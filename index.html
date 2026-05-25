@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AZHAR-AI | Your Personal AI Assistant</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{--bg:#0a0a0f;--surface:#12121a;--card:#1a1a26;--border:#2a2a40;--gold:#e8b84b;--gold2:#f5d080;--rose:#e84b8a;--accent:#5b8dee;--text:#f0efe8;--muted:#7a7a9a;--green:#4ecb8d;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+.bg-grid{position:fixed;inset:0;background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);background-size:40px 40px;opacity:0.3;pointer-events:none;z-index:0;}
+.bg-glow{position:fixed;top:-200px;left:50%;transform:translateX(-50%);width:600px;height:400px;background:radial-gradient(ellipse,rgba(232,75,138,0.1) 0%,rgba(232,184,75,0.08) 50%,transparent 70%);pointer-events:none;z-index:0;}
+header{position:relative;z-index:10;display:flex;align-items:center;justify-content:space-between;padding:16px 32px;border-bottom:1px solid var(--border);background:rgba(10,10,15,0.92);backdrop-filter:blur(12px);}
+.logo{display:flex;align-items:center;gap:14px;}
+.logo-avatar{width:48px;height:48px;flex-shrink:0;}
+.logo-name{font-family:'Syne',sans-serif;font-weight:800;font-size:22px;letter-spacing:1px;}
+.logo-name .az{color:var(--gold);}
+.logo-name .ai{color:var(--rose);}
+.version-badge{background:var(--card);border:1px solid var(--border);color:var(--muted);font-size:10px;padding:2px 8px;border-radius:20px;font-family:'Syne',sans-serif;margin-top:2px;display:inline-block;}
+.status-dot{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--green);}
+.dot{width:7px;height:7px;background:var(--green);border-radius:50%;animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(78,203,141,0.4)}50%{opacity:.8;box-shadow:0 0 0 6px rgba(78,203,141,0)}}
+main{position:relative;z-index:5;max-width:900px;margin:0 auto;padding:28px 20px 48px;}
+.hero{text-align:center;margin-bottom:32px;animation:fadeUp 0.6s ease both;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+.hero-title{font-family:'Syne',sans-serif;font-size:36px;font-weight:800;letter-spacing:-1px;line-height:1.1;margin-bottom:8px;}
+.hero-title .hi{color:var(--muted);font-weight:400;font-size:15px;display:block;margin-bottom:6px;letter-spacing:0;}
+.hero-title .az{color:var(--gold);letter-spacing:2px;}
+.hero-title .ai{color:var(--rose);letter-spacing:2px;}
+.hero-sub{color:var(--muted);font-size:13px;}
+.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:6px;margin-bottom:24px;}
+.tab{padding:10px 6px;border-radius:9px;border:none;background:transparent;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;cursor:pointer;transition:all 0.2s;display:flex;flex-direction:column;align-items:center;gap:4px;}
+.tab.active{background:var(--card);color:var(--text);border:1px solid var(--border);}
+.tab:hover:not(.active){color:var(--text);}
+.tab-icon{font-size:17px;}
+.panel{display:none;animation:fadeUp 0.3s ease both;}
+.panel.active{display:block;}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:22px;margin-bottom:14px;}
+.card-label{font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:1.5px;color:var(--rose);margin-bottom:12px;}
+.card h3{font-family:'Syne',sans-serif;font-size:17px;font-weight:700;margin-bottom:5px;}
+.card p{color:var(--muted);font-size:13px;line-height:1.6;margin-bottom:16px;}
+textarea{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;padding:12px 14px;resize:vertical;outline:none;transition:border 0.2s;min-height:100px;}
+textarea:focus{border-color:var(--rose);}
+.field-label{font-size:12px;color:var(--muted);margin-bottom:6px;margin-top:12px;font-weight:500;}
+.slides-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;}
+.slide-opt{padding:6px 13px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-size:13px;cursor:pointer;transition:all 0.2s;}
+.slide-opt.sel{background:var(--gold);color:#0a0a0f;border-color:var(--gold);font-weight:600;}
+.tone-row{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:16px;}
+.tone-opt{padding:5px 11px;border-radius:20px;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-size:12px;cursor:pointer;transition:all 0.2s;}
+.tone-opt.sel{border-color:var(--rose);color:var(--rose);background:rgba(232,75,138,0.1);}
+.btn{width:100%;padding:13px;background:linear-gradient(135deg,var(--rose),#f06baa);border:none;border-radius:10px;color:#fff;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:0.3px;transition:all 0.2s;margin-bottom:8px;}
+.btn:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(232,75,138,0.3);}
+.btn:disabled{opacity:0.5;cursor:not-allowed;transform:none;}
+.btn-gold{background:linear-gradient(135deg,var(--gold),var(--gold2));color:#0a0a0f;}
+.btn-gold:hover{box-shadow:0 8px 24px rgba(232,184,75,0.3);}
+.output{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-top:14px;font-size:14px;line-height:1.8;display:none;white-space:pre-wrap;max-height:420px;overflow-y:auto;}
+.output.show{display:block;}
+.output-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+.output-label{font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:1.5px;color:var(--green);}
+.copy-btn{background:var(--card);border:1px solid var(--border);color:var(--muted);font-size:11px;padding:4px 10px;border-radius:6px;cursor:pointer;font-family:'DM Sans',sans-serif;}
+.loader{display:none;text-align:center;padding:24px;color:var(--muted);font-size:13px;}
+.spinner{width:28px;height:28px;border:2px solid var(--border);border-top-color:var(--rose);border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 10px;}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* Upload box */
+.upload-box{background:var(--surface);border:2px dashed var(--border);border-radius:12px;padding:18px;text-align:center;cursor:pointer;transition:all 0.2s;margin-bottom:8px;}
+.upload-box:hover{border-color:var(--rose);background:rgba(232,75,138,0.05);}
+.upload-box.has-file{border-color:var(--green);background:rgba(78,203,141,0.05);}
+.upload-icon{font-size:26px;margin-bottom:6px;}
+.upload-text{font-size:13px;color:var(--muted);font-weight:500;}
+.upload-sub{font-size:11px;color:var(--muted);margin-top:3px;}
+.upload-sub.loaded{color:var(--green);font-weight:600;}
+/* Email diff */
+.diff-block{background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-top:14px;overflow:hidden;display:none;}
+.diff-block.show{display:block;}
+.diff-header{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid var(--border);}
+.diff-tabs{display:flex;gap:4px;}
+.diff-tab{padding:5px 10px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;}
+.diff-tab.on{background:var(--card);color:var(--text);}
+.diff-content{padding:14px;font-size:14px;line-height:1.8;white-space:pre-wrap;max-height:380px;overflow-y:auto;}
+.diff-copy{background:var(--card);border:1px solid var(--border);color:var(--muted);font-size:11px;padding:4px 10px;border-radius:6px;cursor:pointer;font-family:'DM Sans',sans-serif;}
+/* Success badge */
+.success-badge{display:none;background:rgba(78,203,141,0.1);border:1px solid var(--green);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--green);margin-top:10px;text-align:center;}
+.success-badge.show{display:block;}
+footer{position:relative;z-index:5;text-align:center;padding:18px;border-top:1px solid var(--border);}
+.footer-inner{display:inline-flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);}
+.footer-inner .gold{color:var(--gold);font-family:'Syne',sans-serif;font-weight:700;letter-spacing:1px;}
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="bg-glow"></div>
+<header>
+  <div class="logo">
+    <svg class="logo-avatar" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="50" cy="50" r="48" fill="#1a1a26" stroke="#e84b8a" stroke-width="2"/>
+      <line x1="50" y1="10" x2="50" y2="22" stroke="#e8b84b" stroke-width="2.5" stroke-linecap="round"/>
+      <circle cx="50" cy="9" r="4" fill="#e84b8a"/>
+      <rect x="24" y="22" width="52" height="40" rx="10" fill="#1e1e2e" stroke="#e84b8a" stroke-width="1.5"/>
+      <rect x="32" y="31" width="14" height="10" rx="3" fill="#e84b8a" opacity="0.2"/>
+      <rect x="32" y="31" width="14" height="10" rx="3" fill="none" stroke="#e84b8a" stroke-width="1.5"/>
+      <rect x="35" y="33" width="8" height="6" rx="2" fill="#e84b8a"/>
+      <rect x="54" y="31" width="14" height="10" rx="3" fill="#e84b8a" opacity="0.2"/>
+      <rect x="54" y="31" width="14" height="10" rx="3" fill="none" stroke="#e84b8a" stroke-width="1.5"/>
+      <rect x="57" y="33" width="8" height="6" rx="2" fill="#e84b8a"/>
+      <rect x="33" y="48" width="34" height="6" rx="3" fill="#1a0a15"/>
+      <rect x="35" y="50" width="6" height="2" rx="1" fill="#e8b84b"/>
+      <rect x="43" y="50" width="6" height="2" rx="1" fill="#e8b84b"/>
+      <rect x="51" y="50" width="6" height="2" rx="1" fill="#e84b8a"/>
+      <rect x="59" y="50" width="6" height="2" rx="1" fill="#e84b8a"/>
+      <circle cx="24" cy="40" r="4" fill="#2a2a40" stroke="#e8b84b" stroke-width="1.5"/>
+      <circle cx="76" cy="40" r="4" fill="#2a2a40" stroke="#e8b84b" stroke-width="1.5"/>
+      <rect x="44" y="62" width="12" height="8" rx="2" fill="#2a2a40"/>
+      <rect x="28" y="70" width="44" height="24" rx="8" fill="#1e1e2e" stroke="#e84b8a" stroke-width="1.5"/>
+      <circle cx="43" cy="82" r="5" fill="#e84b8a" opacity="0.3"/>
+      <circle cx="43" cy="82" r="3" fill="#e84b8a"/>
+      <rect x="52" y="78" width="14" height="3" rx="1.5" fill="#e8b84b" opacity="0.7"/>
+      <rect x="52" y="83" width="10" height="3" rx="1.5" fill="#e8b84b" opacity="0.4"/>
+    </svg>
+    <div>
+      <div class="logo-name"><span class="az">AZHAR</span><span class="ai">-AI</span></div>
+      <span class="version-badge">v 2.0</span>
+    </div>
+  </div>
+  <div class="status-dot"><span class="dot"></span>AI Online</div>
+</header>
+
+<main>
+  <div class="hero">
+    <div class="hero-title">
+      <span class="hi">Your personal AI assistant</span>
+      <span class="az">AZHAR</span><span class="ai">-AI</span>
+    </div>
+    <p class="hero-sub">PowerPoint builder · Excel analyser · Executive summaries · Email correction</p>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('ppt',this)"><span class="tab-icon">📊</span>PowerPoint</button>
+    <button class="tab" onclick="switchTab('excel',this)"><span class="tab-icon">📐</span>Excel</button>
+    <button class="tab" onclick="switchTab('summary',this)"><span class="tab-icon">📋</span>Summaries</button>
+    <button class="tab" onclick="switchTab('email',this)"><span class="tab-icon">✉️</span>Email</button>
+  </div>
+
+  <!-- POWERPOINT -->
+  <div class="panel active" id="ppt">
+    <div class="card">
+      <div class="card-label">Slide Builder + Download</div>
+      <h3>Generate & download a real PowerPoint</h3>
+      <p>Describe your topic OR upload a text/notes file — AZHAR-AI builds the slides and downloads a real <strong>.pptx</strong> file directly into PowerPoint.</p>
+
+      <div class="field-label">📎 Upload notes or document (optional)</div>
+      <div class="upload-box" id="ppt-upload-box" onclick="document.getElementById('ppt-file').click()">
+        <div class="upload-icon">📄</div>
+        <div class="upload-text">Click to attach .txt or .csv notes file</div>
+        <div class="upload-sub" id="ppt-file-name">AI will build slides from your content</div>
+      </div>
+      <input type="file" id="ppt-file" accept=".txt,.csv" style="display:none" onchange="handlePPTFile(this)"/>
+
+      <div class="field-label">Presentation topic or description</div>
+      <textarea id="ppt-topic" placeholder="e.g. Q2 Sales Performance Review for leadership team&#10;&#10;or: Monthly Claims Report — key findings and recommendations"></textarea>
+
+      <div class="field-label">Number of slides</div>
+      <div class="slides-row">
+        <div class="slide-opt sel" onclick="selSlide(this)">5</div>
+        <div class="slide-opt" onclick="selSlide(this)">8</div>
+        <div class="slide-opt" onclick="selSlide(this)">10</div>
+        <div class="slide-opt" onclick="selSlide(this)">12</div>
+        <div class="slide-opt" onclick="selSlide(this)">15</div>
+      </div>
+
+      <div class="field-label">Tone</div>
+      <div class="tone-row" id="ppt-tone">
+        <div class="tone-opt sel" onclick="selTone(this,'ppt-tone')">Professional</div>
+        <div class="tone-opt" onclick="selTone(this,'ppt-tone')">Persuasive</div>
+        <div class="tone-opt" onclick="selTone(this,'ppt-tone')">Friendly</div>
+        <div class="tone-opt" onclick="selTone(this,'ppt-tone')">Executive</div>
+      </div>
+
+      <button class="btn" id="ppt-btn" onclick="runPPT()">✦ Generate Slides</button>
+      <button class="btn btn-gold" id="ppt-download-btn" onclick="downloadPPTX()" style="display:none">⬇ Download as PowerPoint (.pptx)</button>
+
+      <div class="loader" id="ppt-loader"><div class="spinner"></div>AZHAR-AI is building your presentation…</div>
+      <div class="success-badge" id="ppt-success">✓ Presentation ready! Click Download to get your .pptx file</div>
+      <div class="output" id="ppt-out">
+        <div class="output-header"><span class="output-label">✦ Slide outline ready</span><button class="copy-btn" onclick="copyEl('ppt-out-text')">Copy</button></div>
+        <div id="ppt-out-text"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EXCEL -->
+  <div class="panel" id="excel">
+    <div class="card">
+      <div class="card-label">Excel Formula Fixer + Data Analyser</div>
+      <h3>Fix formulas & analyse your Excel data</h3>
+      <p>Upload your Excel as CSV <strong>or</strong> paste a formula — AZHAR-AI reads your actual data, fixes errors, and answers questions about your numbers.</p>
+
+      <div class="field-label">📎 Upload Excel file saved as CSV (recommended)</div>
+      <div class="upload-box" id="excel-upload-box" onclick="document.getElementById('excel-file').click()">
+        <div class="upload-icon">📊</div>
+        <div class="upload-text">Click to attach .csv or .txt file</div>
+        <div class="upload-sub" id="excel-file-name">Save your Excel as CSV first: File → Save As → CSV</div>
+      </div>
+      <input type="file" id="excel-file" accept=".csv,.txt,.xls,.xlsx" style="display:none" onchange="handleExcelFile(this)"/>
+
+      <div class="field-label">Your formula, question or request</div>
+      <textarea id="excel-formula" placeholder="e.g. Fix my VLOOKUP formula&#10;&#10;or: What is the total claims amount for May?&#10;&#10;or: Find all errors in my data and suggest fixes"></textarea>
+
+      <div class="field-label">Extra context (optional)</div>
+      <textarea id="excel-context" style="min-height:55px" placeholder="e.g. Column A = Date, Column B = Staff Name, Column C = Claim Amount..."></textarea>
+
+      <button class="btn" id="excel-btn" onclick="runExcel()">✦ Analyse My Excel</button>
+      <div class="loader" id="excel-loader"><div class="spinner"></div>AZHAR-AI is analysing your data…</div>
+      <div class="output" id="excel-out">
+        <div class="output-header"><span class="output-label">✦ Analysis ready</span><button class="copy-btn" onclick="copyEl('excel-out-text')">Copy</button></div>
+        <div id="excel-out-text"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUMMARY -->
+  <div class="panel" id="summary">
+    <div class="card">
+      <div class="card-label">Executive Summary</div>
+      <h3>Summarise any document or text</h3>
+      <p>Paste your report, email thread, or document — AZHAR-AI will produce a sharp executive summary.</p>
+      <div class="field-label">Paste your text here</div>
+      <textarea id="summary-text" style="min-height:140px" placeholder="Paste your document, email, report, or notes here..."></textarea>
+      <div class="field-label">Summary style</div>
+      <div class="tone-row" id="sum-tone">
+        <div class="tone-opt sel" onclick="selTone(this,'sum-tone')">Executive brief</div>
+        <div class="tone-opt" onclick="selTone(this,'sum-tone')">Bullet points</div>
+        <div class="tone-opt" onclick="selTone(this,'sum-tone')">Action items</div>
+        <div class="tone-opt" onclick="selTone(this,'sum-tone')">Key decisions</div>
+      </div>
+      <button class="btn" id="sum-btn" onclick="runSummary()">✦ Generate Summary</button>
+      <div class="loader" id="sum-loader"><div class="spinner"></div>AZHAR-AI is summarising…</div>
+      <div class="output" id="sum-out">
+        <div class="output-header"><span class="output-label">✦ Summary ready</span><button class="copy-btn" onclick="copyEl('sum-out-text')">Copy</button></div>
+        <div id="sum-out-text"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EMAIL -->
+  <div class="panel" id="email">
+    <div class="card">
+      <div class="card-label">Email Correction & Polish</div>
+      <h3>Fix, rewrite or compose emails</h3>
+      <p>Paste your draft and choose what you need — AZHAR-AI handles the rest.</p>
+      <div class="field-label">Your email draft (or describe what you want to send)</div>
+      <textarea id="email-body" style="min-height:130px" placeholder="Paste your email here, or describe what you want to say..."></textarea>
+      <div class="field-label">What do you need?</div>
+      <div class="tone-row" id="email-action">
+        <div class="tone-opt sel" onclick="selTone(this,'email-action')">Fix grammar & spelling</div>
+        <div class="tone-opt" onclick="selTone(this,'email-action')">Make it professional</div>
+        <div class="tone-opt" onclick="selTone(this,'email-action')">Make it friendly</div>
+        <div class="tone-opt" onclick="selTone(this,'email-action')">Make it shorter</div>
+        <div class="tone-opt" onclick="selTone(this,'email-action')">Full rewrite</div>
+        <div class="tone-opt" onclick="selTone(this,'email-action')">Write from scratch</div>
+      </div>
+      <div class="field-label">Who is this email to? (optional)</div>
+      <textarea id="email-recipient" style="min-height:48px" placeholder="e.g. My manager, a client, HR department..."></textarea>
+      <button class="btn" id="email-btn" onclick="runEmail()">✦ Fix My Email</button>
+      <div class="loader" id="email-loader"><div class="spinner"></div>AZHAR-AI is polishing your email…</div>
+      <div class="diff-block" id="email-out">
+        <div class="diff-header">
+          <div class="diff-tabs">
+            <button class="diff-tab on" onclick="switchDiff('corrected',this)">Corrected email</button>
+            <button class="diff-tab" onclick="switchDiff('subject',this)">Subject line</button>
+            <button class="diff-tab" onclick="switchDiff('changes',this)">What changed</button>
+          </div>
+          <button class="diff-copy" onclick="copyDiff()">Copy</button>
+        </div>
+        <div class="diff-content" id="diff-corrected"></div>
+        <div class="diff-content" id="diff-subject" style="display:none"></div>
+        <div class="diff-content" id="diff-changes" style="display:none"></div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="footer-inner">
+    <span>Powered by</span>
+    <span class="gold">✦ AZHAR</span>
+  </div>
+</footer>
+
+<script>
+// API handled securely by server
+let activeDiff='corrected';
+let lastPPTSlides = [];
+
+function switchTab(id,btn){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');btn.classList.add('active');
+}
+function selSlide(el){document.querySelectorAll('.slide-opt').forEach(e=>e.classList.remove('sel'));el.classList.add('sel');}
+function selTone(el,g){document.querySelectorAll('#'+g+' .tone-opt').forEach(e=>e.classList.remove('sel'));el.classList.add('sel');}
+function getSlides(){return document.querySelector('.slide-opt.sel')?.textContent||'8';}
+function getTone(g){return document.querySelector('#'+g+' .tone-opt.sel')?.textContent||'Professional';}
+function switchDiff(tab,btn){
+  activeDiff=tab;
+  document.querySelectorAll('.diff-tab').forEach(t=>t.classList.remove('on'));btn.classList.add('on');
+  document.querySelectorAll('.diff-content').forEach(c=>c.style.display='none');
+  document.getElementById('diff-'+tab).style.display='block';
+}
+function copyDiff(){
+  navigator.clipboard.writeText(document.getElementById('diff-'+activeDiff).textContent).then(()=>{
+    const btn=event.target;btn.textContent='Copied!';setTimeout(()=>btn.textContent='Copy',2000);
+  });
+}
+function copyEl(id){
+  navigator.clipboard.writeText(document.getElementById(id).textContent).then(()=>{
+    const btn=event.target;btn.textContent='Copied!';setTimeout(()=>btn.textContent='Copy',2000);
+  });
+}
+
+// File handlers
+function handleExcelFile(input){
+  const file=input.files[0];if(!file)return;
+  const nameEl=document.getElementById('excel-file-name');
+  const box=document.getElementById('excel-upload-box');
+  const reader=new FileReader();
+  reader.onload=function(e){
+    const text=e.target.result;
+    const ctx=document.getElementById('excel-context');
+    ctx.value='FILE: '+file.name+'\n\nDATA:\n'+text.substring(0,4000);
+    nameEl.textContent='✓ '+file.name+' loaded — '+text.split('\n').length+' rows';
+    nameEl.classList.add('loaded');
+    box.classList.add('has-file');
+    if(!document.getElementById('excel-formula').value.trim()){
+      document.getElementById('excel-formula').value='Analyse this data. Find any errors, fix formulas, and give me a summary of the key numbers.';
+    }
+  };
+  reader.readAsText(file);
+}
+
+function handlePPTFile(input){
+  const file=input.files[0];if(!file)return;
+  const nameEl=document.getElementById('ppt-file-name');
+  const box=document.getElementById('ppt-upload-box');
+  const reader=new FileReader();
+  reader.onload=function(e){
+    const text=e.target.result;
+    const topic=document.getElementById('ppt-topic');
+    if(!topic.value.trim()){
+      topic.value='Based on the following content, create a professional presentation:\n\n'+text.substring(0,3000);
+    }
+    nameEl.textContent='✓ '+file.name+' loaded';
+    nameEl.classList.add('loaded');
+    box.classList.add('has-file');
+  };
+  reader.readAsText(file);
+}
+
+async function callClaude(prompt){
+  const r=await fetch("/api/chat",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({prompt})
+  });
+  const d=await r.json();
+  if(d.error)throw new Error(d.error);
+  return d.result||'No response.';
+}
+
+async function callExcel(formData){
+  const r=await fetch("/api/excel",{method:"POST",body:formData});
+  const d=await r.json();
+  if(d.error)throw new Error(d.error);
+  return d.result||'No response.';
+}
+
+async function callPPT(formData){
+  const r=await fetch("/api/powerpoint",{method:"POST",body:formData});
+  const d=await r.json();
+  if(d.error)throw new Error(d.error);
+  return d.result||'No response.';
+}
+
+function showOutput(outId,textId,text){document.getElementById(textId).textContent=text;document.getElementById(outId).classList.add('show');}
+function setLoading(lid,bid,on){document.getElementById(lid).style.display=on?'block':'none';document.getElementById(bid).disabled=on;}
+
+// Parse slides from AI response
+function parseSlides(text){
+  const slides=[];
+  const blocks=text.split(/Slide\s+\d+[:\-]/i).filter(b=>b.trim());
+  blocks.forEach((block,i)=>{
+    const lines=block.trim().split('\n').filter(l=>l.trim());
+    if(!lines.length)return;
+    const title=lines[0].replace(/^[*#\-\s]+/,'').trim();
+    const bullets=[];
+    let note='';
+    lines.slice(1).forEach(l=>{
+      const clean=l.replace(/^[\-\*•]\s*/,'').trim();
+      if(!clean)return;
+      if(l.toLowerCase().includes('speaker note')||l.toLowerCase().includes('note:')){
+        note=clean.replace(/speaker notes?:?/i,'').trim();
+      } else if(bullets.length<5){
+        bullets.push(clean);
+      }
+    });
+    if(title) slides.push({title,bullets,note});
+  });
+  return slides;
+}
+
+// Download as real PPTX
+function downloadPPTX(){
+  if(!lastPPTSlides.length){alert('Please generate slides first.');return;}
+  const topic=document.getElementById('ppt-topic').value.trim()||'Presentation';
+
+  const pptx=new PptxGenJS();
+  pptx.layout='LAYOUT_16x9';
+  pptx.author='AZHAR-AI';
+  pptx.title=topic;
+
+  // Title slide
+  const titleSlide=pptx.addSlide();
+  titleSlide.background={color:'1a1a2e'};
+  titleSlide.addShape(pptx.ShapeType.rect,{x:0,y:2.8,w:'100%',h:0.06,fill:{color:'e84b8a'}});
+  titleSlide.addText(topic,{x:0.5,y:1.2,w:9,h:1.5,fontSize:36,bold:true,color:'f0efe8',fontFace:'Calibri',align:'center'});
+  titleSlide.addText('Powered by AZHAR-AI',{x:0.5,y:4.5,w:9,h:0.5,fontSize:14,color:'e8b84b',fontFace:'Calibri',align:'center'});
+
+  // Content slides
+  lastPPTSlides.forEach(slide=>{
+    const s=pptx.addSlide();
+    s.background={color:'f8f9fa'};
+    // Title bar
+    s.addShape(pptx.ShapeType.rect,{x:0,y:0,w:'100%',h:1.2,fill:{color:'1a1a2e'}});
+    s.addText(slide.title,{x:0.3,y:0.15,w:9.4,h:0.9,fontSize:24,bold:true,color:'ffffff',fontFace:'Calibri'});
+    // Gold accent line
+    s.addShape(pptx.ShapeType.rect,{x:0,y:1.2,w:'100%',h:0.06,fill:{color:'e8b84b'}});
+    // Bullets
+    const bulletText=slide.bullets.map(b=>({text:'  '+b,options:{bullet:{type:'bullet'},fontSize:16,color:'1a1a2e',fontFace:'Calibri',paraSpaceAfter:8}}));
+    if(bulletText.length){
+      s.addText(bulletText,{x:0.4,y:1.4,w:9.2,h:3.8});
+    }
+    // Speaker note
+    if(slide.note){s.addNotes(slide.note);}
+    // Footer
+    s.addText('AZHAR-AI',{x:8,y:5.1,w:1.8,h:0.4,fontSize:9,color:'e84b8a',fontFace:'Calibri',align:'right'});
+  });
+
+  // Thank you slide
+  const lastSlide=pptx.addSlide();
+  lastSlide.background={color:'1a1a2e'};
+  lastSlide.addShape(pptx.ShapeType.rect,{x:0,y:2.5,w:'100%',h:0.06,fill:{color:'e84b8a'}});
+  lastSlide.addText('Thank You',{x:0.5,y:1.5,w:9,h:1.2,fontSize:44,bold:true,color:'f0efe8',fontFace:'Calibri',align:'center'});
+  lastSlide.addText('Powered by AZHAR-AI ✦',{x:0.5,y:4.5,w:9,h:0.5,fontSize:13,color:'e8b84b',fontFace:'Calibri',align:'center'});
+
+  const filename=topic.replace(/[^a-z0-9]/gi,'_').substring(0,30)||'AZHAR_AI_Presentation';
+  pptx.writeFile({fileName:filename+'.pptx'});
+}
+
+async function runPPT(){
+  const topic=document.getElementById('ppt-topic').value.trim();
+  if(!topic){alert('Please enter a presentation topic or upload a file.');return;}
+  document.getElementById('ppt-out').classList.remove('show');
+  document.getElementById('ppt-success').classList.remove('show');
+  document.getElementById('ppt-download-btn').style.display='none';
+  setLoading('ppt-loader','ppt-btn',true);
+  try{
+    const r=await callClaude(`You are AZHAR-AI, a professional presentation builder. Create a ${getSlides()}-slide PowerPoint presentation.
+
+Topic: ${topic}
+Tone: ${getTone('ppt-tone')}
+
+Format EXACTLY like this for each slide:
+Slide 1: [Title]
+- [bullet point]
+- [bullet point]
+- [bullet point]
+Speaker Note: [1-2 sentence note]
+
+Slide 2: [Title]
+- [bullet point]
+...and so on for all ${getSlides()} slides.`);
+
+    lastPPTSlides=parseSlides(r);
+    showOutput('ppt-out','ppt-out-text',r);
+    document.getElementById('ppt-success').classList.add('show');
+    document.getElementById('ppt-download-btn').style.display='block';
+  }catch(e){alert('Error: '+e.message);}
+  setLoading('ppt-loader','ppt-btn',false);
+}
+
+async function runExcel(){
+  const f=document.getElementById('excel-formula').value.trim();
+  if(!f){alert('Please enter a formula, question, or upload a CSV file.');return;}
+  const c=document.getElementById('excel-context').value.trim();
+  document.getElementById('excel-out').classList.remove('show');
+  setLoading('excel-loader','excel-btn',true);
+  try{
+    const fd=new FormData();
+    fd.append('question',f);
+    const fileInput=document.getElementById('excel-file');
+    if(fileInput.files[0]) fd.append('file',fileInput.files[0]);
+    else if(c) fd.append('question',f+'\n\nData:\n'+c);
+    const r=await callExcel(fd);
+    showOutput('excel-out','excel-out-text',r);
+  }catch(e){alert('Error: '+e.message);}
+  setLoading('excel-loader','excel-btn',false);
+}
+
+async function runSummary(){
+  const t=document.getElementById('summary-text').value.trim();
+  if(!t){alert('Please paste some text to summarise.');return;}
+  const style=getTone('sum-tone');
+  const styles={'Executive brief':'Write a concise 3-5 sentence executive summary.','Bullet points':'Summarise as clear bullet points by theme.','Action items':'Extract all action items and next steps.','Key decisions':'Identify key decisions with supporting context.'};
+  document.getElementById('sum-out').classList.remove('show');
+  setLoading('sum-loader','sum-btn',true);
+  try{
+    const r=await callClaude(`You are AZHAR-AI. Summarise the following.\n\nStyle: ${style} — ${styles[style]}\n\nText:\n${t}`);
+    showOutput('sum-out','sum-out-text',r);
+  }catch(e){alert('Error: '+e.message);}
+  setLoading('sum-loader','sum-btn',false);
+}
+
+async function runEmail(){
+  const body=document.getElementById('email-body').value.trim();
+  if(!body){alert('Please paste your email.');return;}
+  const action=getTone('email-action');
+  const recipient=document.getElementById('email-recipient').value.trim();
+  document.getElementById('email-out').classList.remove('show');
+  setLoading('email-loader','email-btn',true);
+  try{
+    const raw=await callClaude(`You are AZHAR-AI, a professional email assistant.\n\nTask: ${action}\n${recipient?'Recipient: '+recipient:''}\nEmail:\n${body}\n\nRespond in this EXACT format:\n\nCORRECTED EMAIL:\n[full corrected email]\n\nSUBJECT LINE:\n[2-3 subject line options]\n\nWHAT CHANGED:\n[bullet points of key changes]`);
+    const corrMatch=raw.match(/CORRECTED EMAIL:\s*([\s\S]*?)(?=SUBJECT LINE:|$)/i);
+    const subjMatch=raw.match(/SUBJECT LINE:\s*([\s\S]*?)(?=WHAT CHANGED:|$)/i);
+    const changeMatch=raw.match(/WHAT CHANGED:\s*([\s\S]*?)$/i);
+    document.getElementById('diff-corrected').textContent=corrMatch?corrMatch[1].trim():raw;
+    document.getElementById('diff-subject').textContent=subjMatch?subjMatch[1].trim():'See corrected email tab.';
+    document.getElementById('diff-changes').textContent=changeMatch?changeMatch[1].trim():'See corrected email tab.';
+    document.querySelectorAll('.diff-tab').forEach(t=>t.classList.remove('on'));
+    document.querySelectorAll('.diff-tab')[0].classList.add('on');
+    document.querySelectorAll('.diff-content').forEach(c=>c.style.display='none');
+    document.getElementById('diff-corrected').style.display='block';
+    activeDiff='corrected';
+    document.getElementById('email-out').classList.add('show');
+  }catch(e){alert('Error: '+e.message);}
+  setLoading('email-loader','email-btn',false);
+}
+</script>
+</body>
+</html>

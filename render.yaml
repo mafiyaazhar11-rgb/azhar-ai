@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: azhar-ai
+    env: node
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false
