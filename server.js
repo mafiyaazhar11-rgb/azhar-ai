@@ -47,18 +47,31 @@ app.post('/api/dispatch/upload', upload.single('file'), async (req, res) => {
   try {
     let csvText = '';
     if (req.file) {
-      csvText = fs.readFileSync(req.file.path, 'utf8');
+      const ext = path.extname(req.file.originalname).toLowerCase();
+      if (ext === '.xlsx' || ext === '.xls') {
+        // Handle Excel file
+        const workbook = XLSX.readFile(req.file.path);
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+        csvText = XLSX.utils.sheet_to_csv(sheet);
+        console.log('Excel file converted to CSV, size:', csvText.length);
+      } else {
+        // Handle CSV/text file
+        csvText = fs.readFileSync(req.file.path, 'utf8');
+        console.log('CSV file uploaded, size:', csvText.length, 'chars');
+      }
       fs.unlinkSync(req.file.path);
     } else if (req.body.csvText) {
       csvText = req.body.csvText;
+      console.log('CSV text received, size:', csvText.length, 'chars');
     }
     if (!csvText) return res.status(400).json({ error: 'No data provided' });
 
     // Generate auto summary using Claude
     const summaryPrompt = `You are AZHAR-AI Dispatch Intelligence. Analyse this dispatch CSV data and provide a structured JSON summary.
 
-CSV Data:
-${csvText.substring(0, 8000)}
+CSV Data (first 12000 chars):
+${csvText.substring(0, 12000)}
 
 Return ONLY a JSON object (no markdown, no explanation) with this exact structure:
 {
@@ -91,7 +104,7 @@ Return ONLY a JSON object (no markdown, no explanation) with this exact structur
     dispatchData = {
       uploadedAt: new Date().toISOString(),
       uploadedBy: req.body.uploadedBy || 'Admin',
-      csvText: csvText.substring(0, 15000),
+      csvText: csvText,
       summary
     };
 
@@ -124,7 +137,7 @@ app.post('/api/dispatch/ask', async (req, res) => {
     const prompt = `You are AZHAR-AI Dispatch Intelligence for a logistics/distribution company in UAE.
 
 Today's dispatch data (CSV):
-${dispatchData.csvText}
+${dispatchData.csvText.substring(0, 12000)}
 
 Data uploaded: ${dispatchData.uploadedAt}
 
