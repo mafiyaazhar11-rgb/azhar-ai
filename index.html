@@ -1,836 +1,235 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
+
 <meta charset="UTF-8">
+
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>AZHAR-AI | Executive Intelligence Platform</title>
+
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600;700&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js">
-// DISPATCH COPILOT
-async function loadDispatchStatus(){
-  try{
-    const r=await fetch('/api/dispatch/status');
-    const d=await r.json();
-    const statusEl=document.getElementById('dispatch-status');
-    if(d.hasData && d.summary){
-      const s=d.summary;
-      const uploadTime=new Date(d.uploadedAt).toLocaleString('en-AE');
-      statusEl.className='dispatch-status live';
-      statusEl.innerHTML='<div class="dispatch-status-icon">✅</div><div class="dispatch-status-text">Live data loaded by '+d.uploadedBy+' at '+uploadTime+'</div>';
-      // Fill summary cards
-      document.getElementById('ds-orders-val').textContent=s.total_orders?.toLocaleString()||'—';
-      document.getElementById('ds-value-val').textContent=s.total_value?Math.round(s.total_value).toLocaleString():'—';
-      document.getElementById('ds-lulu-val').textContent=s.lulu_orders?.toLocaleString()||'—';
-      document.getElementById('ds-routes-val').textContent=s.total_routes?.toLocaleString()||'—';
-      document.getElementById('ds-drivers-val').textContent=s.total_drivers?.toLocaleString()||'—';
-      document.getElementById('ds-luluval-val').textContent=s.lulu_value?Math.round(s.lulu_value).toLocaleString():'—';
-      document.getElementById('dispatch-summary').style.display='grid';
-      document.getElementById('quick-q-label').style.display='block';
-      document.getElementById('quick-questions').style.display='flex';
-      document.getElementById('dispatch-ask-label').style.display='block';
-      document.getElementById('dispatch-input-row').style.display='flex';
-    } else {
-      statusEl.className='dispatch-status';
-      statusEl.innerHTML='<div class="dispatch-status-icon">⚠️</div><div class="dispatch-status-text">No dispatch data loaded today. Ask admin to upload the daily report.</div>';
-    }
-  }catch(e){
-    document.getElementById('dispatch-status').innerHTML='<div class="dispatch-status-icon">⚠️</div><div class="dispatch-status-text">Could not connect to server.</div>';
-  }
-}
 
-function dispatchKeydown(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();askDispatch();}}
+<script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
 
-function askQuick(q){
-  document.getElementById('dispatch-input').value=q;
-  askDispatch();
-}
-
-async function askDispatch(){
-  const q=document.getElementById('dispatch-input').value.trim();
-  if(!q){alert('Please enter a question.');return;}
-  document.getElementById('dispatch-send').disabled=true;
-  document.getElementById('dispatch-out').classList.add('show');
-  document.getElementById('dispatch-out-text').textContent='Analysing your dispatch data...';
-  try{
-    const r=await fetch('/api/dispatch/ask',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:q})});
-    const d=await r.json();
-    document.getElementById('dispatch-out-text').textContent=d.result||'No answer.';
-  }catch(e){
-    document.getElementById('dispatch-out-text').textContent='Error: '+e.message;
-  }
-  document.getElementById('dispatch-send').disabled=false;
-}
-
-async function handleDispatchFile(input){
-  const file=input.files[0];if(!file)return;
-  const nameEl=document.getElementById('dispatch-file-name');
-  const box=document.getElementById('dispatch-upload-box');
-  nameEl.textContent='✓ '+file.name+' uploading...';
-  box.classList.add('has-file');
-  document.getElementById('dispatch-upload-loader').style.display='block';
-  try{
-    const fd=new FormData();
-    fd.append('file',file);
-    fd.append('uploadedBy','Azhar');
-    const r=await fetch('/api/dispatch/upload',{method:'POST',body:fd});
-    const d=await r.json();
-    document.getElementById('dispatch-upload-loader').style.display='none';
-    if(d.success){
-      nameEl.textContent='✓ '+file.name+' uploaded! '+( d.summary?.total_orders||'')+ ' orders loaded.';
-      nameEl.classList.add('loaded');
-      loadDispatchStatus();
-      alert('✅ Dispatch data uploaded successfully!
-
-Your team can now ask questions about today's dispatch.');
-    } else {
-      nameEl.textContent='Upload failed: '+(d.error||'Unknown error');
-      alert('Upload failed: '+(d.error||'Unknown error'));
-    }
-  }catch(err){
-    document.getElementById('dispatch-upload-loader').style.display='none';
-    nameEl.textContent='Upload error: '+err.message;
-    alert('Error: '+err.message);
-  }
-}
-</script>
 <style>
-*{margin:0;padding:0;box-sizing:border-box;}
-:root{--black:#050505;--dark:#0a0a08;--surface:#111109;--card:#161612;--border:#2a2a1e;--gold:#c9a84c;--gold2:#e8c878;--gold3:#f5e0a0;--goldglow:rgba(201,168,76,0.15);--text:#f0ece0;--muted:#7a7660;--white:#faf8f0;--green:#4ecb8d;}
-body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--text);min-height:100vh;overflow-x:hidden;}
-.bg-luxury{position:fixed;inset:0;z-index:0;background:radial-gradient(ellipse at 20% 20%,rgba(201,168,76,0.04) 0%,transparent 50%),radial-gradient(ellipse at 80% 80%,rgba(201,168,76,0.03) 0%,transparent 50%),var(--black);}
-.bg-lines{position:fixed;inset:0;z-index:0;background-image:linear-gradient(rgba(201,168,76,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(201,168,76,0.04) 1px,transparent 1px);background-size:60px 60px;}
-.bg-vignette{position:fixed;inset:0;z-index:0;background:radial-gradient(ellipse at center,transparent 40%,rgba(0,0,0,0.7) 100%);}
-header{position:relative;z-index:10;display:flex;align-items:center;justify-content:space-between;padding:0 48px;height:80px;border-bottom:1px solid var(--border);background:rgba(5,5,5,0.95);backdrop-filter:blur(20px);}
-.header-left{display:flex;align-items:center;gap:20px;}
-.logo-mark{width:44px;height:44px;border:1px solid var(--gold);display:flex;align-items:center;justify-content:center;position:relative;}
-.logo-mark::before{content:'';position:absolute;inset:3px;border:1px solid rgba(201,168,76,0.3);}
-.logo-mark svg{width:22px;height:22px;}
-.brand{display:flex;flex-direction:column;gap:2px;}
-.brand-name{font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:700;letter-spacing:6px;background:linear-gradient(135deg,#fff5cc,var(--gold),var(--gold3),#fff0a0,var(--gold));background-size:200% auto;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:shine 3s linear infinite;text-shadow:none;filter:drop-shadow(0 0 8px rgba(201,168,76,0.6));}
-@keyframes shine{0%{background-position:0% center}100%{background-position:200% center}}
-.brand-sub{font-size:9px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;font-weight:500;}
-.header-right{display:flex;align-items:center;gap:24px;}
-.status-indicator{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;}
-.status-dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:glow 2s infinite;}
-@keyframes glow{0%,100%{opacity:1}50%{opacity:0.5}}
-.version{font-size:10px;letter-spacing:2px;color:var(--muted);border:1px solid var(--border);padding:3px 10px;text-transform:uppercase;}
-main{position:relative;z-index:5;max-width:1000px;margin:0 auto;padding:60px 24px 80px;}
-.hero{text-align:center;margin-bottom:60px;animation:fadeUp 0.8s ease both;}
-@keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
-.hero-eyebrow{font-size:10px;letter-spacing:4px;color:var(--gold);text-transform:uppercase;margin-bottom:20px;display:flex;align-items:center;justify-content:center;gap:12px;}
-.hero-eyebrow::before,.hero-eyebrow::after{content:'';width:40px;height:1px;background:var(--gold);opacity:0.4;}
-.hero-title{font-family:'Cormorant Garamond',serif;font-size:64px;font-weight:300;letter-spacing:-1px;line-height:1.05;margin-bottom:16px;color:var(--white);}
-.hero-title strong{font-weight:700;background:linear-gradient(135deg,var(--gold),var(--gold3));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
-.hero-desc{font-size:13px;color:var(--muted);letter-spacing:1px;line-height:1.8;max-width:500px;margin:0 auto;}
-.divider{display:flex;align-items:center;gap:16px;margin-bottom:40px;}
-.divider-line{flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--border),transparent);}
-.divider-diamond{width:8px;height:8px;background:var(--gold);transform:rotate(45deg);flex-shrink:0;}
-.nav-tabs{display:grid;grid-template-columns:repeat(6,1fr);gap:0;border:1px solid var(--border);margin-bottom:48px;}
-.nav-tab{padding:16px 8px;border:none;background:transparent;color:var(--muted);font-family:'Montserrat',sans-serif;font-size:10px;font-weight:600;letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:all 0.3s;display:flex;flex-direction:column;align-items:center;gap:8px;border-right:1px solid var(--border);position:relative;}
-.nav-tab:last-child{border-right:none;}
-.nav-tab::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:var(--gold);transform:scaleX(0);transition:transform 0.3s;}
-.nav-tab.active{color:var(--gold);background:var(--goldglow);}
-.nav-tab.active::after{transform:scaleX(1);}
-.nav-tab:hover:not(.active){color:var(--text);}
-.nav-icon{font-size:18px;}
-.panel{display:none;animation:fadeUp 0.4s ease both;}
-.panel.active{display:block;}
-.card{background:var(--card);border:1px solid var(--border);padding:40px;margin-bottom:20px;position:relative;overflow:hidden;}
-.card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:0.5;}
-.card-eyebrow{font-size:9px;letter-spacing:3px;color:var(--gold);text-transform:uppercase;margin-bottom:16px;display:flex;align-items:center;gap:10px;}
-.card-eyebrow::after{content:'';flex:1;height:1px;background:var(--border);}
-.card h3{font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:600;color:var(--white);margin-bottom:8px;letter-spacing:0.5px;}
-.card p{color:var(--muted);font-size:12px;line-height:1.8;margin-bottom:24px;letter-spacing:0.5px;}
-.field-label{font-size:9px;letter-spacing:2px;color:var(--gold);text-transform:uppercase;margin-bottom:8px;margin-top:20px;}
-textarea{width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:'Montserrat',sans-serif;font-size:13px;padding:16px 18px;resize:vertical;outline:none;transition:border 0.3s;min-height:110px;line-height:1.7;}
-textarea:focus{border-color:var(--gold);}
-textarea::placeholder{color:var(--muted);}
-.upload-box{background:var(--surface);border:1px dashed var(--border);padding:24px;text-align:center;cursor:pointer;transition:all 0.3s;margin-bottom:6px;}
-.upload-box:hover{border-color:var(--gold);background:var(--goldglow);}
-.upload-box.has-file{border-color:var(--green);border-style:solid;}
-.upload-icon{font-size:24px;margin-bottom:8px;}
-.upload-text{font-size:11px;color:var(--muted);letter-spacing:1px;}
-.upload-sub{font-size:10px;color:var(--muted);margin-top:4px;}
-.upload-sub.loaded{color:var(--green);}
-.options-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;}
-.option-pill{padding:7px 16px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:'Montserrat',sans-serif;font-size:10px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all 0.2s;}
-.option-pill.sel{border-color:var(--gold);color:var(--gold);background:var(--goldglow);}
-.btn-primary{width:100%;padding:16px;background:transparent;border:1px solid var(--gold);color:var(--gold);font-family:'Montserrat',sans-serif;font-size:10px;font-weight:600;letter-spacing:3px;text-transform:uppercase;cursor:pointer;transition:all 0.3s;position:relative;overflow:hidden;margin-bottom:10px;}
-.btn-primary::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,var(--gold),var(--gold2));opacity:0;transition:opacity 0.3s;}
-.btn-primary:hover::before{opacity:1;}
-.btn-primary:hover{color:var(--black);}
-.btn-primary span{position:relative;z-index:1;}
-.btn-primary:disabled{opacity:0.3;cursor:not-allowed;}
-.btn-download{width:100%;padding:16px;background:linear-gradient(135deg,var(--gold),var(--gold2));border:none;color:var(--black);font-family:'Montserrat',sans-serif;font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;cursor:pointer;transition:all 0.3s;display:none;margin-bottom:10px;}
-.btn-download:hover{transform:translateY(-1px);}
-.output-wrap{background:var(--surface);border:1px solid var(--border);margin-top:20px;display:none;}
-.output-wrap.show{display:block;}
-.output-header{display:flex;justify-content:space-between;align-items:center;padding:12px 20px;border-bottom:1px solid var(--border);}
-.output-label{font-size:9px;letter-spacing:2px;color:var(--gold);text-transform:uppercase;}
-.copy-btn{background:transparent;border:1px solid var(--border);color:var(--muted);font-size:9px;padding:4px 12px;cursor:pointer;font-family:'Montserrat',sans-serif;text-transform:uppercase;transition:all 0.2s;}
-.copy-btn:hover{border-color:var(--gold);color:var(--gold);}
-.output-body{padding:24px;font-size:13px;line-height:1.9;white-space:pre-wrap;max-height:440px;overflow-y:auto;}
-.loader{display:none;text-align:center;padding:40px;}
-.loader-ring{width:36px;height:36px;margin:0 auto 16px;border:1px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin 1s linear infinite;}
-@keyframes spin{to{transform:rotate(360deg)}}
-.loader-text{font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;}
-.success-note{display:none;margin-top:12px;padding:12px 20px;border:1px solid rgba(78,203,141,0.3);background:rgba(78,203,141,0.05);font-size:10px;letter-spacing:1px;color:var(--green);text-transform:uppercase;}
-.success-note.show{display:block;}
-.diff-wrap{background:var(--surface);border:1px solid var(--border);margin-top:20px;display:none;}
-.diff-wrap.show{display:block;}
-.diff-nav{display:flex;border-bottom:1px solid var(--border);}
-.diff-btn{padding:12px 20px;border:none;background:transparent;color:var(--muted);font-family:'Montserrat',sans-serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:all 0.2s;border-right:1px solid var(--border);position:relative;}
-.diff-btn::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:var(--gold);transform:scaleX(0);transition:transform 0.2s;}
-.diff-btn.on{color:var(--gold);}
-.diff-btn.on::after{transform:scaleX(1);}
-.diff-copy{margin-left:auto;padding:12px 20px;border:none;background:transparent;color:var(--muted);font-family:'Montserrat',sans-serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:all 0.2s;}
-.diff-copy:hover{color:var(--gold);}
-.diff-body{padding:24px;font-size:13px;line-height:1.9;white-space:pre-wrap;max-height:440px;overflow-y:auto;}
-/* CHAT */
-.chat-window{background:var(--surface);border:1px solid var(--border);min-height:380px;max-height:480px;overflow-y:auto;padding:24px;margin-bottom:16px;display:flex;flex-direction:column;gap:16px;}
-.chat-welcome{text-align:center;margin:auto;padding:40px 20px;}
-.chat-welcome-icon{font-size:32px;color:var(--gold);margin-bottom:12px;}
-.chat-welcome-title{font-family:'Cormorant Garamond',serif;font-size:24px;color:var(--white);margin-bottom:8px;}
-.chat-welcome-sub{font-size:11px;color:var(--muted);letter-spacing:1px;}
-.chat-msg{display:flex;gap:12px;animation:fadeUp 0.3s ease;}
-.chat-msg.user{flex-direction:row-reverse;}
-.chat-bubble{max-width:75%;padding:14px 18px;font-size:13px;line-height:1.7;}
-.chat-msg.user .chat-bubble{background:var(--goldglow);border:1px solid rgba(201,168,76,0.3);color:var(--text);}
-.chat-msg.ai .chat-bubble{background:var(--card);border:1px solid var(--border);color:var(--text);}
-.chat-avatar{width:32px;height:32px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;border:1px solid var(--border);background:var(--surface);color:var(--gold);font-family:'Cormorant Garamond',serif;font-weight:700;}
-.chat-typing{display:flex;gap:4px;align-items:center;padding:14px 18px;}
-.chat-typing span{width:6px;height:6px;background:var(--gold);border-radius:50%;animation:typing 1.2s infinite;}
-.chat-typing span:nth-child(2){animation-delay:0.2s;}
-.chat-typing span:nth-child(3){animation-delay:0.4s;}
-@keyframes typing{0%,100%{opacity:0.3;transform:translateY(0)}50%{opacity:1;transform:translateY(-4px)}}
-.chat-input-row{display:flex;gap:10px;align-items:flex-end;}
-.chat-textarea{flex:1;min-height:52px;max-height:120px;resize:none;padding:14px 18px;}
-.chat-send-btn{width:52px;height:52px;flex-shrink:0;background:linear-gradient(135deg,var(--gold),var(--gold2));border:none;color:var(--black);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;}
-.chat-send-btn:hover{transform:translateY(-2px);box-shadow:0 4px 16px rgba(201,168,76,0.3);}
-.chat-send-btn:disabled{opacity:0.4;transform:none;cursor:not-allowed;}
-footer{position:relative;z-index:5;text-align:center;padding:32px;border-top:1px solid var(--border);}
-.footer-text{font-size:10px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;display:flex;align-items:center;justify-content:center;gap:16px;}
-.footer-text::before,.footer-text::after{content:'';width:30px;height:1px;background:var(--gold);opacity:0.3;}
-.footer-gold{color:var(--gold);}
-::-webkit-scrollbar{width:4px;}
-::-webkit-scrollbar-track{background:var(--surface);}
-::-webkit-scrollbar-thumb{background:var(--border);}
-::-webkit-scrollbar-thumb:hover{background:var(--gold);}
 
-/* Dispatch styles */
-.dispatch-status{display:flex;align-items:center;gap:12px;padding:16px 20px;border:1px solid var(--border);background:var(--surface);margin-bottom:20px;}
-.dispatch-status-icon{font-size:20px;}
-.dispatch-status-text{font-size:12px;color:var(--muted);letter-spacing:0.5px;}
-.dispatch-status.live{border-color:var(--green);background:rgba(78,203,141,0.05);}
-.dispatch-status.live .dispatch-status-text{color:var(--green);}
-.dispatch-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px;}
-.dscard{background:var(--surface);border:1px solid var(--border);padding:20px;text-align:center;position:relative;overflow:hidden;}
-.dscard::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:0.4;}
-.dscard-val{font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:700;color:var(--gold);margin-bottom:4px;}
-.dscard-label{font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;}
-.quick-questions{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px;}
-.quick-btn{padding:8px 16px;background:var(--surface);border:1px solid var(--border);color:var(--muted);font-family:'Montserrat',sans-serif;font-size:10px;letter-spacing:1px;cursor:pointer;transition:all 0.2s;text-transform:uppercase;}
-.quick-btn:hover{border-color:var(--gold);color:var(--gold);background:var(--goldglow);}
-</style>
-</head>
-<body>
-<div class="bg-luxury"></div>
-<div class="bg-lines"></div>
-<div class="bg-vignette"></div>
+/* =========================
+   RESPONSIVE FIXES
+========================= */
 
-<header>
-  <div class="header-left">
-    <div class="logo-mark">
-      <svg viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M11 2L13.5 8.5H20L14.5 12.5L16.5 19L11 15L5.5 19L7.5 12.5L2 8.5H8.5L11 2Z" stroke="#c9a84c" stroke-width="1" fill="none"/>
-        <circle cx="11" cy="11" r="3" stroke="#c9a84c" stroke-width="0.5" fill="rgba(201,168,76,0.1)"/>
-      </svg>
-    </div>
-    <div class="brand">
-      <div class="brand-name">AZHAR — AI</div>
-      <div class="brand-sub">Executive Intelligence Platform</div>
-    </div>
-  </div>
-  <div class="header-right">
-    <div class="status-indicator"><div class="status-dot"></div>System Active</div>
-    <div class="version">V 2.0</div>
-  </div>
-</header>
-
-<main>
-  <div class="hero">
-    <div class="hero-eyebrow">Intelligence Redefined</div>
-    <h1 class="hero-title">Your Personal<br><strong>AI Assistant</strong></h1>
-    <p class="hero-desc">Precision-engineered for executive productivity. PowerPoint · Excel · Summaries · Email · Chat</p>
-  </div>
-  <div class="divider"><div class="divider-line"></div><div class="divider-diamond"></div><div class="divider-line"></div></div>
-
-  <div class="nav-tabs">
-    <button class="nav-tab active" onclick="switchTab('ppt',this)"><span class="nav-icon">📊</span>PowerPoint</button>
-    <button class="nav-tab" onclick="switchTab('excel',this)"><span class="nav-icon">📐</span>Excel</button>
-    <button class="nav-tab" onclick="switchTab('summary',this)"><span class="nav-icon">📋</span>Summaries</button>
-    <button class="nav-tab" onclick="switchTab('email',this)"><span class="nav-icon">✉️</span>Email</button>
-    <button class="nav-tab" onclick="switchTab('chat',this)"><span class="nav-icon">💬</span>Chat</button>
-    <button class="nav-tab" onclick="switchTab('dispatch',this);loadDispatchStatus()"><span class="nav-icon">🚚</span>Dispatch</button>
-  </div>
-
-  <!-- POWERPOINT -->
-  <div class="panel active" id="ppt">
-    <div class="card">
-      <div class="card-eyebrow">Slide Builder</div>
-      <h3>Generate & Download Presentations</h3>
-      <p>Describe your topic or upload notes — receive a complete slide deck with a downloadable PowerPoint file.</p>
-      <div class="field-label">Upload Notes File (Optional)</div>
-      <div class="upload-box" id="ppt-upload-box" onclick="document.getElementById('ppt-file').click()">
-        <div class="upload-icon">📄</div>
-        <div class="upload-text">Attach .txt or .csv document</div>
-        <div class="upload-sub" id="ppt-file-name">AI will construct slides from your content</div>
-      </div>
-      <input type="file" id="ppt-file" accept=".txt,.csv" style="display:none" onchange="handlePPTFile(this)"/>
-      <div class="field-label">Presentation Topic</div>
-      <textarea id="ppt-topic" placeholder="e.g. Q2 Performance Review — Leadership Briefing"></textarea>
-      <div class="field-label">Slides</div>
-      <div class="options-row" id="slide-opts">
-        <div class="option-pill sel" onclick="selOpt(this,'slide-opts')">5</div>
-        <div class="option-pill" onclick="selOpt(this,'slide-opts')">8</div>
-        <div class="option-pill" onclick="selOpt(this,'slide-opts')">10</div>
-        <div class="option-pill" onclick="selOpt(this,'slide-opts')">12</div>
-        <div class="option-pill" onclick="selOpt(this,'slide-opts')">15</div>
-      </div>
-      <div class="field-label">Tone</div>
-      <div class="options-row" id="ppt-tone">
-        <div class="option-pill sel" onclick="selOpt(this,'ppt-tone')">Executive</div>
-        <div class="option-pill" onclick="selOpt(this,'ppt-tone')">Professional</div>
-        <div class="option-pill" onclick="selOpt(this,'ppt-tone')">Persuasive</div>
-        <div class="option-pill" onclick="selOpt(this,'ppt-tone')">Strategic</div>
-      </div>
-      <button class="btn-primary" id="ppt-btn" onclick="runPPT()"><span>Generate Presentation</span></button>
-      <button class="btn-download" id="ppt-dl" onclick="downloadPPTX()">⬇ Download as PowerPoint (.pptx)</button>
-      <div class="loader" id="ppt-loader"><div class="loader-ring"></div><div class="loader-text">Constructing your presentation</div></div>
-      <div class="success-note" id="ppt-success">✓ Presentation ready — download your .pptx file above</div>
-      <div class="output-wrap" id="ppt-out">
-        <div class="output-header"><span class="output-label">Slide Outline</span><button class="copy-btn" onclick="copyEl('ppt-out-text')">Copy</button></div>
-        <div class="output-body" id="ppt-out-text"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- EXCEL -->
-  <div class="panel" id="excel">
-    <div class="card">
-      <div class="card-eyebrow">Data Intelligence</div>
-      <h3>Excel Analysis & Formula Correction</h3>
-      <p>Upload your spreadsheet as CSV or describe your formula — receive precise corrections and data insights.</p>
-      <div class="field-label">Upload Excel File (Save as CSV First)</div>
-      <div class="upload-box" id="excel-upload-box" onclick="document.getElementById('excel-file').click()">
-        <div class="upload-icon">📊</div>
-        <div class="upload-text">Attach .csv or .txt spreadsheet</div>
-        <div class="upload-sub" id="excel-file-name">File → Save As → CSV in Excel</div>
-      </div>
-      <input type="file" id="excel-file" accept=".csv,.txt" style="display:none" onchange="handleExcelFile(this)"/>
-      <div class="field-label">Formula or Request</div>
-      <textarea id="excel-formula" placeholder="e.g. Fix my VLOOKUP returning #N/A&#10;e.g. Analyse this data and identify key trends"></textarea>
-      <div class="field-label">Context (Optional)</div>
-      <textarea id="excel-context" style="min-height:60px" placeholder="e.g. Column A = Date, Column B = Region, Column C = Revenue..."></textarea>
-      <button class="btn-primary" id="excel-btn" onclick="runExcel()"><span>Analyse Data</span></button>
-      <div class="loader" id="excel-loader"><div class="loader-ring"></div><div class="loader-text">Analysing your data</div></div>
-      <div class="output-wrap" id="excel-out">
-        <div class="output-header"><span class="output-label">Analysis Complete</span><button class="copy-btn" onclick="copyEl('excel-out-text')">Copy</button></div>
-        <div class="output-body" id="excel-out-text"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- SUMMARY -->
-  <div class="panel" id="summary">
-    <div class="card">
-      <div class="card-eyebrow">Document Intelligence</div>
-      <h3>Executive Summary Generator</h3>
-      <p>Paste any document, report or correspondence — receive a precise executive summary in your preferred format.</p>
-      <div class="field-label">Source Document</div>
-      <textarea id="summary-text" style="min-height:160px" placeholder="Paste your document, report, email thread or meeting notes here..."></textarea>
-      <div class="field-label">Output Format</div>
-      <div class="options-row" id="sum-tone">
-        <div class="option-pill sel" onclick="selOpt(this,'sum-tone')">Executive Brief</div>
-        <div class="option-pill" onclick="selOpt(this,'sum-tone')">Bullet Points</div>
-        <div class="option-pill" onclick="selOpt(this,'sum-tone')">Action Items</div>
-        <div class="option-pill" onclick="selOpt(this,'sum-tone')">Key Decisions</div>
-      </div>
-      <button class="btn-primary" id="sum-btn" onclick="runSummary()"><span>Generate Summary</span></button>
-      <div class="loader" id="sum-loader"><div class="loader-ring"></div><div class="loader-text">Processing document</div></div>
-      <div class="output-wrap" id="sum-out">
-        <div class="output-header"><span class="output-label">Summary</span><button class="copy-btn" onclick="copyEl('sum-out-text')">Copy</button></div>
-        <div class="output-body" id="sum-out-text"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- EMAIL -->
-  <div class="panel" id="email">
-    <div class="card">
-      <div class="card-eyebrow">Communication Excellence</div>
-      <h3>Email Refinement & Composition</h3>
-      <p>Submit your draft correspondence — receive a professionally refined version with subject line options.</p>
-      <div class="field-label">Your Draft or Request</div>
-      <textarea id="email-body" style="min-height:140px" placeholder="Paste your email draft here, or describe what you need to communicate..."></textarea>
-      <div class="field-label">Refinement Type</div>
-      <div class="options-row" id="email-action">
-        <div class="option-pill sel" onclick="selOpt(this,'email-action')">Fix Grammar</div>
-        <div class="option-pill" onclick="selOpt(this,'email-action')">Make Professional</div>
-        <div class="option-pill" onclick="selOpt(this,'email-action')">Make Friendly</div>
-        <div class="option-pill" onclick="selOpt(this,'email-action')">Shorten</div>
-        <div class="option-pill" onclick="selOpt(this,'email-action')">Full Rewrite</div>
-        <div class="option-pill" onclick="selOpt(this,'email-action')">Write from Scratch</div>
-      </div>
-      <div class="field-label">Recipient (Optional)</div>
-      <textarea id="email-recipient" style="min-height:50px" placeholder="e.g. Senior management, client, HR department..."></textarea>
-      <button class="btn-primary" id="email-btn" onclick="runEmail()"><span>Refine Email</span></button>
-      <div class="loader" id="email-loader"><div class="loader-ring"></div><div class="loader-text">Refining your correspondence</div></div>
-      <div class="diff-wrap" id="email-out">
-        <div class="diff-nav">
-          <button class="diff-btn on" onclick="switchDiff('corrected',this)">Refined Email</button>
-          <button class="diff-btn" onclick="switchDiff('subject',this)">Subject Lines</button>
-          <button class="diff-btn" onclick="switchDiff('changes',this)">Changes Made</button>
-          <button class="diff-copy" onclick="copyDiff()">Copy</button>
-        </div>
-        <div class="diff-body" id="diff-corrected"></div>
-        <div class="diff-body" id="diff-subject" style="display:none"></div>
-        <div class="diff-body" id="diff-changes" style="display:none"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- CHAT -->
-  <div class="panel" id="chat">
-    <div class="card">
-      <div class="card-eyebrow">General Intelligence</div>
-      <h3>Ask Me Anything</h3>
-      <p>Your personal AI assistant. Ask any question, get advice, draft content, solve problems — anything at all.</p>
-      <div class="chat-window" id="chat-window">
-        <div class="chat-welcome">
-          <div class="chat-welcome-icon">✦</div>
-          <div class="chat-welcome-title">How can I assist you today?</div>
-          <div class="chat-welcome-sub">Ask me anything — I am here to help</div>
-        </div>
-      </div>
-      <div class="chat-input-row">
-        <textarea id="chat-input" class="chat-textarea" placeholder="Ask anything..." onkeydown="chatKeydown(event)" rows="2"></textarea>
-        <button class="chat-send-btn" id="chat-send" onclick="sendChat()">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="22" y1="2" x2="11" y2="13"></line>
-            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-          </svg>
-        </button>
-      </div>
-      <div style="text-align:right;margin-top:8px;">
-        <button onclick="clearChat()" style="background:transparent;border:1px solid var(--border);color:var(--muted);font-family:Montserrat,sans-serif;font-size:9px;letter-spacing:2px;padding:6px 14px;cursor:pointer;text-transform:uppercase;">Clear Chat</button>
-      </div>
-    </div>
-  </div>
-  <!-- DISPATCH COPILOT -->
-  <div class="panel" id="dispatch">
-    <div class="card">
-      <div class="card-eyebrow">Dispatch Intelligence</div>
-      <h3>Daily Dispatch Copilot</h3>
-      <p>Upload today's dispatch report once — your entire team can ask questions instantly. No more digging through Excel.</p>
-
-      <!-- Status bar -->
-      <div class="dispatch-status" id="dispatch-status">
-        <div class="dispatch-status-icon">⏳</div>
-        <div class="dispatch-status-text">Checking for today's data...</div>
-      </div>
-
-      <!-- Summary cards -->
-      <div class="dispatch-summary" id="dispatch-summary" style="display:none">
-        <div class="dscard" id="ds-orders"><div class="dscard-val" id="ds-orders-val">—</div><div class="dscard-label">Total Orders</div></div>
-        <div class="dscard" id="ds-value"><div class="dscard-val" id="ds-value-val">—</div><div class="dscard-label">Total Value (AED)</div></div>
-        <div class="dscard" id="ds-lulu"><div class="dscard-val" id="ds-lulu-val">—</div><div class="dscard-label">Lulu Orders</div></div>
-        <div class="dscard" id="ds-routes"><div class="dscard-val" id="ds-routes-val">—</div><div class="dscard-label">Routes</div></div>
-        <div class="dscard" id="ds-drivers"><div class="dscard-val" id="ds-drivers-val">—</div><div class="dscard-label">Drivers</div></div>
-        <div class="dscard" id="ds-luluval"><div class="dscard-val" id="ds-luluval-val">—</div><div class="dscard-label">Lulu Value (AED)</div></div>
-      </div>
-
-      <!-- Quick questions -->
-      <div class="field-label" id="quick-q-label" style="display:none">Quick Questions</div>
-      <div class="quick-questions" id="quick-questions" style="display:none">
-        <button class="quick-btn" onclick="askQuick('How many Lulu orders do we have today and what is total value?')">🛒 Lulu Orders</button>
-        <button class="quick-btn" onclick="askQuick('Break down orders and values by city')">🏙️ By City</button>
-        <button class="quick-btn" onclick="askQuick('Who are the top 5 drivers by number of deliveries today?')">🚚 Top Drivers</button>
-        <button class="quick-btn" onclick="askQuick('What are the top 10 customers by order value today?')">💰 Top Customers</button>
-        <button class="quick-btn" onclick="askQuick('Show me all Lulu Food orders and their values')">🍎 Lulu Food</button>
-        <button class="quick-btn" onclick="askQuick('What is the total dispatch value for Dubai today?')">📍 Dubai Orders</button>
-        <button class="quick-btn" onclick="askQuick('What is the total dispatch value for Abu Dhabi today?')">📍 Abu Dhabi</button>
-        <button class="quick-btn" onclick="askQuick('How many orders does each route have today?')">🗺️ Routes</button>
-      </div>
-
-      <!-- Ask anything -->
-      <div class="field-label" id="dispatch-ask-label" style="display:none">Ask Anything About Today's Dispatch</div>
-      <div class="chat-input-row" id="dispatch-input-row" style="display:none">
-        <textarea id="dispatch-input" class="chat-textarea" placeholder="e.g. How many Lulu orders? What is total value? Which driver has most deliveries?" onkeydown="dispatchKeydown(event)" rows="2"></textarea>
-        <button class="chat-send-btn" id="dispatch-send" onclick="askDispatch()">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="22" y1="2" x2="11" y2="13"></line>
-            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-          </svg>
-        </button>
-      </div>
-
-      <!-- Answer -->
-      <div class="output-wrap" id="dispatch-out" style="margin-top:14px;">
-        <div class="output-header"><span class="output-label">✦ Dispatch Answer</span><button class="copy-btn" onclick="copyEl('dispatch-out-text')">Copy</button></div>
-        <div class="output-body" id="dispatch-out-text"></div>
-      </div>
-
-      <!-- Admin upload section -->
-      <div style="margin-top:32px;padding-top:24px;border-top:1px solid var(--border);">
-        <div class="card-eyebrow">Admin Only — Upload Today's Data</div>
-        <div class="upload-box" id="dispatch-upload-box" onclick="document.getElementById('dispatch-file').click()">
-          <div class="upload-icon">📊</div>
-          <div class="upload-text">Upload today's dispatch report (.csv or .xlsx)</div>
-          <div class="upload-sub" id="dispatch-file-name">Export from your system as CSV then upload here</div>
-        </div>
-        <input type="file" id="dispatch-file" accept=".csv,.txt,.xlsx,.xls" style="display:none" onchange="handleDispatchFile(this)"/>
-        <div class="loader" id="dispatch-upload-loader" style="display:none;text-align:center;padding:20px;">
-          <div class="loader-ring"></div>
-          <div class="loader-text">Processing dispatch data...</div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-</main>
-
-<footer>
-  <div class="footer-text">
-    <span class="footer-gold">✦</span> Powered by Azhar <span class="footer-gold">✦</span>
-  </div>
-</footer>
-
-<script>
-let activeDiff='corrected';
-let lastPPTSlides=[];
-let chatHistory=[];
-
-function switchTab(id,btn){
-  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
-  document.getElementById(id).classList.add('active');btn.classList.add('active');
-}
-function selOpt(el,g){document.querySelectorAll('#'+g+' .option-pill').forEach(e=>e.classList.remove('sel'));el.classList.add('sel');}
-function getOpt(g){return document.querySelector('#'+g+' .option-pill.sel')?.textContent.trim()||'';}
-function switchDiff(tab,btn){
-  activeDiff=tab;
-  document.querySelectorAll('.diff-btn').forEach(t=>t.classList.remove('on'));btn.classList.add('on');
-  document.querySelectorAll('.diff-body').forEach(c=>c.style.display='none');
-  document.getElementById('diff-'+tab).style.display='block';
-}
-function copyDiff(){navigator.clipboard.writeText(document.getElementById('diff-'+activeDiff).textContent).then(()=>{const btn=event.target;btn.textContent='Copied';setTimeout(()=>btn.textContent='Copy',2000);});}
-function copyEl(id){navigator.clipboard.writeText(document.getElementById(id).textContent).then(()=>{const btn=event.target;btn.textContent='Copied';setTimeout(()=>btn.textContent='Copy',2000);});}
-
-function handleExcelFile(input){
-  const file=input.files[0];if(!file)return;
-  const nameEl=document.getElementById('excel-file-name');
-  const box=document.getElementById('excel-upload-box');
-  const reader=new FileReader();
-  reader.onload=function(e){
-    const text=e.target.result;
-    document.getElementById('excel-context').value='FILE: '+file.name+'\n\nDATA:\n'+text.substring(0,4000);
-    nameEl.textContent='✓ '+file.name+' — '+text.split('\n').length+' rows loaded';
-    nameEl.classList.add('loaded');box.classList.add('has-file');
-    if(!document.getElementById('excel-formula').value.trim())
-      document.getElementById('excel-formula').value='Analyse this data. Identify key findings, fix any formula errors, and provide a concise executive summary.';
-  };
-  reader.readAsText(file);
-}
-function handlePPTFile(input){
-  const file=input.files[0];if(!file)return;
-  const nameEl=document.getElementById('ppt-file-name');
-  const box=document.getElementById('ppt-upload-box');
-  const reader=new FileReader();
-  reader.onload=function(e){
-    const text=e.target.result;
-    const topic=document.getElementById('ppt-topic');
-    if(!topic.value.trim())topic.value='Create a professional presentation based on:\n\n'+text.substring(0,3000);
-    nameEl.textContent='✓ '+file.name+' loaded';
-    nameEl.classList.add('loaded');box.classList.add('has-file');
-  };
-  reader.readAsText(file);
+html,
+body {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  scroll-behavior: smooth;
 }
 
-async function callAPI(endpoint,data){
-  const r=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
-  const d=await r.json();if(d.error)throw new Error(d.error);return d.result||'No response.';
-}
-async function callExcelAPI(fd){
-  const r=await fetch('/api/excel',{method:'POST',body:fd});
-  const d=await r.json();if(d.error)throw new Error(d.error);return d.result||'No response.';
-}
-async function callPPTAPI(fd){
-  const r=await fetch('/api/powerpoint',{method:'POST',body:fd});
-  const d=await r.json();if(d.error)throw new Error(d.error);return d.result||'No response.';
-}
-function setLoading(lid,bid,on){document.getElementById(lid).style.display=on?'block':'none';document.getElementById(bid).disabled=on;}
-function showOut(outId,textId,text){document.getElementById(textId).textContent=text;document.getElementById(outId).classList.add('show');}
-
-function parseSlides(text){
-  const slides=[];
-  const blocks=text.split(/Slide\s+\d+[:\-]/i).filter(b=>b.trim());
-  blocks.forEach(block=>{
-    const lines=block.trim().split('\n').filter(l=>l.trim());
-    if(!lines.length)return;
-    const title=lines[0].replace(/^[*#\-\s]+/,'').trim();
-    const bullets=[];let note='';
-    lines.slice(1).forEach(l=>{
-      const clean=l.replace(/^[\-\*\u2022]\s*/,'').trim();
-      if(!clean)return;
-      if(l.toLowerCase().includes('speaker note')||l.toLowerCase().includes('note:')){note=clean.replace(/speaker notes?:?/i,'').trim();}
-      else if(bullets.length<5)bullets.push(clean);
-    });
-    if(title)slides.push({title,bullets,note});
-  });
-  return slides;
+/* MAIN LAYOUT */
+main {
+  position: relative;
+  z-index: 5;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 60px 20px 80px;
 }
 
-function downloadPPTX(){
-  if(!lastPPTSlides.length){alert('Please generate slides first.');return;}
-  const topic=document.getElementById('ppt-topic').value.trim()||'Presentation';
-  const pptx=new PptxGenJS();
-  pptx.layout='LAYOUT_16x9';pptx.author='AZHAR-AI';pptx.title=topic;
-  const ts=pptx.addSlide();
-  ts.background={color:'050505'};
-  ts.addShape(pptx.ShapeType.rect,{x:0.5,y:2.4,w:9,h:0.02,fill:{color:'c9a84c'}});
-  ts.addText(topic,{x:0.5,y:1.0,w:9,h:1.4,fontSize:40,bold:true,color:'f5e0a0',fontFace:'Georgia',align:'center'});
-  ts.addText('AZHAR-AI  |  Executive Intelligence Platform',{x:0.5,y:4.5,w:9,h:0.5,fontSize:11,color:'7a7660',fontFace:'Calibri',align:'center',charSpacing:3});
-  lastPPTSlides.forEach(slide=>{
-    const s=pptx.addSlide();
-    s.background={color:'0a0a08'};
-    s.addShape(pptx.ShapeType.rect,{x:0,y:0,w:'100%',h:1.1,fill:{color:'111109'}});
-    s.addShape(pptx.ShapeType.rect,{x:0,y:1.1,w:'100%',h:0.02,fill:{color:'c9a84c'}});
-    s.addText(slide.title,{x:0.4,y:0.15,w:9.2,h:0.85,fontSize:26,bold:true,color:'f5e0a0',fontFace:'Georgia'});
-    if(slide.bullets.length){
-      const bt=slide.bullets.map(b=>({text:b,options:{bullet:{type:'bullet'},fontSize:15,color:'c8c4b0',fontFace:'Calibri',paraSpaceAfter:10}}));
-      s.addText(bt,{x:0.5,y:1.3,w:9,h:3.8});
-    }
-    if(slide.note)s.addNotes(slide.note);
-    s.addText('AZHAR-AI',{x:8.2,y:5.1,w:1.6,h:0.4,fontSize:8,color:'c9a84c',fontFace:'Calibri',align:'right',charSpacing:2});
-  });
-  const es=pptx.addSlide();
-  es.background={color:'050505'};
-  es.addShape(pptx.ShapeType.rect,{x:0.5,y:2.6,w:9,h:0.02,fill:{color:'c9a84c'}});
-  es.addText('Thank You',{x:0.5,y:1.4,w:9,h:1.2,fontSize:48,bold:true,color:'f5e0a0',fontFace:'Georgia',align:'center'});
-  es.addText('Powered by Azhar',{x:0.5,y:4.5,w:9,h:0.5,fontSize:12,color:'c9a84c',fontFace:'Calibri',align:'center',charSpacing:3});
-  pptx.writeFile({fileName:(topic.replace(/[^a-z0-9]/gi,'_').substring(0,30)||'AZHAR_AI')+'.pptx'});
+/* HERO */
+.hero {
+  width: 100%;
+  text-align: center;
 }
 
-async function runPPT(){
-  const topic=document.getElementById('ppt-topic').value.trim();
-  if(!topic){alert('Please enter a presentation topic.');return;}
-  document.getElementById('ppt-out').classList.remove('show');
-  document.getElementById('ppt-success').classList.remove('show');
-  document.getElementById('ppt-dl').style.display='none';
-  setLoading('ppt-loader','ppt-btn',true);
-  try{
-    const fd=new FormData();
-    fd.append('topic',topic);fd.append('slides',getOpt('slide-opts'));fd.append('tone',getOpt('ppt-tone'));
-    const fi=document.getElementById('ppt-file');
-    if(fi.files[0])fd.append('file',fi.files[0]);
-    const r=await callPPTAPI(fd);
-    lastPPTSlides=parseSlides(r);
-    showOut('ppt-out','ppt-out-text',r);
-    document.getElementById('ppt-success').classList.add('show');
-    document.getElementById('ppt-dl').style.display='block';
-  }catch(e){alert('Error: '+e.message);}
-  setLoading('ppt-loader','ppt-btn',false);
+.hero-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(42px, 7vw, 72px);
+  line-height: 1.1;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
-async function runExcel(){
-  const f=document.getElementById('excel-formula').value.trim();
-  if(!f){alert('Please enter a formula or request.');return;}
-  document.getElementById('excel-out').classList.remove('show');
-  setLoading('excel-loader','excel-btn',true);
-  try{
-    const fd=new FormData();fd.append('question',f);
-    const fi=document.getElementById('excel-file');
-    if(fi.files[0])fd.append('file',fi.files[0]);
-    else{const c=document.getElementById('excel-context').value.trim();if(c)fd.append('question',f+'\n\nData:\n'+c);}
-    const r=await callExcelAPI(fd);
-    showOut('excel-out','excel-out-text',r);
-  }catch(e){alert('Error: '+e.message);}
-  setLoading('excel-loader','excel-btn',false);
+.hero-desc {
+  max-width: 700px;
+  margin: 0 auto;
+  line-height: 1.8;
+  overflow-wrap: break-word;
 }
 
-async function runSummary(){
-  const t=document.getElementById('summary-text').value.trim();
-  if(!t){alert('Please paste your document.');return;}
-  const style=getOpt('sum-tone');
-  const styles={'Executive Brief':'Write a concise 3-5 sentence executive summary.','Bullet Points':'Summarise as clear bullet points by theme.','Action Items':'Extract all action items and next steps.','Key Decisions':'Identify key decisions with supporting context.'};
-  document.getElementById('sum-out').classList.remove('show');
-  setLoading('sum-loader','sum-btn',true);
-  try{
-    const r=await callAPI('/api/chat',{prompt:'You are AZHAR-AI, an executive assistant.\n\nSummarise the following. Style: '+style+' - '+styles[style]+'\n\nDocument:\n'+t});
-    showOut('sum-out','sum-out-text',r);
-  }catch(e){alert('Error: '+e.message);}
-  setLoading('sum-loader','sum-btn',false);
+/* CARDS */
+.card {
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
 }
 
-async function runEmail(){
-  const body=document.getElementById('email-body').value.trim();
-  if(!body){alert('Please enter your email draft.');return;}
-  const action=getOpt('email-action');
-  const recipient=document.getElementById('email-recipient').value.trim();
-  document.getElementById('email-out').classList.remove('show');
-  setLoading('email-loader','email-btn',true);
-  try{
-    const raw=await callAPI('/api/chat',{prompt:'You are AZHAR-AI, a professional correspondence specialist.\n\nTask: '+action+'\n'+(recipient?'Recipient: '+recipient:'')+'\nEmail:\n'+body+'\n\nRespond in this EXACT format:\n\nCORRECTED EMAIL:\n[refined email]\n\nSUBJECT LINE:\n[3 subject line options]\n\nWHAT CHANGED:\n[bullet points of improvements]'});
-    const c=raw.match(/CORRECTED EMAIL:\s*([\s\S]*?)(?=SUBJECT LINE:|$)/i);
-    const s=raw.match(/SUBJECT LINE:\s*([\s\S]*?)(?=WHAT CHANGED:|$)/i);
-    const w=raw.match(/WHAT CHANGED:\s*([\s\S]*?)$/i);
-    document.getElementById('diff-corrected').textContent=c?c[1].trim():raw;
-    document.getElementById('diff-subject').textContent=s?s[1].trim():'See refined email.';
-    document.getElementById('diff-changes').textContent=w?w[1].trim():'See refined email.';
-    document.querySelectorAll('.diff-btn').forEach(t=>t.classList.remove('on'));
-    document.querySelectorAll('.diff-btn')[0].classList.add('on');
-    document.querySelectorAll('.diff-body').forEach(c=>c.style.display='none');
-    document.getElementById('diff-corrected').style.display='block';
-    activeDiff='corrected';
-    document.getElementById('email-out').classList.add('show');
-  }catch(e){alert('Error: '+e.message);}
-  setLoading('email-loader','email-btn',false);
+.card h3,
+.card p,
+.output-body,
+.chat-bubble,
+.dispatch-status-text {
+  overflow-wrap: break-word;
+  word-break: break-word;
+  white-space: normal;
 }
 
-// CHAT
-function chatKeydown(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChat();}}
-
-function clearChat(){
-  chatHistory=[];
-  document.getElementById('chat-window').innerHTML='<div class="chat-welcome"><div class="chat-welcome-icon">✦</div><div class="chat-welcome-title">How can I assist you today?</div><div class="chat-welcome-sub">Ask me anything — I am here to help</div></div>';
+/* TEXTAREA */
+textarea {
+  width: 100%;
+  max-width: 100%;
+  min-height: 120px;
+  resize: vertical;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
-function addMessage(role,text){
-  const win=document.getElementById('chat-window');
-  const welcome=win.querySelector('.chat-welcome');if(welcome)welcome.remove();
-  const div=document.createElement('div');
-  div.className='chat-msg '+role;
-  const avatar=role==='user'?'A':'✦';
-  div.innerHTML='<div class="chat-avatar">'+avatar+'</div><div class="chat-bubble">'+text.replace(/\n/g,'<br>')+'</div>';
-  win.appendChild(div);win.scrollTop=win.scrollHeight;
+/* NAVIGATION */
+.nav-tabs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  width: 100%;
 }
 
-function addTyping(){
-  const win=document.getElementById('chat-window');
-  const div=document.createElement('div');
-  div.className='chat-msg ai';div.id='chat-typing-indicator';
-  div.innerHTML='<div class="chat-avatar">✦</div><div class="chat-bubble"><div class="chat-typing"><span></span><span></span><span></span></div></div>';
-  win.appendChild(div);win.scrollTop=win.scrollHeight;
+.nav-tab {
+  min-width: 0;
+  padding: 14px 6px;
+  font-size: 10px;
 }
 
-function removeTyping(){const t=document.getElementById('chat-typing-indicator');if(t)t.remove();}
-
-async function sendChat(){
-  const input=document.getElementById('chat-input');
-  const msg=input.value.trim();if(!msg)return;
-  input.value='';
-  document.getElementById('chat-send').disabled=true;
-  addMessage('user',msg);
-  chatHistory.push({role:'user',content:msg});
-  addTyping();
-  try{
-    const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt:msg,history:chatHistory.slice(-10)})});
-    const d=await r.json();removeTyping();
-    const reply=d.result||'I apologise, I was unable to process that request.';
-    addMessage('ai',reply);
-    chatHistory.push({role:'assistant',content:reply});
-  }catch(e){removeTyping();addMessage('ai','I apologise, there was an error. Please try again.');}
-  document.getElementById('chat-send').disabled=false;
-  input.focus();
+/* OUTPUT WINDOWS */
+.output-wrap,
+.diff-wrap,
+.chat-window {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
 }
 
-// DISPATCH COPILOT
-async function loadDispatchStatus(){
-  try{
-    const r=await fetch('/api/dispatch/status');
-    const d=await r.json();
-    const statusEl=document.getElementById('dispatch-status');
-    if(d.hasData && d.summary){
-      const s=d.summary;
-      const uploadTime=new Date(d.uploadedAt).toLocaleString('en-AE');
-      statusEl.className='dispatch-status live';
-      statusEl.innerHTML='<div class="dispatch-status-icon">✅</div><div class="dispatch-status-text">Live data loaded by '+d.uploadedBy+' at '+uploadTime+'</div>';
-      // Fill summary cards
-      document.getElementById('ds-orders-val').textContent=s.total_orders?.toLocaleString()||'—';
-      document.getElementById('ds-value-val').textContent=s.total_value?Math.round(s.total_value).toLocaleString():'—';
-      document.getElementById('ds-lulu-val').textContent=s.lulu_orders?.toLocaleString()||'—';
-      document.getElementById('ds-routes-val').textContent=s.total_routes?.toLocaleString()||'—';
-      document.getElementById('ds-drivers-val').textContent=s.total_drivers?.toLocaleString()||'—';
-      document.getElementById('ds-luluval-val').textContent=s.lulu_value?Math.round(s.lulu_value).toLocaleString():'—';
-      document.getElementById('dispatch-summary').style.display='grid';
-      document.getElementById('quick-q-label').style.display='block';
-      document.getElementById('quick-questions').style.display='flex';
-      document.getElementById('dispatch-ask-label').style.display='block';
-      document.getElementById('dispatch-input-row').style.display='flex';
-    } else {
-      statusEl.className='dispatch-status';
-      statusEl.innerHTML='<div class="dispatch-status-icon">⚠️</div><div class="dispatch-status-text">No dispatch data loaded today. Ask admin to upload the daily report.</div>';
-    }
-  }catch(e){
-    document.getElementById('dispatch-status').innerHTML='<div class="dispatch-status-icon">⚠️</div><div class="dispatch-status-text">Could not connect to server.</div>';
+/* CHAT INPUT */
+.chat-input-row {
+  width: 100%;
+  flex-wrap: wrap;
+}
+
+.chat-textarea {
+  flex: 1;
+  min-width: 0;
+}
+
+/* DISPATCH SUMMARY */
+.dispatch-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+/* BUTTONS */
+.btn-primary,
+.btn-download {
+  width: 100%;
+}
+
+/* TABLE SAFETY */
+table {
+  width: 100%;
+  display: block;
+  overflow-x: auto;
+}
+
+/* MOBILE */
+@media (max-width: 768px) {
+
+  header {
+    padding: 0 14px;
+    height: auto;
+    min-height: 70px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .header-left {
+    gap: 12px;
+  }
+
+  .brand-name {
+    font-size: 18px;
+    letter-spacing: 2px;
+  }
+
+  .brand-sub {
+    font-size: 8px;
+  }
+
+  .hero {
+    margin-bottom: 40px;
+  }
+
+  .hero-title {
+    font-size: 42px;
+  }
+
+  .hero-desc {
+    font-size: 12px;
+    padding: 0 10px;
+  }
+
+  main {
+    padding: 30px 14px 60px;
+  }
+
+  .card {
+    padding: 22px;
+  }
+
+  .card h3 {
+    font-size: 24px;
+  }
+
+  .nav-tabs {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .dispatch-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .chat-bubble {
+    max-width: 90%;
+  }
+
+  .chat-send-btn {
+    width: 100%;
+  }
+
+  .quick-questions {
+    flex-direction: column;
+  }
+
+  .quick-btn {
+    width: 100%;
   }
 }
 
-function dispatchKeydown(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();askDispatch();}}
+/* EXTRA SMALL */
+@media (max-width: 480px) {
 
-function askQuick(q){
-  document.getElementById('dispatch-input').value=q;
-  askDispatch();
-}
-
-async function askDispatch(){
-  const q=document.getElementById('dispatch-input').value.trim();
-  if(!q){alert('Please enter a question.');return;}
-  document.getElementById('dispatch-send').disabled=true;
-  document.getElementById('dispatch-out').classList.add('show');
-  document.getElementById('dispatch-out-text').textContent='Analysing your dispatch data...';
-  try{
-    const r=await fetch('/api/dispatch/ask',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:q})});
-    const d=await r.json();
-    document.getElementById('dispatch-out-text').textContent=d.result||'No answer.';
-  }catch(e){
-    document.getElementById('dispatch-out-text').textContent='Error: '+e.message;
+  .hero-title {
+    font-size: 34px;
   }
-  document.getElementById('dispatch-send').disabled=false;
-}
 
-async function handleDispatchFile(input){
-  const file=input.files[0];if(!file)return;
-  const nameEl=document.getElementById('dispatch-file-name');
-  const box=document.getElementById('dispatch-upload-box');
-  nameEl.textContent='✓ '+file.name+' uploading...';
-  box.classList.add('has-file');
-  document.getElementById('dispatch-upload-loader').style.display='block';
-  try{
-    const fd=new FormData();
-    fd.append('file',file);
-    fd.append('uploadedBy','Azhar');
-    const r=await fetch('/api/dispatch/upload',{method:'POST',body:fd});
-    const d=await r.json();
-    document.getElementById('dispatch-upload-loader').style.display='none';
-    if(d.success){
-      nameEl.textContent='✓ '+file.name+' uploaded! '+( d.summary?.total_orders||'')+ ' orders loaded.';
-      nameEl.classList.add('loaded');
-      loadDispatchStatus();
-      alert('✅ Dispatch data uploaded successfully!
+  .card {
+    padding: 18px;
+  }
 
-Your team can now ask questions about today's dispatch.');
-    } else {
-      nameEl.textContent='Upload failed: '+(d.error||'Unknown error');
-      alert('Upload failed: '+(d.error||'Unknown error'));
-    }
-  }catch(err){
-    document.getElementById('dispatch-upload-loader').style.display='none';
-    nameEl.textContent='Upload error: '+err.message;
-    alert('Error: '+err.message);
+  .nav-tabs {
+    grid-template-columns: 1fr;
+  }
+
+  .brand-name {
+    font-size: 16px;
   }
 }
-</script>
-</body>
-</html>
