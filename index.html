@@ -19,7 +19,8 @@ header{position:relative;z-index:10;display:flex;align-items:center;justify-cont
 .logo-mark::before{content:'';position:absolute;inset:3px;border:1px solid rgba(201,168,76,0.3);}
 .logo-mark svg{width:22px;height:22px;}
 .brand{display:flex;flex-direction:column;gap:2px;}
-.brand-name{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:700;letter-spacing:4px;background:linear-gradient(135deg,var(--gold),var(--gold3));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.brand-name{font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:700;letter-spacing:6px;background:linear-gradient(135deg,#fff5cc,var(--gold),var(--gold3),#fff0a0,var(--gold));background-size:200% auto;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:shine 3s linear infinite;text-shadow:none;filter:drop-shadow(0 0 8px rgba(201,168,76,0.6));}
+@keyframes shine{0%{background-position:0% center}100%{background-position:200% center}}
 .brand-sub{font-size:9px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;font-weight:500;}
 .header-right{display:flex;align-items:center;gap:24px;}
 .status-indicator{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;}
