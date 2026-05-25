@@ -5,7 +5,96 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AZHAR-AI | Executive Intelligence Platform</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600;700&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js">
+// DISPATCH COPILOT
+async function loadDispatchStatus(){
+  try{
+    const r=await fetch('/api/dispatch/status');
+    const d=await r.json();
+    const statusEl=document.getElementById('dispatch-status');
+    if(d.hasData && d.summary){
+      const s=d.summary;
+      const uploadTime=new Date(d.uploadedAt).toLocaleString('en-AE');
+      statusEl.className='dispatch-status live';
+      statusEl.innerHTML='<div class="dispatch-status-icon">✅</div><div class="dispatch-status-text">Live data loaded by '+d.uploadedBy+' at '+uploadTime+'</div>';
+      // Fill summary cards
+      document.getElementById('ds-orders-val').textContent=s.total_orders?.toLocaleString()||'—';
+      document.getElementById('ds-value-val').textContent=s.total_value?Math.round(s.total_value).toLocaleString():'—';
+      document.getElementById('ds-lulu-val').textContent=s.lulu_orders?.toLocaleString()||'—';
+      document.getElementById('ds-routes-val').textContent=s.total_routes?.toLocaleString()||'—';
+      document.getElementById('ds-drivers-val').textContent=s.total_drivers?.toLocaleString()||'—';
+      document.getElementById('ds-luluval-val').textContent=s.lulu_value?Math.round(s.lulu_value).toLocaleString():'—';
+      document.getElementById('dispatch-summary').style.display='grid';
+      document.getElementById('quick-q-label').style.display='block';
+      document.getElementById('quick-questions').style.display='flex';
+      document.getElementById('dispatch-ask-label').style.display='block';
+      document.getElementById('dispatch-input-row').style.display='flex';
+    } else {
+      statusEl.className='dispatch-status';
+      statusEl.innerHTML='<div class="dispatch-status-icon">⚠️</div><div class="dispatch-status-text">No dispatch data loaded today. Ask admin to upload the daily report.</div>';
+    }
+  }catch(e){
+    document.getElementById('dispatch-status').innerHTML='<div class="dispatch-status-icon">⚠️</div><div class="dispatch-status-text">Could not connect to server.</div>';
+  }
+}
+
+function dispatchKeydown(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();askDispatch();}}
+
+function askQuick(q){
+  document.getElementById('dispatch-input').value=q;
+  askDispatch();
+}
+
+async function askDispatch(){
+  const q=document.getElementById('dispatch-input').value.trim();
+  if(!q){alert('Please enter a question.');return;}
+  document.getElementById('dispatch-send').disabled=true;
+  document.getElementById('dispatch-out').classList.add('show');
+  document.getElementById('dispatch-out-text').textContent='Analysing your dispatch data...';
+  try{
+    const r=await fetch('/api/dispatch/ask',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:q})});
+    const d=await r.json();
+    document.getElementById('dispatch-out-text').textContent=d.result||'No answer.';
+  }catch(e){
+    document.getElementById('dispatch-out-text').textContent='Error: '+e.message;
+  }
+  document.getElementById('dispatch-send').disabled=false;
+}
+
+function handleDispatchFile(input){
+  const file=input.files[0];if(!file)return;
+  const nameEl=document.getElementById('dispatch-file-name');
+  const box=document.getElementById('dispatch-upload-box');
+  nameEl.textContent='✓ '+file.name+' selected — uploading...';
+  box.classList.add('has-file');
+  document.getElementById('dispatch-upload-loader').style.display='block';
+
+  const reader=new FileReader();
+  reader.onload=async function(e){
+    const csvText=e.target.result;
+    try{
+      const fd=new FormData();
+      fd.append('csvText',csvText);
+      fd.append('uploadedBy','Azhar');
+      const r=await fetch('/api/dispatch/upload',{method:'POST',body:fd});
+      const d=await r.json();
+      document.getElementById('dispatch-upload-loader').style.display='none';
+      if(d.success){
+        nameEl.textContent='✓ '+file.name+' uploaded successfully!';
+        nameEl.classList.add('loaded');
+        loadDispatchStatus();
+        alert('Dispatch data uploaded! Your team can now ask questions.');
+      } else {
+        nameEl.textContent='Upload failed: '+(d.error||'Unknown error');
+      }
+    }catch(err){
+      document.getElementById('dispatch-upload-loader').style.display='none';
+      nameEl.textContent='Upload error: '+err.message;
+    }
+  };
+  reader.readAsText(file);
+}
+</script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
 :root{--black:#050505;--dark:#0a0a08;--surface:#111109;--card:#161612;--border:#2a2a1e;--gold:#c9a84c;--gold2:#e8c878;--gold3:#f5e0a0;--goldglow:rgba(201,168,76,0.15);--text:#f0ece0;--muted:#7a7660;--white:#faf8f0;--green:#4ecb8d;}
@@ -38,7 +127,7 @@ main{position:relative;z-index:5;max-width:1000px;margin:0 auto;padding:60px 24p
 .divider{display:flex;align-items:center;gap:16px;margin-bottom:40px;}
 .divider-line{flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--border),transparent);}
 .divider-diamond{width:8px;height:8px;background:var(--gold);transform:rotate(45deg);flex-shrink:0;}
-.nav-tabs{display:grid;grid-template-columns:repeat(5,1fr);gap:0;border:1px solid var(--border);margin-bottom:48px;}
+.nav-tabs{display:grid;grid-template-columns:repeat(6,1fr);gap:0;border:1px solid var(--border);margin-bottom:48px;}
 .nav-tab{padding:16px 8px;border:none;background:transparent;color:var(--muted);font-family:'Montserrat',sans-serif;font-size:10px;font-weight:600;letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:all 0.3s;display:flex;flex-direction:column;align-items:center;gap:8px;border-right:1px solid var(--border);position:relative;}
 .nav-tab:last-child{border-right:none;}
 .nav-tab::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:var(--gold);transform:scaleX(0);transition:transform 0.3s;}
@@ -129,6 +218,21 @@ footer{position:relative;z-index:5;text-align:center;padding:32px;border-top:1px
 ::-webkit-scrollbar-track{background:var(--surface);}
 ::-webkit-scrollbar-thumb{background:var(--border);}
 ::-webkit-scrollbar-thumb:hover{background:var(--gold);}
+
+/* Dispatch styles */
+.dispatch-status{display:flex;align-items:center;gap:12px;padding:16px 20px;border:1px solid var(--border);background:var(--surface);margin-bottom:20px;}
+.dispatch-status-icon{font-size:20px;}
+.dispatch-status-text{font-size:12px;color:var(--muted);letter-spacing:0.5px;}
+.dispatch-status.live{border-color:var(--green);background:rgba(78,203,141,0.05);}
+.dispatch-status.live .dispatch-status-text{color:var(--green);}
+.dispatch-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px;}
+.dscard{background:var(--surface);border:1px solid var(--border);padding:20px;text-align:center;position:relative;overflow:hidden;}
+.dscard::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:0.4;}
+.dscard-val{font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:700;color:var(--gold);margin-bottom:4px;}
+.dscard-label{font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;}
+.quick-questions{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px;}
+.quick-btn{padding:8px 16px;background:var(--surface);border:1px solid var(--border);color:var(--muted);font-family:'Montserrat',sans-serif;font-size:10px;letter-spacing:1px;cursor:pointer;transition:all 0.2s;text-transform:uppercase;}
+.quick-btn:hover{border-color:var(--gold);color:var(--gold);background:var(--goldglow);}
 </style>
 </head>
 <body>
@@ -169,6 +273,7 @@ footer{position:relative;z-index:5;text-align:center;padding:32px;border-top:1px
     <button class="nav-tab" onclick="switchTab('summary',this)"><span class="nav-icon">📋</span>Summaries</button>
     <button class="nav-tab" onclick="switchTab('email',this)"><span class="nav-icon">✉️</span>Email</button>
     <button class="nav-tab" onclick="switchTab('chat',this)"><span class="nav-icon">💬</span>Chat</button>
+    <button class="nav-tab" onclick="switchTab('dispatch',this);loadDispatchStatus()"><span class="nav-icon">🚚</span>Dispatch</button>
   </div>
 
   <!-- POWERPOINT -->
@@ -325,6 +430,77 @@ footer{position:relative;z-index:5;text-align:center;padding:32px;border-top:1px
     </div>
   </div>
 </main>
+
+  <!-- DISPATCH COPILOT -->
+  <div class="panel" id="dispatch">
+    <div class="card">
+      <div class="card-eyebrow">Dispatch Intelligence</div>
+      <h3>Daily Dispatch Copilot</h3>
+      <p>Upload today's dispatch report once — your entire team can ask questions instantly. No more digging through Excel.</p>
+
+      <!-- Status bar -->
+      <div class="dispatch-status" id="dispatch-status">
+        <div class="dispatch-status-icon">⏳</div>
+        <div class="dispatch-status-text">Checking for today's data...</div>
+      </div>
+
+      <!-- Summary cards -->
+      <div class="dispatch-summary" id="dispatch-summary" style="display:none">
+        <div class="dscard" id="ds-orders"><div class="dscard-val" id="ds-orders-val">—</div><div class="dscard-label">Total Orders</div></div>
+        <div class="dscard" id="ds-value"><div class="dscard-val" id="ds-value-val">—</div><div class="dscard-label">Total Value (AED)</div></div>
+        <div class="dscard" id="ds-lulu"><div class="dscard-val" id="ds-lulu-val">—</div><div class="dscard-label">Lulu Orders</div></div>
+        <div class="dscard" id="ds-routes"><div class="dscard-val" id="ds-routes-val">—</div><div class="dscard-label">Routes</div></div>
+        <div class="dscard" id="ds-drivers"><div class="dscard-val" id="ds-drivers-val">—</div><div class="dscard-label">Drivers</div></div>
+        <div class="dscard" id="ds-luluval"><div class="dscard-val" id="ds-luluval-val">—</div><div class="dscard-label">Lulu Value (AED)</div></div>
+      </div>
+
+      <!-- Quick questions -->
+      <div class="field-label" id="quick-q-label" style="display:none">Quick Questions</div>
+      <div class="quick-questions" id="quick-questions" style="display:none">
+        <button class="quick-btn" onclick="askQuick('How many Lulu orders do we have today and what is total value?')">🛒 Lulu Orders</button>
+        <button class="quick-btn" onclick="askQuick('Break down orders and values by city')">🏙️ By City</button>
+        <button class="quick-btn" onclick="askQuick('Who are the top 5 drivers by number of deliveries today?')">🚚 Top Drivers</button>
+        <button class="quick-btn" onclick="askQuick('What are the top 10 customers by order value today?')">💰 Top Customers</button>
+        <button class="quick-btn" onclick="askQuick('Show me all Lulu Food orders and their values')">🍎 Lulu Food</button>
+        <button class="quick-btn" onclick="askQuick('What is the total dispatch value for Dubai today?')">📍 Dubai Orders</button>
+        <button class="quick-btn" onclick="askQuick('What is the total dispatch value for Abu Dhabi today?')">📍 Abu Dhabi</button>
+        <button class="quick-btn" onclick="askQuick('How many orders does each route have today?')">🗺️ Routes</button>
+      </div>
+
+      <!-- Ask anything -->
+      <div class="field-label" id="dispatch-ask-label" style="display:none">Ask Anything About Today's Dispatch</div>
+      <div class="chat-input-row" id="dispatch-input-row" style="display:none">
+        <textarea id="dispatch-input" class="chat-textarea" placeholder="e.g. How many Lulu orders? What is total value? Which driver has most deliveries?" onkeydown="dispatchKeydown(event)" rows="2"></textarea>
+        <button class="chat-send-btn" id="dispatch-send" onclick="askDispatch()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="22" y1="2" x2="11" y2="13"></line>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Answer -->
+      <div class="output-wrap" id="dispatch-out" style="margin-top:14px;">
+        <div class="output-header"><span class="output-label">✦ Dispatch Answer</span><button class="copy-btn" onclick="copyEl('dispatch-out-text')">Copy</button></div>
+        <div class="output-body" id="dispatch-out-text"></div>
+      </div>
+
+      <!-- Admin upload section -->
+      <div style="margin-top:32px;padding-top:24px;border-top:1px solid var(--border);">
+        <div class="card-eyebrow">Admin Only — Upload Today's Data</div>
+        <div class="upload-box" id="dispatch-upload-box" onclick="document.getElementById('dispatch-file').click()">
+          <div class="upload-icon">📊</div>
+          <div class="upload-text">Upload today's dispatch report (.csv)</div>
+          <div class="upload-sub" id="dispatch-file-name">Export from your system as CSV then upload here</div>
+        </div>
+        <input type="file" id="dispatch-file" accept=".csv,.txt" style="display:none" onchange="handleDispatchFile(this)"/>
+        <div class="loader" id="dispatch-upload-loader" style="display:none;text-align:center;padding:20px;">
+          <div class="loader-ring"></div>
+          <div class="loader-text">Processing dispatch data...</div>
+        </div>
+      </div>
+    </div>
+  </div>
 
 <footer>
   <div class="footer-text">
@@ -569,6 +745,95 @@ async function sendChat(){
   }catch(e){removeTyping();addMessage('ai','I apologise, there was an error. Please try again.');}
   document.getElementById('chat-send').disabled=false;
   input.focus();
+}
+
+// DISPATCH COPILOT
+async function loadDispatchStatus(){
+  try{
+    const r=await fetch('/api/dispatch/status');
+    const d=await r.json();
+    const statusEl=document.getElementById('dispatch-status');
+    if(d.hasData && d.summary){
+      const s=d.summary;
+      const uploadTime=new Date(d.uploadedAt).toLocaleString('en-AE');
+      statusEl.className='dispatch-status live';
+      statusEl.innerHTML='<div class="dispatch-status-icon">✅</div><div class="dispatch-status-text">Live data loaded by '+d.uploadedBy+' at '+uploadTime+'</div>';
+      // Fill summary cards
+      document.getElementById('ds-orders-val').textContent=s.total_orders?.toLocaleString()||'—';
+      document.getElementById('ds-value-val').textContent=s.total_value?Math.round(s.total_value).toLocaleString():'—';
+      document.getElementById('ds-lulu-val').textContent=s.lulu_orders?.toLocaleString()||'—';
+      document.getElementById('ds-routes-val').textContent=s.total_routes?.toLocaleString()||'—';
+      document.getElementById('ds-drivers-val').textContent=s.total_drivers?.toLocaleString()||'—';
+      document.getElementById('ds-luluval-val').textContent=s.lulu_value?Math.round(s.lulu_value).toLocaleString():'—';
+      document.getElementById('dispatch-summary').style.display='grid';
+      document.getElementById('quick-q-label').style.display='block';
+      document.getElementById('quick-questions').style.display='flex';
+      document.getElementById('dispatch-ask-label').style.display='block';
+      document.getElementById('dispatch-input-row').style.display='flex';
+    } else {
+      statusEl.className='dispatch-status';
+      statusEl.innerHTML='<div class="dispatch-status-icon">⚠️</div><div class="dispatch-status-text">No dispatch data loaded today. Ask admin to upload the daily report.</div>';
+    }
+  }catch(e){
+    document.getElementById('dispatch-status').innerHTML='<div class="dispatch-status-icon">⚠️</div><div class="dispatch-status-text">Could not connect to server.</div>';
+  }
+}
+
+function dispatchKeydown(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();askDispatch();}}
+
+function askQuick(q){
+  document.getElementById('dispatch-input').value=q;
+  askDispatch();
+}
+
+async function askDispatch(){
+  const q=document.getElementById('dispatch-input').value.trim();
+  if(!q){alert('Please enter a question.');return;}
+  document.getElementById('dispatch-send').disabled=true;
+  document.getElementById('dispatch-out').classList.add('show');
+  document.getElementById('dispatch-out-text').textContent='Analysing your dispatch data...';
+  try{
+    const r=await fetch('/api/dispatch/ask',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:q})});
+    const d=await r.json();
+    document.getElementById('dispatch-out-text').textContent=d.result||'No answer.';
+  }catch(e){
+    document.getElementById('dispatch-out-text').textContent='Error: '+e.message;
+  }
+  document.getElementById('dispatch-send').disabled=false;
+}
+
+function handleDispatchFile(input){
+  const file=input.files[0];if(!file)return;
+  const nameEl=document.getElementById('dispatch-file-name');
+  const box=document.getElementById('dispatch-upload-box');
+  nameEl.textContent='✓ '+file.name+' selected — uploading...';
+  box.classList.add('has-file');
+  document.getElementById('dispatch-upload-loader').style.display='block';
+
+  const reader=new FileReader();
+  reader.onload=async function(e){
+    const csvText=e.target.result;
+    try{
+      const fd=new FormData();
+      fd.append('csvText',csvText);
+      fd.append('uploadedBy','Azhar');
+      const r=await fetch('/api/dispatch/upload',{method:'POST',body:fd});
+      const d=await r.json();
+      document.getElementById('dispatch-upload-loader').style.display='none';
+      if(d.success){
+        nameEl.textContent='✓ '+file.name+' uploaded successfully!';
+        nameEl.classList.add('loaded');
+        loadDispatchStatus();
+        alert('Dispatch data uploaded! Your team can now ask questions.');
+      } else {
+        nameEl.textContent='Upload failed: '+(d.error||'Unknown error');
+      }
+    }catch(err){
+      document.getElementById('dispatch-upload-loader').style.display='none';
+      nameEl.textContent='Upload error: '+err.message;
+    }
+  };
+  reader.readAsText(file);
 }
 </script>
 </body>
