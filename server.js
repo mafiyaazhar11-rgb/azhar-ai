@@ -34,14 +34,140 @@ const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 // Health check
 app.get('/health', (req, res) => res.json({ status: 'AZHAR-AI server running' }));
 
-// Text AI call
+// In-memory dispatch data store (shared across all users)
+let dispatchData = {
+  uploadedAt: null,
+  uploadedBy: null,
+  csvText: null,
+  summary: null
+};
+
+// Upload dispatch data (admin only)
+app.post('/api/dispatch/upload', upload.single('file'), async (req, res) => {
+  try {
+    let csvText = '';
+    if (req.file) {
+      csvText = fs.readFileSync(req.file.path, 'utf8');
+      fs.unlinkSync(req.file.path);
+    } else if (req.body.csvText) {
+      csvText = req.body.csvText;
+    }
+    if (!csvText) return res.status(400).json({ error: 'No data provided' });
+
+    // Generate auto summary using Claude
+    const summaryPrompt = `You are AZHAR-AI Dispatch Intelligence. Analyse this dispatch CSV data and provide a structured JSON summary.
+
+CSV Data:
+${csvText.substring(0, 8000)}
+
+Return ONLY a JSON object (no markdown, no explanation) with this exact structure:
+{
+  "total_orders": <number>,
+  "total_value": <number>,
+  "total_routes": <number>,
+  "total_drivers": <number>,
+  "by_city": [{"city": "Dubai", "orders": 0, "value": 0}],
+  "top_customers": [{"name": "Customer", "orders": 0, "value": 0}],
+  "top_drivers": [{"name": "Driver", "orders": 0}],
+  "lulu_orders": <number>,
+  "lulu_value": <number>,
+  "date": "<date from data>"
+}`;
+
+    const message = await anthropic.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 1000,
+      messages: [{ role: 'user', content: summaryPrompt }]
+    });
+
+    let summary = null;
+    try {
+      const raw = message.content[0].text.replace(/```json|```/g, '').trim();
+      summary = JSON.parse(raw);
+    } catch(e) {
+      summary = { error: 'Could not parse summary' };
+    }
+
+    dispatchData = {
+      uploadedAt: new Date().toISOString(),
+      uploadedBy: req.body.uploadedBy || 'Admin',
+      csvText: csvText.substring(0, 15000),
+      summary
+    };
+
+    res.json({ success: true, summary, uploadedAt: dispatchData.uploadedAt });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Get dispatch status
+app.get('/api/dispatch/status', (req, res) => {
+  if (!dispatchData.uploadedAt) {
+    return res.json({ hasData: false });
+  }
+  res.json({
+    hasData: true,
+    uploadedAt: dispatchData.uploadedAt,
+    uploadedBy: dispatchData.uploadedBy,
+    summary: dispatchData.summary
+  });
+});
+
+// Ask dispatch question
+app.post('/api/dispatch/ask', async (req, res) => {
+  try {
+    if (!dispatchData.csvText) {
+      return res.json({ result: 'No dispatch data loaded yet. Please ask your admin to upload today dispatch report.' });
+    }
+    const { question } = req.body;
+    const prompt = `You are AZHAR-AI Dispatch Intelligence for a logistics/distribution company in UAE.
+
+Today's dispatch data (CSV):
+${dispatchData.csvText}
+
+Data uploaded: ${dispatchData.uploadedAt}
+
+The columns are: ORDER CODE, ROUTE, CITY, CUSTOMER, CUSTOMER ADDRESS, TOTAL_AMOUNT, ETA, VEHICLE_ID, DRIVER_ID, DRIVER CONTACT DETAILS
+
+User question: ${question}
+
+Answer accurately based on the data. Be specific with numbers, names and values. Format nicely with bullet points where helpful. Always mention AED for currency values. If asking about Lulu - search for customers containing "LULU" or "Lulu" in the name.`;
+
+    const message = await anthropic.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 1500,
+      messages: [{ role: 'user', content: prompt }]
+    });
+    res.json({ result: message.content[0].text });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Text AI call with history support
 app.post('/api/chat', async (req, res) => {
   try {
-    const { prompt } = req.body;
+    const { prompt, history } = req.body;
+    let messages = [];
+    // Add history if provided
+    if (history && history.length > 0) {
+      messages = history.slice(-10).map(h => ({
+        role: h.role === 'assistant' ? 'assistant' : 'user',
+        content: h.content
+      }));
+      // Make sure last message is the current prompt
+      if (messages[messages.length-1]?.content !== prompt) {
+        messages.push({ role: 'user', content: prompt });
+      }
+    } else {
+      messages = [{ role: 'user', content: prompt }];
+    }
     const message = await anthropic.messages.create({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 2000,
-      messages: [{ role: 'user', content: prompt }]
+      system: 'You are AZHAR-AI, a highly professional and intelligent executive assistant. You help with any question, task or request. Be concise, accurate and professional.',
+      messages: messages
     });
     res.json({ result: message.content[0].text });
   } catch (e) {
