@@ -13,6 +13,21 @@ const upload = multer({ dest: 'uploads/', limits: { fileSize: 50 * 1024 * 1024 }
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.static('public'));
+app.use(express.static('.'));
+app.get('/', (req, res) => {
+  const path = require('path');
+  const fs = require('fs');
+  // Try public/index.html first, then root index.html
+  const publicPath = path.join(__dirname, 'public', 'index.html');
+  const rootPath = path.join(__dirname, 'index.html');
+  if (fs.existsSync(publicPath)) {
+    res.sendFile(publicPath);
+  } else if (fs.existsSync(rootPath)) {
+    res.sendFile(rootPath);
+  } else {
+    res.send('AZHAR-AI Server is running! index.html not found.');
+  }
+});
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
