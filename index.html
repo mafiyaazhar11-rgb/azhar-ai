@@ -61,38 +61,36 @@ async function askDispatch(){
   document.getElementById('dispatch-send').disabled=false;
 }
 
-function handleDispatchFile(input){
+async function handleDispatchFile(input){
   const file=input.files[0];if(!file)return;
   const nameEl=document.getElementById('dispatch-file-name');
   const box=document.getElementById('dispatch-upload-box');
-  nameEl.textContent='✓ '+file.name+' selected — uploading...';
+  nameEl.textContent='✓ '+file.name+' uploading...';
   box.classList.add('has-file');
   document.getElementById('dispatch-upload-loader').style.display='block';
+  try{
+    const fd=new FormData();
+    fd.append('file',file);
+    fd.append('uploadedBy','Azhar');
+    const r=await fetch('/api/dispatch/upload',{method:'POST',body:fd});
+    const d=await r.json();
+    document.getElementById('dispatch-upload-loader').style.display='none';
+    if(d.success){
+      nameEl.textContent='✓ '+file.name+' uploaded! '+( d.summary?.total_orders||'')+ ' orders loaded.';
+      nameEl.classList.add('loaded');
+      loadDispatchStatus();
+      alert('✅ Dispatch data uploaded successfully!
 
-  const reader=new FileReader();
-  reader.onload=async function(e){
-    const csvText=e.target.result;
-    try{
-      const fd=new FormData();
-      fd.append('csvText',csvText);
-      fd.append('uploadedBy','Azhar');
-      const r=await fetch('/api/dispatch/upload',{method:'POST',body:fd});
-      const d=await r.json();
-      document.getElementById('dispatch-upload-loader').style.display='none';
-      if(d.success){
-        nameEl.textContent='✓ '+file.name+' uploaded successfully!';
-        nameEl.classList.add('loaded');
-        loadDispatchStatus();
-        alert('Dispatch data uploaded! Your team can now ask questions.');
-      } else {
-        nameEl.textContent='Upload failed: '+(d.error||'Unknown error');
-      }
-    }catch(err){
-      document.getElementById('dispatch-upload-loader').style.display='none';
-      nameEl.textContent='Upload error: '+err.message;
+Your team can now ask questions about today's dispatch.');
+    } else {
+      nameEl.textContent='Upload failed: '+(d.error||'Unknown error');
+      alert('Upload failed: '+(d.error||'Unknown error'));
     }
-  };
-  reader.readAsText(file);
+  }catch(err){
+    document.getElementById('dispatch-upload-loader').style.display='none';
+    nameEl.textContent='Upload error: '+err.message;
+    alert('Error: '+err.message);
+  }
 }
 </script>
 <style>
@@ -490,10 +488,10 @@ footer{position:relative;z-index:5;text-align:center;padding:32px;border-top:1px
         <div class="card-eyebrow">Admin Only — Upload Today's Data</div>
         <div class="upload-box" id="dispatch-upload-box" onclick="document.getElementById('dispatch-file').click()">
           <div class="upload-icon">📊</div>
-          <div class="upload-text">Upload today's dispatch report (.csv)</div>
+          <div class="upload-text">Upload today's dispatch report (.csv or .xlsx)</div>
           <div class="upload-sub" id="dispatch-file-name">Export from your system as CSV then upload here</div>
         </div>
-        <input type="file" id="dispatch-file" accept=".csv,.txt" style="display:none" onchange="handleDispatchFile(this)"/>
+        <input type="file" id="dispatch-file" accept=".csv,.txt,.xlsx,.xls" style="display:none" onchange="handleDispatchFile(this)"/>
         <div class="loader" id="dispatch-upload-loader" style="display:none;text-align:center;padding:20px;">
           <div class="loader-ring"></div>
           <div class="loader-text">Processing dispatch data...</div>
@@ -802,38 +800,36 @@ async function askDispatch(){
   document.getElementById('dispatch-send').disabled=false;
 }
 
-function handleDispatchFile(input){
+async function handleDispatchFile(input){
   const file=input.files[0];if(!file)return;
   const nameEl=document.getElementById('dispatch-file-name');
   const box=document.getElementById('dispatch-upload-box');
-  nameEl.textContent='✓ '+file.name+' selected — uploading...';
+  nameEl.textContent='✓ '+file.name+' uploading...';
   box.classList.add('has-file');
   document.getElementById('dispatch-upload-loader').style.display='block';
+  try{
+    const fd=new FormData();
+    fd.append('file',file);
+    fd.append('uploadedBy','Azhar');
+    const r=await fetch('/api/dispatch/upload',{method:'POST',body:fd});
+    const d=await r.json();
+    document.getElementById('dispatch-upload-loader').style.display='none';
+    if(d.success){
+      nameEl.textContent='✓ '+file.name+' uploaded! '+( d.summary?.total_orders||'')+ ' orders loaded.';
+      nameEl.classList.add('loaded');
+      loadDispatchStatus();
+      alert('✅ Dispatch data uploaded successfully!
 
-  const reader=new FileReader();
-  reader.onload=async function(e){
-    const csvText=e.target.result;
-    try{
-      const fd=new FormData();
-      fd.append('csvText',csvText);
-      fd.append('uploadedBy','Azhar');
-      const r=await fetch('/api/dispatch/upload',{method:'POST',body:fd});
-      const d=await r.json();
-      document.getElementById('dispatch-upload-loader').style.display='none';
-      if(d.success){
-        nameEl.textContent='✓ '+file.name+' uploaded successfully!';
-        nameEl.classList.add('loaded');
-        loadDispatchStatus();
-        alert('Dispatch data uploaded! Your team can now ask questions.');
-      } else {
-        nameEl.textContent='Upload failed: '+(d.error||'Unknown error');
-      }
-    }catch(err){
-      document.getElementById('dispatch-upload-loader').style.display='none';
-      nameEl.textContent='Upload error: '+err.message;
+Your team can now ask questions about today's dispatch.');
+    } else {
+      nameEl.textContent='Upload failed: '+(d.error||'Unknown error');
+      alert('Upload failed: '+(d.error||'Unknown error'));
     }
-  };
-  reader.readAsText(file);
+  }catch(err){
+    document.getElementById('dispatch-upload-loader').style.display='none';
+    nameEl.textContent='Upload error: '+err.message;
+    alert('Error: '+err.message);
+  }
 }
 </script>
 </body>
