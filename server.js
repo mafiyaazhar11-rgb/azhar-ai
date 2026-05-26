@@ -57,6 +57,7 @@ function parseDispatchCSV(csvText, dateKey) {
   const driverIdIdx = idx(['DRIVER_ID']);
   const orderIdx    = idx(['ORDER CODE','ORDER_CODE']);
   const locationIdx = idx(['LOCATION_ID','LOCATION']);
+  const typeColIdx  = idx(['TYPE','type']);  // Direct type column
 
   let totalOrders = 0, totalValue = 0;
   const cities = {}, customers = {}, routes = {}, driverSet = new Set();
@@ -182,21 +183,33 @@ function parseDispatchCSV(csvText, dateKey) {
   const luluOrders = luluEntries.reduce((s,[,v]) => s + v.orders, 0);
   const luluValue  = luluEntries.reduce((s,[,v]) => s + v.value, 0);
 
-  // Detailed type breakdown from ORDER CODE
+  // Type detection - use TYPE column if exists, else fall back to ORDER CODE
   const typeStats = { DCV:{o:0,v:0}, DCF:{o:0,v:0}, DGC:{o:0,v:0}, DGS:{o:0,v:0}, DSN:{o:0,v:0}, HCP:{o:0,v:0} };
-  let foodOrders=0, foodValue=0, nonFoodOrders=0, nonFoodValue=0, plOrders=0;
+  let foodOrders=0, foodValue=0, nonFoodOrders=0, nonFoodValue=0, plOrders=0, vanOrders=0;
+  const hasTypeCol = typeColIdx >= 0;
 
   for (let i = 1; i < lines.length; i++) {
     const row = lines[i].split(',').map(c => c.trim().replace(/^"|"$/g,''));
     if (!row[0]) continue;
-    const order = (orderIdx >= 0 ? row[orderIdx] : '').trim().toUpperCase();
     const amt = amtIdx >= 0 ? parseFloat(row[amtIdx]) || 0 : 0;
-    const typeMatch = order.match(/[A-Z]{2,3}/);
-    const tc = typeMatch ? typeMatch[0] : '';
-    if (typeStats[tc]) { typeStats[tc].o++; typeStats[tc].v += amt; }
-    if (tc==='DCV'||tc==='DCF') { foodOrders++; foodValue+=amt; }
-    else if (tc==='DGC'||tc==='DGS'||tc==='DSN') { nonFoodOrders++; nonFoodValue+=amt; }
-    else if (tc==='HCP') plOrders++;
+
+    if (hasTypeCol) {
+      // Use TYPE column directly: Food, Non Food, Noon Food, 3 PL, Van
+      const typeVal = (row[typeColIdx]||'').trim().toUpperCase();
+      if (typeVal === 'FOOD') { foodOrders++; foodValue += amt; typeStats.DCV.o++; typeStats.DCV.v += amt; }
+      else if (typeVal === 'NON FOOD' || typeVal === 'NOON FOOD' || typeVal === 'NONFOOD') { nonFoodOrders++; nonFoodValue += amt; typeStats.DGC.o++; typeStats.DGC.v += amt; }
+      else if (typeVal === '3 PL' || typeVal === '3PL') { plOrders++; typeStats.HCP.o++; }
+      else if (typeVal === 'VAN') { vanOrders++; }
+    } else {
+      // Fall back to ORDER CODE pattern
+      const order = (orderIdx >= 0 ? row[orderIdx] : '').trim().toUpperCase();
+      const typeMatch = order.match(/[A-Z]{2,3}/);
+      const tc = typeMatch ? typeMatch[0] : '';
+      if (typeStats[tc]) { typeStats[tc].o++; typeStats[tc].v += amt; }
+      if (tc==='DCV'||tc==='DCF') { foodOrders++; foodValue+=amt; }
+      else if (tc==='DGC'||tc==='DGS'||tc==='DSN') { nonFoodOrders++; nonFoodValue+=amt; }
+      else if (tc==='HCP') plOrders++;
+    }
   }
 
   return {
@@ -211,6 +224,7 @@ function parseDispatchCSV(csvText, dateKey) {
     non_food_orders: nonFoodOrders,
     non_food_value: Math.round(nonFoodValue),
     pl_orders: plOrders,
+    van_orders: vanOrders,
     total_drops: Object.values(routes).reduce((s, r) => s + (r.locations ? r.locations.size : 0), 0),
     type_breakdown: {
       DCV: { orders: typeStats.DCV.o, value: Math.round(typeStats.DCV.v) },
