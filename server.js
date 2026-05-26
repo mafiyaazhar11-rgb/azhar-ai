@@ -182,10 +182,10 @@ function parseDispatchCSV(csvText, dateKey) {
   const luluOrders = luluEntries.reduce((s,[,v]) => s + v.orders, 0);
   const luluValue  = luluEntries.reduce((s,[,v]) => s + v.value, 0);
 
-  // Type from ORDER CODE: DCV/DCF=Food, DGC/DGS/DSN=NonFood, HCP=3PL
-  let foodOrders = 0, foodValue = 0;
-  let nonFoodOrders = 0, nonFoodValue = 0;
-  let plOrders = 0;
+  // Detailed type breakdown from ORDER CODE
+  const typeStats = { DCV:{o:0,v:0}, DCF:{o:0,v:0}, DGC:{o:0,v:0}, DGS:{o:0,v:0}, DSN:{o:0,v:0}, HCP:{o:0,v:0} };
+  let foodOrders=0, foodValue=0, nonFoodOrders=0, nonFoodValue=0, plOrders=0;
+
   for (let i = 1; i < lines.length; i++) {
     const row = lines[i].split(',').map(c => c.trim().replace(/^"|"$/g,''));
     if (!row[0]) continue;
@@ -193,9 +193,10 @@ function parseDispatchCSV(csvText, dateKey) {
     const amt = amtIdx >= 0 ? parseFloat(row[amtIdx]) || 0 : 0;
     const typeMatch = order.match(/[A-Z]{2,3}/);
     const tc = typeMatch ? typeMatch[0] : '';
-    if (tc === 'DCV' || tc === 'DCF') { foodOrders++; foodValue += amt; }
-    else if (tc === 'DGC' || tc === 'DGS' || tc === 'DSN') { nonFoodOrders++; nonFoodValue += amt; }
-    else if (tc === 'HCP') { plOrders++; }
+    if (typeStats[tc]) { typeStats[tc].o++; typeStats[tc].v += amt; }
+    if (tc==='DCV'||tc==='DCF') { foodOrders++; foodValue+=amt; }
+    else if (tc==='DGC'||tc==='DGS'||tc==='DSN') { nonFoodOrders++; nonFoodValue+=amt; }
+    else if (tc==='HCP') plOrders++;
   }
 
   return {
@@ -210,6 +211,15 @@ function parseDispatchCSV(csvText, dateKey) {
     non_food_orders: nonFoodOrders,
     non_food_value: Math.round(nonFoodValue),
     pl_orders: plOrders,
+    total_drops: Object.values(routes).reduce((s, r) => s + (r.locations ? r.locations.size : 0), 0),
+    type_breakdown: {
+      DCV: { orders: typeStats.DCV.o, value: Math.round(typeStats.DCV.v) },
+      DCF: { orders: typeStats.DCF.o, value: Math.round(typeStats.DCF.v) },
+      DGC: { orders: typeStats.DGC.o, value: Math.round(typeStats.DGC.v) },
+      DGS: { orders: typeStats.DGS.o, value: Math.round(typeStats.DGS.v) },
+      DSN: { orders: typeStats.DSN.o, value: Math.round(typeStats.DSN.v) },
+      HCP: { orders: typeStats.HCP.o, value: Math.round(typeStats.HCP.v) }
+    },
     by_city: byCity,
     top_customers: topCustomers,
     top_drivers: topDrivers,
