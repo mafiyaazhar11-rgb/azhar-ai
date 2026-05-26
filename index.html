@@ -783,7 +783,7 @@ function buildDashboard(d) {
 
   if (s.top_customers && s.top_customers.length) {
     document.getElementById('ds-customers').innerHTML = s.top_customers.slice(0, 6).map((c,i) =>
-      '<div class="detail-row"><span class="dr-name">' + (i+1) + '. ' + c.name + '</span><div style="text-align:right;"><div class="dr-val">AED ' + Math.round(c.value||0).toLocaleString() + '</div><div class="dr-sub">' + (c.orders||0) + ' orders</div></div></div>'
+      '<div class="detail-row"><span class="dr-name">' + (i+1) + '. ' + c.name + '</span><div style="text-align:right;"><div class="dr-val">AED ' + Math.round(c.value||0).toLocaleString() + '</div><div class="dr-sub">' + (c.orders||0) + ' lines' + (c.locations > 1 ? ' | ' + c.locations + ' branches' : '') + '</div></div></div>'
     ).join('');
   }
 
