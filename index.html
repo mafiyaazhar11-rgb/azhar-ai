@@ -386,8 +386,7 @@ footer{position:relative;z-index:5;text-align:center;padding:28px;border-top:1px
                 <tr style="background:#1a1a2e;border-bottom:2px solid var(--gold);">
                   <th style="padding:8px 10px;font-size:9px;color:var(--gold);text-transform:uppercase;letter-spacing:1px;text-align:left;border:1px solid var(--border);">Route</th>
                   <th style="padding:8px 10px;font-size:9px;color:var(--gold);text-transform:uppercase;letter-spacing:1px;text-align:center;border:1px solid var(--border);">Driver ID</th>
-                  <th style="padding:8px 10px;font-size:9px;color:var(--gold);text-transform:uppercase;letter-spacing:1px;text-align:center;border:1px solid var(--border);">Drops (Locations)</th>
-                  <th style="padding:8px 10px;font-size:9px;color:var(--gold);text-transform:uppercase;letter-spacing:1px;text-align:center;border:1px solid var(--border);">Order Lines</th>
+                  <th style="padding:8px 10px;font-size:9px;color:var(--gold);text-transform:uppercase;letter-spacing:1px;text-align:center;border:1px solid var(--border);">Drops</th>
                   <th style="padding:8px 10px;font-size:9px;color:var(--gold);text-transform:uppercase;letter-spacing:1px;text-align:right;border:1px solid var(--border);">Value (AED)</th>
                 </tr>
               </thead>
@@ -568,7 +567,7 @@ footer{position:relative;z-index:5;text-align:center;padding:28px;border-top:1px
       </div>
 
       <label class="lbl" style="margin-top:20px;">Line Items</label>
-      <div id="inv-items" style="margin-bottom:10px;"></div>
+      <div id="inv-items" style="margin-bottom:10px;width:100%;"></div>
       <button onclick="addInvItem()" style="padding:9px 18px;background:transparent;border:1px solid var(--border);color:var(--muted);font-family:'Montserrat',sans-serif;font-size:9px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all 0.2s;margin-bottom:16px;" onmouseover="this.style.borderColor='var(--gold)';this.style.color='var(--gold)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">+ Add Line Item</button>
 
       <div class="inv-totals">
@@ -753,6 +752,8 @@ function buildDashboard(d) {
   document.getElementById('k-value').textContent = 'AED ' + val;
   document.getElementById('k-food').textContent = (s.food_orders||0).toLocaleString();
   document.getElementById('k-nonfood').textContent = (s.non_food_orders||0).toLocaleString();
+  const plEl = document.getElementById('k-pl');
+  if (plEl) plEl.textContent = (s.pl_orders||0).toLocaleString();
   document.getElementById('k-routes').textContent = (s.total_routes||0).toLocaleString();
   document.getElementById('k-drivers-sub').textContent = (s.total_drivers||0) + ' drivers';
 
@@ -804,7 +805,6 @@ function buildDashboard(d) {
       '<td style="padding:8px 10px;font-size:12px;color:var(--gold);font-weight:600;border:1px solid var(--border);">' + r.route + '</td>' +
       '<td style="padding:8px 10px;font-size:12px;color:var(--text);text-align:center;border:1px solid var(--border);">' + (r.driver||'—') + '</td>' +
       '<td style="padding:8px 10px;font-size:14px;color:var(--gold);font-weight:700;text-align:center;border:1px solid var(--border);">' + r.drops + '</td>' +
-      '<td style="padding:8px 10px;font-size:12px;color:var(--muted);text-align:center;border:1px solid var(--border);">' + (r.order_lines||'—') + '</td>' +
       '<td style="padding:8px 10px;font-size:12px;color:var(--gold);text-align:right;border:1px solid var(--border);">AED ' + (r.value||0).toLocaleString() + '</td>' +
       '</tr>'
     ).join('');
@@ -950,33 +950,31 @@ function addInvItem() {
   invCount++;
   const row = document.createElement('div');
   row.className = 'item-row';
-  row.style.background = 'var(--card)';
-  row.style.border = '1px solid var(--border)';
-  row.style.marginBottom = '10px';
+  row.style.cssText = 'width:100%;border:1px solid #2a2a1e;margin-bottom:10px;background:#161612;box-sizing:border-box;';
 
-  const lbl = function(t, c) { return '<div style="font-size:9px;color:' + (c||'var(--muted)') + ';letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">' + t + '</div>'; };
-  const inp = function(ph, extra) { return '<input type="text" placeholder="' + ph + '" oninput="calcInv()" style="width:100%;height:44px;padding:10px 12px;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:Montserrat,sans-serif;font-size:13px;outline:none;box-sizing:border-box;' + (extra||'') + '"/>'; };
+  row.innerHTML =
+    '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-bottom:1px solid #2a2a1e;background:rgba(201,168,76,0.06);">'
+    + '<span style="font-size:11px;color:#c9a84c;font-weight:700;letter-spacing:2px;">ITEM ' + invCount + '</span>'
+    + '<button type="button" onclick="this.closest(\'.item-row\').remove();calcInv()" style="background:transparent;border:1px solid rgba(232,75,75,0.4);color:#e84b4b;cursor:pointer;font-size:10px;padding:5px 14px;font-family:Montserrat,sans-serif;letter-spacing:1px;">DELETE</button>'
+    + '</div>'
 
-  const header = '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:rgba(201,168,76,0.06);border-bottom:1px solid var(--border);">' +
-    '<span style="font-size:11px;color:var(--gold);font-weight:700;letter-spacing:2px;">&#10022; ITEM ' + invCount + '</span>' +
-    '<button onclick="this.closest(\'.item-row\').remove();calcInv()" style="background:transparent;border:1px solid rgba(232,75,75,0.4);color:var(--red);cursor:pointer;font-size:10px;padding:5px 14px;font-family:Montserrat,sans-serif;letter-spacing:1px;text-transform:uppercase;">Delete</button>' +
-    '</div>';
+    + '<div style="padding:10px 16px 0;box-sizing:border-box;">'
+    + '<div style="font-size:9px;color:#7a7660;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">Description</div>'
+    + '<input type="text" placeholder="Enter full item description here..." oninput="calcInv()" style="width:100%;height:44px;padding:10px 12px;background:#111109;border:1px solid #2a2a1e;color:#f0ece0;font-family:Montserrat,sans-serif;font-size:13px;outline:none;box-sizing:border-box;"/>'
+    + '</div>'
 
-  const desc = '<div style="padding:12px 16px 8px;">' + lbl('Description') + inp('Enter full item description here...') + '</div>';
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:10px 16px 0;box-sizing:border-box;">'
+    + '<div><div style="font-size:9px;color:#7a7660;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">Barcode</div><input type="text" placeholder="Barcode number" style="width:100%;height:44px;padding:10px 12px;background:#111109;border:1px solid #2a2a1e;color:#f0ece0;font-family:Montserrat,sans-serif;font-size:13px;outline:none;box-sizing:border-box;"/></div>'
+    + '<div><div style="font-size:9px;color:#7a7660;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">Quantity</div><input type="text" placeholder="0" oninput="calcInv()" style="width:100%;height:44px;padding:10px 12px;background:#111109;border:1px solid #2a2a1e;color:#f0ece0;font-family:Montserrat,sans-serif;font-size:13px;outline:none;box-sizing:border-box;text-align:center;"/></div>'
+    + '</div>'
 
-  const barcodeQty = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0 16px 8px;">' +
-    '<div>' + lbl('Barcode') + '<input type="text" placeholder="Barcode number" style="width:100%;height:44px;padding:10px 12px;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:Montserrat,sans-serif;font-size:13px;outline:none;box-sizing:border-box;"/></div>' +
-    '<div>' + lbl('Quantity') + inp('0', 'text-align:center;') + '</div>' +
-    '</div>';
+    + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;padding:10px 16px 14px;box-sizing:border-box;">'
+    + '<div><div style="font-size:9px;color:#7a7660;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">Unit Price (AED)</div><input type="text" placeholder="0.00" oninput="calcInv()" style="width:100%;height:44px;padding:10px 12px;background:#111109;border:1px solid #2a2a1e;color:#f0ece0;font-family:Montserrat,sans-serif;font-size:13px;outline:none;box-sizing:border-box;text-align:right;"/></div>'
+    + '<div><div style="font-size:9px;color:#7a7660;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">VAT</div><label style="display:flex;align-items:center;gap:8px;height:44px;padding:0 12px;background:#111109;border:1px solid #2a2a1e;cursor:pointer;box-sizing:border-box;"><input type="checkbox" checked class="vat-chk" onchange="calcInv()" style="width:16px;height:16px;accent-color:#c9a84c;flex-shrink:0;"/><span style="font-size:11px;color:#7a7660;white-space:nowrap;">5% VAT</span></label></div>'
+    + '<div><div style="font-size:9px;color:#4ecb8d;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">VAT Amt (AED)</div><input type="text" readonly class="vat-amt" placeholder="Auto" style="width:100%;height:44px;padding:10px 12px;background:rgba(78,203,141,0.05);border:1px solid rgba(78,203,141,0.2);color:#4ecb8d;font-family:Montserrat,sans-serif;font-size:13px;font-weight:600;outline:none;box-sizing:border-box;text-align:right;cursor:default;"/></div>'
+    + '<div><div style="font-size:9px;color:#c9a84c;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">Net Amt (AED)</div><input type="text" readonly class="net-amt" placeholder="Auto" style="width:100%;height:44px;padding:10px 12px;background:rgba(201,168,76,0.05);border:1px solid rgba(201,168,76,0.2);color:#c9a84c;font-family:Montserrat,sans-serif;font-size:15px;font-weight:700;outline:none;box-sizing:border-box;text-align:right;cursor:default;"/></div>'
+    + '</div>';
 
-  const priceRow = '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;padding:0 16px 14px;">' +
-    '<div>' + lbl('Unit Price (AED)') + inp('0.00', 'text-align:right;') + '</div>' +
-    '<div>' + lbl('VAT') + '<label style="display:flex;align-items:center;gap:8px;height:44px;padding:0 12px;background:var(--surface);border:1px solid var(--border);cursor:pointer;box-sizing:border-box;"><input type="checkbox" checked class="vat-chk" onchange="calcInv()" style="width:16px;height:16px;accent-color:var(--gold);flex-shrink:0;"/><span style="font-size:11px;color:var(--muted);">5% VAT</span></label></div>' +
-    '<div>' + lbl('VAT Amt (AED)', 'var(--green)') + '<input type="text" readonly class="vat-amt" placeholder="Auto" style="width:100%;height:44px;padding:10px 12px;background:rgba(78,203,141,0.05);border:1px solid rgba(78,203,141,0.2);color:var(--green);font-family:Montserrat,sans-serif;font-size:13px;font-weight:600;outline:none;box-sizing:border-box;text-align:right;cursor:default;"/></div>' +
-    '<div>' + lbl('Net Amt (AED)', 'var(--gold)') + '<input type="text" readonly class="net-amt" placeholder="Auto" style="width:100%;height:44px;padding:10px 12px;background:rgba(201,168,76,0.05);border:1px solid rgba(201,168,76,0.2);color:var(--gold);font-family:Montserrat,sans-serif;font-size:15px;font-weight:700;outline:none;box-sizing:border-box;text-align:right;cursor:default;"/></div>' +
-    '</div>';
-
-  row.innerHTML = header + desc + barcodeQty + priceRow;
   document.getElementById('inv-items').appendChild(row);
   row.querySelector('input').focus();
 }
@@ -1031,9 +1029,9 @@ function previewInv() {
   const co = COS[selCo];
   const ref = document.getElementById('inv-ref').value || ('PRO-INV-' + Date.now().toString().slice(-8));
   const css = 'body{font-family:Calibri,Arial,sans-serif;font-size:11pt;color:#1a1a1a;padding:30px 40px;background:#fff;}' +
-    '.hdr{display:flex;justify-content:space-between;align-items:flex-end;padding-bottom:12px;border-bottom:3px solid ' + co.color + ';margin-bottom:20px;}' +
-    '.cn{font-size:20pt;font-weight:800;color:' + co.color + ';letter-spacing:2px;}' +
-    '.cr{text-align:right;font-size:9pt;color:#666;line-height:1.6;}' +
+    '.hdr{text-align:center;padding:20px;background:' + co.color + ';margin-bottom:20px;}' +
+    '.cn{font-size:22pt;font-weight:800;color:#ffffff;letter-spacing:2px;text-align:center;}' +
+    '.cr{font-size:10pt;color:rgba(255,255,255,0.85);line-height:1.6;text-align:center;margin-top:6px;}' +
     'h1{font-size:17pt;text-align:center;color:' + co.color + ';letter-spacing:4px;margin:16px 0;}' +
     '.meta{display:flex;justify-content:space-between;margin-bottom:16px;}' +
     '.lbl{font-size:8pt;color:#999;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;}' +
@@ -1053,7 +1051,7 @@ function previewInv() {
     '@media print{.pbtn{display:none;}}';
 
   const body = '<button class="pbtn" onclick="window.print()">🖨 Print / Save PDF</button>' +
-    '<div class="hdr"><div class="cn">' + co.name + '</div><div class="cr"><div>' + document.getElementById('inv-addr').value.split('\n').join('<br>') + '</div><div>' + document.getElementById('inv-contact').value + '</div></div></div>' +
+    '<div class="hdr"><div class="cn">' + co.name + '</div><div class="cr">' + document.getElementById('inv-addr').value.split('\n').join(' | ') + ' | ' + document.getElementById('inv-contact').value + '</div></div>' +
     '<h1>PROFORMA INVOICE</h1>' +
     '<div class="meta"><div><div class="lbl">Bill To</div><div class="val">' + document.getElementById('inv-client').value + '</div><div style="font-size:10pt;color:#444;margin-top:3px;">' + document.getElementById('inv-client-addr').value + '</div></div>' +
     '<div style="text-align:right;"><div class="lbl">Reference No</div><div class="val" style="color:' + co.color + '">' + ref + '</div><div style="margin-top:5px;"><span class="lbl">Date: </span>' + document.getElementById('inv-date').value + '</div><div><span class="lbl">Valid: </span>' + document.getElementById('inv-valid').value + '</div><div><span class="lbl">Terms: </span>' + document.getElementById('inv-terms').value + '</div></div></div>' +
