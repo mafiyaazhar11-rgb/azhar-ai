@@ -86,8 +86,11 @@ Return ONLY a JSON object (no markdown, no explanation) with this exact structur
   "top_drivers": [{"name": "Driver", "orders": 0}],
   "lulu_orders": <number>,
   "lulu_value": <number>,
+  "food_orders": <number>,
+  "non_food_orders": <number>,
   "date": "<date from data>"
-}`;
+}
+Return ONLY the JSON. food_orders = count of orders where CUSTOMER name contains FOOD. non_food_orders = total_orders minus food_orders.`;
 
     const message = await anthropic.messages.create({
       model: 'claude-haiku-4-5-20251001',
