@@ -297,22 +297,22 @@ footer span{color:var(--gold);}
           <div class="kpi-label">Total Orders</div>
           <div class="kpi-value" id="k-orders">—</div>
           <div class="kpi-sub" id="k-routes-sub">— routes · — drivers</div>
-          <div class="kpi-sub up" id="k-drops" style="margin-top:4px;font-size:11px;">— total drops</div>
+          <div class="kpi-sub" style="color:var(--green);" id="k-drops" style="margin-top:4px;font-size:11px;">— total drops</div>
         </div>
         <div class="kpi-card">
           <div class="kpi-icon" style="background:rgba(201,168,76,0.1);">💰</div>
           <div class="kpi-label">Total Value (AED)</div>
           <div class="kpi-value" id="k-value">—</div>
-          <div class="kpi-sub up" id="k-value-sub">Today's dispatch</div>
+          <div class="kpi-sub" style="color:var(--green);" id="k-value-sub">Today's dispatch</div>
         </div>
         <div class="kpi-card">
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
 
             <!-- FOOD -->
             <div style="background:rgba(78,203,141,0.05);border:1px solid rgba(78,203,141,0.2);padding:12px;">
-              <div style="font-size:9px;color:var(--green);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;font-weight:700;">🟢 FOOD</div>
-              <div style="font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:700;color:var(--green);" id="k-food">—</div>
-              <div style="font-size:10px;color:var(--muted);margin-bottom:8px;" id="k-food-val">AED —</div>
+              <div style="font-size:9px;color:var(--green);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;font-weight:700;">✦ FOOD</div>
+              <div style="font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:700;color:var(--gold);" id="k-food">—</div>
+              <div style="font-size:10px;color:var(--muted);margin-bottom:8px;" id="k-food-val" style="color:var(--green);font-weight:700;">AED —</div>
               <div style="border-top:1px solid rgba(78,203,141,0.15);padding-top:8px;" id="k-food-detail">
                 <div style="display:flex;justify-content:space-between;font-size:10px;padding:2px 0;"><span style="color:var(--muted);">DCV</span><span id="k-dcv-orders">—</span></div>
                 <div style="display:flex;justify-content:space-between;font-size:10px;padding:2px 0;"><span style="color:var(--muted);">DCF (FoodSvc)</span><span id="k-dcf-orders">—</span></div>
@@ -320,39 +320,39 @@ footer span{color:var(--gold);}
             </div>
 
             <!-- NON-FOOD -->
-            <div style="background:rgba(232,133,75,0.05);border:1px solid rgba(232,133,75,0.2);padding:12px;">
-              <div style="font-size:9px;color:var(--orange);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;font-weight:700;">🟠 NON-FOOD</div>
-              <div style="font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:700;color:var(--orange);" id="k-nonfood">—</div>
-              <div style="font-size:10px;color:var(--muted);margin-bottom:8px;" id="k-nonfood-val">AED —</div>
-              <div style="border-top:1px solid rgba(232,133,75,0.15);padding-top:8px;">
-                <div style="padding:4px 0;border-bottom:1px solid rgba(232,133,75,0.08);">
+            <div style="background:rgba(91,141,238,0.05);border:1px solid rgba(91,141,238,0.2);padding:12px;">
+              <div style="font-size:9px;color:var(--blue);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;font-weight:700;">🟠 NON-FOOD</div>
+              <div style="font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:700;color:var(--blue);" id="k-nonfood">—</div>
+              <div style="font-size:10px;color:var(--muted);margin-bottom:8px;" id="k-nonfood-val" style="color:var(--blue);font-weight:700;">AED —</div>
+              <div style="border-top:1px solid rgba(91,141,238,0.15);padding-top:8px;">
+                <div style="padding:4px 0;border-bottom:1px solid rgba(91,141,238,0.08);">
                   <div style="display:flex;justify-content:space-between;align-items:center;">
                     <span style="font-size:10px;color:var(--muted);font-weight:600;">DGC</span>
                     <span id="k-dgc-orders" style="font-size:10px;color:var(--text);">—</span>
                   </div>
-                  <div style="font-size:11px;color:var(--orange);font-weight:700;text-align:right;margin-top:2px;" id="k-dgc-val">AED —</div>
+                  <div style="font-size:11px;color:var(--blue);font-weight:600;text-align:right;margin-top:1px;" id="k-dgc-val">AED —</div>
                 </div>
-                <div style="padding:4px 0;border-bottom:1px solid rgba(232,133,75,0.08);">
+                <div style="padding:4px 0;border-bottom:1px solid rgba(91,141,238,0.08);">
                   <div style="display:flex;justify-content:space-between;align-items:center;">
                     <span style="font-size:10px;color:var(--muted);font-weight:600;">DGS</span>
                     <span id="k-dgs-orders" style="font-size:10px;color:var(--text);">—</span>
                   </div>
-                  <div style="font-size:11px;color:var(--orange);font-weight:700;text-align:right;margin-top:2px;" id="k-dgs-val">AED —</div>
+                  <div style="font-size:11px;color:var(--blue);font-weight:600;text-align:right;margin-top:1px;" id="k-dgs-val">AED —</div>
                 </div>
                 <div style="padding:4px 0;">
                   <div style="display:flex;justify-content:space-between;align-items:center;">
                     <span style="font-size:10px;color:var(--muted);font-weight:600;">DSN</span>
                     <span id="k-dsn-orders" style="font-size:10px;color:var(--text);">—</span>
                   </div>
-                  <div style="font-size:11px;color:var(--orange);font-weight:700;text-align:right;margin-top:2px;" id="k-dsn-val">AED —</div>
+                  <div style="font-size:11px;color:var(--blue);font-weight:600;text-align:right;margin-top:1px;" id="k-dsn-val">AED —</div>
                 </div>
               </div>
             </div>
 
             <!-- 3PL -->
             <div style="background:rgba(91,141,238,0.05);border:1px solid rgba(91,141,238,0.2);padding:12px;">
-              <div style="font-size:9px;color:var(--blue);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;font-weight:700;">🔵 3PL</div>
-              <div style="font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:700;color:var(--blue);" id="k-pl">—</div>
+              <div style="font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;font-weight:700;">✦ 3PL</div>
+              <div style="font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:700;color:var(--gold);" id="k-pl">—</div>
               <div style="font-size:10px;color:var(--muted);margin-bottom:8px;">AED 0</div>
               <div style="border-top:1px solid rgba(91,141,238,0.15);padding-top:8px;">
                 <div style="display:flex;justify-content:space-between;font-size:10px;padding:2px 0;"><span style="color:var(--muted);">HCP</span><span id="k-hcp">—</span></div>
@@ -380,7 +380,7 @@ footer span{color:var(--gold);}
             <svg class="donut-svg" width="100" height="100" viewBox="0 0 100 100" id="ds-donut-svg">
               <circle cx="50" cy="50" r="35" fill="none" stroke="#2a2a1e" stroke-width="18"/>
               <circle cx="50" cy="50" r="35" fill="none" stroke="#4ecb8d" stroke-width="18" id="donut-food" stroke-dasharray="0 220" stroke-dashoffset="55" style="transition:stroke-dasharray 1s;"/>
-              <circle cx="50" cy="50" r="35" fill="none" stroke="#e8854b" stroke-width="18" id="donut-nonfood" stroke-dasharray="0 220" stroke-dashoffset="55" style="transition:stroke-dasharray 1s;"/>
+              <circle cx="50" cy="50" r="35" fill="none" stroke="#5b8dee" stroke-width="18" id="donut-nonfood" stroke-dasharray="0 220" stroke-dashoffset="55" style="transition:stroke-dasharray 1s;"/>
               <circle cx="50" cy="50" r="35" fill="none" stroke="#5b8dee" stroke-width="18" id="donut-pl" stroke-dasharray="0 220" stroke-dashoffset="55" style="transition:stroke-dasharray 1s;"/>
               <text x="50" y="46" text-anchor="middle" font-size="11" fill="#c9a84c" font-weight="700" id="donut-center">—</text>
               <text x="50" y="58" text-anchor="middle" font-size="7" fill="#7a7660">ORDERS</text>
@@ -776,7 +776,7 @@ function buildDashboard(d) {
   document.getElementById('ds-kpis').style.display = 'grid';
 
   // City bar chart
-  const colors = ['#c9a84c','#e84b8a','#5b8dee','#4ecb8d','#e8854b','#a84bcb','#e8c878','#5bd8ee'];
+  const colors = ['#c9a84c','#4ecb8d','#5b8dee','#e8c878','#7a9bd4','#a8d4a8','#d4c878','#78b4d4'];
   if (s.by_city && s.by_city.length) {
     const cities = s.by_city.slice(0,8);
     const max = Math.max(...cities.map(c => c.orders||0));
@@ -807,7 +807,7 @@ function buildDashboard(d) {
     document.getElementById('donut-center').textContent = (s.total_orders||0).toLocaleString();
     document.getElementById('ds-donut-legend').innerHTML =
       '<div class="donut-item"><div class="donut-dot" style="background:var(--green)"></div><span>Food: <strong>' + (s.food_orders||0) + '</strong></span></div>' +
-      '<div class="donut-item"><div class="donut-dot" style="background:var(--orange)"></div><span>Non-Food: <strong>' + (s.non_food_orders||0) + '</strong></span></div>' +
+      '<div class="donut-item"><div class="donut-dot" style="background:var(--blue)"></div><span>Non-Food: <strong>' + (s.non_food_orders||0) + '</strong></span></div>' +
       '<div class="donut-item"><div class="donut-dot" style="background:var(--blue)"></div><span>3PL: <strong>' + (s.pl_orders||0) + '</strong></span></div>';
   }
 
