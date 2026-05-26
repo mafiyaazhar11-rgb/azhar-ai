@@ -34,12 +34,14 @@ const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 // Health check
 app.get('/health', (req, res) => res.json({ status: 'AZHAR-AI server running' }));
 
-// In-memory dispatch data store (shared across all users)
+// In-memory dispatch data store - keeps 30 days history
+let dispatchHistory = {}; // keyed by date string YYYY-MM-DD
 let dispatchData = {
   uploadedAt: null,
   uploadedBy: null,
   csvText: null,
-  summary: null
+  summary: null,
+  date: null
 };
 
 // Upload dispatch data (admin only)
@@ -114,16 +116,37 @@ Return ONLY a JSON object (no markdown, no explanation) with this exact structur
   }
 });
 
-// Get dispatch status
+// Get dispatch status + available dates
 app.get('/api/dispatch/status', (req, res) => {
+  const availableDates = Object.keys(dispatchHistory).sort().reverse();
   if (!dispatchData.uploadedAt) {
-    return res.json({ hasData: false });
+    return res.json({ hasData: false, availableDates });
   }
   res.json({
     hasData: true,
     uploadedAt: dispatchData.uploadedAt,
     uploadedBy: dispatchData.uploadedBy,
-    summary: dispatchData.summary
+    summary: dispatchData.summary,
+    date: dispatchData.date,
+    availableDates
+  });
+});
+
+// Load specific date
+app.get('/api/dispatch/date/:dateKey', (req, res) => {
+  const { dateKey } = req.params;
+  const entry = dispatchHistory[dateKey];
+  if (!entry) {
+    return res.json({ hasData: false, message: 'No data for this date' });
+  }
+  // Set as current active data
+  dispatchData = entry;
+  res.json({
+    hasData: true,
+    uploadedAt: entry.uploadedAt,
+    uploadedBy: entry.uploadedBy,
+    summary: entry.summary,
+    date: entry.date
   });
 });
 
