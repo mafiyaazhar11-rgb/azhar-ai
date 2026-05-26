@@ -998,80 +998,125 @@ function removeItem(btn) {
 function previewInvoice() {
   const co = companies[selectedCompany];
   const ref = document.getElementById('q-ref').value || ('PRO-INV-' + Date.now().toString().slice(-8));
-  const win = window.open('', '_blank', 'width=1000,height=750');
-  if (!win) { alert('Please allow popups for this site to use Preview.'); return; }
   
-  const css = [
-    '*{margin:0;padding:0;box-sizing:border-box;}',
-    'body{font-family:Calibri,Arial,sans-serif;font-size:11pt;color:#1a1a1a;padding:30px 40px;background:#fff;}',
-    '.lh{display:flex;justify-content:space-between;align-items:flex-end;padding-bottom:12px;border-bottom:3px solid ' + co.color + ';margin-bottom:20px;}',
-    '.lh img{height:55px;width:auto;}',
-    '.lh-right{text-align:right;font-size:9pt;color:#666;}',
-    'h1{font-size:18pt;text-align:center;color:' + co.color + ';letter-spacing:3px;margin:16px 0;}',
-    '.meta{display:flex;justify-content:space-between;margin-bottom:16px;}',
-    '.label{font-size:8pt;color:#999;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;}',
-    '.val{font-size:11pt;font-weight:600;}',
-    'table{width:100%;border-collapse:collapse;margin-bottom:16px;}',
-    'th{background:#1a1a2e;color:#c9a84c;padding:9px 8px;font-size:9pt;text-transform:uppercase;letter-spacing:1px;border:1px solid #ddd;}',
-    'td{padding:8px;border:1px solid #e0e0e0;font-size:10pt;}',
-    'tr:nth-child(even) td{background:#fafafa;}',
-    '.totals{margin-left:auto;width:45%;}',
-    '.totals table{width:100%;}',
-    '.totals td{border:none;padding:6px 8px;}',
-    '.gt td{font-weight:700;font-size:13pt;color:' + co.color + ';border-top:2px solid ' + co.color + ';padding-top:8px;}',
-    '.notes{margin-top:16px;padding:10px;background:#f9f9f9;border-left:3px solid ' + co.color + ';font-size:10pt;}',
-    '.sigs{display:flex;justify-content:space-between;margin-top:50px;}',
-    '.sig{text-align:center;width:30%;border-top:1px solid #333;padding-top:8px;font-size:10pt;}',
-    '.footer{margin-top:24px;text-align:center;font-size:9pt;color:#aaa;border-top:1px solid #eee;padding-top:8px;}',
-    '.print-btn{position:fixed;top:20px;right:20px;padding:12px 24px;background:' + co.color + ';color:#fff;border:none;font-size:12pt;cursor:pointer;font-family:Calibri;letter-spacing:1px;}',
-    '@media print{.print-btn{display:none;}}'
-  ].join('\n');
-
-  const body = [
-    '<button class="print-btn" onclick="window.print()">Print / Save PDF</button>',
-    '<div class="lh">',
-    '  <img src="' + co.logo + '" />',
-    '  <div class="lh-right"><div>' + document.getElementById('q-address').value + '</div><div>' + document.getElementById('q-contact').value + '</div></div>',
+  // Build complete HTML as a blob URL - more reliable than window.open + write
+  const itemsRows = getItemsHTML();
+  
+  const html = [
+    '<!DOCTYPE html>',
+    '<html>',
+    '<head>',
+    '<meta charset="utf-8">',
+    '<title>' + ref + '</title>',
+    '<style>',
+    '* { margin: 0; padding: 0; box-sizing: border-box; }',
+    'body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; color: #1a1a1a; padding: 30px 40px; background: #fff; }',
+    '.header { display: flex; justify-content: space-between; align-items: flex-end; padding-bottom: 14px; border-bottom: 3px solid ' + co.color + '; margin-bottom: 20px; }',
+    '.company-name { font-size: 22pt; font-weight: 800; color: ' + co.color + '; letter-spacing: 2px; }',
+    '.company-info { text-align: right; font-size: 9pt; color: #666; line-height: 1.6; }',
+    'h1 { font-size: 18pt; text-align: center; color: ' + co.color + '; letter-spacing: 4px; margin: 16px 0; }',
+    '.meta { display: flex; justify-content: space-between; margin-bottom: 20px; gap: 20px; }',
+    '.meta-box { flex: 1; }',
+    '.label { font-size: 8pt; color: #999; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 3px; }',
+    '.val { font-size: 11pt; font-weight: 700; color: #1a1a1a; }',
+    '.bill-box { background: #f8f8f8; padding: 14px; border-left: 4px solid ' + co.color + '; margin-bottom: 20px; }',
+    'table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }',
+    'th { background: #1a1a2e; color: #c9a84c; padding: 10px 8px; font-size: 9pt; text-transform: uppercase; letter-spacing: 1px; border: 1px solid #ccc; text-align: left; }',
+    'td { padding: 9px 8px; border: 1px solid #e0e0e0; font-size: 10pt; }',
+    'tr:nth-child(even) td { background: #fafafa; }',
+    '.totals-wrap { display: flex; justify-content: flex-end; margin-bottom: 20px; }',
+    '.totals-table { width: 45%; border-collapse: collapse; }',
+    '.totals-table td { border: none; padding: 6px 10px; font-size: 11pt; }',
+    '.grand-total td { font-weight: 700; font-size: 13pt; color: ' + co.color + '; border-top: 2px solid ' + co.color + '; padding-top: 10px; }',
+    '.notes-box { padding: 12px; background: #f9f9f9; border-left: 3px solid ' + co.color + '; margin-bottom: 20px; font-size: 10pt; }',
+    '.signatures { display: flex; justify-content: space-between; margin-top: 60px; }',
+    '.sig-box { text-align: center; width: 28%; border-top: 1px solid #333; padding-top: 8px; font-size: 10pt; color: #555; }',
+    '.footer { margin-top: 30px; text-align: center; font-size: 9pt; color: #aaa; border-top: 1px solid #eee; padding-top: 10px; }',
+    '.print-btn { position: fixed; top: 16px; right: 16px; padding: 12px 28px; background: ' + co.color + '; color: #fff; border: none; font-size: 11pt; cursor: pointer; font-weight: 700; border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }',
+    '@media print { .print-btn { display: none !important; } }',
+    '</style>',
+    '</head>',
+    '<body>',
+    '<button class="print-btn" onclick="window.print()">🖨 Print / Save as PDF</button>',
+    
+    '<div class="header">',
+    '  <div class="company-name">' + co.name + '</div>',
+    '  <div class="company-info">',
+    '    <div>' + (document.getElementById("q-address").value || "").split("\n").join("<br>") + '</div>',
+    '    <div>' + (document.getElementById("q-contact").value || "") + '</div>',
+    '  </div>',
     '</div>',
+    
     '<h1>PROFORMA INVOICE</h1>',
+    
     '<div class="meta">',
-    '  <div><div class="label">Bill To</div><div class="val">' + document.getElementById('q-client').value + '</div><div style="font-size:10pt;color:#444;margin-top:4px;">' + document.getElementById('q-client-address').value + '</div></div>',
-    '  <div style="text-align:right;"><div class="label">Reference No</div><div class="val" style="color:' + co.color + '">' + ref + '</div>',
-    '  <div style="margin-top:6px;"><span class="label">Date: </span>' + document.getElementById('q-date').value + '</div>',
-    '  <div><span class="label">Valid: </span>' + document.getElementById('q-valid').value + '</div>',
-    '  <div><span class="label">Terms: </span>' + document.getElementById('q-terms').value + '</div></div>',
+    '  <div class="meta-box">',
+    '    <div class="label">Reference No</div>',
+    '    <div class="val" style="color:' + co.color + '">' + ref + '</div>',
+    '  </div>',
+    '  <div class="meta-box">',
+    '    <div class="label">Date</div>',
+    '    <div class="val">' + (document.getElementById("q-date").value || "—") + '</div>',
+    '  </div>',
+    '  <div class="meta-box">',
+    '    <div class="label">Valid Until</div>',
+    '    <div class="val">' + (document.getElementById("q-valid").value || "30 days") + '</div>',
+    '  </div>',
+    '  <div class="meta-box">',
+    '    <div class="label">Payment Terms</div>',
+    '    <div class="val">' + (document.getElementById("q-terms").value || "—") + '</div>',
+    '  </div>',
     '</div>',
-    '<table><thead><tr>',
+    
+    '<div class="bill-box">',
+    '  <div class="label">Bill To</div>',
+    '  <div class="val" style="margin-bottom:4px;">' + (document.getElementById("q-client").value || "—") + '</div>',
+    '  <div style="font-size:10pt;color:#444;">' + (document.getElementById("q-client-address").value || "").split("\n").join("<br>") + '</div>',
+    '</div>',
+    
+    '<table>',
+    '<thead><tr>',
     '<th style="width:4%;text-align:center;">Sr.</th>',
-    '<th style="width:32%;text-align:left;">Description</th>',
+    '<th style="width:32%">Description</th>',
     '<th style="width:14%;text-align:center;">Barcode</th>',
     '<th style="width:7%;text-align:center;">Qty</th>',
-    '<th style="width:15%;text-align:right;">Unit Price (AED)</th>',
-    '<th style="width:13%;text-align:right;">VAT 5%</th>',
-    '<th style="width:15%;text-align:right;">Net Amount</th>',
-    '</tr></thead><tbody>' + getItemsHTML() + '</tbody></table>',
-    '<div class="totals"><table>',
-    '<tr><td>Subtotal (excl. VAT):</td><td style="text-align:right;">' + document.getElementById('q-subtotal').textContent + '</td></tr>',
-    '<tr><td>VAT (5%):</td><td style="text-align:right;color:green;">' + document.getElementById('q-vat').textContent + '</td></tr>',
-    '<tr class="gt"><td>Net Total (incl. VAT):</td><td style="text-align:right;">' + document.getElementById('q-total').textContent + '</td></tr>',
+    '<th style="width:14%;text-align:right;">Unit Price (AED)</th>',
+    '<th style="width:13%;text-align:right;">VAT 5% (AED)</th>',
+    '<th style="width:16%;text-align:right;">Net Amount (AED)</th>',
+    '</tr></thead>',
+    '<tbody>' + itemsRows + '</tbody>',
+    '</table>',
+    
+    '<div class="totals-wrap"><table class="totals-table">',
+    '<tr><td style="color:#666;">Subtotal (excl. VAT):</td><td style="text-align:right;">' + document.getElementById("q-subtotal").textContent + '</td></tr>',
+    '<tr><td style="color:#666;">VAT (5%):</td><td style="text-align:right;color:green;">' + document.getElementById("q-vat").textContent + '</td></tr>',
+    '<tr class="grand-total"><td>Net Total (incl. VAT):</td><td style="text-align:right;">' + document.getElementById("q-total").textContent + '</td></tr>',
     '</table></div>',
-    document.getElementById('q-notes').value ? '<div class="notes"><strong>Notes:</strong> ' + document.getElementById('q-notes').value + '</div>' : '',
-    '<div class="sigs">',
-    '<div class="sig">Prepared By</div>',
-    '<div class="sig">Authorized Signatory</div>',
-    '<div class="sig">Client Acknowledgement</div>',
+    
+    document.getElementById("q-notes").value ? '<div class="notes-box"><strong>Notes / Terms:</strong> ' + document.getElementById("q-notes").value + '</div>' : '',
+    
+    '<div class="signatures">',
+    '  <div class="sig-box">Prepared By</div>',
+    '  <div class="sig-box">Authorized Signatory</div>',
+    '  <div class="sig-box">Client Acknowledgement</div>',
     '</div>',
-    '<div class="footer">Powered by AZHAR-AI ✦ ' + co.name + '</div>'
+    
+    '<div class="footer">Powered by AZHAR-AI &nbsp;✦&nbsp; ' + co.name + '</div>',
+    '</body></html>'
   ].join('\n');
 
-  const html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>' + ref + '</title><style>' + css + '</style></head><body>' + body + '</body></html>';
-  win.document.open();
-  win.document.write(html);
-  win.document.close();
+  // Use Blob URL - most reliable method, works on all servers
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const win = window.open(url, '_blank');
+  if (!win) {
+    alert('Popup blocked! Please allow popups for this site, then try again.');
+  }
+  // Clean up blob URL after 60 seconds
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
 
 
-// DOWNLOAD WORD
 function downloadQuoteWord() {
   const co = companies[selectedCompany];
   const ref = document.getElementById('q-ref').value || ('PRO-INV-' + Date.now().toString().slice(-8));
@@ -1123,7 +1168,7 @@ function addChatMessage(role, text) {
   const welcome = win.querySelector('.chat-welcome'); if(welcome) welcome.remove();
   const div = document.createElement('div');
   div.className = 'chat-msg ' + role;
-  div.innerHTML = '<div class="chat-avatar">' + (role==='user'?'A':'✦') + '</div><div class="chat-bubble">' + text.replace(/\n/g,'<br>') + '</div>';
+  div.innerHTML = '<div class="chat-avatar">' + (role==='user'?'A':'✦') + '</div><div class="chat-bubble">' + text.split("\n").join("<br>") + '</div>';
   win.appendChild(div); win.scrollTop = win.scrollHeight;
 }
 function addTyping() {
@@ -2372,7 +2417,7 @@ function addChatMessage(role, text) {
   const welcome = win.querySelector('.chat-welcome'); if(welcome) welcome.remove();
   const div = document.createElement('div');
   div.className = 'chat-msg ' + role;
-  div.innerHTML = '<div class="chat-avatar">' + (role==='user'?'A':'✦') + '</div><div class="chat-bubble">' + text.replace(/\n/g,'<br>') + '</div>';
+  div.innerHTML = '<div class="chat-avatar">' + (role==='user'?'A':'✦') + '</div><div class="chat-bubble">' + text.split("\n").join("<br>") + '</div>';
   win.appendChild(div); win.scrollTop = win.scrollHeight;
 }
 function addTyping() {
