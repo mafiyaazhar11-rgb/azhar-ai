@@ -716,28 +716,50 @@ async function loadDispatchStatus() {
   try {
     const r = await fetch('/api/dispatch/status');
     const d = await r.json();
-    const statusEl = document.getElementById('dispatch-status');
+    buildDateSlicer(d.availableDates || [], d.date);
     if (d.hasData && d.summary) {
-      const s = d.summary;
-      const t = new Date(d.uploadedAt).toLocaleString('en-AE');
-      statusEl.className = 'dispatch-status live';
-      statusEl.innerHTML = '<div class="dispatch-status-icon">✅</div><div class="dispatch-status-text">Live data — uploaded by ' + d.uploadedBy + ' at ' + t + '</div>';
-      document.getElementById('kpi-orders').textContent = (s.total_orders || 0).toLocaleString();
-      document.getElementById('kpi-value').textContent = s.total_value ? Math.round(s.total_value).toLocaleString() : '—';
-      document.getElementById('kpi-lulu').textContent = (s.lulu_orders || 0).toLocaleString();
-      document.getElementById('kpi-routes').textContent = (s.total_routes || 0).toLocaleString();
-      document.getElementById('kpi-drivers').textContent = (s.total_drivers || 0).toLocaleString();
-      document.getElementById('kpi-luluval').textContent = s.lulu_value ? Math.round(s.lulu_value).toLocaleString() : '—';
-      document.getElementById('kpi-grid').style.display = 'grid';
-      document.getElementById('quick-section').style.display = 'block';
-      dispatchLoaded = true;
+      updateDashboard(d);
     } else {
+      const statusEl = document.getElementById('dispatch-status');
       statusEl.className = 'dispatch-status';
-      statusEl.innerHTML = '<div class="dispatch-status-icon">⚠️</div><div class="dispatch-status-text">No dispatch data loaded today. Upload below to activate.</div>';
+      statusEl.innerHTML = '<div class="dispatch-status-icon">⚠️</div><div class="dispatch-status-text">No dispatch data for today. Upload your Excel file below.</div>';
     }
   } catch (e) {
-    document.getElementById('dispatch-status').innerHTML = '<div class="dispatch-status-icon">⚠️</div><div class="dispatch-status-text">Could not connect to server.</div>';
+    console.error('Dispatch status error:', e);
+    const statusEl = document.getElementById('dispatch-status');
+    if (statusEl) {
+      statusEl.className = 'dispatch-status';
+      statusEl.innerHTML = '<div class="dispatch-status-icon">⚠️</div><div class="dispatch-status-text">Server starting up... please wait 30 seconds and refresh.</div>';
+    }
   }
+}
+
+function buildDateSlicer(dates, currentDate) {
+  const wrap = document.getElementById('date-slicer-wrap');
+  const slicer = document.getElementById('date-slicer');
+  if (!dates || dates.length === 0) { if(wrap) wrap.style.display = 'none'; return; }
+  if(wrap) wrap.style.display = 'block';
+  if(!slicer) return;
+  slicer.innerHTML = '';
+  const today = new Date().toISOString().split('T')[0];
+  dates.slice(0, 30).forEach(dateKey => {
+    const btn = document.createElement('button');
+    btn.className = 'date-pill' + (dateKey === today ? ' today' : '') + (dateKey === currentDate ? ' active' : '');
+    const d = new Date(dateKey);
+    const label = dateKey === today ? 'Today' : d.toLocaleDateString('en-AE', {day:'numeric', month:'short'});
+    btn.textContent = label;
+    btn.onclick = () => loadDate(dateKey);
+    slicer.appendChild(btn);
+  });
+}
+
+async function loadDate(dateKey) {
+  try {
+    const r = await fetch('/api/dispatch/date/' + dateKey);
+    const d = await r.json();
+    if (d.hasData) { updateDashboard(d); loadDispatchStatus(); }
+    else alert('No data for ' + dateKey);
+  } catch(e) { alert('Error: ' + e.message); }
 }
 
 function askQuick(q) {
