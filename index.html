@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AZHAR-AI | Operations & Customer Service Intelligence</title>
+<title>AZHAR-AI | Operations &amp; Customer Service Intelligence Platform</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600;700&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js">
 // DOWNLOAD QUOTATION AS WORD
@@ -308,6 +308,111 @@ function initQuotation() {
   addItem();
 }
 
+
+// PREVIEW INVOICE
+function previewInvoice() {
+  const co = companies[selectedCompany];
+  const ref = document.getElementById('q-ref').value || ('PRO-INV-' + Date.now().toString().slice(-8));
+  
+  const win = window.open('', '_blank', 'width=900,height=700');
+  win.document.write(`
+<!DOCTYPE html>
+<html>
+<head>
+<title>Preview — ${ref}</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:Calibri,Arial,sans-serif;font-size:11pt;color:#1a1a1a;padding:30px 40px;background:#fff;}
+.lh{display:flex;justify-content:space-between;align-items:flex-end;padding-bottom:12px;border-bottom:3px solid ${co.color};margin-bottom:20px;}
+.lh img{height:55px;width:auto;}
+.lh-right{text-align:right;font-size:9pt;color:#666;}
+h1{font-size:18pt;text-align:center;color:${co.color};letter-spacing:3px;margin-bottom:20px;}
+.meta{display:flex;justify-content:space-between;margin-bottom:16px;}
+.meta-box{width:48%;}
+.label{font-size:8pt;color:#999;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;}
+.val{font-size:11pt;font-weight:600;color:#1a1a1a;}
+.bill{background:#f5f5f5;padding:12px;border-left:4px solid ${co.color};margin-bottom:20px;}
+table{width:100%;border-collapse:collapse;margin-bottom:16px;}
+th{background:#1a1a2e;color:#c9a84c;padding:9px 8px;font-size:9pt;text-transform:uppercase;letter-spacing:1px;border:1px solid #ddd;}
+td{padding:8px;border:1px solid #e0e0e0;font-size:10pt;}
+tr:nth-child(even) td{background:#fafafa;}
+.totals{margin-left:auto;width:42%;}
+.totals td{border:none;padding:5px 8px;}
+.gt td{font-weight:700;font-size:13pt;color:${co.color};border-top:2px solid ${co.color};padding-top:8px;}
+.notes{margin-top:16px;padding:10px;background:#f9f9f9;border-left:3px solid ${co.color};font-size:10pt;}
+.sigs{display:flex;justify-content:space-between;margin-top:50px;}
+.sig{text-align:center;width:30%;border-top:1px solid #333;padding-top:8px;font-size:10pt;}
+.footer{margin-top:24px;text-align:center;font-size:9pt;color:#aaa;border-top:1px solid #eee;padding-top:8px;}
+.print-btn{position:fixed;top:20px;right:20px;padding:12px 24px;background:${co.color};color:#fff;border:none;font-size:12pt;cursor:pointer;border-radius:4px;font-family:Calibri;letter-spacing:1px;}
+.print-btn:hover{opacity:0.9;}
+@media print{.print-btn{display:none;}}
+</style>
+</head>
+<body>
+<button class="print-btn" onclick="window.print()">🖨 Print / Save PDF</button>
+
+<div class="lh">
+  <img src="${co.logo}" />
+  <div class="lh-right">
+    <div>${document.getElementById('q-address').value}</div>
+    <div>${document.getElementById('q-contact').value}</div>
+  </div>
+</div>
+
+<h1>PROFORMA INVOICE</h1>
+
+<div class="meta">
+  <div class="meta-box">
+    <div class="label">Bill To</div>
+    <div class="val">${document.getElementById('q-client').value || '—'}</div>
+    <div style="font-size:10pt;color:#444;margin-top:4px;">${document.getElementById('q-client-address').value}</div>
+  </div>
+  <div class="meta-box" style="text-align:right;">
+    <div class="label">Reference No</div>
+    <div class="val" style="color:${co.color}">${ref}</div>
+    <div style="margin-top:8px;"><span class="label">Date: </span>${document.getElementById('q-date').value || '—'}</div>
+    <div><span class="label">Valid Until: </span>${document.getElementById('q-valid').value || '30 days'}</div>
+    <div><span class="label">Payment Terms: </span>${document.getElementById('q-terms').value || '—'}</div>
+  </div>
+</div>
+
+<table>
+  <thead>
+    <tr>
+      <th style="width:4%;text-align:center;">Sr.</th>
+      <th style="width:32%;text-align:left;">Description</th>
+      <th style="width:14%;text-align:center;">Barcode</th>
+      <th style="width:7%;text-align:center;">Qty</th>
+      <th style="width:15%;text-align:right;">Unit Price (AED)</th>
+      <th style="width:13%;text-align:right;">VAT 5% (AED)</th>
+      <th style="width:15%;text-align:right;">Net Amount (AED)</th>
+    </tr>
+  </thead>
+  <tbody>
+    ${getItemsHTML()}
+  </tbody>
+</table>
+
+<table class="totals">
+  <tr><td>Subtotal (excl. VAT):</td><td style="text-align:right;">${document.getElementById('q-subtotal').textContent}</td></tr>
+  <tr><td>VAT (5%):</td><td style="text-align:right;color:green;">${document.getElementById('q-vat').textContent}</td></tr>
+  <tr class="gt"><td>Net Total (incl. VAT):</td><td style="text-align:right;">${document.getElementById('q-total').textContent}</td></tr>
+</table>
+
+${document.getElementById('q-notes').value ? '<div class="notes"><strong>Notes / Terms:</strong> ' + document.getElementById('q-notes').value + '</div>' : ''}
+
+<div class="sigs">
+  <div class="sig">Prepared By</div>
+  <div class="sig">Authorized Signatory</div>
+  <div class="sig">Client Acknowledgement</div>
+</div>
+
+<div class="footer">Powered by AZHAR-AI ✦ ${co.name}</div>
+</body>
+</html>`);
+  win.document.close();
+}
+
 </script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
@@ -496,7 +601,7 @@ footer{position:relative;z-index:5;text-align:center;padding:28px;border-top:1px
     </div>
     <div class="brand">
       <div class="brand-name">AZHAR — AI</div>
-      <div class="brand-sub">Operations & Customer Service Intelligence</div>
+      <div class="brand-sub">Operations &amp; Customer Service Intelligence Platform</div>
     </div>
   </div>
   <div class="header-right">
@@ -508,25 +613,25 @@ footer{position:relative;z-index:5;text-align:center;padding:28px;border-top:1px
 <main>
   <div class="hero">
     <div class="hero-eyebrow">Operations Intelligence Platform</div>
-    <h1 class="hero-title">Your Operations<br><strong>AI Command Centre</strong></h1>
-    <p class="hero-desc">Dispatch Control · Rejection Analysis · Executive Summaries · Email Writer · Quotation Maker · Excel Support</p>
+    <h1 class="hero-title">Operations &amp; Customer Service<br><strong>AI Command Centre</strong></h1>
+    <p class="hero-desc">Daily Dispatch · Daily Rejection · Executive Summary · Email Writer · Proforma Invoice · Excel Support</p>
   </div>
   <div class="divider"><div class="divider-line"></div><div class="divider-diamond"></div><div class="divider-line"></div></div>
 
   <div class="nav-tabs">
-    <button class="nav-tab active" onclick="switchTab('dispatch',this);loadDispatchStatus()"><span class="nav-icon">🚚</span>Dispatch</button>
-    <button class="nav-tab" onclick="switchTab('rejection',this)"><span class="nav-icon">📊</span>Rejection</button>
-    <button class="nav-tab" onclick="switchTab('summary',this)"><span class="nav-icon">📋</span>Summary</button>
-    <button class="nav-tab" onclick="switchTab('email',this)"><span class="nav-icon">✉️</span>Email</button>
-    <button class="nav-tab" onclick="switchTab('quotation',this)"><span class="nav-icon">💼</span>Quotation</button>
-    <button class="nav-tab" onclick="switchTab('excel',this)"><span class="nav-icon">📐</span>Excel</button>
+    <button class="nav-tab active" onclick="switchTab('dispatch',this);loadDispatchStatus()"><span class="nav-icon">🚚</span>Daily Dispatch</button>
+    <button class="nav-tab" onclick="switchTab('rejection',this)"><span class="nav-icon">📊</span>Daily Rejection</button>
+    <button class="nav-tab" onclick="switchTab('summary',this)"><span class="nav-icon">📋</span>Executive Summary</button>
+    <button class="nav-tab" onclick="switchTab('email',this)"><span class="nav-icon">✉️</span>Email Writer</button>
+    <button class="nav-tab" onclick="switchTab('quotation',this)"><span class="nav-icon">💼</span>Proforma Invoice</button>
+    <button class="nav-tab" onclick="switchTab('excel',this)"><span class="nav-icon">📐</span>Excel Support</button>
   </div>
 
   <!-- DISPATCH CONTROL -->
   <div class="panel active" id="dispatch">
     <div class="card">
       <div class="card-eyebrow">Daily Dispatch Control</div>
-      <h3>Live Dispatch Intelligence</h3>
+      <h3>Daily Dispatch Control</h3>
       <p>Upload today's dispatch report once — your entire operations team gets instant answers about orders, customers, drivers and values.</p>
       <div class="dispatch-status" id="dispatch-status">
         <div class="dispatch-status-icon">⏳</div>
@@ -581,11 +686,11 @@ footer{position:relative;z-index:5;text-align:center;padding:28px;border-top:1px
         <div class="output-body" id="dispatch-out-text"></div>
       </div>
       <div style="margin-top:28px;padding-top:22px;border-top:1px solid var(--border);">
-        <div class="card-eyebrow">Admin Upload — Today's Data</div>
+        <div class="card-eyebrow">Admin Only — Upload Today's Dispatch Data</div>
         <div class="upload-box" onclick="document.getElementById('dispatch-file').click()">
           <div class="upload-icon">📊</div>
-          <div class="upload-text">Upload today's dispatch report (.xlsx or .csv)</div>
-          <div class="upload-sub" id="dispatch-file-name">Only admin needs to upload — team sees data automatically</div>
+          <div class="upload-text">Upload Today's Dispatch Report (.xlsx or .csv)</div>
+          <div class="upload-sub" id="dispatch-file-name">Admin uploads once daily — entire team sees live data automatically</div>
         </div>
         <input type="file" id="dispatch-file" accept=".csv,.xlsx,.xls,.txt" style="display:none" onchange="uploadDispatch(this)"/>
         <div class="loader" id="dispatch-loader"><div class="loader-ring"></div><div class="loader-text">Processing dispatch data...</div></div>
@@ -597,11 +702,11 @@ footer{position:relative;z-index:5;text-align:center;padding:28px;border-top:1px
   <div class="panel" id="rejection">
     <div class="card">
       <div class="card-eyebrow">Daily Rejection Analysis</div>
-      <h3>Analyse Rejected Orders & Returns</h3>
+      <h3>Daily Rejection Analysis</h3>
       <p>Upload your daily rejection report or paste rejection data — get a full analysis with reasons, patterns, top customers with rejections, and recommendations to reduce returns.</p>
       <div class="upload-box" onclick="document.getElementById('rejection-file').click()">
         <div class="upload-icon">📋</div>
-        <div class="upload-text">Upload rejection report (.xlsx or .csv)</div>
+        <div class="upload-text">Upload Daily Rejection Report (.xlsx or .csv)</div>
         <div class="upload-sub" id="rejection-file-name">Or paste rejection data below</div>
       </div>
       <input type="file" id="rejection-file" accept=".csv,.xlsx,.xls,.txt" style="display:none" onchange="handleGenericFile(this,'rejection-data','rejection-file-name','rejection-upload-box')"/>
@@ -616,10 +721,10 @@ footer{position:relative;z-index:5;text-align:center;padding:28px;border-top:1px
         <div class="option-pill" onclick="selOpt(this,'rej-type')">By Product</div>
         <div class="option-pill" onclick="selOpt(this,'rej-type')">Recommendations</div>
       </div>
-      <button class="btn-primary" id="rej-btn" onclick="runRejection()"><span>Analyse Rejections</span></button>
-      <div class="loader" id="rej-loader"><div class="loader-ring"></div><div class="loader-text">Analysing rejection data...</div></div>
+      <button class="btn-primary" id="rej-btn" onclick="runRejection()"><span>Analyse Daily Rejections</span></button>
+      <div class="loader" id="rej-loader"><div class="loader-ring"></div><div class="loader-text">Analysing daily rejection data...</div></div>
       <div class="output-wrap" id="rej-out">
-        <div class="output-header"><span class="output-label">✦ Rejection Analysis</span><button class="copy-btn" onclick="copyEl('rej-out-text')">Copy</button></div>
+        <div class="output-header"><span class="output-label">✦ Daily Rejection Analysis</span><button class="copy-btn" onclick="copyEl('rej-out-text')">Copy</button></div>
         <div class="output-body" id="rej-out-text"></div>
       </div>
     </div>
@@ -629,7 +734,7 @@ footer{position:relative;z-index:5;text-align:center;padding:28px;border-top:1px
   <div class="panel" id="summary">
     <div class="card">
       <div class="card-eyebrow">Executive Summary</div>
-      <h3>Generate Executive Summaries</h3>
+      <h3>Executive Summary Generator</h3>
       <p>Paste any report, email thread, meeting notes or document — receive a sharp executive summary ready for your CEO or GM.</p>
       <div class="field-label">Source Document or Report</div>
       <textarea id="summary-text" style="min-height:160px" placeholder="Paste your document, report, email thread, or meeting notes here..."></textarea>
@@ -641,8 +746,8 @@ footer{position:relative;z-index:5;text-align:center;padding:28px;border-top:1px
         <div class="option-pill" onclick="selOpt(this,'sum-type')">Key Decisions</div>
         <div class="option-pill" onclick="selOpt(this,'sum-type')">Operations Report</div>
       </div>
-      <button class="btn-primary" id="sum-btn" onclick="runSummary()"><span>Generate Summary</span></button>
-      <div class="loader" id="sum-loader"><div class="loader-ring"></div><div class="loader-text">Processing document...</div></div>
+      <button class="btn-primary" id="sum-btn" onclick="runSummary()"><span>Generate Executive Summary</span></button>
+      <div class="loader" id="sum-loader"><div class="loader-ring"></div><div class="loader-text">Processing your document...</div></div>
       <div class="output-wrap" id="sum-out">
         <div class="output-header"><span class="output-label">✦ Executive Summary</span><button class="copy-btn" onclick="copyEl('sum-out-text')">Copy</button></div>
         <div class="output-body" id="sum-out-text"></div>
@@ -654,13 +759,13 @@ footer{position:relative;z-index:5;text-align:center;padding:28px;border-top:1px
   <div class="panel" id="email">
     <div class="card">
       <div class="card-eyebrow">Professional Email Writer</div>
-      <h3>Write & Refine Business Emails</h3>
+      <h3>Professional Email Writer</h3>
       <p>Paste your draft or describe what you need — receive a professionally written email with subject line options. Perfect for customer complaints, supplier communications and management updates.</p>
       <div class="field-label">Your Draft or Description</div>
       <textarea id="email-body" style="min-height:130px" placeholder="Paste your email draft here, or describe what you need to communicate...&#10;&#10;e.g. Write email to Lulu complaining about 3 rejected deliveries this week and requesting urgent meeting"></textarea>
       <div class="field-label">Email Type</div>
       <div class="options-row" id="email-type">
-        <div class="option-pill sel" onclick="selOpt(this,'email-type')">Fix & Polish</div>
+        <div class="option-pill sel" onclick="selOpt(this,'email-type')">Fix Grammar &amp; Polish</div>
         <div class="option-pill" onclick="selOpt(this,'email-type')">Customer Complaint</div>
         <div class="option-pill" onclick="selOpt(this,'email-type')">Supplier Communication</div>
         <div class="option-pill" onclick="selOpt(this,'email-type')">Management Update</div>
@@ -669,8 +774,8 @@ footer{position:relative;z-index:5;text-align:center;padding:28px;border-top:1px
       </div>
       <div class="field-label">Recipient (Optional)</div>
       <textarea id="email-recipient" style="min-height:48px" placeholder="e.g. Lulu procurement manager, CEO, Supplier, HR..."></textarea>
-      <button class="btn-primary" id="email-btn" onclick="runEmail()"><span>Write Email</span></button>
-      <div class="loader" id="email-loader"><div class="loader-ring"></div><div class="loader-text">Writing your email...</div></div>
+      <button class="btn-primary" id="email-btn" onclick="runEmail()"><span>Write Professional Email</span></button>
+      <div class="loader" id="email-loader"><div class="loader-ring"></div><div class="loader-text">Writing professional email...</div></div>
       <div class="diff-wrap" id="email-out">
         <div class="diff-nav">
           <button class="diff-btn on" onclick="switchDiff('corrected',this)">Final Email</button>
@@ -688,8 +793,8 @@ footer{position:relative;z-index:5;text-align:center;padding:28px;border-top:1px
   <!-- QUOTATION MAKER -->
   <div class="panel" id="quotation">
     <div class="card">
-      <div class="card-eyebrow">Proforma Invoice / Quotation Maker</div>
-      <h3>Generate Professional Proforma Invoice</h3>
+      <div class="card-eyebrow">Proforma Invoice</div>
+      <h3>Proforma Invoice Generator</h3>
       <p>Select your company, fill in the details — download as Word or PDF with your company letterhead.</p>
 
       <!-- Company Selector -->
@@ -740,34 +845,29 @@ footer{position:relative;z-index:5;text-align:center;padding:28px;border-top:1px
 
       <!-- Line Items Table -->
       <div class="field-label" style="margin-top:24px;">Line Items</div>
-      <div style="overflow-x:auto;border:1px solid var(--border);">
-      <table id="quote-table" style="width:100%;border-collapse:collapse;table-layout:fixed;min-width:700px;">
-        <colgroup>
-          <col style="width:40px">
-          <col style="width:auto">
-          <col style="width:140px">
-          <col style="width:60px">
-          <col style="width:130px">
-          <col style="width:120px">
-          <col style="width:140px">
-          <col style="width:36px">
-        </colgroup>
-        <thead>
-          <tr style="background:#1a1a2e;border-bottom:2px solid var(--gold);">
-            <th style="padding:10px 6px;font-size:9px;letter-spacing:1px;color:var(--gold);text-transform:uppercase;text-align:center;border:1px solid var(--border);">Sr.</th>
-            <th style="padding:10px 6px;font-size:9px;letter-spacing:1px;color:var(--gold);text-transform:uppercase;text-align:left;border:1px solid var(--border);">Description</th>
-            <th style="padding:10px 6px;font-size:9px;letter-spacing:1px;color:var(--gold);text-transform:uppercase;text-align:center;border:1px solid var(--border);">Barcode</th>
-            <th style="padding:10px 6px;font-size:9px;letter-spacing:1px;color:var(--gold);text-transform:uppercase;text-align:center;border:1px solid var(--border);">Qty</th>
-            <th style="padding:10px 6px;font-size:9px;letter-spacing:1px;color:var(--gold);text-transform:uppercase;text-align:right;border:1px solid var(--border);">Unit Price (AED)</th>
-            <th style="padding:10px 6px;font-size:9px;letter-spacing:1px;color:var(--gold);text-transform:uppercase;text-align:right;border:1px solid var(--border);">VAT 5% (AED)</th>
-            <th style="padding:10px 6px;font-size:9px;letter-spacing:1px;color:var(--gold);text-transform:uppercase;text-align:right;border:1px solid var(--border);">Net Amount (AED)</th>
-            <th style="border:1px solid var(--border);"></th>
-          </tr>
-        </thead>
-        <tbody id="quote-items"></tbody>
-      </table>
+      
+      <!-- LINE ITEMS TABLE - Full width scrollable -->
+      <div style="width:100%;overflow-x:auto;margin-bottom:0;">
+        <table style="width:100%;min-width:900px;border-collapse:collapse;border:1px solid var(--border);">
+          <thead>
+            <tr style="background:#1a1a2e;">
+              <th style="width:44px;padding:10px 8px;font-size:9px;letter-spacing:1px;color:var(--gold);text-transform:uppercase;text-align:center;border:1px solid var(--border);white-space:nowrap;">Sr.</th>
+              <th style="padding:10px 8px;font-size:9px;letter-spacing:1px;color:var(--gold);text-transform:uppercase;text-align:left;border:1px solid var(--border);">Description</th>
+              <th style="width:150px;padding:10px 8px;font-size:9px;letter-spacing:1px;color:var(--gold);text-transform:uppercase;text-align:center;border:1px solid var(--border);white-space:nowrap;">Barcode</th>
+              <th style="width:70px;padding:10px 8px;font-size:9px;letter-spacing:1px;color:var(--gold);text-transform:uppercase;text-align:center;border:1px solid var(--border);white-space:nowrap;">Qty</th>
+              <th style="width:140px;padding:10px 8px;font-size:9px;letter-spacing:1px;color:var(--gold);text-transform:uppercase;text-align:right;border:1px solid var(--border);white-space:nowrap;">Unit Price (AED)</th>
+              <th style="width:130px;padding:10px 8px;font-size:9px;letter-spacing:1px;color:var(--gold);text-transform:uppercase;text-align:right;border:1px solid var(--border);white-space:nowrap;">VAT 5% (AED)</th>
+              <th style="width:150px;padding:10px 8px;font-size:9px;letter-spacing:1px;color:var(--gold);text-transform:uppercase;text-align:right;border:1px solid var(--border);white-space:nowrap;">Net Amount (AED)</th>
+              <th style="width:36px;border:1px solid var(--border);"></th>
+            </tr>
+          </thead>
+          <tbody id="quote-items"></tbody>
+        </table>
       </div>
-      <button class="add-item-btn" onclick="addItem()">+ Add Line Item</button>
+      <div style="display:flex;gap:10px;margin-top:10px;align-items:center;">
+        <button class="add-item-btn" onclick="addItem()" style="margin:0;">+ Add Line Item</button>
+        <button onclick="previewInvoice()" style="padding:10px 20px;background:transparent;border:1px solid var(--gold);color:var(--gold);font-family:Montserrat,sans-serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:all 0.2s;" onmouseover="this.style.background='var(--goldglow)'" onmouseout="this.style.background='transparent'">👁 Preview Invoice</button>
+      </div>
       
       <!-- Totals -->
       <div style="margin-top:20px;padding:16px;background:var(--surface);border:1px solid var(--border);">
@@ -788,8 +888,8 @@ footer{position:relative;z-index:5;text-align:center;padding:28px;border-top:1px
       <div class="field-label">Special Notes / Terms & Conditions</div>
       <textarea id="q-notes" style="min-height:60px" placeholder="e.g. All prices are in AED. VAT 5% included. Delivery within 3-5 working days."></textarea>
 
-      <button class="btn-primary" id="quote-btn" onclick="runQuotation()" style="margin-top:16px;"><span>Generate Professional Proforma Invoice</span></button>
-      <div class="loader" id="quote-loader"><div class="loader-ring"></div><div class="loader-text">Generating proforma invoice...</div></div>
+      <button class="btn-primary" id="quote-btn" onclick="runQuotation()" style="margin-top:16px;"><span>Generate Proforma Invoice</span></button>
+      <div class="loader" id="quote-loader"><div class="loader-ring"></div><div class="loader-text">Generating your proforma invoice...</div></div>
       <div class="output-wrap" id="quote-out">
         <div class="output-header">
           <span class="output-label">✦ Proforma Invoice Ready</span>
@@ -808,7 +908,7 @@ footer{position:relative;z-index:5;text-align:center;padding:28px;border-top:1px
   <div class="panel" id="excel">
     <div class="card">
       <div class="card-eyebrow">Excel Support</div>
-      <h3>Excel Formula Help & Data Analysis</h3>
+      <h3>Excel Support & Data Analysis</h3>
       <p>Upload your Excel/CSV file or paste a formula — get instant fixes, explanations and data insights.</p>
       <div class="upload-box" onclick="document.getElementById('excel-file').click()">
         <div class="upload-icon">📊</div>
@@ -820,10 +920,10 @@ footer{position:relative;z-index:5;text-align:center;padding:28px;border-top:1px
       <textarea id="excel-formula" placeholder="e.g. Fix my VLOOKUP returning #N/A&#10;e.g. Sum column C where column A equals Dubai&#10;e.g. Analyse this data and give me key insights"></textarea>
       <div class="field-label">Context (Optional)</div>
       <textarea id="excel-context" style="min-height:55px" placeholder="e.g. Column A = Date, Column B = Customer, Column C = Amount..."></textarea>
-      <button class="btn-primary" id="excel-btn" onclick="runExcel()"><span>Get Excel Help</span></button>
-      <div class="loader" id="excel-loader"><div class="loader-ring"></div><div class="loader-text">Analysing your data...</div></div>
+      <button class="btn-primary" id="excel-btn" onclick="runExcel()"><span>Analyse & Fix Excel</span></button>
+      <div class="loader" id="excel-loader"><div class="loader-ring"></div><div class="loader-text">Analysing your Excel data...</div></div>
       <div class="output-wrap" id="excel-out">
-        <div class="output-header"><span class="output-label">✦ Excel Analysis</span><button class="copy-btn" onclick="copyEl('excel-out-text')">Copy</button></div>
+        <div class="output-header"><span class="output-label">✦ Excel Analysis Complete</span><button class="copy-btn" onclick="copyEl('excel-out-text')">Copy</button></div>
         <div class="output-body" id="excel-out-text"></div>
       </div>
     </div>
@@ -1502,6 +1602,111 @@ function selectCompany(key) {
 function initQuotation() {
   selectCompany('aki');
   addItem();
+}
+
+
+// PREVIEW INVOICE
+function previewInvoice() {
+  const co = companies[selectedCompany];
+  const ref = document.getElementById('q-ref').value || ('PRO-INV-' + Date.now().toString().slice(-8));
+  
+  const win = window.open('', '_blank', 'width=900,height=700');
+  win.document.write(`
+<!DOCTYPE html>
+<html>
+<head>
+<title>Preview — ${ref}</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:Calibri,Arial,sans-serif;font-size:11pt;color:#1a1a1a;padding:30px 40px;background:#fff;}
+.lh{display:flex;justify-content:space-between;align-items:flex-end;padding-bottom:12px;border-bottom:3px solid ${co.color};margin-bottom:20px;}
+.lh img{height:55px;width:auto;}
+.lh-right{text-align:right;font-size:9pt;color:#666;}
+h1{font-size:18pt;text-align:center;color:${co.color};letter-spacing:3px;margin-bottom:20px;}
+.meta{display:flex;justify-content:space-between;margin-bottom:16px;}
+.meta-box{width:48%;}
+.label{font-size:8pt;color:#999;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;}
+.val{font-size:11pt;font-weight:600;color:#1a1a1a;}
+.bill{background:#f5f5f5;padding:12px;border-left:4px solid ${co.color};margin-bottom:20px;}
+table{width:100%;border-collapse:collapse;margin-bottom:16px;}
+th{background:#1a1a2e;color:#c9a84c;padding:9px 8px;font-size:9pt;text-transform:uppercase;letter-spacing:1px;border:1px solid #ddd;}
+td{padding:8px;border:1px solid #e0e0e0;font-size:10pt;}
+tr:nth-child(even) td{background:#fafafa;}
+.totals{margin-left:auto;width:42%;}
+.totals td{border:none;padding:5px 8px;}
+.gt td{font-weight:700;font-size:13pt;color:${co.color};border-top:2px solid ${co.color};padding-top:8px;}
+.notes{margin-top:16px;padding:10px;background:#f9f9f9;border-left:3px solid ${co.color};font-size:10pt;}
+.sigs{display:flex;justify-content:space-between;margin-top:50px;}
+.sig{text-align:center;width:30%;border-top:1px solid #333;padding-top:8px;font-size:10pt;}
+.footer{margin-top:24px;text-align:center;font-size:9pt;color:#aaa;border-top:1px solid #eee;padding-top:8px;}
+.print-btn{position:fixed;top:20px;right:20px;padding:12px 24px;background:${co.color};color:#fff;border:none;font-size:12pt;cursor:pointer;border-radius:4px;font-family:Calibri;letter-spacing:1px;}
+.print-btn:hover{opacity:0.9;}
+@media print{.print-btn{display:none;}}
+</style>
+</head>
+<body>
+<button class="print-btn" onclick="window.print()">🖨 Print / Save PDF</button>
+
+<div class="lh">
+  <img src="${co.logo}" />
+  <div class="lh-right">
+    <div>${document.getElementById('q-address').value}</div>
+    <div>${document.getElementById('q-contact').value}</div>
+  </div>
+</div>
+
+<h1>PROFORMA INVOICE</h1>
+
+<div class="meta">
+  <div class="meta-box">
+    <div class="label">Bill To</div>
+    <div class="val">${document.getElementById('q-client').value || '—'}</div>
+    <div style="font-size:10pt;color:#444;margin-top:4px;">${document.getElementById('q-client-address').value}</div>
+  </div>
+  <div class="meta-box" style="text-align:right;">
+    <div class="label">Reference No</div>
+    <div class="val" style="color:${co.color}">${ref}</div>
+    <div style="margin-top:8px;"><span class="label">Date: </span>${document.getElementById('q-date').value || '—'}</div>
+    <div><span class="label">Valid Until: </span>${document.getElementById('q-valid').value || '30 days'}</div>
+    <div><span class="label">Payment Terms: </span>${document.getElementById('q-terms').value || '—'}</div>
+  </div>
+</div>
+
+<table>
+  <thead>
+    <tr>
+      <th style="width:4%;text-align:center;">Sr.</th>
+      <th style="width:32%;text-align:left;">Description</th>
+      <th style="width:14%;text-align:center;">Barcode</th>
+      <th style="width:7%;text-align:center;">Qty</th>
+      <th style="width:15%;text-align:right;">Unit Price (AED)</th>
+      <th style="width:13%;text-align:right;">VAT 5% (AED)</th>
+      <th style="width:15%;text-align:right;">Net Amount (AED)</th>
+    </tr>
+  </thead>
+  <tbody>
+    ${getItemsHTML()}
+  </tbody>
+</table>
+
+<table class="totals">
+  <tr><td>Subtotal (excl. VAT):</td><td style="text-align:right;">${document.getElementById('q-subtotal').textContent}</td></tr>
+  <tr><td>VAT (5%):</td><td style="text-align:right;color:green;">${document.getElementById('q-vat').textContent}</td></tr>
+  <tr class="gt"><td>Net Total (incl. VAT):</td><td style="text-align:right;">${document.getElementById('q-total').textContent}</td></tr>
+</table>
+
+${document.getElementById('q-notes').value ? '<div class="notes"><strong>Notes / Terms:</strong> ' + document.getElementById('q-notes').value + '</div>' : ''}
+
+<div class="sigs">
+  <div class="sig">Prepared By</div>
+  <div class="sig">Authorized Signatory</div>
+  <div class="sig">Client Acknowledgement</div>
+</div>
+
+<div class="footer">Powered by AZHAR-AI ✦ ${co.name}</div>
+</body>
+</html>`);
+  win.document.close();
 }
 
 </script>
