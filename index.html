@@ -312,7 +312,7 @@ footer span{color:var(--gold);}
             <div style="background:rgba(78,203,141,0.05);border:1px solid rgba(78,203,141,0.2);padding:12px;">
               <div style="font-size:9px;color:var(--green);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;font-weight:700;">✦ FOOD</div>
               <div style="font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:700;color:var(--gold);" id="k-food">—</div>
-              <div style="font-size:10px;color:var(--muted);margin-bottom:8px;" id="k-food-val" style="color:var(--green);font-weight:700;">AED —</div>
+              <div style="font-size:10px;color:var(--muted);margin-bottom:8px;" id="k-food-val">AED —</div>
               <div style="border-top:1px solid rgba(78,203,141,0.15);padding-top:8px;" id="k-food-detail">
                 <div style="display:flex;justify-content:space-between;font-size:10px;padding:2px 0;"><span style="color:var(--muted);">DCV</span><span id="k-dcv-orders">—</span></div>
                 <div style="display:flex;justify-content:space-between;font-size:10px;padding:2px 0;"><span style="color:var(--muted);">DCF (FoodSvc)</span><span id="k-dcf-orders">—</span></div>
@@ -321,9 +321,9 @@ footer span{color:var(--gold);}
 
             <!-- NON-FOOD -->
             <div style="background:rgba(91,141,238,0.05);border:1px solid rgba(91,141,238,0.2);padding:12px;">
-              <div style="font-size:9px;color:var(--blue);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;font-weight:700;">🟠 NON-FOOD</div>
+              <div style="font-size:9px;color:var(--blue);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;font-weight:700;">🟠 NOON FOOD</div>
               <div style="font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:700;color:var(--blue);" id="k-nonfood">—</div>
-              <div style="font-size:10px;color:var(--muted);margin-bottom:8px;" id="k-nonfood-val" style="color:var(--blue);font-weight:700;">AED —</div>
+              <div style="font-size:10px;color:var(--muted);margin-bottom:8px;" id="k-nonfood-val">AED —</div>
               <div style="border-top:1px solid rgba(91,141,238,0.15);padding-top:8px;">
                 <div style="padding:4px 0;border-bottom:1px solid rgba(91,141,238,0.08);">
                   <div style="display:flex;justify-content:space-between;align-items:center;">
@@ -362,18 +362,15 @@ footer span{color:var(--gold);}
 
           </div>
         </div>
-
       </div>
 
       <!-- Charts Row -->
       <div class="grid-3-1" id="ds-charts" style="display:none;">
-        <!-- Orders by City Bar Chart -->
         <div class="box">
           <div class="box-title">📊 Orders by City <span id="ds-city-total"></span></div>
           <div class="chart-bars" id="ds-city-bars" style="height:120px;"></div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;" id="ds-city-labels"></div>
         </div>
-        <!-- Dispatch Status Donut -->
         <div class="box">
           <div class="box-title">📈 Order Type Split</div>
           <div class="donut-wrap">
@@ -381,7 +378,7 @@ footer span{color:var(--gold);}
               <circle cx="50" cy="50" r="35" fill="none" stroke="#2a2a1e" stroke-width="18"/>
               <circle cx="50" cy="50" r="35" fill="none" stroke="#4ecb8d" stroke-width="18" id="donut-food" stroke-dasharray="0 220" stroke-dashoffset="55" style="transition:stroke-dasharray 1s;"/>
               <circle cx="50" cy="50" r="35" fill="none" stroke="#5b8dee" stroke-width="18" id="donut-nonfood" stroke-dasharray="0 220" stroke-dashoffset="55" style="transition:stroke-dasharray 1s;"/>
-              <circle cx="50" cy="50" r="35" fill="none" stroke="#5b8dee" stroke-width="18" id="donut-pl" stroke-dasharray="0 220" stroke-dashoffset="55" style="transition:stroke-dasharray 1s;"/>
+              <circle cx="50" cy="50" r="35" fill="none" stroke="#c9a84c" stroke-width="18" id="donut-pl" stroke-dasharray="0 220" stroke-dashoffset="55" style="transition:stroke-dasharray 1s;"/>
               <text x="50" y="46" text-anchor="middle" font-size="11" fill="#c9a84c" font-weight="700" id="donut-center">—</text>
               <text x="50" y="58" text-anchor="middle" font-size="7" fill="#7a7660">ORDERS</text>
             </svg>
@@ -392,7 +389,6 @@ footer span{color:var(--gold);}
 
       <!-- Tables Row -->
       <div class="grid-2" id="ds-tables" style="display:none;">
-        <!-- Top Customers -->
         <div class="box">
           <div class="box-title">💰 Top Customers by Value</div>
           <table class="data-table" id="ds-cust-table">
@@ -400,7 +396,6 @@ footer span{color:var(--gold);}
             <tbody id="ds-cust-body"></tbody>
           </table>
         </div>
-        <!-- Top Drivers -->
         <div class="box">
           <div class="box-title">🚚 Top 5 Drivers</div>
           <div id="ds-drivers-list"></div>
@@ -434,7 +429,7 @@ footer span{color:var(--gold);}
           <button class="qbtn city" onclick="doAsk('Total orders and value for FUJAIRAH today')">📍 Fujairah</button>
           <button class="qbtn city" onclick="doAsk('Total orders and value for AL AIN today')">📍 Al Ain</button>
           <button class="qbtn stat" onclick="doAsk('Top 5 drivers by deliveries today')">🚚 Top Drivers</button>
-          <button class="qbtn stat" onclick="doAsk('Total food orders value and non-food orders value')">📊 Food vs Non-Food</button>
+          <button class="qbtn stat" onclick="doAsk('Total food orders value and noon food orders value')">📊 Food vs Noon Food</button>
           <button class="qbtn stat" onclick="doAsk('Summary of all routes with drops and values')">🗺️ All Routes</button>
         </div>
         <div class="ask-row">
@@ -755,7 +750,7 @@ function buildDashboard(d) {
   const lbl = d.date === today ? 'Today' : d.date;
   const val = s.total_value ? (s.total_value >= 1000000 ? (s.total_value/1000000).toFixed(2)+'M' : Math.round(s.total_value).toLocaleString()) : '—';
 
-  // Status
+  // Status bar
   const el = document.getElementById('ds-status');
   el.className = 'd-status live';
   el.innerHTML = '<span style="font-size:16px;">✅</span><span class="d-status-txt"><strong>' + lbl + '</strong> &nbsp;|&nbsp; ' + (s.total_orders||0).toLocaleString() + ' Orders &nbsp;|&nbsp; AED ' + val + ' &nbsp;|&nbsp; By: ' + d.uploadedBy + '</span>';
@@ -763,15 +758,28 @@ function buildDashboard(d) {
   // KPIs
   document.getElementById('k-orders').textContent = (s.total_orders||0).toLocaleString();
   document.getElementById('k-routes-sub').textContent = (s.total_routes||0) + ' routes · ' + (s.total_drivers||0) + ' drivers';
-  // Show total drops in routes KPI
   const dropsEl = document.getElementById('k-drops');
   if (dropsEl) dropsEl.textContent = (s.total_drops||0).toLocaleString() + ' total drops';
   document.getElementById('k-value').textContent = 'AED ' + val;
+
+  // Type cards
   document.getElementById('k-food').textContent = (s.food_orders||0).toLocaleString();
   document.getElementById('k-food-val').textContent = 'AED ' + (s.food_value ? Math.round(s.food_value).toLocaleString() : '0');
   document.getElementById('k-nonfood').textContent = (s.non_food_orders||0).toLocaleString();
   document.getElementById('k-nonfood-val').textContent = 'AED ' + (s.non_food_value ? Math.round(s.non_food_value).toLocaleString() : '0');
   document.getElementById('k-pl').textContent = (s.pl_orders||0).toLocaleString();
+
+  // ORG sub-breakdown
+  const tb = s.type_breakdown || {};
+  document.getElementById('k-dcv-orders').textContent = (tb.DCV?.orders||0) + ' orders';
+  document.getElementById('k-dcf-orders').textContent = (tb.DCF?.orders||0) + ' orders';
+  document.getElementById('k-dgc-orders').textContent = (tb.DGC?.orders||0) + ' orders';
+  document.getElementById('k-dgc-val').textContent = 'AED ' + Math.round(tb.DGC?.value||0).toLocaleString();
+  document.getElementById('k-dgs-orders').textContent = (tb.DGS?.orders||0) + ' orders';
+  document.getElementById('k-dgs-val').textContent = 'AED ' + Math.round(tb.DGS?.value||0).toLocaleString();
+  document.getElementById('k-dsn-orders').textContent = (tb.DSN?.orders||0) + ' orders';
+  document.getElementById('k-dsn-val').textContent = 'AED ' + Math.round(tb.DSN?.value||0).toLocaleString();
+  document.getElementById('k-hcp').textContent = (tb.HCP?.orders||0) + ' orders';
 
   document.getElementById('ds-kpis').style.display = 'grid';
 
@@ -807,8 +815,8 @@ function buildDashboard(d) {
     document.getElementById('donut-center').textContent = (s.total_orders||0).toLocaleString();
     document.getElementById('ds-donut-legend').innerHTML =
       '<div class="donut-item"><div class="donut-dot" style="background:var(--green)"></div><span>Food: <strong>' + (s.food_orders||0) + '</strong></span></div>' +
-      '<div class="donut-item"><div class="donut-dot" style="background:var(--blue)"></div><span>Non-Food: <strong>' + (s.non_food_orders||0) + '</strong></span></div>' +
-      '<div class="donut-item"><div class="donut-dot" style="background:var(--blue)"></div><span>3PL: <strong>' + (s.pl_orders||0) + '</strong></span></div>';
+      '<div class="donut-item"><div class="donut-dot" style="background:var(--blue)"></div><span>Noon Food: <strong>' + (s.non_food_orders||0) + '</strong></span></div>' +
+      '<div class="donut-item"><div class="donut-dot" style="background:var(--gold)"></div><span>3PL: <strong>' + (s.pl_orders||0) + '</strong></span></div>';
   }
 
   // Top customers table
@@ -853,7 +861,6 @@ async function doUpload(input) {
     if (d.success) {
       nameEl.textContent = '✓ ' + file.name + ' — ' + (d.summary?.total_orders||0).toLocaleString() + ' orders loaded';
       nameEl.style.color = 'var(--green)';
-      document.getElementById('ds-upload-box')?.classList.add('done');
       buildDashboard(d);
       loadStatus();
     } else {
