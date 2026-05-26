@@ -199,7 +199,10 @@ function parseDispatchCSV(csvText, dateKey) {
     lulu_orders: luluOrders,
     lulu_value: Math.round(luluValue),
     food_orders: foodOrders,
-    non_food_orders: totalOrders - foodOrders,
+    food_value: Math.round(foodValue),
+    non_food_orders: nonFoodOrders,
+    non_food_value: Math.round(nonFoodValue),
+    pl_orders: plOrders,
     by_city: byCity,
     top_customers: topCustomers,
     top_drivers: topDrivers,
@@ -285,16 +288,27 @@ app.post('/api/dispatch/ask', async (req, res) => {
       max_tokens: 1500,
       messages: [{
         role: 'user',
-        content: `You are AZHAR-AI Dispatch Intelligence for UAE logistics.
-Dispatch CSV data:
-${currentDispatch.csvText.substring(0, 12000)}
+        content: `You are AZHAR-AI Dispatch Intelligence for UAE logistics company in UAE.
 
-Columns: ORDER CODE, ROUTE, CITY, CUSTOMER, TOTAL_AMOUNT, ETA, VEHICLE_ID, DRIVER_ID, DRIVER CONTACT DETAILS
-Date: ${currentDispatch.date}
+IMPORTANT FACTS about this dispatch data:
+- Total orders: ${currentDispatch.summary.total_orders || 'unknown'}
+- Total value: AED ${currentDispatch.summary.total_value || 'unknown'}
+- Food orders (numeric order codes): ${currentDispatch.summary.food_orders || 'unknown'} orders, AED ${currentDispatch.summary.food_value || 'unknown'}
+- Non-food/3PL orders (HCP codes): ${currentDispatch.summary.non_food_orders || 'unknown'} orders
+- Total routes: ${currentDispatch.summary.total_routes || 'unknown'}
+- Total drivers: ${currentDispatch.summary.total_drivers || 'unknown'}
+- Date: ${currentDispatch.date}
+
+CSV Data (for detailed queries):
+${currentDispatch.csvText.substring(0, 10000)}
+
+Columns: ORDER CODE, ROUTE, CITY, LOCATION_ID, CUSTOMER, TOTAL_AMOUNT, ETA, VEHICLE_ID, DRIVER_ID, DRIVER CONTACT DETAILS
+
+Note: Numeric order codes = Food orders. HCP_ prefix = Non-food/3PL orders.
 
 Question: ${req.body.question}
 
-Answer accurately with specific numbers. Use AED for currency.`
+Answer with exact numbers from the data above. Use AED for currency values.`
       }]
     });
     res.json({ result: msg.content[0].text });
