@@ -8,109 +8,142 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
 :root{
-  --black:#050505;--surface:#111109;--card:#161612;
-  --border:#2a2a1e;--gold:#c9a84c;--gold2:#e8c878;
-  --gold3:#f5e0a0;--glow:rgba(201,168,76,0.12);
-  --text:#f0ece0;--muted:#7a7660;--white:#faf8f0;
-  --green:#4ecb8d;--red:#e84b4b;--blue:#5b8dee;
+  --black:#050505;--surface:#0f0f0d;--card:#161612;--card2:#1a1a16;
+  --border:#2a2a1e;--gold:#c9a84c;--gold2:#e8c878;--gold3:#f5e0a0;
+  --glow:rgba(201,168,76,0.1);--text:#f0ece0;--muted:#7a7660;
+  --white:#faf8f0;--green:#4ecb8d;--red:#e84b4b;--blue:#5b8dee;--orange:#e8854b;
+  --sidebar:220px;
 }
-body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--text);min-height:100vh;}
-.bg{position:fixed;inset:0;z-index:0;
-  background:radial-gradient(ellipse at 20% 20%,rgba(201,168,76,0.04),transparent 50%),
-  radial-gradient(ellipse at 80% 80%,rgba(201,168,76,0.03),transparent 50%),var(--black);}
-.grid{position:fixed;inset:0;z-index:0;
-  background-image:linear-gradient(rgba(201,168,76,0.04) 1px,transparent 1px),
-  linear-gradient(90deg,rgba(201,168,76,0.04) 1px,transparent 1px);
-  background-size:60px 60px;}
+body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--text);min-height:100vh;display:flex;overflow:hidden;}
 
-/* HEADER */
-header{position:relative;z-index:10;display:flex;align-items:center;justify-content:space-between;
-  padding:0 40px;height:76px;border-bottom:1px solid var(--border);
-  background:rgba(5,5,5,0.97);backdrop-filter:blur(20px);}
-.logo{display:flex;align-items:center;gap:16px;}
-.logo-box{width:42px;height:42px;border:1px solid var(--gold);display:flex;align-items:center;justify-content:center;position:relative;}
-.logo-box::before{content:'';position:absolute;inset:3px;border:1px solid rgba(201,168,76,0.3);}
-.logo-box svg{width:20px;height:20px;}
-.brand-name{font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:700;letter-spacing:5px;
-  background:linear-gradient(135deg,#fff5cc,var(--gold),var(--gold3),#fff0a0,var(--gold));
-  background-size:200% auto;-webkit-background-clip:text;-webkit-text-fill-color:transparent;
-  animation:shine 3s linear infinite;}
-@keyframes shine{0%{background-position:0% center}100%{background-position:200% center}}
-.brand-sub{font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;}
-.status{display:flex;align-items:center;gap:8px;font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;}
-.dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 2s infinite;}
+/* ── SIDEBAR ── */
+.sidebar{width:var(--sidebar);min-height:100vh;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;position:fixed;left:0;top:0;bottom:0;z-index:100;}
+.sb-logo{padding:20px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;}
+.sb-logo-box{width:38px;height:38px;border:1px solid var(--gold);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.sb-logo-box svg{width:18px;height:18px;}
+.sb-brand{display:flex;flex-direction:column;}
+.sb-name{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:700;letter-spacing:3px;background:linear-gradient(135deg,var(--gold),var(--gold3));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.sb-sub{font-size:8px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;}
+.sb-section{padding:16px 12px 6px;font-size:8px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;}
+.sb-item{display:flex;align-items:center;gap:10px;padding:10px 14px;margin:2px 8px;border-radius:0;cursor:pointer;transition:all 0.2s;color:var(--muted);font-size:11px;font-weight:500;letter-spacing:0.5px;border:none;background:transparent;width:calc(100% - 16px);text-align:left;}
+.sb-item:hover{background:var(--glow);color:var(--text);}
+.sb-item.on{background:var(--glow);color:var(--gold);border-left:2px solid var(--gold);}
+.sb-item .icon{font-size:15px;width:20px;text-align:center;flex-shrink:0;}
+.sb-footer{margin-top:auto;padding:16px;border-top:1px solid var(--border);}
+.sb-user{display:flex;align-items:center;gap:10px;}
+.sb-avatar{width:34px;height:34px;background:linear-gradient(135deg,var(--gold),var(--gold2));border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--black);flex-shrink:0;}
+.sb-user-name{font-size:12px;font-weight:600;color:var(--text);}
+.sb-user-role{font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;}
+
+/* ── MAIN ── */
+.main{margin-left:var(--sidebar);flex:1;display:flex;flex-direction:column;min-height:100vh;overflow:hidden;}
+
+/* ── TOPBAR ── */
+.topbar{height:64px;background:rgba(5,5,5,0.95);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 28px;flex-shrink:0;backdrop-filter:blur(10px);position:sticky;top:0;z-index:50;}
+.topbar-left h2{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;color:var(--white);}
+.topbar-left p{font-size:10px;color:var(--muted);letter-spacing:1px;margin-top:2px;}
+.topbar-right{display:flex;align-items:center;gap:20px;}
+.topbar-date{font-size:11px;color:var(--muted);text-align:right;}
+.topbar-date strong{display:block;color:var(--text);font-size:12px;}
+.dot-live{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--green);letter-spacing:1px;}
+.dot-live::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 2s infinite;}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
-.ver{font-size:10px;letter-spacing:2px;color:var(--muted);border:1px solid var(--border);padding:3px 10px;}
 
-/* MAIN */
-main{position:relative;z-index:5;max-width:1100px;margin:0 auto;padding:40px 20px 80px;}
+/* ── CONTENT ── */
+.content{flex:1;overflow-y:auto;padding:24px 28px;background:var(--black);}
+.content::-webkit-scrollbar{width:4px;}
+.content::-webkit-scrollbar-track{background:var(--surface);}
+.content::-webkit-scrollbar-thumb{background:var(--border);}
 
-/* HERO */
-.hero{text-align:center;margin-bottom:36px;}
-.hero-ey{font-size:10px;letter-spacing:4px;color:var(--gold);text-transform:uppercase;margin-bottom:16px;
-  display:flex;align-items:center;justify-content:center;gap:12px;}
-.hero-ey::before,.hero-ey::after{content:'';width:40px;height:1px;background:var(--gold);opacity:0.4;}
-.hero h1{font-family:'Cormorant Garamond',serif;font-size:46px;font-weight:300;line-height:1.1;color:var(--white);}
-.hero h1 strong{font-weight:700;background:linear-gradient(135deg,var(--gold),var(--gold3));
-  -webkit-background-clip:text;-webkit-text-fill-color:transparent;}
-.hero p{font-size:12px;color:var(--muted);letter-spacing:1px;margin-top:10px;}
-.div{display:flex;align-items:center;gap:14px;margin-bottom:30px;}
-.div-line{flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--border),transparent);}
-.div-dia{width:8px;height:8px;background:var(--gold);transform:rotate(45deg);}
-
-/* TABS */
-.tabs{display:grid;grid-template-columns:repeat(6,1fr);border:1px solid var(--border);margin-bottom:36px;}
-.tab{padding:14px 6px;border:none;background:transparent;color:var(--muted);
-  font-family:'Montserrat',sans-serif;font-size:9px;font-weight:600;letter-spacing:1.5px;
-  text-transform:uppercase;cursor:pointer;transition:all 0.3s;
-  display:flex;flex-direction:column;align-items:center;gap:6px;
-  border-right:1px solid var(--border);position:relative;}
-.tab:last-child{border-right:none;}
-.tab::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;
-  background:var(--gold);transform:scaleX(0);transition:transform 0.3s;}
-.tab.on{color:var(--gold);background:var(--glow);}
-.tab.on::after{transform:scaleX(1);}
-.tab:hover:not(.on){color:var(--text);}
-.tab-icon{font-size:18px;}
-
-/* PANELS */
-.panel{display:none;animation:up 0.3s ease;}
+/* ── PANELS ── */
+.panel{display:none;}
 .panel.on{display:block;}
-@keyframes up{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
 
-/* CARD */
-.card{background:var(--card);border:1px solid var(--border);padding:32px;margin-bottom:16px;position:relative;}
-.card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;
-  background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:0.5;}
-.card-ey{font-size:9px;letter-spacing:3px;color:var(--gold);text-transform:uppercase;margin-bottom:12px;
-  display:flex;align-items:center;gap:8px;}
-.card-ey::after{content:'';flex:1;height:1px;background:var(--border);}
-.card h2{font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:600;color:var(--white);margin-bottom:6px;}
-.card p{color:var(--muted);font-size:12px;line-height:1.8;margin-bottom:20px;}
+/* ── KPI ROW ── */
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;}
+.kpi-card{background:var(--card);border:1px solid var(--border);padding:20px;position:relative;overflow:hidden;}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:0.4;}
+.kpi-icon{width:44px;height:44px;border-radius:0;display:flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:12px;}
+.kpi-label{font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;}
+.kpi-value{font-family:'Cormorant Garamond',serif;font-size:32px;font-weight:700;color:var(--gold);margin-bottom:6px;}
+.kpi-sub{font-size:10px;color:var(--muted);}
+.kpi-sub.up{color:var(--green);}
+.kpi-sub.dn{color:var(--red);}
 
-/* FORM */
-.lbl{font-size:9px;letter-spacing:2px;color:var(--gold);text-transform:uppercase;margin-bottom:6px;margin-top:16px;display:block;}
-input[type=text],textarea{width:100%;background:var(--surface);border:1px solid var(--border);
-  color:var(--text);font-family:'Montserrat',sans-serif;font-size:13px;
-  padding:11px 14px;outline:none;transition:border 0.2s;display:block;}
+/* ── GRID LAYOUTS ── */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px;}
+.grid-3-1{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:16px;}
+.grid-1-3{display:grid;grid-template-columns:1fr 2fr;gap:16px;margin-bottom:16px;}
+
+/* ── BOX ── */
+.box{background:var(--card);border:1px solid var(--border);padding:20px;position:relative;}
+.box::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:0.3;}
+.box-title{font-size:10px;letter-spacing:2px;color:var(--gold);text-transform:uppercase;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;}
+.box-title span{font-size:9px;color:var(--muted);letter-spacing:1px;}
+
+/* ── CHART BARS ── */
+.chart-bars{display:flex;align-items:flex-end;gap:8px;height:100px;margin-bottom:8px;}
+.chart-bar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;}
+.chart-bar{width:100%;border-radius:2px 2px 0 0;transition:height 0.8s ease;}
+.chart-bar-lbl{font-size:9px;color:var(--muted);}
+.chart-bar-val{font-size:9px;font-weight:700;}
+
+/* ── DONUT ── */
+.donut-wrap{display:flex;align-items:center;gap:20px;}
+.donut-svg{flex-shrink:0;}
+.donut-legend{display:flex;flex-direction:column;gap:10px;}
+.donut-item{display:flex;align-items:center;gap:8px;font-size:11px;}
+.donut-dot{width:8px;height:8px;border-radius:50%;}
+
+/* ── TABLE ── */
+.data-table{width:100%;border-collapse:collapse;}
+.data-table th{padding:8px 12px;font-size:9px;letter-spacing:1.5px;color:var(--gold);text-transform:uppercase;text-align:left;border-bottom:1px solid var(--border);font-weight:500;}
+.data-table td{padding:10px 12px;font-size:12px;border-bottom:1px solid rgba(42,42,30,0.5);}
+.data-table tr:hover td{background:var(--glow);}
+.badge{display:inline-block;padding:3px 10px;font-size:9px;letter-spacing:1px;text-transform:uppercase;font-weight:600;}
+.badge.green{background:rgba(78,203,141,0.15);color:var(--green);}
+.badge.gold{background:rgba(201,168,76,0.15);color:var(--gold);}
+.badge.red{background:rgba(232,75,75,0.15);color:var(--red);}
+.badge.blue{background:rgba(91,141,238,0.15);color:var(--blue);}
+
+/* ── STATUS BAR ── */
+.d-status{display:flex;align-items:center;gap:12px;padding:12px 16px;border:1px solid var(--border);background:var(--surface);margin-bottom:16px;}
+.d-status.live{border-color:var(--green);background:rgba(78,203,141,0.05);}
+.d-status.live .d-status-txt{color:var(--green);}
+.d-status-txt{font-size:11px;color:var(--muted);}
+
+/* ── DATE PILLS ── */
+.date-pills{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;}
+.dpill{padding:5px 12px;background:var(--surface);border:1px solid var(--border);color:var(--muted);font-family:'Montserrat',sans-serif;font-size:10px;cursor:pointer;transition:all 0.2s;}
+.dpill:hover{border-color:var(--gold);color:var(--gold);}
+.dpill.on{background:var(--gold);color:var(--black);border-color:var(--gold);font-weight:700;}
+.dpill.today{border-color:var(--green);color:var(--green);}
+.dpill.today.on{background:var(--green);color:var(--black);}
+
+/* ── QUICK BTNS ── */
+.qbtns{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;}
+.qbtn{padding:6px 12px;background:var(--surface);border:1px solid var(--border);color:var(--muted);font-family:'Montserrat',sans-serif;font-size:9px;letter-spacing:1px;cursor:pointer;transition:all 0.2s;text-transform:uppercase;}
+.qbtn:hover{border-color:var(--gold);color:var(--gold);background:var(--glow);}
+.qbtn.cust{border-color:rgba(78,203,141,0.3);color:var(--green);}
+.qbtn.city{border-color:rgba(91,141,238,0.3);color:var(--blue);}
+.qbtn.stat{border-color:rgba(201,168,76,0.4);color:var(--gold);}
+
+/* ── FORM ELEMENTS ── */
+.lbl{font-size:9px;letter-spacing:2px;color:var(--gold);text-transform:uppercase;margin-bottom:6px;margin-top:14px;display:block;}
+input[type=text],textarea{width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:'Montserrat',sans-serif;font-size:13px;padding:11px 14px;outline:none;transition:border 0.2s;display:block;box-sizing:border-box;}
 input[type=text]:focus,textarea:focus{border-color:var(--gold);}
 input::placeholder,textarea::placeholder{color:var(--muted);}
 textarea{resize:vertical;min-height:100px;line-height:1.7;}
 
-/* PILLS */
-.pills{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;}
-.pill{padding:6px 14px;border:1px solid var(--border);background:transparent;
-  color:var(--muted);font-family:'Montserrat',sans-serif;font-size:9px;
-  letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all 0.2s;}
+/* ── PILLS ── */
+.pills{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
+.pill{padding:6px 14px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:'Montserrat',sans-serif;font-size:9px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all 0.2s;}
 .pill.on{border-color:var(--gold);color:var(--gold);background:var(--glow);}
 
-/* BUTTONS */
-.btn{width:100%;padding:14px;background:transparent;border:1px solid var(--gold);
-  color:var(--gold);font-family:'Montserrat',sans-serif;font-size:10px;font-weight:600;
-  letter-spacing:3px;text-transform:uppercase;cursor:pointer;transition:all 0.3s;
-  position:relative;overflow:hidden;margin-bottom:8px;}
-.btn::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,var(--gold),var(--gold2));
-  opacity:0;transition:opacity 0.3s;}
+/* ── BUTTONS ── */
+.btn{width:100%;padding:13px;background:transparent;border:1px solid var(--gold);color:var(--gold);font-family:'Montserrat',sans-serif;font-size:10px;font-weight:600;letter-spacing:3px;text-transform:uppercase;cursor:pointer;transition:all 0.3s;position:relative;overflow:hidden;margin-bottom:8px;}
+.btn::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,var(--gold),var(--gold2));opacity:0;transition:opacity 0.3s;}
 .btn:hover::before{opacity:1;}
 .btn:hover{color:var(--black);}
 .btn span{position:relative;z-index:1;}
@@ -118,633 +151,555 @@ textarea{resize:vertical;min-height:100px;line-height:1.7;}
 .btn:disabled::before{opacity:0!important;}
 .btn:disabled{color:var(--gold)!important;}
 
-.btn-gold{width:100%;padding:14px;background:linear-gradient(135deg,var(--gold),var(--gold2));
-  border:none;color:var(--black);font-family:'Montserrat',sans-serif;font-size:10px;
-  font-weight:700;letter-spacing:3px;text-transform:uppercase;cursor:pointer;transition:all 0.3s;
-  margin-bottom:8px;display:none;}
-.btn-gold:hover{transform:translateY(-1px);}
-
-/* UPLOAD */
-.upload{background:var(--surface);border:1px dashed var(--border);padding:22px;
-  text-align:center;cursor:pointer;transition:all 0.3s;margin-bottom:8px;}
-.upload:hover{border-color:var(--gold);background:var(--glow);}
-.upload.done{border-color:var(--green);border-style:solid;}
-.upload-icon{font-size:22px;margin-bottom:6px;}
-.upload-txt{font-size:11px;color:var(--muted);letter-spacing:1px;}
-.upload-sub{font-size:10px;color:var(--muted);margin-top:3px;}
-.upload-sub.ok{color:var(--green);}
-
-/* OUTPUT */
-.out{background:var(--surface);border:1px solid var(--border);margin-top:16px;display:none;}
+/* ── OUTPUT ── */
+.out{background:var(--surface);border:1px solid var(--border);margin-top:14px;display:none;}
 .out.show{display:block;}
-.out-head{display:flex;justify-content:space-between;align-items:center;
-  padding:10px 18px;border-bottom:1px solid var(--border);}
+.out-head{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-bottom:1px solid var(--border);}
 .out-lbl{font-size:9px;letter-spacing:2px;color:var(--gold);text-transform:uppercase;}
-.copy{background:transparent;border:1px solid var(--border);color:var(--muted);
-  font-size:9px;padding:4px 10px;cursor:pointer;font-family:'Montserrat',sans-serif;
-  text-transform:uppercase;transition:all 0.2s;}
+.copy{background:transparent;border:1px solid var(--border);color:var(--muted);font-size:9px;padding:4px 10px;cursor:pointer;font-family:'Montserrat',sans-serif;text-transform:uppercase;}
 .copy:hover{border-color:var(--gold);color:var(--gold);}
-.out-body{padding:22px;font-size:13px;line-height:1.9;white-space:pre-wrap;max-height:500px;overflow-y:auto;}
+.out-body{padding:20px;font-size:13px;line-height:1.9;white-space:pre-wrap;max-height:500px;overflow-y:auto;}
 
-/* LOADER */
-.loader{display:none;text-align:center;padding:30px;}
-.ring{width:32px;height:32px;margin:0 auto 12px;border:1px solid var(--border);
-  border-top-color:var(--gold);border-radius:50%;animation:spin 1s linear infinite;}
+/* ── LOADER ── */
+.loader{display:none;text-align:center;padding:28px;}
+.ring{width:30px;height:30px;margin:0 auto 12px;border:1px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin 1s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg)}}
 .ring-txt{font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;}
 
-/* DISPATCH DASHBOARD */
-.d-status{display:flex;align-items:center;gap:12px;padding:14px 18px;
-  border:1px solid var(--border);background:var(--surface);margin-bottom:16px;}
-.d-status.live{border-color:var(--green);background:rgba(78,203,141,0.05);}
-.d-status.live .d-status-txt{color:var(--green);}
-.d-status-txt{font-size:11px;color:var(--muted);}
-.kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:20px;display:none;}
-.kpi{background:var(--surface);border:1px solid var(--border);padding:18px;text-align:center;position:relative;}
-.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;
-  background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:0.4;}
-.kpi-val{font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:700;color:var(--gold);}
-.kpi-lbl{font-size:9px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-top:3px;}
-.kpi-sub{font-size:10px;color:var(--muted);margin-top:2px;}
-.charts{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;display:none;}
-.chart-box{background:var(--surface);border:1px solid var(--border);padding:18px;}
-.chart-title{font-size:9px;letter-spacing:2px;color:var(--gold);text-transform:uppercase;margin-bottom:14px;}
-.detail-row{display:flex;justify-content:space-between;align-items:center;
-  padding:7px 0;border-bottom:1px solid var(--border);}
-.detail-row:last-child{border-bottom:none;}
-.dr-name{font-size:12px;color:var(--text);}
-.dr-val{font-size:12px;color:var(--gold);font-weight:700;}
-.dr-sub{font-size:10px;color:var(--muted);}
-.bars{display:flex;align-items:flex-end;gap:10px;height:100px;justify-content:center;margin-bottom:8px;}
-.bar-wrap{display:flex;flex-direction:column;align-items:center;gap:3px;}
-.bar-num{font-size:10px;font-weight:700;}
-.bar-rect{width:36px;border-radius:3px 3px 0 0;}
-.bar-lbl{font-size:10px;font-weight:600;}
-.drivers-wrap{display:none;margin-bottom:14px;}
-.driver-row{margin-bottom:10px;}
-.driver-info{display:flex;justify-content:space-between;margin-bottom:4px;}
-.driver-name{font-size:12px;}
-.driver-count{font-size:12px;font-weight:700;}
-.progress{height:3px;background:var(--border);border-radius:2px;}
-.progress-fill{height:3px;border-radius:2px;transition:width 0.8s;}
-.qbtns{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:16px;display:none;}
-.qbtn{padding:7px 14px;background:var(--surface);border:1px solid var(--border);
-  color:var(--muted);font-family:'Montserrat',sans-serif;font-size:9px;
-  letter-spacing:1px;cursor:pointer;transition:all 0.2s;text-transform:uppercase;}
-.qbtn:hover{border-color:var(--gold);color:var(--gold);background:var(--glow);}
-.qbtn.cust{border-color:rgba(78,203,141,0.3);color:var(--green);}
-.qbtn.city{border-color:rgba(91,141,238,0.3);color:var(--blue);}
-.qbtn.stat{border-color:rgba(201,168,76,0.4);color:var(--gold);}
-.ask-row{display:flex;gap:10px;align-items:flex-end;margin-bottom:10px;display:none;}
-.ask-inp{flex:1;min-height:48px;max-height:100px;resize:none;padding:12px 14px;}
-.send{width:48px;height:48px;flex-shrink:0;background:linear-gradient(135deg,var(--gold),var(--gold2));
-  border:none;color:var(--black);cursor:pointer;display:flex;align-items:center;justify-content:center;}
-.send:hover{transform:translateY(-2px);}
-.send:disabled{opacity:0.4;cursor:not-allowed;transform:none;}
-.date-wrap{display:none;margin-bottom:16px;}
-.date-lbl{font-size:9px;letter-spacing:2px;color:var(--gold);text-transform:uppercase;margin-bottom:6px;}
-.date-pills{display:flex;gap:6px;flex-wrap:wrap;}
-.dpill{padding:6px 12px;background:var(--surface);border:1px solid var(--border);
-  color:var(--muted);font-family:'Montserrat',sans-serif;font-size:10px;cursor:pointer;transition:all 0.2s;}
-.dpill:hover{border-color:var(--gold);color:var(--gold);}
-.dpill.on{background:var(--gold);color:var(--black);border-color:var(--gold);font-weight:700;}
-.dpill.today{border-color:var(--green);color:var(--green);}
-.dpill.today.on{background:var(--green);color:var(--black);}
+/* ── UPLOAD ── */
+.upload{background:var(--surface);border:1px dashed var(--border);padding:20px;text-align:center;cursor:pointer;transition:all 0.3s;margin-bottom:8px;}
+.upload:hover{border-color:var(--gold);background:var(--glow);}
+.upload.done{border-color:var(--green);border-style:solid;}
 
-/* EMAIL TABS */
+/* ── EMAIL DIFF ── */
 .etabs{display:flex;border-bottom:1px solid var(--border);}
-.etab{padding:10px 18px;border:none;background:transparent;color:var(--muted);
-  font-family:'Montserrat',sans-serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;
-  cursor:pointer;transition:all 0.2s;border-right:1px solid var(--border);position:relative;}
-.etab::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;
-  background:var(--gold);transform:scaleX(0);transition:transform 0.2s;}
+.etab{padding:10px 16px;border:none;background:transparent;color:var(--muted);font-family:'Montserrat',sans-serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:all 0.2s;border-right:1px solid var(--border);position:relative;}
+.etab::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:var(--gold);transform:scaleX(0);transition:transform 0.2s;}
 .etab.on{color:var(--gold);}
 .etab.on::after{transform:scaleX(1);}
-.ecopy{margin-left:auto;padding:10px 18px;border:none;background:transparent;
-  color:var(--muted);font-family:'Montserrat',sans-serif;font-size:9px;cursor:pointer;}
+.ecopy{margin-left:auto;padding:10px 16px;border:none;background:transparent;color:var(--muted);font-family:'Montserrat',sans-serif;font-size:9px;cursor:pointer;}
 .ecopy:hover{color:var(--gold);}
-.ebody{padding:22px;font-size:13px;line-height:1.9;white-space:pre-wrap;max-height:440px;overflow-y:auto;}
-.ediff{background:var(--surface);border:1px solid var(--border);margin-top:16px;display:none;}
+.ebody{padding:20px;font-size:13px;line-height:1.9;white-space:pre-wrap;max-height:440px;overflow-y:auto;}
+.ediff{background:var(--surface);border:1px solid var(--border);margin-top:14px;display:none;}
 .ediff.show{display:block;}
 
-/* INVOICE */
-.inv-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px;}
-.inv-inp{width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);
-  font-family:'Montserrat',sans-serif;font-size:13px;padding:11px 14px;outline:none;transition:border 0.2s;display:block;}
+/* ── INVOICE ── */
+.inv-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:14px;}
+.inv-inp{width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:'Montserrat',sans-serif;font-size:13px;padding:11px 14px;outline:none;transition:border 0.2s;display:block;box-sizing:border-box;}
 .inv-inp:focus{border-color:var(--gold);}
 .inv-inp::placeholder{color:var(--muted);}
-.inv-lbl{font-size:9px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-bottom:5px;display:block;}
-.items-head{display:grid;grid-template-columns:44px 1fr 130px 65px 120px 110px 130px 36px;
-  background:#1a1a2e;border:1px solid var(--border);border-bottom:2px solid var(--gold);}
-.items-head div{padding:10px 8px;font-size:9px;color:var(--gold);text-transform:uppercase;letter-spacing:1px;}
-.item-row{display:grid;grid-template-columns:44px 1fr 130px 65px 120px 110px 130px 36px;
-  border-bottom:1px solid var(--border);background:var(--surface);}
-.item-row div{border-right:1px solid var(--border);}
-.item-row div:last-child{border-right:none;}
-.item-row input{width:100%;height:44px;padding:10px 10px;background:transparent;border:none;
-  outline:none;color:var(--text);font-family:'Montserrat',sans-serif;font-size:13px;}
-.item-num{display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--gold);font-weight:600;}
-.item-del{display:flex;align-items:center;justify-content:center;}
-.item-del button{background:transparent;border:none;color:var(--red);cursor:pointer;font-size:18px;padding:4px 8px;}
 .inv-totals{padding:16px;background:var(--surface);border:1px solid var(--border);margin-bottom:14px;}
 .inv-total-row{display:flex;justify-content:space-between;padding:6px 0;}
-.inv-total-lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;}
-.inv-total-val{font-size:13px;color:var(--text);}
-.inv-total-val.vat{color:var(--green);}
-.inv-total-val.total{font-size:18px;color:var(--gold);font-weight:700;font-family:'Cormorant Garamond',serif;}
-.inv-btns{display:flex;gap:10px;}
-.inv-btn{flex:1;padding:13px;background:transparent;border:1px solid var(--gold);color:var(--gold);
-  font-family:'Montserrat',sans-serif;font-size:9px;font-weight:600;letter-spacing:2px;
-  text-transform:uppercase;cursor:pointer;transition:all 0.2s;}
+.inv-btns{display:flex;gap:10px;margin-top:14px;}
+.inv-btn{flex:1;padding:13px;background:transparent;border:1px solid var(--gold);color:var(--gold);font-family:'Montserrat',sans-serif;font-size:9px;font-weight:600;letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:all 0.2s;}
 .inv-btn:hover{background:var(--glow);}
 .inv-btn.blue{border-color:var(--blue);color:var(--blue);}
-.inv-btn.blue:hover{background:rgba(91,141,238,0.1);}
 
-footer{position:relative;z-index:5;text-align:center;padding:28px;border-top:1px solid var(--border);}
-.footer-txt{font-size:10px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;
-  display:flex;align-items:center;justify-content:center;gap:14px;}
-.footer-txt::before,.footer-txt::after{content:'';width:30px;height:1px;background:var(--gold);opacity:0.3;}
-.fg{color:var(--gold);}
-::-webkit-scrollbar{width:4px;}
-::-webkit-scrollbar-track{background:var(--surface);}
-::-webkit-scrollbar-thumb{background:var(--border);}
-::-webkit-scrollbar-thumb:hover{background:var(--gold);}
+/* ── QUICK ACTIONS ── */
+.qa-btn{display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--surface);border:1px solid var(--border);width:100%;margin-bottom:8px;cursor:pointer;transition:all 0.2s;font-family:'Montserrat',sans-serif;font-size:11px;color:var(--text);text-align:left;}
+.qa-btn:hover{border-color:var(--gold);background:var(--glow);}
+.qa-btn .qa-icon{font-size:16px;width:24px;text-align:center;}
+.qa-btn .qa-plus{margin-left:auto;color:var(--gold);font-size:16px;}
+
+/* ── ASK INPUT ── */
+.ask-row{display:flex;gap:8px;align-items:flex-end;}
+.ask-inp{flex:1;min-height:44px;max-height:100px;resize:none;padding:11px 14px;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:'Montserrat',sans-serif;font-size:13px;outline:none;}
+.ask-inp:focus{border-color:var(--gold);}
+.send-btn{width:44px;height:44px;flex-shrink:0;background:linear-gradient(135deg,var(--gold),var(--gold2));border:none;color:var(--black);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;transition:all 0.2s;}
+.send-btn:hover{transform:translateY(-2px);}
+.send-btn:disabled{opacity:0.4;cursor:not-allowed;transform:none;}
+
+/* ── ROUTE TABLE ── */
+.route-table{width:100%;border-collapse:collapse;}
+.route-table th{padding:8px 10px;font-size:9px;letter-spacing:1px;color:var(--gold);text-transform:uppercase;text-align:left;border-bottom:2px solid var(--gold);background:#1a1a2e;}
+.route-table td{padding:8px 10px;font-size:12px;border-bottom:1px solid rgba(42,42,30,0.5);}
+.route-table tr:hover td{background:var(--glow);}
+.progress-bar{height:3px;background:var(--border);border-radius:2px;margin-top:4px;}
+.progress-fill{height:3px;border-radius:2px;}
+
+footer{padding:16px 28px;border-top:1px solid var(--border);text-align:center;font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;flex-shrink:0;}
+footer span{color:var(--gold);}
 </style>
 </head>
 <body>
-<div class="bg"></div>
-<div class="grid"></div>
 
-<header>
-  <div class="logo">
-    <div class="logo-box">
-      <svg viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M11 2L13.5 8.5H20L14.5 12.5L16.5 19L11 15L5.5 19L7.5 12.5L2 8.5H8.5L11 2Z" stroke="#c9a84c" stroke-width="1"/>
-        <circle cx="11" cy="11" r="3" stroke="#c9a84c" stroke-width="0.5" fill="rgba(201,168,76,0.1)"/>
-      </svg>
+<!-- ══════════════════════════════════════════════════ SIDEBAR -->
+<aside class="sidebar">
+  <div class="sb-logo">
+    <div class="sb-logo-box">
+      <svg viewBox="0 0 22 22" fill="none"><path d="M11 2L13.5 8.5H20L14.5 12.5L16.5 19L11 15L5.5 19L7.5 12.5L2 8.5H8.5L11 2Z" stroke="#c9a84c" stroke-width="1"/><circle cx="11" cy="11" r="3" stroke="#c9a84c" stroke-width="0.5" fill="rgba(201,168,76,0.1)"/></svg>
     </div>
-    <div>
-      <div class="brand-name">AZHAR — AI</div>
-      <div class="brand-sub">Operations &amp; Customer Service Intelligence</div>
+    <div class="sb-brand">
+      <div class="sb-name">AZHAR-AI</div>
+      <div class="sb-sub">Operations Intelligence</div>
     </div>
   </div>
-  <div style="display:flex;align-items:center;gap:20px;">
-    <div class="status"><div class="dot"></div>System Active</div>
-    <div class="ver">V 3.0</div>
+
+  <div class="sb-section">AI Command Centre</div>
+  <button class="sb-item on" onclick="goTab('dispatch',this)"><span class="icon">🚚</span> Daily Dispatch</button>
+  <button class="sb-item" onclick="goTab('rejection',this)"><span class="icon">📊</span> Daily Rejection</button>
+  <button class="sb-item" onclick="goTab('summary',this)"><span class="icon">📋</span> Executive Summary</button>
+  <button class="sb-item" onclick="goTab('email',this)"><span class="icon">✉️</span> Email Writer</button>
+  <button class="sb-item" onclick="goTab('invoice',this)"><span class="icon">💼</span> Proforma Invoice</button>
+  <button class="sb-item" onclick="goTab('excel',this)"><span class="icon">📐</span> Excel Support</button>
+
+  <div class="sb-footer">
+    <div class="sb-user">
+      <div class="sb-avatar">A</div>
+      <div>
+        <div class="sb-user-name">Azhar</div>
+        <div class="sb-user-role">Administrator</div>
+      </div>
+    </div>
   </div>
-</header>
+</aside>
 
-<main>
-  <div class="hero">
-    <div class="hero-ey">Operations Intelligence Platform</div>
-    <h1>Operations &amp; Customer Service<br><strong>AI Command Centre</strong></h1>
-    <p>Daily Dispatch · Daily Rejection · Executive Summary · Email Writer · Proforma Invoice · Excel Support</p>
+<!-- ══════════════════════════════════════════════════ MAIN -->
+<div class="main">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="topbar-left">
+      <h2 id="topbar-title">Welcome back, Azhar</h2>
+      <p id="topbar-sub">Operations & Customer Service AI Command Centre</p>
+    </div>
+    <div class="topbar-right">
+      <div class="dot-live">System Active</div>
+      <div class="topbar-date">
+        <strong id="tb-date">—</strong>
+        <span id="tb-time">—</span>
+      </div>
+      <div class="sb-avatar" style="width:36px;height:36px;font-size:12px;">A</div>
+    </div>
   </div>
-  <div class="div"><div class="div-line"></div><div class="div-dia"></div><div class="div-line"></div></div>
 
-  <div class="tabs">
-    <button class="tab on" onclick="goTab('dispatch',this)"><span class="tab-icon">🚚</span>Daily Dispatch</button>
-    <button class="tab" onclick="goTab('rejection',this)"><span class="tab-icon">📊</span>Daily Rejection</button>
-    <button class="tab" onclick="goTab('summary',this)"><span class="tab-icon">📋</span>Executive Summary</button>
-    <button class="tab" onclick="goTab('email',this)"><span class="tab-icon">✉️</span>Email Writer</button>
-    <button class="tab" onclick="goTab('invoice',this)"><span class="tab-icon">💼</span>Proforma Invoice</button>
-    <button class="tab" onclick="goTab('excel',this)"><span class="tab-icon">📐</span>Excel Support</button>
-  </div>
+  <!-- CONTENT -->
+  <div class="content">
 
-  <!-- DISPATCH -->
-  <div class="panel on" id="dispatch">
-    <div class="card">
-      <div class="card-ey">Daily Dispatch Control</div>
-      <h2>Operations Dashboard</h2>
-      <p>Upload your daily Excel dispatch report — full live dashboard for your entire team.</p>
+    <!-- ══ DAILY DISPATCH ══════════════════════════════════ -->
+    <div class="panel on" id="dispatch">
 
-      <div class="d-status" id="ds-status">
-        <span style="font-size:18px;">⏳</span>
-        <span class="d-status-txt">Checking for today's dispatch data...</span>
-      </div>
-
-      <div class="date-wrap" id="ds-dates">
-        <div class="date-lbl">📅 Select Date</div>
-        <div class="date-pills" id="ds-date-pills"></div>
-      </div>
-
-      <div class="kpis" id="ds-kpis">
-        <div class="kpi"><div class="kpi-val" id="k-orders">—</div><div class="kpi-lbl">Total Orders</div></div>
-        <div class="kpi"><div class="kpi-val" id="k-value" style="font-size:20px;">—</div><div class="kpi-lbl">Value (AED)</div></div>
-        <div class="kpi">
-          <div style="display:flex;justify-content:space-between;">
-            <div><div class="kpi-val" id="k-food" style="font-size:20px;color:var(--green);">—</div><div class="kpi-sub">FOOD</div></div>
-            <div style="text-align:right;"><div class="kpi-val" id="k-nonfood" style="font-size:20px;color:var(--red);">—</div><div class="kpi-sub">NON-FOOD</div></div>
-          </div>
-          <div class="kpi-lbl">Food / Non-Food</div>
+      <!-- Status + Date Slicer -->
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px;">
+        <div class="d-status" id="ds-status" style="flex:1;min-width:260px;margin:0;">
+          <span style="font-size:16px;">⏳</span>
+          <span class="d-status-txt">Checking for today's dispatch data...</span>
         </div>
-        <div class="kpi"><div class="kpi-val" id="k-routes" style="color:var(--blue);">—</div><div class="kpi-lbl">Routes</div><div class="kpi-sub" id="k-drivers-sub">— drivers</div></div>
-        <div class="kpi"><div class="kpi-val" id="k-dubai" style="color:var(--green);">—</div><div class="kpi-lbl">Dubai Orders</div><div class="kpi-sub" id="k-dubai-sub">AED —</div></div>
-        <div class="kpi"><div class="kpi-val" id="k-adh" style="color:var(--blue);">—</div><div class="kpi-lbl">Abu Dhabi</div><div class="kpi-sub" id="k-adh-sub">AED —</div></div>
-      </div>
-
-      <div class="charts" id="ds-charts">
-        <div class="chart-box">
-          <div class="chart-title">📊 Orders by City</div>
-          <div class="bars" id="ds-bars"></div>
-          <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;" id="ds-bar-labels"></div>
-        </div>
-        <div class="chart-box">
-          <div class="chart-title">💰 Top Customers by Value</div>
-          <div id="ds-customers"></div>
+        <div id="ds-date-wrap" style="display:none;">
+          <div class="date-pills" id="ds-date-pills" style="margin:0;"></div>
         </div>
       </div>
 
-      <div class="charts" id="ds-charts2" style="grid-template-columns:1fr 1fr 1fr;">
-        <div class="chart-box">
-          <div class="chart-title">🚚 Top 5 Drivers</div>
-          <div id="ds-drivers"></div>
+      <!-- KPI Cards -->
+      <div class="kpi-row" id="ds-kpis" style="display:none;">
+        <div class="kpi-card">
+          <div class="kpi-icon" style="background:rgba(201,168,76,0.1);">📦</div>
+          <div class="kpi-label">Total Orders</div>
+          <div class="kpi-value" id="k-orders">—</div>
+          <div class="kpi-sub" id="k-routes-sub">— routes · — drivers</div>
         </div>
-        <div class="chart-box">
-          <div class="chart-title">📍 Value by City</div>
-          <div id="ds-cities"></div>
+        <div class="kpi-card">
+          <div class="kpi-icon" style="background:rgba(201,168,76,0.1);">💰</div>
+          <div class="kpi-label">Total Value (AED)</div>
+          <div class="kpi-value" id="k-value">—</div>
+          <div class="kpi-sub up" id="k-value-sub">Today's dispatch</div>
         </div>
-        <div class="chart-box" style="background:#0d1508;border-color:rgba(78,203,141,0.3);">
-          <div class="chart-title" style="color:var(--green);">✦ Quick Ask</div>
-          <button class="qbtn cust" onclick="doAsk('All LULU orders today — count and value')" style="width:100%;margin-bottom:6px;text-align:left;">🛒 Lulu orders?</button>
-          <button class="qbtn city" onclick="doAsk('Top driver today by deliveries')" style="width:100%;margin-bottom:6px;text-align:left;">🚚 Top driver?</button>
-          <button class="qbtn stat" onclick="doAsk('Total value for Dubai today')" style="width:100%;margin-bottom:10px;text-align:left;">📍 Dubai value?</button>
-          <div style="display:flex;gap:6px;">
-            <input type="text" id="ds-quick" placeholder="Ask anything..." class="ask-inp" style="min-height:40px;" onkeydown="if(event.key==='Enter'){doAsk(this.value);this.value=''}"/>
-            <button class="send" style="height:40px;width:40px;" onclick="doAsk(document.getElementById('ds-quick').value);document.getElementById('ds-quick').value=''">→</button>
+        <div class="kpi-card">
+          <div class="kpi-icon" style="background:rgba(78,203,141,0.1);">🍎</div>
+          <div class="kpi-label">Food / Non-Food / 3PL</div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:4px;">
+            <div>
+              <div style="font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:700;color:var(--green);" id="k-food">—</div>
+              <div style="font-size:9px;color:var(--green);">FOOD</div>
+            </div>
+            <div style="text-align:center;">
+              <div style="font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:700;color:var(--orange);" id="k-nonfood">—</div>
+              <div style="font-size:9px;color:var(--orange);">NON-FOOD</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:700;color:var(--blue);" id="k-pl">—</div>
+              <div style="font-size:9px;color:var(--blue);">3PL</div>
+            </div>
           </div>
         </div>
+        <div class="kpi-card">
+          <div class="kpi-icon" style="background:rgba(232,75,75,0.1);">🛒</div>
+          <div class="kpi-label">Lulu Orders</div>
+          <div class="kpi-value" id="k-lulu" style="color:var(--red);">—</div>
+          <div class="kpi-sub" id="k-lulu-sub">AED —</div>
+        </div>
       </div>
 
-      <!-- ROUTE SUMMARY TABLE -->
-      <div id="ds-routes-wrap" style="display:none;margin-bottom:14px;">
-        <div class="chart-box" style="background:var(--surface);border:1px solid var(--border);padding:18px;">
-          <div class="chart-title">🗺️ Route Summary — Drops per Route</div>
-          <div style="overflow-x:auto;">
-            <table style="width:100%;border-collapse:collapse;" id="ds-routes-table">
-              <thead>
-                <tr style="background:#1a1a2e;border-bottom:2px solid var(--gold);">
-                  <th style="padding:8px 10px;font-size:9px;color:var(--gold);text-transform:uppercase;letter-spacing:1px;text-align:left;border:1px solid var(--border);">Route</th>
-                  <th style="padding:8px 10px;font-size:9px;color:var(--gold);text-transform:uppercase;letter-spacing:1px;text-align:center;border:1px solid var(--border);">Driver ID</th>
-                  <th style="padding:8px 10px;font-size:9px;color:var(--gold);text-transform:uppercase;letter-spacing:1px;text-align:center;border:1px solid var(--border);">Drops</th>
-                  <th style="padding:8px 10px;font-size:9px;color:var(--gold);text-transform:uppercase;letter-spacing:1px;text-align:right;border:1px solid var(--border);">Value (AED)</th>
-                </tr>
-              </thead>
-              <tbody id="ds-routes-body"></tbody>
-            </table>
+      <!-- Charts Row -->
+      <div class="grid-3-1" id="ds-charts" style="display:none;">
+        <!-- Orders by City Bar Chart -->
+        <div class="box">
+          <div class="box-title">📊 Orders by City <span id="ds-city-total"></span></div>
+          <div class="chart-bars" id="ds-city-bars" style="height:120px;"></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;" id="ds-city-labels"></div>
+        </div>
+        <!-- Dispatch Status Donut -->
+        <div class="box">
+          <div class="box-title">📈 Order Type Split</div>
+          <div class="donut-wrap">
+            <svg class="donut-svg" width="100" height="100" viewBox="0 0 100 100" id="ds-donut-svg">
+              <circle cx="50" cy="50" r="35" fill="none" stroke="#2a2a1e" stroke-width="18"/>
+              <circle cx="50" cy="50" r="35" fill="none" stroke="#4ecb8d" stroke-width="18" id="donut-food" stroke-dasharray="0 220" stroke-dashoffset="55" style="transition:stroke-dasharray 1s;"/>
+              <circle cx="50" cy="50" r="35" fill="none" stroke="#e8854b" stroke-width="18" id="donut-nonfood" stroke-dasharray="0 220" stroke-dashoffset="55" style="transition:stroke-dasharray 1s;"/>
+              <circle cx="50" cy="50" r="35" fill="none" stroke="#5b8dee" stroke-width="18" id="donut-pl" stroke-dasharray="0 220" stroke-dashoffset="55" style="transition:stroke-dasharray 1s;"/>
+              <text x="50" y="46" text-anchor="middle" font-size="11" fill="#c9a84c" font-weight="700" id="donut-center">—</text>
+              <text x="50" y="58" text-anchor="middle" font-size="7" fill="#7a7660">ORDERS</text>
+            </svg>
+            <div class="donut-legend" id="ds-donut-legend"></div>
           </div>
         </div>
       </div>
 
-      <div class="qbtns" id="ds-qbtns">
-        <button class="qbtn cust" onclick="doAsk('All LULU orders — count, value, branches')">🟡 Lulu</button>
-        <button class="qbtn cust" onclick="doAsk('All CARREFOUR orders — count and value')">🔵 Carrefour</button>
-        <button class="qbtn cust" onclick="doAsk('All UNION COOP orders — count and value')">🟢 Union Coop</button>
-        <button class="qbtn cust" onclick="doAsk('All SPINNEYS orders — count and value')">🟣 Spinneys</button>
-        <button class="qbtn cust" onclick="doAsk('All WAITROSE orders — count and value')">⚪ Waitrose</button>
-        <button class="qbtn cust" onclick="doAsk('All CHOITHRAMS orders — count and value')">🟠 Choithrams</button>
-        <button class="qbtn cust" onclick="doAsk('All WEST ZONE orders — count and value')">🔴 West Zone</button>
-        <button class="qbtn cust" onclick="doAsk('All GEANT orders — count and value')">🟤 Geant</button>
-        <button class="qbtn city" onclick="doAsk('Total orders and value for DUBAI today')">📍 Dubai</button>
-        <button class="qbtn city" onclick="doAsk('Total orders and value for ABU DHABI today')">📍 Abu Dhabi</button>
-        <button class="qbtn city" onclick="doAsk('Total orders and value for SHARJAH today')">📍 Sharjah</button>
-        <button class="qbtn city" onclick="doAsk('Total orders and value for FUJAIRAH today')">📍 Fujairah</button>
-        <button class="qbtn city" onclick="doAsk('Total orders and value for AL AIN today')">📍 Al Ain</button>
-        <button class="qbtn city" onclick="doAsk('Total orders and value for RAK today')">📍 RAK</button>
-        <button class="qbtn stat" onclick="doAsk('Top 5 drivers by deliveries today with count')">🚚 Top 5 Drivers</button>
-        <button class="qbtn stat" onclick="doAsk('Total orders count and total value in AED')">📦 Total Summary</button>
-        <button class="qbtn stat" onclick="doAsk('List all routes with their drop count and driver name')">🗺️ All Routes</button>
-      </div>
-
-      <div class="ask-row" id="ds-ask-row">
-        <textarea id="ds-ask" class="ask-inp" placeholder="Ask anything about today's dispatch..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();doAsk(this.value);this.value=''}" rows="2"></textarea>
-        <button class="send" id="ds-send" onclick="doAsk(document.getElementById('ds-ask').value);document.getElementById('ds-ask').value=''">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-        </button>
-      </div>
-
-      <div class="out" id="ds-out">
-        <div class="out-head"><span class="out-lbl">✦ Dispatch Intelligence</span><button class="copy" onclick="doCopy('ds-answer')">Copy</button></div>
-        <div class="out-body" id="ds-answer"></div>
-      </div>
-
-      <div style="margin-top:24px;padding-top:20px;border-top:1px solid var(--border);">
-        <!-- Admin Login -->
-        <div id="admin-lock" style="text-align:center;padding:20px;">
-          <div style="font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:12px;">🔒 Admin Access Required</div>
-          <div style="display:flex;gap:8px;max-width:360px;margin:0 auto;">
-            <input type="password" id="admin-pwd" placeholder="Enter admin password..." 
-              style="flex:1;height:42px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:Montserrat,sans-serif;font-size:13px;outline:none;"
-              onkeydown="if(event.key==='Enter')checkAdminPwd()"/>
-            <button onclick="checkAdminPwd()" 
-              style="padding:10px 20px;background:transparent;border:1px solid var(--gold);color:var(--gold);font-family:Montserrat,sans-serif;font-size:10px;font-weight:600;letter-spacing:2px;text-transform:uppercase;cursor:pointer;">
-              Unlock
-            </button>
-          </div>
+      <!-- Tables Row -->
+      <div class="grid-2" id="ds-tables" style="display:none;">
+        <!-- Top Customers -->
+        <div class="box">
+          <div class="box-title">💰 Top Customers by Value</div>
+          <table class="data-table" id="ds-cust-table">
+            <thead><tr><th>#</th><th>Customer</th><th>Orders</th><th>Value (AED)</th></tr></thead>
+            <tbody id="ds-cust-body"></tbody>
+          </table>
         </div>
+        <!-- Top Drivers -->
+        <div class="box">
+          <div class="box-title">🚚 Top 5 Drivers</div>
+          <div id="ds-drivers-list"></div>
+        </div>
+      </div>
 
-        <!-- Admin Upload (hidden until password entered) -->
-        <div id="admin-upload" style="display:none;">
-          <div class="card-ey">Admin Only — Upload Today's Excel File</div>
-          <div class="upload" id="ds-upload-box" onclick="document.getElementById('ds-file').click()">
-            <div class="upload-icon">📊</div>
-            <div class="upload-txt">Click to Upload Dispatch Report (.xlsx or .csv)</div>
-            <div class="upload-sub" id="ds-file-name">Admin uploads once — team sees live data automatically</div>
+      <!-- Route Summary -->
+      <div class="box" id="ds-routes-box" style="display:none;margin-bottom:16px;">
+        <div class="box-title">🗺️ Route Summary — Drops per Route</div>
+        <div style="overflow-x:auto;max-height:300px;overflow-y:auto;">
+          <table class="route-table">
+            <thead><tr><th>Route</th><th>Driver</th><th>Drops</th><th>Value (AED)</th></tr></thead>
+            <tbody id="ds-route-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Ask AI -->
+      <div class="box" id="ds-ask-box" style="display:none;margin-bottom:16px;">
+        <div class="box-title">✦ Ask AI About Today's Dispatch</div>
+        <div class="qbtns" style="margin-bottom:12px;">
+          <button class="qbtn cust" onclick="doAsk('All LULU orders today — total count, value, branches')">🟡 Lulu</button>
+          <button class="qbtn cust" onclick="doAsk('All CARREFOUR orders — count and value')">🔵 Carrefour</button>
+          <button class="qbtn cust" onclick="doAsk('All UNION COOP orders — count and value')">🟢 Union Coop</button>
+          <button class="qbtn cust" onclick="doAsk('All SPINNEYS orders — count and value')">🟣 Spinneys</button>
+          <button class="qbtn cust" onclick="doAsk('All WAITROSE orders — count and value')">⚪ Waitrose</button>
+          <button class="qbtn cust" onclick="doAsk('All CHOITHRAMS orders — count and value')">🟠 Choithrams</button>
+          <button class="qbtn city" onclick="doAsk('Total orders and value for DUBAI today')">📍 Dubai</button>
+          <button class="qbtn city" onclick="doAsk('Total orders and value for ABU DHABI today')">📍 Abu Dhabi</button>
+          <button class="qbtn city" onclick="doAsk('Total orders and value for SHARJAH today')">📍 Sharjah</button>
+          <button class="qbtn city" onclick="doAsk('Total orders and value for FUJAIRAH today')">📍 Fujairah</button>
+          <button class="qbtn city" onclick="doAsk('Total orders and value for AL AIN today')">📍 Al Ain</button>
+          <button class="qbtn stat" onclick="doAsk('Top 5 drivers by deliveries today')">🚚 Top Drivers</button>
+          <button class="qbtn stat" onclick="doAsk('Total food orders value and non-food orders value')">📊 Food vs Non-Food</button>
+          <button class="qbtn stat" onclick="doAsk('Summary of all routes with drops and values')">🗺️ All Routes</button>
+        </div>
+        <div class="ask-row">
+          <textarea id="ds-ask" class="ask-inp" placeholder="Ask anything about today's dispatch..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();doAsk(this.value);this.value=''}" rows="2"></textarea>
+          <button class="send-btn" id="ds-send" onclick="doAsk(document.getElementById('ds-ask').value);document.getElementById('ds-ask').value=''">→</button>
+        </div>
+        <div class="out" id="ds-out" style="margin-top:12px;">
+          <div class="out-head"><span class="out-lbl">✦ Dispatch Intelligence</span><button class="copy" onclick="doCopy('ds-answer')">Copy</button></div>
+          <div class="out-body" id="ds-answer"></div>
+        </div>
+      </div>
+
+      <!-- Admin Upload -->
+      <div class="box">
+        <div class="box-title">🔒 Admin — Upload Today's Dispatch File</div>
+        <div id="admin-lock" style="display:flex;gap:8px;align-items:center;">
+          <input type="password" id="admin-pwd" placeholder="Enter admin password..."
+            style="flex:1;height:42px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:Montserrat,sans-serif;font-size:13px;outline:none;"
+            onkeydown="if(event.key==='Enter')checkPwd()"/>
+          <button onclick="checkPwd()" class="inv-btn" style="flex:0;white-space:nowrap;padding:10px 18px;margin:0;">Unlock</button>
+        </div>
+        <div id="admin-upload" style="display:none;margin-top:12px;">
+          <div class="upload" onclick="document.getElementById('ds-file').click()">
+            <div style="font-size:22px;margin-bottom:6px;">📊</div>
+            <div style="font-size:11px;color:var(--muted);letter-spacing:1px;">Click to Upload Dispatch Report (.xlsx or .csv)</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:3px;" id="ds-file-name">Admin uploads once — team sees live data automatically</div>
           </div>
           <input type="file" id="ds-file" accept=".xlsx,.xls,.csv,.txt" style="display:none" onchange="doUpload(this)"/>
           <div class="loader" id="ds-loader"><div class="ring"></div><div class="ring-txt">Processing your Excel file...</div></div>
-          <button onclick="lockAdmin()" style="margin-top:10px;padding:6px 16px;background:transparent;border:1px solid var(--border);color:var(--muted);font-family:Montserrat,sans-serif;font-size:9px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;">🔒 Lock Admin</button>
+          <button onclick="lockAdmin()" style="margin-top:8px;padding:6px 14px;background:transparent;border:1px solid var(--border);color:var(--muted);font-family:Montserrat,sans-serif;font-size:9px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;">🔒 Lock Admin</button>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- REJECTION -->
-  <div class="panel" id="rejection">
-    <div class="card">
-      <div class="card-ey">Daily Rejection Analysis</div>
-      <h2>Analyse Rejections &amp; Returns</h2>
-      <p>Upload or paste your daily rejection report — get full analysis by customer, reason, and product with recommendations.</p>
-      <div class="upload" onclick="document.getElementById('rej-file').click()">
-        <div class="upload-icon">📋</div>
-        <div class="upload-txt">Upload rejection report (.xlsx or .csv)</div>
-        <div class="upload-sub" id="rej-file-name">Or paste data below</div>
-      </div>
-      <input type="file" id="rej-file" accept=".csv,.xlsx,.xls,.txt" style="display:none" onchange="loadFile(this,'rej-data','rej-file-name')"/>
-      <label class="lbl">Rejection Data</label>
-      <textarea id="rej-data" placeholder="Paste rejection/returns data here...&#10;Order#, Customer, Item, Reason, Value, Date..."></textarea>
-      <label class="lbl">Analysis Type</label>
-      <div class="pills" id="rej-type">
-        <div class="pill on" onclick="setPill(this,'rej-type')">Full Analysis</div>
-        <div class="pill" onclick="setPill(this,'rej-type')">By Customer</div>
-        <div class="pill" onclick="setPill(this,'rej-type')">By Reason</div>
-        <div class="pill" onclick="setPill(this,'rej-type')">By Product</div>
-        <div class="pill" onclick="setPill(this,'rej-type')">Recommendations</div>
-      </div>
-      <button class="btn" id="rej-btn" onclick="doRejection()"><span>Analyse Rejections</span></button>
-      <div class="loader" id="rej-loader"><div class="ring"></div><div class="ring-txt">Analysing rejection data...</div></div>
-      <div class="out" id="rej-out">
-        <div class="out-head"><span class="out-lbl">✦ Rejection Analysis</span><button class="copy" onclick="doCopy('rej-answer')">Copy</button></div>
-        <div class="out-body" id="rej-answer"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- SUMMARY -->
-  <div class="panel" id="summary">
-    <div class="card">
-      <div class="card-ey">Executive Summary</div>
-      <h2>Executive Summary Generator</h2>
-      <p>Paste any report, email or document — receive a sharp executive summary ready for your CEO or GM.</p>
-      <label class="lbl">Source Document</label>
-      <textarea id="sum-text" style="min-height:150px;" placeholder="Paste your document, report, email or meeting notes here..."></textarea>
-      <label class="lbl">Output Format</label>
-      <div class="pills" id="sum-type">
-        <div class="pill on" onclick="setPill(this,'sum-type')">Executive Brief</div>
-        <div class="pill" onclick="setPill(this,'sum-type')">Bullet Points</div>
-        <div class="pill" onclick="setPill(this,'sum-type')">Action Items</div>
-        <div class="pill" onclick="setPill(this,'sum-type')">Key Decisions</div>
-        <div class="pill" onclick="setPill(this,'sum-type')">Operations Report</div>
-      </div>
-      <button class="btn" id="sum-btn" onclick="doSummary()"><span>Generate Executive Summary</span></button>
-      <div class="loader" id="sum-loader"><div class="ring"></div><div class="ring-txt">Processing document...</div></div>
-      <div class="out" id="sum-out">
-        <div class="out-head"><span class="out-lbl">✦ Executive Summary</span><button class="copy" onclick="doCopy('sum-answer')">Copy</button></div>
-        <div class="out-body" id="sum-answer"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- EMAIL -->
-  <div class="panel" id="email">
-    <div class="card">
-      <div class="card-ey">Professional Email Writer</div>
-      <h2>Write &amp; Refine Business Emails</h2>
-      <p>Paste your draft or describe what you need — receive a professional email with subject line options.</p>
-      <label class="lbl">Your Draft or Description</label>
-      <textarea id="em-body" style="min-height:120px;" placeholder="Paste your email draft, or describe what you need to communicate..."></textarea>
-      <label class="lbl">Email Type</label>
-      <div class="pills" id="em-type">
-        <div class="pill on" onclick="setPill(this,'em-type')">Fix &amp; Polish</div>
-        <div class="pill" onclick="setPill(this,'em-type')">Customer Complaint</div>
-        <div class="pill" onclick="setPill(this,'em-type')">Supplier</div>
-        <div class="pill" onclick="setPill(this,'em-type')">Management Update</div>
-        <div class="pill" onclick="setPill(this,'em-type')">Apology</div>
-        <div class="pill" onclick="setPill(this,'em-type')">Follow Up</div>
-      </div>
-      <label class="lbl">Recipient (Optional)</label>
-      <textarea id="em-to" style="min-height:44px;" placeholder="e.g. Lulu procurement manager, CEO, Supplier..."></textarea>
-      <button class="btn" id="em-btn" onclick="doEmail()"><span>Write Professional Email</span></button>
-      <div class="loader" id="em-loader"><div class="ring"></div><div class="ring-txt">Writing your email...</div></div>
-      <div class="ediff" id="em-diff">
-        <div class="etabs">
-          <button class="etab on" onclick="setETab('em-final',this)">Final Email</button>
-          <button class="etab" onclick="setETab('em-subject',this)">Subject Lines</button>
-          <button class="etab" onclick="setETab('em-notes',this)">Notes</button>
-          <button class="ecopy" onclick="doCopyActive()">Copy</button>
+    <!-- ══ DAILY REJECTION ══════════════════════════════ -->
+    <div class="panel" id="rejection">
+      <div class="box">
+        <div class="box-title">📊 Daily Rejection Analysis</div>
+        <div class="upload" onclick="document.getElementById('rej-file').click()">
+          <div style="font-size:22px;margin-bottom:6px;">📋</div>
+          <div style="font-size:11px;color:var(--muted);">Upload rejection report (.xlsx or .csv)</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:3px;" id="rej-file-name">Or paste data below</div>
         </div>
-        <div class="ebody" id="em-final"></div>
-        <div class="ebody" id="em-subject" style="display:none;"></div>
-        <div class="ebody" id="em-notes" style="display:none;"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- INVOICE -->
-  <div class="panel" id="invoice">
-    <div class="card">
-      <div class="card-ey">Proforma Invoice</div>
-      <h2>Proforma Invoice Generator</h2>
-      <p>Select company letterhead, fill details, add items — preview and download as PDF or Word.</p>
-
-      <label class="lbl">Select Company Letterhead</label>
-      <div class="pills" id="inv-co" style="margin-bottom:20px;">
-        <div class="pill on" onclick="setPill(this,'inv-co');setCompany('aki')" style="padding:10px 18px;">🏢 AKI — Al Khayyat Investments</div>
-        <div class="pill" onclick="setPill(this,'inv-co');setCompany('alphamed')" style="padding:10px 18px;">🏥 Alphamed General Trading</div>
-      </div>
-
-      <div class="inv-grid">
-        <div>
-          <span class="inv-lbl">From (Your Company)</span>
-          <input type="text" id="inv-from" class="inv-inp" placeholder="Company name" style="margin-bottom:6px;"/>
-          <textarea id="inv-addr" class="inv-inp" style="height:64px;margin-bottom:6px;" placeholder="Address"></textarea>
-          <input type="text" id="inv-contact" class="inv-inp" placeholder="Tel / Email"/>
+        <input type="file" id="rej-file" accept=".csv,.xlsx,.xls,.txt" style="display:none" onchange="loadFile(this,'rej-data','rej-file-name')"/>
+        <label class="lbl">Rejection Data</label>
+        <textarea id="rej-data" placeholder="Paste your rejection/returns data here..."></textarea>
+        <label class="lbl">Analysis Type</label>
+        <div class="pills" id="rej-type">
+          <div class="pill on" onclick="setPill(this,'rej-type')">Full Analysis</div>
+          <div class="pill" onclick="setPill(this,'rej-type')">By Customer</div>
+          <div class="pill" onclick="setPill(this,'rej-type')">By Reason</div>
+          <div class="pill" onclick="setPill(this,'rej-type')">By Product</div>
+          <div class="pill" onclick="setPill(this,'rej-type')">Recommendations</div>
         </div>
-        <div>
-          <span class="inv-lbl">Bill To (Client)</span>
-          <input type="text" id="inv-client" class="inv-inp" placeholder="Client name" style="margin-bottom:6px;"/>
-          <textarea id="inv-client-addr" class="inv-inp" style="height:64px;margin-bottom:6px;" placeholder="Client address"></textarea>
-        </div>
-        <div>
-          <span class="inv-lbl">Invoice Details</span>
-          <input type="text" id="inv-ref" class="inv-inp" placeholder="Reference No" style="margin-bottom:6px;"/>
-          <input type="text" id="inv-date" class="inv-inp" placeholder="Date" style="margin-bottom:6px;"/>
-          <input type="text" id="inv-valid" class="inv-inp" placeholder="Valid Until" style="margin-bottom:6px;"/>
-          <input type="text" id="inv-terms" class="inv-inp" placeholder="Payment Terms"/>
+        <button class="btn" id="rej-btn" onclick="doRejection()"><span>Analyse Daily Rejections</span></button>
+        <div class="loader" id="rej-loader"><div class="ring"></div><div class="ring-txt">Analysing rejection data...</div></div>
+        <div class="out" id="rej-out">
+          <div class="out-head"><span class="out-lbl">✦ Rejection Analysis</span><button class="copy" onclick="doCopy('rej-answer')">Copy</button></div>
+          <div class="out-body" id="rej-answer"></div>
         </div>
       </div>
+    </div>
 
-      <label class="lbl" style="margin-top:20px;">Line Items</label>
-      <div id="inv-items" style="margin-bottom:10px;width:100%;"></div>
-      <button onclick="addInvItem()" style="padding:9px 18px;background:transparent;border:1px solid var(--border);color:var(--muted);font-family:'Montserrat',sans-serif;font-size:9px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all 0.2s;margin-bottom:16px;" onmouseover="this.style.borderColor='var(--gold)';this.style.color='var(--gold)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">+ Add Line Item</button>
-
-      <div class="inv-totals">
-        <div class="inv-total-row"><span class="inv-total-lbl">Subtotal (excl. VAT)</span><span class="inv-total-val" id="inv-subtotal">AED 0.00</span></div>
-        <div class="inv-total-row"><span class="inv-total-lbl">VAT (5%)</span><span class="inv-total-val vat" id="inv-vat">AED 0.00</span></div>
-        <div class="inv-total-row" style="border-top:1px solid var(--border);padding-top:10px;margin-top:4px;"><span class="inv-total-lbl" style="color:var(--gold);font-weight:700;">Net Total (incl. VAT)</span><span class="inv-total-val total" id="inv-total">AED 0.00</span></div>
-      </div>
-
-      <label class="lbl">Special Notes / Terms &amp; Conditions</label>
-      <textarea id="inv-notes" class="inv-inp" style="height:60px;margin-bottom:16px;" placeholder="e.g. All prices in AED. VAT 5% applicable."></textarea>
-
-      <div class="inv-btns">
-        <button class="inv-btn" onclick="previewInv()">👁 Preview &amp; Print PDF</button>
-        <button class="inv-btn blue" onclick="downloadInvWord()">⬇ Download Word</button>
+    <!-- ══ EXECUTIVE SUMMARY ════════════════════════════ -->
+    <div class="panel" id="summary">
+      <div class="box">
+        <div class="box-title">📋 Executive Summary Generator</div>
+        <label class="lbl">Source Document</label>
+        <textarea id="sum-text" style="min-height:160px;" placeholder="Paste your document, report, email or meeting notes here..."></textarea>
+        <label class="lbl">Output Format</label>
+        <div class="pills" id="sum-type">
+          <div class="pill on" onclick="setPill(this,'sum-type')">Executive Brief</div>
+          <div class="pill" onclick="setPill(this,'sum-type')">Bullet Points</div>
+          <div class="pill" onclick="setPill(this,'sum-type')">Action Items</div>
+          <div class="pill" onclick="setPill(this,'sum-type')">Key Decisions</div>
+          <div class="pill" onclick="setPill(this,'sum-type')">Operations Report</div>
+        </div>
+        <button class="btn" id="sum-btn" onclick="doSummary()"><span>Generate Executive Summary</span></button>
+        <div class="loader" id="sum-loader"><div class="ring"></div><div class="ring-txt">Processing document...</div></div>
+        <div class="out" id="sum-out">
+          <div class="out-head"><span class="out-lbl">✦ Executive Summary</span><button class="copy" onclick="doCopy('sum-answer')">Copy</button></div>
+          <div class="out-body" id="sum-answer"></div>
+        </div>
       </div>
     </div>
-  </div>
 
-  <!-- EXCEL -->
-  <div class="panel" id="excel">
-    <div class="card">
-      <div class="card-ey">Excel Support</div>
-      <h2>Excel Formula Help &amp; Data Analysis</h2>
-      <p>Upload your file or describe your formula — get instant fixes and data insights.</p>
-      <div class="upload" onclick="document.getElementById('xl-file').click()">
-        <div class="upload-icon">📊</div>
-        <div class="upload-txt">Upload .csv or .xlsx file</div>
-        <div class="upload-sub" id="xl-file-name">File → Save As → CSV first</div>
-      </div>
-      <input type="file" id="xl-file" accept=".csv,.txt,.xlsx" style="display:none" onchange="loadFileExcel(this)"/>
-      <label class="lbl">Your Formula or Question</label>
-      <textarea id="xl-q" placeholder="e.g. Fix my VLOOKUP returning #N/A&#10;e.g. Sum column C where column A equals Dubai"></textarea>
-      <label class="lbl">Context (Optional)</label>
-      <textarea id="xl-ctx" style="min-height:55px;" placeholder="e.g. Column A = Date, Column B = Customer, Column C = Amount..."></textarea>
-      <button class="btn" id="xl-btn" onclick="doExcel()"><span>Analyse &amp; Fix Excel</span></button>
-      <div class="loader" id="xl-loader"><div class="ring"></div><div class="ring-txt">Analysing your data...</div></div>
-      <div class="out" id="xl-out">
-        <div class="out-head"><span class="out-lbl">✦ Excel Analysis</span><button class="copy" onclick="doCopy('xl-answer')">Copy</button></div>
-        <div class="out-body" id="xl-answer"></div>
+    <!-- ══ EMAIL WRITER ═════════════════════════════════ -->
+    <div class="panel" id="email">
+      <div class="box">
+        <div class="box-title">✉️ Professional Email Writer</div>
+        <label class="lbl">Your Draft or Description</label>
+        <textarea id="em-body" style="min-height:120px;" placeholder="Paste your email draft, or describe what you need to communicate..."></textarea>
+        <label class="lbl">Email Type</label>
+        <div class="pills" id="em-type">
+          <div class="pill on" onclick="setPill(this,'em-type')">Fix &amp; Polish</div>
+          <div class="pill" onclick="setPill(this,'em-type')">Customer Complaint</div>
+          <div class="pill" onclick="setPill(this,'em-type')">Supplier</div>
+          <div class="pill" onclick="setPill(this,'em-type')">Management Update</div>
+          <div class="pill" onclick="setPill(this,'em-type')">Apology</div>
+          <div class="pill" onclick="setPill(this,'em-type')">Follow Up</div>
+        </div>
+        <label class="lbl">Recipient (Optional)</label>
+        <textarea id="em-to" style="min-height:44px;" placeholder="e.g. Lulu procurement manager, CEO, Supplier..."></textarea>
+        <button class="btn" id="em-btn" onclick="doEmail()"><span>Write Professional Email</span></button>
+        <div class="loader" id="em-loader"><div class="ring"></div><div class="ring-txt">Writing your email...</div></div>
+        <div class="ediff" id="em-diff">
+          <div class="etabs">
+            <button class="etab on" onclick="setETab('em-final',this)">Final Email</button>
+            <button class="etab" onclick="setETab('em-subject',this)">Subject Lines</button>
+            <button class="etab" onclick="setETab('em-notes',this)">Notes</button>
+            <button class="ecopy" onclick="doCopyActive()">Copy</button>
+          </div>
+          <div class="ebody" id="em-final"></div>
+          <div class="ebody" id="em-subject" style="display:none;"></div>
+          <div class="ebody" id="em-notes" style="display:none;"></div>
+        </div>
       </div>
     </div>
-  </div>
-</main>
 
-<footer>
-  <div class="footer-txt"><span class="fg">✦</span> Powered by Azhar <span class="fg">✦</span></div>
-</footer>
+    <!-- ══ PROFORMA INVOICE ═════════════════════════════ -->
+    <div class="panel" id="invoice">
+      <div class="box">
+        <div class="box-title">💼 Proforma Invoice Generator</div>
+        <label class="lbl">Select Company Letterhead</label>
+        <div class="pills" id="inv-co" style="margin-bottom:18px;">
+          <div class="pill on" onclick="setPill(this,'inv-co');setCompany('aki')" style="padding:10px 18px;">🏢 AKI — Al Khayyat Investments</div>
+          <div class="pill" onclick="setPill(this,'inv-co');setCompany('alphamed')" style="padding:10px 18px;">🏥 Alphamed General Trading</div>
+        </div>
+        <div class="inv-grid">
+          <div>
+            <div style="font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">From (Your Company)</div>
+            <input type="text" id="inv-from" class="inv-inp" placeholder="Company name" style="margin-bottom:6px;"/>
+            <textarea id="inv-addr" class="inv-inp" style="height:64px;margin-bottom:6px;resize:none;" placeholder="Address"></textarea>
+            <input type="text" id="inv-contact" class="inv-inp" placeholder="Tel / Email"/>
+          </div>
+          <div>
+            <div style="font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">Bill To (Client)</div>
+            <input type="text" id="inv-client" class="inv-inp" placeholder="Client name" style="margin-bottom:6px;"/>
+            <textarea id="inv-client-addr" class="inv-inp" style="height:64px;resize:none;" placeholder="Client address"></textarea>
+          </div>
+          <div>
+            <div style="font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">Invoice Details</div>
+            <input type="text" id="inv-ref" class="inv-inp" placeholder="Reference No" style="margin-bottom:6px;"/>
+            <input type="text" id="inv-date" class="inv-inp" placeholder="Date" style="margin-bottom:6px;"/>
+            <input type="text" id="inv-valid" class="inv-inp" placeholder="Valid Until" style="margin-bottom:6px;"/>
+            <input type="text" id="inv-terms" class="inv-inp" placeholder="Payment Terms"/>
+          </div>
+        </div>
+        <label class="lbl" style="margin-top:18px;">Line Items</label>
+        <div id="inv-items" style="margin-bottom:10px;width:100%;"></div>
+        <button type="button" onclick="addInvItem()" style="padding:9px 18px;background:transparent;border:1px solid var(--border);color:var(--muted);font-family:'Montserrat',sans-serif;font-size:9px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all 0.2s;margin-bottom:16px;" onmouseover="this.style.borderColor='var(--gold)';this.style.color='var(--gold)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">+ Add Line Item</button>
+        <div class="inv-totals">
+          <div class="inv-total-row"><span style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Subtotal (excl. VAT)</span><span style="font-size:13px;color:var(--text);" id="inv-subtotal">AED 0.00</span></div>
+          <div class="inv-total-row"><span style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">VAT (5%)</span><span style="font-size:13px;color:var(--green);" id="inv-vat">AED 0.00</span></div>
+          <div class="inv-total-row" style="border-top:1px solid var(--border);padding-top:10px;margin-top:4px;"><span style="font-size:12px;color:var(--gold);font-weight:700;text-transform:uppercase;letter-spacing:1px;">Net Total (incl. VAT)</span><span style="font-size:20px;color:var(--gold);font-weight:700;font-family:'Cormorant Garamond',serif;" id="inv-total">AED 0.00</span></div>
+        </div>
+        <label class="lbl">Special Notes / Terms &amp; Conditions</label>
+        <textarea id="inv-notes" class="inv-inp" style="height:60px;margin-bottom:14px;" placeholder="e.g. All prices in AED. VAT 5% applicable."></textarea>
+        <div class="inv-btns">
+          <button class="inv-btn" onclick="previewInv()">👁 Preview &amp; Print PDF</button>
+          <button class="inv-btn blue" onclick="downloadInvWord()">⬇ Download Word</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ EXCEL SUPPORT ════════════════════════════════ -->
+    <div class="panel" id="excel">
+      <div class="box">
+        <div class="box-title">📐 Excel Support &amp; Data Analysis</div>
+        <div class="upload" onclick="document.getElementById('xl-file').click()">
+          <div style="font-size:22px;margin-bottom:6px;">📊</div>
+          <div style="font-size:11px;color:var(--muted);">Upload .csv or .xlsx file</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:3px;" id="xl-file-name">File → Save As → CSV first</div>
+        </div>
+        <input type="file" id="xl-file" accept=".csv,.txt,.xlsx" style="display:none" onchange="loadFileExcel(this)"/>
+        <label class="lbl">Your Formula or Question</label>
+        <textarea id="xl-q" placeholder="e.g. Fix my VLOOKUP returning #N/A&#10;e.g. Analyse this data and give key insights"></textarea>
+        <label class="lbl">Context (Optional)</label>
+        <textarea id="xl-ctx" style="min-height:55px;" placeholder="e.g. Column A = Date, Column B = Customer, Column C = Amount..."></textarea>
+        <button class="btn" id="xl-btn" onclick="doExcel()"><span>Analyse &amp; Fix Excel</span></button>
+        <div class="loader" id="xl-loader"><div class="ring"></div><div class="ring-txt">Analysing your data...</div></div>
+        <div class="out" id="xl-out">
+          <div class="out-head"><span class="out-lbl">✦ Excel Analysis</span><button class="copy" onclick="doCopy('xl-answer')">Copy</button></div>
+          <div class="out-body" id="xl-answer"></div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+
+  <footer>Powered by <span>✦ AZHAR-AI</span> &nbsp;·&nbsp; Operations &amp; Customer Service Intelligence Platform &nbsp;·&nbsp; V 4.0</footer>
+</div><!-- /main -->
 
 <script>
-// ─── TAB NAVIGATION ───────────────────────────────────────────
+// ── CLOCK ──────────────────────────────────────────────────────
+function updateClock() {
+  const now = new Date();
+  const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  document.getElementById('tb-date').textContent = days[now.getDay()] + ', ' + now.getDate() + ' ' + months[now.getMonth()] + ' ' + now.getFullYear();
+  document.getElementById('tb-time').textContent = now.toLocaleTimeString('en-AE', {hour:'2-digit',minute:'2-digit'});
+}
+updateClock();
+setInterval(updateClock, 1000);
+
+// ── TAB NAVIGATION ─────────────────────────────────────────────
+const TITLES = {
+  dispatch: ['Welcome back, Azhar', 'Operations & Customer Service AI Command Centre'],
+  rejection: ['Daily Rejection Analysis', 'Analyse rejections and returns'],
+  summary: ['Executive Summary Generator', 'Create professional summaries for leadership'],
+  email: ['Professional Email Writer', 'Write and refine business correspondence'],
+  invoice: ['Proforma Invoice Generator', 'Create professional invoices with letterhead'],
+  excel: ['Excel Support & Data Analysis', 'Fix formulas and analyse spreadsheet data']
+};
+
 function goTab(id, btn) {
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('on'));
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('on'));
+  document.querySelectorAll('.sb-item').forEach(b => b.classList.remove('on'));
   document.getElementById(id).classList.add('on');
   btn.classList.add('on');
+  const t = TITLES[id] || ['AZHAR-AI',''];
+  document.getElementById('topbar-title').textContent = t[0];
+  document.getElementById('topbar-sub').textContent = t[1];
 }
 
-// ─── PILLS / OPTIONS ──────────────────────────────────────────
+// ── UTILS ──────────────────────────────────────────────────────
 function setPill(el, g) {
   document.querySelectorAll('#' + g + ' .pill').forEach(p => p.classList.remove('on'));
   el.classList.add('on');
 }
-function getPill(g) {
-  return document.querySelector('#' + g + ' .pill.on')?.textContent.trim() || '';
-}
-
-// ─── COPY ─────────────────────────────────────────────────────
+function getPill(g) { return document.querySelector('#' + g + ' .pill.on')?.textContent.trim() || ''; }
 function doCopy(id) {
   navigator.clipboard.writeText(document.getElementById(id).textContent).then(() => {
-    const btn = event.target; btn.textContent = 'Copied!';
-    setTimeout(() => btn.textContent = 'Copy', 2000);
+    const btn = event.target; btn.textContent = 'Copied!'; setTimeout(() => btn.textContent = 'Copy', 2000);
   });
 }
-
-// ─── SHOW OUTPUT ──────────────────────────────────────────────
 function showOut(outId, answerId, text) {
   document.getElementById(answerId).textContent = text;
   document.getElementById(outId).classList.add('show');
 }
-
-// ─── LOADING ──────────────────────────────────────────────────
-function setLoad(loadId, btnId, on) {
-  document.getElementById(loadId).style.display = on ? 'block' : 'none';
-  if (btnId) document.getElementById(btnId).disabled = on;
+function setLoad(lid, bid, on) {
+  document.getElementById(lid).style.display = on ? 'block' : 'none';
+  if (bid) document.getElementById(bid).disabled = on;
 }
-
-// ─── API CALL ─────────────────────────────────────────────────
 async function api(prompt) {
-  const r = await fetch('/api/chat', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ prompt })
-  });
+  const r = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt }) });
   const d = await r.json();
   if (d.error) throw new Error(d.error);
   return d.result || 'No response.';
 }
-
-// ─── FILE LOADER ──────────────────────────────────────────────
 function loadFile(input, targetId, nameId) {
   const file = input.files[0]; if (!file) return;
   const reader = new FileReader();
   reader.onload = e => {
     if (targetId) document.getElementById(targetId).value = 'FILE: ' + file.name + '\n\n' + e.target.result.substring(0, 5000);
-    const nameEl = document.getElementById(nameId);
-    nameEl.textContent = '✓ ' + file.name + ' loaded';
-    nameEl.classList.add('ok');
+    const el = document.getElementById(nameId); el.textContent = '✓ ' + file.name; el.style.color = 'var(--green)';
   };
   reader.readAsText(file);
 }
-
 function loadFileExcel(input) {
   const file = input.files[0]; if (!file) return;
-  const nameEl = document.getElementById('xl-file-name');
   const reader = new FileReader();
   reader.onload = e => {
-    const text = e.target.result;
-    document.getElementById('xl-ctx').value = 'FILE: ' + file.name + '\nDATA:\n' + text.substring(0, 4000);
-    nameEl.textContent = '✓ ' + file.name + ' loaded';
-    nameEl.classList.add('ok');
-    if (!document.getElementById('xl-q').value.trim())
-      document.getElementById('xl-q').value = 'Analyse this data. Find key insights and give a summary.';
+    document.getElementById('xl-ctx').value = 'FILE: ' + file.name + '\nDATA:\n' + e.target.result.substring(0, 4000);
+    const el = document.getElementById('xl-file-name'); el.textContent = '✓ ' + file.name; el.style.color = 'var(--green)';
+    if (!document.getElementById('xl-q').value.trim()) document.getElementById('xl-q').value = 'Analyse this data. Find key insights and give a summary.';
   };
   reader.readAsText(file);
 }
 
-// ─── DISPATCH ─────────────────────────────────────────────────
+// ── DISPATCH ───────────────────────────────────────────────────
 async function loadStatus() {
   try {
     const r = await fetch('/api/dispatch/status');
     const d = await r.json();
     if (d.availableDates && d.availableDates.length > 0) buildDatePills(d.availableDates, d.date);
-    if (d.hasData && d.summary) {
-      buildDashboard(d);
-    } else {
-      setStatus('⚠️', 'No dispatch data yet. Upload your Excel file below.', false);
+    if (d.hasData && d.summary) buildDashboard(d);
+    else {
+      const el = document.getElementById('ds-status');
+      el.className = 'd-status';
+      el.innerHTML = '<span style="font-size:16px;">⚠️</span><span class="d-status-txt">No dispatch data yet. Upload your Excel file below.</span>';
     }
-  } catch (e) {
-    setStatus('⚠️', 'Server starting... please wait 30 seconds and refresh.', false);
+  } catch(e) {
+    const el = document.getElementById('ds-status');
+    el.className = 'd-status';
+    el.innerHTML = '<span style="font-size:16px;">⚠️</span><span class="d-status-txt">Server starting... please refresh in 30 seconds.</span>';
   }
 }
 
-function setStatus(icon, msg, live) {
-  const el = document.getElementById('ds-status');
-  el.className = 'd-status' + (live ? ' live' : '');
-  el.innerHTML = '<span style="font-size:18px;">' + icon + '</span><span class="d-status-txt">' + msg + '</span>';
-}
-
 function buildDatePills(dates, current) {
-  const wrap = document.getElementById('ds-dates');
+  const wrap = document.getElementById('ds-date-wrap');
   const pills = document.getElementById('ds-date-pills');
   wrap.style.display = 'block';
   pills.innerHTML = '';
   const today = new Date().toISOString().split('T')[0];
-  dates.slice(0, 30).forEach(dk => {
+  dates.slice(0,30).forEach(dk => {
     const btn = document.createElement('button');
     const d = new Date(dk);
-    const lbl = dk === today ? 'Today' : d.toLocaleDateString('en-AE', { day: 'numeric', month: 'short' });
-    btn.className = 'dpill' + (dk === today ? ' today' : '') + (dk === current ? ' on' : '');
-    btn.textContent = lbl;
+    btn.className = 'dpill' + (dk===today?' today':'') + (dk===current?' on':'');
+    btn.textContent = dk===today ? 'Today' : d.toLocaleDateString('en-AE',{day:'numeric',month:'short'});
     btn.onclick = () => loadDate(dk);
     pills.appendChild(btn);
   });
@@ -756,7 +711,7 @@ async function loadDate(dk) {
     const d = await r.json();
     if (d.hasData) { buildDashboard(d); loadStatus(); }
     else alert('No data for ' + dk);
-  } catch (e) { alert('Error: ' + e.message); }
+  } catch(e) { alert('Error: ' + e.message); }
 }
 
 function buildDashboard(d) {
@@ -764,156 +719,179 @@ function buildDashboard(d) {
   const today = new Date().toISOString().split('T')[0];
   const lbl = d.date === today ? 'Today' : d.date;
   const val = s.total_value ? (s.total_value >= 1000000 ? (s.total_value/1000000).toFixed(2)+'M' : Math.round(s.total_value).toLocaleString()) : '—';
-  setStatus('✅', '<strong>' + lbl + '</strong> &nbsp;|&nbsp; ' + (s.total_orders||0).toLocaleString() + ' Orders &nbsp;|&nbsp; AED ' + val + ' &nbsp;|&nbsp; By: ' + d.uploadedBy, true);
 
+  // Status
+  const el = document.getElementById('ds-status');
+  el.className = 'd-status live';
+  el.innerHTML = '<span style="font-size:16px;">✅</span><span class="d-status-txt"><strong>' + lbl + '</strong> &nbsp;|&nbsp; ' + (s.total_orders||0).toLocaleString() + ' Orders &nbsp;|&nbsp; AED ' + val + ' &nbsp;|&nbsp; By: ' + d.uploadedBy + '</span>';
+
+  // KPIs
   document.getElementById('k-orders').textContent = (s.total_orders||0).toLocaleString();
+  document.getElementById('k-routes-sub').textContent = (s.total_routes||0) + ' routes · ' + (s.total_drivers||0) + ' drivers';
   document.getElementById('k-value').textContent = 'AED ' + val;
   document.getElementById('k-food').textContent = (s.food_orders||0).toLocaleString();
   document.getElementById('k-nonfood').textContent = (s.non_food_orders||0).toLocaleString();
-  const plEl = document.getElementById('k-pl');
-  if (plEl) plEl.textContent = (s.pl_orders||0).toLocaleString();
-  document.getElementById('k-routes').textContent = (s.total_routes||0).toLocaleString();
-  document.getElementById('k-drivers-sub').textContent = (s.total_drivers||0) + ' drivers';
-
-  if (s.by_city && s.by_city.length) {
-    const dubai = s.by_city.find(c => c.city && c.city.toUpperCase().includes('DUBAI'));
-    const adh = s.by_city.find(c => c.city && c.city.toUpperCase().includes('ABU'));
-    if (dubai) { document.getElementById('k-dubai').textContent = (dubai.orders||0).toLocaleString(); document.getElementById('k-dubai-sub').textContent = 'AED ' + Math.round(dubai.value||0).toLocaleString(); }
-    if (adh) { document.getElementById('k-adh').textContent = (adh.orders||0).toLocaleString(); document.getElementById('k-adh-sub').textContent = 'AED ' + Math.round(adh.value||0).toLocaleString(); }
-  }
-
+  document.getElementById('k-pl').textContent = (s.pl_orders||0).toLocaleString();
+  document.getElementById('k-lulu').textContent = (s.lulu_orders||0).toLocaleString();
+  document.getElementById('k-lulu-sub').textContent = s.lulu_value ? 'AED ' + Math.round(s.lulu_value).toLocaleString() : 'AED 0';
   document.getElementById('ds-kpis').style.display = 'grid';
 
-  const colors = ['#c9a84c','#e84b8a','#5b8dee','#4ecb8d','#e8854b','#a84bcb'];
+  // City bar chart
+  const colors = ['#c9a84c','#e84b8a','#5b8dee','#4ecb8d','#e8854b','#a84bcb','#e8c878','#5bd8ee'];
   if (s.by_city && s.by_city.length) {
-    const cities = s.by_city.slice(0, 6);
+    const cities = s.by_city.slice(0,8);
     const max = Math.max(...cities.map(c => c.orders||0));
-    document.getElementById('ds-bars').innerHTML = cities.map((c,i) => {
-      const h = max > 0 ? Math.max(6, Math.round(((c.orders||0)/max)*90)) : 6;
-      return '<div class="bar-wrap"><div class="bar-num" style="color:' + colors[i] + '">' + (c.orders||0).toLocaleString() + '</div><div class="bar-rect" style="height:' + h + 'px;background:' + colors[i] + '"></div></div>';
+    document.getElementById('ds-city-bars').innerHTML = cities.map((c,i) => {
+      const h = max>0 ? Math.max(6,Math.round(((c.orders||0)/max)*110)) : 6;
+      return '<div class="chart-bar-wrap"><div class="chart-bar-val" style="color:' + colors[i] + '">' + (c.orders||0) + '</div><div class="chart-bar" style="height:' + h + 'px;background:' + colors[i] + '"></div></div>';
     }).join('');
-    document.getElementById('ds-bar-labels').innerHTML = cities.map((c,i) =>
-      '<div class="bar-lbl" style="color:' + colors[i] + ';min-width:36px;text-align:center;">' + (c.city||'').replace('Abu Dhabi','AbuDhabi') + '</div>'
+    document.getElementById('ds-city-labels').innerHTML = cities.map((c,i) =>
+      '<div class="chart-bar-lbl" style="color:' + colors[i] + ';font-weight:600;min-width:36px;text-align:center;">' + (c.city||'').replace('Abu Dhabi','AbuDhabi').replace('Ras Al Khaimah','RAK') + '</div>'
     ).join('');
-    document.getElementById('ds-cities').innerHTML = cities.map((c,i) =>
-      '<div class="detail-row"><span class="dr-name" style="color:' + colors[i] + '">📍 ' + c.city + '</span><div style="text-align:right;"><div class="dr-val">AED ' + Math.round(c.value||0).toLocaleString() + '</div><div class="dr-sub">' + (c.orders||0).toLocaleString() + ' orders</div></div></div>'
-    ).join('');
+    document.getElementById('ds-charts').style.display = 'grid';
   }
 
+  // Donut chart
+  const total = (s.food_orders||0) + (s.non_food_orders||0) + (s.pl_orders||0);
+  if (total > 0) {
+    const circ = 2 * Math.PI * 35;
+    const fp = (s.food_orders||0)/total, np = (s.non_food_orders||0)/total, pp = (s.pl_orders||0)/total;
+    const fd = fp*circ, nd = np*circ, pd = pp*circ;
+    document.getElementById('donut-food').setAttribute('stroke-dasharray', fd + ' ' + (circ-fd));
+    document.getElementById('donut-nonfood').setAttribute('stroke-dasharray', nd + ' ' + (circ-nd));
+    document.getElementById('donut-nonfood').setAttribute('stroke-dashoffset', 55 - fd);
+    document.getElementById('donut-pl').setAttribute('stroke-dasharray', pd + ' ' + (circ-pd));
+    document.getElementById('donut-pl').setAttribute('stroke-dashoffset', 55 - fd - nd);
+    document.getElementById('donut-center').textContent = (s.total_orders||0).toLocaleString();
+    document.getElementById('ds-donut-legend').innerHTML =
+      '<div class="donut-item"><div class="donut-dot" style="background:var(--green)"></div><span>Food: <strong>' + (s.food_orders||0) + '</strong></span></div>' +
+      '<div class="donut-item"><div class="donut-dot" style="background:var(--orange)"></div><span>Non-Food: <strong>' + (s.non_food_orders||0) + '</strong></span></div>' +
+      '<div class="donut-item"><div class="donut-dot" style="background:var(--blue)"></div><span>3PL: <strong>' + (s.pl_orders||0) + '</strong></span></div>';
+  }
+
+  // Top customers table
   if (s.top_customers && s.top_customers.length) {
-    document.getElementById('ds-customers').innerHTML = s.top_customers.slice(0, 6).map((c,i) =>
-      '<div class="detail-row"><span class="dr-name">' + (i+1) + '. ' + c.name + '</span><div style="text-align:right;"><div class="dr-val">AED ' + Math.round(c.value||0).toLocaleString() + '</div><div class="dr-sub">' + (c.orders||0) + ' lines' + (c.locations > 1 ? ' | ' + c.locations + ' branches' : '') + '</div></div></div>'
+    document.getElementById('ds-cust-body').innerHTML = s.top_customers.slice(0,6).map((c,i) =>
+      '<tr><td style="color:var(--muted);">' + (i+1) + '</td><td>' + c.name + '</td><td style="color:var(--muted);">' + (c.orders||0) + '</td><td style="color:var(--gold);font-weight:600;">AED ' + Math.round(c.value||0).toLocaleString() + '</td></tr>'
     ).join('');
   }
 
+  // Top drivers
   if (s.top_drivers && s.top_drivers.length) {
     const maxD = s.top_drivers[0].orders || 1;
-    document.getElementById('ds-drivers').innerHTML = s.top_drivers.slice(0, 5).map((dr,i) => {
+    document.getElementById('ds-drivers-list').innerHTML = s.top_drivers.slice(0,5).map((dr,i) => {
       const pct = Math.round((dr.orders/maxD)*100);
-      const col = i < 3 ? 'var(--gold)' : 'var(--muted)';
-      return '<div class="driver-row"><div class="driver-info"><span class="driver-name" style="color:' + col + ';font-weight:' + (i<3?'700':'400') + '">' + (i+1) + '. ' + dr.name + '</span><span class="driver-count" style="color:' + col + '">' + dr.orders + ' drops</span></div><div class="progress"><div class="progress-fill" style="width:' + pct + '%;background:' + col + '"></div></div></div>';
+      const col = i<3 ? 'var(--gold)' : 'var(--muted)';
+      return '<div style="margin-bottom:12px;"><div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span style="font-size:12px;color:' + col + ';font-weight:' + (i<3?'600':'400') + '">' + (i+1) + '. ' + dr.name + '</span><span style="font-size:12px;color:' + col + ';font-weight:700">' + dr.orders + ' drops</span></div><div class="progress-bar"><div class="progress-fill" style="width:' + pct + '%;background:' + col + '"></div></div></div>';
     }).join('');
   }
 
-  // Build route summary table
+  // Route table
   if (s.top_routes && s.top_routes.length) {
-    const tbody = document.getElementById('ds-routes-body');
-    tbody.innerHTML = s.top_routes.map((r, i) =>
-      '<tr style="border-bottom:1px solid var(--border);background:' + (i%2===0?'var(--surface)':'var(--card)') + ';">' +
-      '<td style="padding:8px 10px;font-size:12px;color:var(--gold);font-weight:600;border:1px solid var(--border);">' + r.route + '</td>' +
-      '<td style="padding:8px 10px;font-size:12px;color:var(--text);text-align:center;border:1px solid var(--border);">' + (r.driver||'—') + '</td>' +
-      '<td style="padding:8px 10px;font-size:14px;color:var(--gold);font-weight:700;text-align:center;border:1px solid var(--border);">' + r.drops + '</td>' +
-      '<td style="padding:8px 10px;font-size:12px;color:var(--gold);text-align:right;border:1px solid var(--border);">AED ' + (r.value||0).toLocaleString() + '</td>' +
-      '</tr>'
+    document.getElementById('ds-route-body').innerHTML = s.top_routes.map((r,i) =>
+      '<tr><td style="color:var(--gold);font-weight:600;">' + r.route + '</td><td>' + (r.driver||'—') + '</td><td style="text-align:center;font-weight:700;color:var(--gold);">' + r.drops + '</td><td style="text-align:right;">AED ' + (r.value||0).toLocaleString() + '</td></tr>'
     ).join('');
-    document.getElementById('ds-routes-wrap').style.display = 'block';
+    document.getElementById('ds-routes-box').style.display = 'block';
   }
 
-  ['ds-charts','ds-charts2','ds-qbtns'].forEach(id => { const el = document.getElementById(id); if(el) el.style.display = id === 'ds-qbtns' ? 'flex' : 'grid'; });
-  document.getElementById('ds-ask-row').style.display = 'flex';
+  document.getElementById('ds-tables').style.display = 'grid';
+  document.getElementById('ds-ask-box').style.display = 'block';
 }
 
 async function doUpload(input) {
   const file = input.files[0]; if (!file) return;
   const nameEl = document.getElementById('ds-file-name');
-  const box = document.getElementById('ds-upload-box');
-  nameEl.textContent = '⏳ Uploading ' + file.name + '...';
+  nameEl.textContent = '⏳ Uploading ' + file.name + '...'; nameEl.style.color = 'var(--muted)';
   setLoad('ds-loader', null, true);
   try {
-    const fd = new FormData();
-    fd.append('file', file);
-    fd.append('uploadedBy', 'Azhar');
+    const fd = new FormData(); fd.append('file', file); fd.append('uploadedBy', 'Azhar');
     const r = await fetch('/api/dispatch/upload', { method: 'POST', body: fd });
     const d = await r.json();
     setLoad('ds-loader', null, false);
     if (d.success) {
       nameEl.textContent = '✓ ' + file.name + ' — ' + (d.summary?.total_orders||0).toLocaleString() + ' orders loaded';
-      nameEl.classList.add('ok');
-      box.classList.add('done');
+      nameEl.style.color = 'var(--green)';
+      document.getElementById('ds-upload-box')?.classList.add('done');
       buildDashboard(d);
       loadStatus();
     } else {
-      nameEl.textContent = '❌ Upload failed: ' + (d.error || 'Unknown error');
+      nameEl.textContent = '❌ ' + (d.error || 'Upload failed'); nameEl.style.color = 'var(--red)';
       alert('Upload failed: ' + (d.error || 'Unknown error'));
     }
-  } catch (e) {
+  } catch(e) {
     setLoad('ds-loader', null, false);
-    nameEl.textContent = '❌ Error: ' + e.message;
-    alert('Upload error: ' + e.message);
+    nameEl.textContent = '❌ Error: ' + e.message; nameEl.style.color = 'var(--red)';
+    alert('Error: ' + e.message);
   }
   input.value = '';
 }
 
 async function doAsk(q) {
   if (!q || !q.trim()) return;
-  document.getElementById('ds-out').classList.add('show');
-  document.getElementById('ds-answer').textContent = '✦ Analysing your dispatch data...';
+  const el = document.getElementById('ds-out'); el.classList.add('show');
+  document.getElementById('ds-answer').textContent = '✦ Analysing dispatch data...';
+  document.getElementById('ds-send').disabled = true;
   try {
-    const r = await fetch('/api/dispatch/ask', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ question: q })
-    });
+    const r = await fetch('/api/dispatch/ask', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({question: q}) });
     const d = await r.json();
     document.getElementById('ds-answer').textContent = d.result || 'No answer found.';
-  } catch (e) {
-    document.getElementById('ds-answer').textContent = 'Error: ' + e.message;
-  }
+  } catch(e) { document.getElementById('ds-answer').textContent = 'Error: ' + e.message; }
+  document.getElementById('ds-send').disabled = false;
 }
 
-// ─── REJECTION ────────────────────────────────────────────────
+// Admin password
+const ADMIN_PWD = 'azhar2026';
+function checkPwd() {
+  const pwd = document.getElementById('admin-pwd').value;
+  if (pwd === ADMIN_PWD) {
+    document.getElementById('admin-lock').style.display = 'none';
+    document.getElementById('admin-upload').style.display = 'block';
+    document.getElementById('admin-pwd').value = '';
+  } else {
+    const inp = document.getElementById('admin-pwd');
+    inp.style.borderColor = 'var(--red)'; inp.value = '';
+    inp.placeholder = '❌ Wrong password!';
+    setTimeout(() => { inp.style.borderColor = 'var(--border)'; inp.placeholder = 'Enter admin password...'; }, 2000);
+  }
+}
+function lockAdmin() {
+  document.getElementById('admin-lock').style.display = 'flex';
+  document.getElementById('admin-upload').style.display = 'none';
+}
+
+// ── REJECTION ──────────────────────────────────────────────────
 async function doRejection() {
   const data = document.getElementById('rej-data').value.trim();
   if (!data) { alert('Please paste rejection data or upload a file.'); return; }
   document.getElementById('rej-out').classList.remove('show');
-  setLoad('rej-loader', 'rej-btn', true);
+  setLoad('rej-loader','rej-btn',true);
   try {
-    const r = await api('You are AZHAR-AI Operations Intelligence for UAE logistics.\nAnalyse this rejection data. Type: ' + getPill('rej-type') + '\nProvide: total rejections, top reasons, top customers with rejections, top products, recommendations.\n\nData:\n' + data);
-    showOut('rej-out', 'rej-answer', r);
-  } catch (e) { alert('Error: ' + e.message); }
-  setLoad('rej-loader', 'rej-btn', false);
+    const r = await api('You are AZHAR-AI Operations Intelligence for UAE logistics.\nAnalyse this rejection data. Type: ' + getPill('rej-type') + '\nProvide: total rejections, top reasons, top customers, recommendations.\n\nData:\n' + data);
+    showOut('rej-out','rej-answer',r);
+  } catch(e) { alert('Error: ' + e.message); }
+  setLoad('rej-loader','rej-btn',false);
 }
 
-// ─── SUMMARY ──────────────────────────────────────────────────
+// ── SUMMARY ────────────────────────────────────────────────────
 async function doSummary() {
   const text = document.getElementById('sum-text').value.trim();
   if (!text) { alert('Please paste your document.'); return; }
   document.getElementById('sum-out').classList.remove('show');
-  setLoad('sum-loader', 'sum-btn', true);
+  setLoad('sum-loader','sum-btn',true);
   try {
-    const styles = { 'Executive Brief': 'Write a concise 4-6 sentence executive summary.', 'Bullet Points': 'Summarise as clear bullet points by theme.', 'Action Items': 'Extract all action items and next steps.', 'Key Decisions': 'Identify key decisions with context.', 'Operations Report': 'Format as operations report: Overview, Key Metrics, Issues, Actions Required.' };
+    const styles = {'Executive Brief':'Write a concise 4-6 sentence executive summary.','Bullet Points':'Summarise as clear bullet points.','Action Items':'Extract all action items and next steps.','Key Decisions':'Identify key decisions with context.','Operations Report':'Format as operations report: Overview, Key Metrics, Issues, Actions.'};
     const type = getPill('sum-type');
-    const r = await api('You are AZHAR-AI executive assistant for UAE logistics.\nStyle: ' + type + ' — ' + (styles[type]||styles['Executive Brief']) + '\n\nDocument:\n' + text);
-    showOut('sum-out', 'sum-answer', r);
-  } catch (e) { alert('Error: ' + e.message); }
-  setLoad('sum-loader', 'sum-btn', false);
+    const r = await api('You are AZHAR-AI for UAE logistics.\nStyle: ' + type + ' — ' + (styles[type]||styles['Executive Brief']) + '\n\nDocument:\n' + text);
+    showOut('sum-out','sum-answer',r);
+  } catch(e) { alert('Error: ' + e.message); }
+  setLoad('sum-loader','sum-btn',false);
 }
 
-// ─── EMAIL ────────────────────────────────────────────────────
+// ── EMAIL ──────────────────────────────────────────────────────
 let activeETab = 'em-final';
 function setETab(id, btn) {
   activeETab = id;
-  document.querySelectorAll('.etab').forEach(t => t.classList.remove('on'));
-  btn.classList.add('on');
+  document.querySelectorAll('.etab').forEach(t => t.classList.remove('on')); btn.classList.add('on');
   document.querySelectorAll('.ebody').forEach(b => b.style.display = 'none');
   document.getElementById(id).style.display = 'block';
 }
@@ -922,16 +900,15 @@ function doCopyActive() {
     const btn = event.target; btn.textContent = 'Copied!'; setTimeout(() => btn.textContent = 'Copy', 2000);
   });
 }
-
 async function doEmail() {
   const body = document.getElementById('em-body').value.trim();
-  if (!body) { alert('Please enter your email or description.'); return; }
+  if (!body) { alert('Please enter your email.'); return; }
   document.getElementById('em-diff').classList.remove('show');
-  setLoad('em-loader', 'em-btn', true);
+  setLoad('em-loader','em-btn',true);
   try {
     const type = getPill('em-type');
     const to = document.getElementById('em-to').value.trim();
-    const raw = await api('You are AZHAR-AI professional email writer for UAE logistics company.\nTask: ' + type + (to ? '\nRecipient: ' + to : '') + '\nEmail:\n' + body + '\n\nRespond in EXACT format:\n\nFINAL EMAIL:\n[email]\n\nSUBJECT LINE:\n[3 options]\n\nNOTES:\n[key points]');
+    const raw = await api('You are AZHAR-AI professional email writer for UAE logistics.\nTask: ' + type + (to?'\nRecipient: '+to:'') + '\nEmail:\n' + body + '\n\nRespond in EXACT format:\n\nFINAL EMAIL:\n[email]\n\nSUBJECT LINE:\n[3 options]\n\nNOTES:\n[key points]');
     const fe = raw.match(/FINAL EMAIL:\s*([\s\S]*?)(?=SUBJECT LINE:|$)/i);
     const sl = raw.match(/SUBJECT LINE:\s*([\s\S]*?)(?=NOTES:|$)/i);
     const nt = raw.match(/NOTES:\s*([\s\S]*?)$/i);
@@ -944,21 +921,19 @@ async function doEmail() {
     document.getElementById('em-final').style.display = 'block';
     activeETab = 'em-final';
     document.getElementById('em-diff').classList.add('show');
-  } catch (e) { alert('Error: ' + e.message); }
-  setLoad('em-loader', 'em-btn', false);
+  } catch(e) { alert('Error: ' + e.message); }
+  setLoad('em-loader','em-btn',false);
 }
 
-// ─── INVOICE ──────────────────────────────────────────────────
+// ── INVOICE ────────────────────────────────────────────────────
 const COS = {
-  aki: { name: 'Al Khayyat Investments LLC', addr: 'P.O Box 11245, Dubai, UAE', contact: 'Tel: 04 810 5555 | Fax: 04 885 9081 | info@aki.ae', color: '#1a237e' },
-  alphamed: { name: 'Alphamed General Trading LLC', addr: 'P.O Box 11245, Dubai, UAE', contact: 'Tel: 04 810 5555 | alphamed@emirates.net', color: '#cc0000' }
+  aki: { name:'Al Khayyat Investments LLC', addr:'P.O Box 11245, Dubai, UAE', contact:'Tel: 04 810 5555 | Fax: 04 885 9081 | info@aki.ae', color:'#1a237e' },
+  alphamed: { name:'Alphamed General Trading LLC', addr:'P.O Box 11245, Dubai, UAE', contact:'Tel: 04 810 5555 | alphamed@emirates.net', color:'#cc0000' }
 };
-let selCo = 'aki';
-let invCount = 0;
+let selCo = 'aki', invCount = 0;
 
 function setCompany(k) {
-  selCo = k;
-  const co = COS[k];
+  selCo = k; const co = COS[k];
   document.getElementById('inv-from').value = co.name;
   document.getElementById('inv-addr').value = co.addr;
   document.getElementById('inv-contact').value = co.contact;
@@ -968,31 +943,26 @@ function addInvItem() {
   invCount++;
   const row = document.createElement('div');
   row.className = 'item-row';
-  row.style.cssText = 'width:100%;border:1px solid #2a2a1e;margin-bottom:10px;background:#161612;box-sizing:border-box;';
-
+  row.style.cssText = 'border:1px solid #2a2a1e;margin-bottom:10px;background:#161612;';
   row.innerHTML =
     '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-bottom:1px solid #2a2a1e;background:rgba(201,168,76,0.06);">'
     + '<span style="font-size:11px;color:#c9a84c;font-weight:700;letter-spacing:2px;">ITEM ' + invCount + '</span>'
     + '<button type="button" onclick="this.closest(\'.item-row\').remove();calcInv()" style="background:transparent;border:1px solid rgba(232,75,75,0.4);color:#e84b4b;cursor:pointer;font-size:10px;padding:5px 14px;font-family:Montserrat,sans-serif;letter-spacing:1px;">DELETE</button>'
     + '</div>'
-
-    + '<div style="padding:10px 16px 0;box-sizing:border-box;">'
+    + '<div style="padding:10px 16px 0;">'
     + '<div style="font-size:9px;color:#7a7660;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">Description</div>'
     + '<input type="text" placeholder="Enter full item description here..." oninput="calcInv()" style="width:100%;height:44px;padding:10px 12px;background:#111109;border:1px solid #2a2a1e;color:#f0ece0;font-family:Montserrat,sans-serif;font-size:13px;outline:none;box-sizing:border-box;"/>'
     + '</div>'
-
-    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:10px 16px 0;box-sizing:border-box;">'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:10px 16px 0;">'
     + '<div><div style="font-size:9px;color:#7a7660;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">Barcode</div><input type="text" placeholder="Barcode number" style="width:100%;height:44px;padding:10px 12px;background:#111109;border:1px solid #2a2a1e;color:#f0ece0;font-family:Montserrat,sans-serif;font-size:13px;outline:none;box-sizing:border-box;"/></div>'
     + '<div><div style="font-size:9px;color:#7a7660;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">Quantity</div><input type="text" placeholder="0" oninput="calcInv()" style="width:100%;height:44px;padding:10px 12px;background:#111109;border:1px solid #2a2a1e;color:#f0ece0;font-family:Montserrat,sans-serif;font-size:13px;outline:none;box-sizing:border-box;text-align:center;"/></div>'
     + '</div>'
-
-    + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;padding:10px 16px 14px;box-sizing:border-box;">'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;padding:10px 16px 14px;">'
     + '<div><div style="font-size:9px;color:#7a7660;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">Unit Price (AED)</div><input type="text" placeholder="0.00" oninput="calcInv()" style="width:100%;height:44px;padding:10px 12px;background:#111109;border:1px solid #2a2a1e;color:#f0ece0;font-family:Montserrat,sans-serif;font-size:13px;outline:none;box-sizing:border-box;text-align:right;"/></div>'
     + '<div><div style="font-size:9px;color:#7a7660;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">VAT</div><label style="display:flex;align-items:center;gap:8px;height:44px;padding:0 12px;background:#111109;border:1px solid #2a2a1e;cursor:pointer;box-sizing:border-box;"><input type="checkbox" checked class="vat-chk" onchange="calcInv()" style="width:16px;height:16px;accent-color:#c9a84c;flex-shrink:0;"/><span style="font-size:11px;color:#7a7660;white-space:nowrap;">5% VAT</span></label></div>'
     + '<div><div style="font-size:9px;color:#4ecb8d;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">VAT Amt (AED)</div><input type="text" readonly class="vat-amt" placeholder="Auto" style="width:100%;height:44px;padding:10px 12px;background:rgba(78,203,141,0.05);border:1px solid rgba(78,203,141,0.2);color:#4ecb8d;font-family:Montserrat,sans-serif;font-size:13px;font-weight:600;outline:none;box-sizing:border-box;text-align:right;cursor:default;"/></div>'
     + '<div><div style="font-size:9px;color:#c9a84c;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">Net Amt (AED)</div><input type="text" readonly class="net-amt" placeholder="Auto" style="width:100%;height:44px;padding:10px 12px;background:rgba(201,168,76,0.05);border:1px solid rgba(201,168,76,0.2);color:#c9a84c;font-family:Montserrat,sans-serif;font-size:15px;font-weight:700;outline:none;box-sizing:border-box;text-align:right;cursor:default;"/></div>'
     + '</div>';
-
   document.getElementById('inv-items').appendChild(row);
   row.querySelector('input').focus();
 }
@@ -1002,7 +972,6 @@ function calcInv() {
   document.querySelectorAll('.item-row').forEach(row => {
     const inputs = row.querySelectorAll('input[type=text]');
     const chk = row.querySelector('.vat-chk');
-    // inputs: 0=desc, 1=barcode, 2=qty, 3=price, 4=vat-amt(readonly), 5=net-amt(readonly)
     const qty = parseFloat(inputs[2]?.value) || 0;
     const price = parseFloat(inputs[3]?.value) || 0;
     const amt = qty * price;
@@ -1016,7 +985,7 @@ function calcInv() {
   });
   document.getElementById('inv-subtotal').textContent = 'AED ' + sub.toFixed(2);
   document.getElementById('inv-vat').textContent = 'AED ' + totalVat.toFixed(2);
-  document.getElementById('inv-total').textContent = 'AED ' + (sub + totalVat).toFixed(2);
+  document.getElementById('inv-total').textContent = 'AED ' + (sub+totalVat).toFixed(2);
 }
 
 function getInvRows() {
@@ -1024,21 +993,13 @@ function getInvRows() {
   document.querySelectorAll('.item-row').forEach(row => {
     const inputs = row.querySelectorAll('input[type=text]');
     const chk = row.querySelector('.vat-chk');
-    const desc = inputs[0]?.value || '';
-    if (!desc) return;
+    const desc = inputs[0]?.value || ''; if (!desc) return;
     i++;
-    const bc = inputs[1]?.value || '';
-    const qty = inputs[2]?.value || '';
-    const price = inputs[3]?.value || '';
-    const vat = row.querySelector('.vat-amt')?.value || '';
-    const net = row.querySelector('.net-amt')?.value || '';
-    rows += '<tr><td style="text-align:center;padding:7px 6px;border:1px solid #ddd;">' + i + '</td>' +
-      '<td style="padding:7px 6px;border:1px solid #ddd;">' + desc + '</td>' +
-      '<td style="text-align:center;padding:7px 6px;border:1px solid #ddd;">' + bc + '</td>' +
-      '<td style="text-align:center;padding:7px 6px;border:1px solid #ddd;">' + qty + '</td>' +
-      '<td style="text-align:right;padding:7px 6px;border:1px solid #ddd;">' + price + '</td>' +
-      '<td style="text-align:right;padding:7px 6px;border:1px solid #ddd;color:green;">' + (chk&&chk.checked ? vat : 'No VAT') + '</td>' +
-      '<td style="text-align:right;padding:7px 6px;border:1px solid #ddd;font-weight:700;">' + net + '</td></tr>';
+    const bc = inputs[1]?.value||'', qty = inputs[2]?.value||'', price = inputs[3]?.value||'';
+    const vat = row.querySelector('.vat-amt')?.value||'';
+    const net = row.querySelector('.net-amt')?.value||'';
+    const td = 'padding:8px;border:1px solid #e0e0e0;font-size:10pt;';
+    rows += '<tr><td style="' + td + 'text-align:center;">' + i + '</td><td style="' + td + '">' + desc + '</td><td style="' + td + 'text-align:center;">' + bc + '</td><td style="' + td + 'text-align:center;">' + qty + '</td><td style="' + td + 'text-align:right;">' + price + '</td><td style="' + td + 'text-align:right;color:green;">' + (chk&&chk.checked?vat:'No VAT') + '</td><td style="' + td + 'text-align:right;font-weight:700;">' + net + '</td></tr>';
   });
   return rows || '<tr><td colspan="7" style="padding:10px;text-align:center;color:#aaa;">No items</td></tr>';
 }
@@ -1046,112 +1007,64 @@ function getInvRows() {
 function previewInv() {
   const co = COS[selCo];
   const ref = document.getElementById('inv-ref').value || ('PRO-INV-' + Date.now().toString().slice(-8));
-  const css = 'body{font-family:Calibri,Arial,sans-serif;font-size:11pt;color:#1a1a1a;padding:30px 40px;background:#fff;}' +
-    '.hdr{text-align:center;padding:20px;background:' + co.color + ';margin-bottom:20px;}' +
-    '.cn{font-size:22pt;font-weight:800;color:#ffffff;letter-spacing:2px;text-align:center;}' +
-    '.cr{font-size:10pt;color:rgba(255,255,255,0.85);line-height:1.6;text-align:center;margin-top:6px;}' +
-    'h1{font-size:17pt;text-align:center;color:' + co.color + ';letter-spacing:4px;margin:16px 0;}' +
-    '.meta{display:flex;justify-content:space-between;margin-bottom:16px;}' +
-    '.lbl{font-size:8pt;color:#999;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;}' +
-    '.val{font-size:11pt;font-weight:700;}' +
-    '.bill{background:#f8f8f8;padding:12px;border-left:4px solid ' + co.color + ';margin-bottom:18px;}' +
-    'table{width:100%;border-collapse:collapse;margin-bottom:14px;}' +
-    'th{background:#1a1a2e;color:#c9a84c;padding:9px 8px;font-size:9pt;text-transform:uppercase;letter-spacing:1px;border:1px solid #ccc;}' +
-    'td{padding:8px;border:1px solid #e0e0e0;font-size:10pt;}tr:nth-child(even) td{background:#fafafa;}' +
-    '.tots{margin-left:auto;width:44%;}' +
-    '.tots table{width:100%;}' +
-    '.tots td{border:none;padding:5px 8px;}' +
-    '.gt td{font-weight:700;font-size:12pt;color:' + co.color + ';border-top:2px solid ' + co.color + ';padding-top:8px;}' +
-    '.sigs{display:flex;justify-content:space-between;margin-top:50px;}' +
-    '.sig{text-align:center;width:28%;border-top:1px solid #333;padding-top:8px;font-size:10pt;color:#555;}' +
-    '.footer{margin-top:24px;text-align:center;font-size:9pt;color:#aaa;border-top:1px solid #eee;padding-top:8px;}' +
-    '.pbtn{position:fixed;top:16px;right:16px;padding:12px 28px;background:' + co.color + ';color:#fff;border:none;font-size:11pt;cursor:pointer;font-weight:700;border-radius:4px;}' +
-    '@media print{.pbtn{display:none;}}';
-
-  const body = '<button class="pbtn" onclick="window.print()">🖨 Print / Save PDF</button>' +
-    '<div class="hdr"><div class="cn">' + co.name + '</div><div class="cr">' + document.getElementById('inv-addr').value.split('\n').join(' | ') + ' | ' + document.getElementById('inv-contact').value + '</div></div>' +
-    '<h1>PROFORMA INVOICE</h1>' +
-    '<div class="meta"><div><div class="lbl">Bill To</div><div class="val">' + document.getElementById('inv-client').value + '</div><div style="font-size:10pt;color:#444;margin-top:3px;">' + document.getElementById('inv-client-addr').value + '</div></div>' +
-    '<div style="text-align:right;"><div class="lbl">Reference No</div><div class="val" style="color:' + co.color + '">' + ref + '</div><div style="margin-top:5px;"><span class="lbl">Date: </span>' + document.getElementById('inv-date').value + '</div><div><span class="lbl">Valid: </span>' + document.getElementById('inv-valid').value + '</div><div><span class="lbl">Terms: </span>' + document.getElementById('inv-terms').value + '</div></div></div>' +
-    '<table><thead><tr><th style="width:4%;text-align:center;">Sr.</th><th style="width:32%">Description</th><th style="width:14%;text-align:center;">Barcode</th><th style="width:7%;text-align:center;">Qty</th><th style="width:14%;text-align:right;">Unit Price</th><th style="width:13%;text-align:right;">VAT 5%</th><th style="width:16%;text-align:right;">Net Amount</th></tr></thead><tbody>' + getInvRows() + '</tbody></table>' +
-    '<div class="tots"><table><tr><td>Subtotal (excl. VAT):</td><td style="text-align:right">' + document.getElementById('inv-subtotal').textContent + '</td></tr><tr><td>VAT (5%):</td><td style="text-align:right;color:green">' + document.getElementById('inv-vat').textContent + '</td></tr><tr class="gt"><td>Net Total:</td><td style="text-align:right">' + document.getElementById('inv-total').textContent + '</td></tr></table></div>' +
-    (document.getElementById('inv-notes').value ? '<div style="padding:10px;background:#f9f9f9;border-left:3px solid ' + co.color + ';margin-bottom:16px;"><strong>Notes:</strong> ' + document.getElementById('inv-notes').value + '</div>' : '') +
-    '<div class="sigs"><div class="sig">Prepared By</div><div class="sig">Authorized Signatory</div><div class="sig">Client Acknowledgement</div></div>' +
-    '<div class="footer">Powered by AZHAR-AI ✦ ' + co.name + '</div>';
-
+  const css = 'body{font-family:Calibri,Arial,sans-serif;font-size:11pt;color:#1a1a1a;padding:30px 40px;background:#fff;}.hdr{background:' + co.color + ';padding:20px 30px;margin:-30px -40px 24px;color:#fff;display:flex;justify-content:space-between;align-items:center;}.hdr-co{font-size:20pt;font-weight:800;letter-spacing:2px;}.hdr-info{text-align:right;font-size:9pt;opacity:0.9;line-height:1.6;}h1{font-size:17pt;text-align:center;color:' + co.color + ';letter-spacing:4px;margin:0 0 20px;}.meta{display:flex;justify-content:space-between;margin-bottom:18px;}.lbl{font-size:8pt;color:#999;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;}.val{font-size:11pt;font-weight:700;}.bill{background:#f8f8f8;padding:12px;border-left:4px solid ' + co.color + ';margin-bottom:18px;}table{width:100%;border-collapse:collapse;margin-bottom:14px;}th{background:#1a1a2e;color:#c9a84c;padding:9px 8px;font-size:9pt;text-transform:uppercase;letter-spacing:1px;border:1px solid #ccc;}td{padding:8px;border:1px solid #e0e0e0;font-size:10pt;}tr:nth-child(even) td{background:#fafafa;}.tots{margin-left:auto;width:44%;}.tots table{width:100%;}.tots td{border:none;padding:5px 8px;font-size:11pt;}.gt td{font-weight:700;font-size:13pt;color:' + co.color + ';border-top:2px solid ' + co.color + ';padding-top:8px;}.sigs{display:flex;justify-content:space-between;margin-top:50px;}.sig{text-align:center;width:28%;border-top:1px solid #333;padding-top:8px;font-size:10pt;color:#555;}.footer{margin-top:24px;text-align:center;font-size:9pt;color:#aaa;border-top:1px solid #eee;padding-top:8px;}.pbtn{position:fixed;top:16px;right:16px;padding:12px 28px;background:' + co.color + ';color:#fff;border:none;font-size:11pt;cursor:pointer;font-weight:700;border-radius:4px;}@media print{.pbtn{display:none;}}';
+  const body = '<button class="pbtn" onclick="window.print()">🖨 Print / Save PDF</button>'
+    + '<div class="hdr"><div class="hdr-co">' + co.name + '</div><div class="hdr-info"><div>' + document.getElementById('inv-addr').value.split('\n').join(' | ') + '</div><div>' + document.getElementById('inv-contact').value + '</div></div></div>'
+    + '<h1>PROFORMA INVOICE</h1>'
+    + '<div class="meta"><div><div class="lbl">Bill To</div><div class="val">' + document.getElementById('inv-client').value + '</div><div style="font-size:10pt;color:#444;margin-top:3px;">' + document.getElementById('inv-client-addr').value + '</div></div><div style="text-align:right;"><div class="lbl">Reference No</div><div class="val" style="color:' + co.color + '">' + ref + '</div><div style="margin-top:5px;"><span class="lbl">Date: </span>' + document.getElementById('inv-date').value + '</div><div><span class="lbl">Valid: </span>' + document.getElementById('inv-valid').value + '</div><div><span class="lbl">Terms: </span>' + document.getElementById('inv-terms').value + '</div></div></div>'
+    + '<table><thead><tr><th style="width:4%;text-align:center;">Sr.</th><th style="width:30%">Description</th><th style="width:14%;text-align:center;">Barcode</th><th style="width:7%;text-align:center;">Qty</th><th style="width:14%;text-align:right;">Unit Price</th><th style="width:13%;text-align:right;">VAT 5%</th><th style="width:18%;text-align:right;">Net Amount</th></tr></thead><tbody>' + getInvRows() + '</tbody></table>'
+    + '<div class="tots"><table><tr><td>Subtotal (excl. VAT):</td><td style="text-align:right">' + document.getElementById('inv-subtotal').textContent + '</td></tr><tr><td>VAT (5%):</td><td style="text-align:right;color:green">' + document.getElementById('inv-vat').textContent + '</td></tr><tr class="gt"><td>Net Total:</td><td style="text-align:right">' + document.getElementById('inv-total').textContent + '</td></tr></table></div>'
+    + (document.getElementById('inv-notes').value ? '<div style="padding:10px;background:#f9f9f9;border-left:3px solid ' + co.color + ';margin-bottom:16px;"><strong>Notes:</strong> ' + document.getElementById('inv-notes').value + '</div>' : '')
+    + '<div class="sigs"><div class="sig">Prepared By</div><div class="sig">Authorized Signatory</div><div class="sig">Client Acknowledgement</div></div>'
+    + '<div class="footer">Powered by AZHAR-AI ✦ ' + co.name + '</div>';
   const html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>' + ref + '</title><style>' + css + '</style></head><body>' + body + '</body></html>';
-  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const blob = new Blob([html], {type:'text/html;charset=utf-8'});
   const url = URL.createObjectURL(blob);
   const win = window.open(url, '_blank');
-  if (!win) alert('Please allow popups for this site, then try again.');
+  if (!win) alert('Please allow popups for this site.');
   setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
 
 function downloadInvWord() {
   const co = COS[selCo];
   const ref = document.getElementById('inv-ref').value || ('PRO-INV-' + Date.now().toString().slice(-8));
-  const html = '<html><head><meta charset="utf-8"><title>' + ref + '</title><style>body{font-family:Calibri;font-size:11pt;margin:2cm;}h1{font-size:15pt;text-align:center;color:' + co.color + ';border-bottom:2px solid ' + co.color + ';padding-bottom:8px;margin-bottom:16px;}table{width:100%;border-collapse:collapse;margin:14px 0;}th{background:#1a1a2e;color:#c9a84c;padding:8px;font-size:9pt;border:1px solid #ddd;}td{padding:7px;border:1px solid #ddd;}</style></head><body>' +
-    '<h1>PROFORMA INVOICE</h1>' +
-    '<table><tr><td style="width:50%;border:none;vertical-align:top;"><strong>From:</strong><br>' + document.getElementById('inv-from').value + '<br>' + document.getElementById('inv-addr').value + '<br>' + document.getElementById('inv-contact').value + '</td><td style="width:50%;border:none;text-align:right;vertical-align:top;"><strong>Ref:</strong> ' + ref + '<br><strong>Date:</strong> ' + document.getElementById('inv-date').value + '<br><strong>Valid:</strong> ' + document.getElementById('inv-valid').value + '</td></tr></table>' +
-    '<div style="background:#f0f0f0;padding:10px;margin-bottom:14px;"><strong>Bill To:</strong> ' + document.getElementById('inv-client').value + '<br>' + document.getElementById('inv-client-addr').value + '</div>' +
-    '<table><thead><tr><th>Sr.</th><th>Description</th><th>Barcode</th><th>Qty</th><th>Unit Price</th><th>VAT 5%</th><th>Net Amount</th></tr></thead><tbody>' + getInvRows() + '</tbody></table>' +
-    '<table style="margin-left:auto;width:40%;"><tr><td>Subtotal:</td><td style="text-align:right">' + document.getElementById('inv-subtotal').textContent + '</td></tr><tr><td>VAT:</td><td style="text-align:right;color:green">' + document.getElementById('inv-vat').textContent + '</td></tr><tr style="font-weight:700;color:' + co.color + '"><td>Net Total:</td><td style="text-align:right">' + document.getElementById('inv-total').textContent + '</td></tr></table>' +
-    '<p style="text-align:center;margin-top:40px;color:#aaa;font-size:9pt;">Powered by AZHAR-AI ✦ ' + co.name + '</p></body></html>';
-  const blob = new Blob([html], { type: 'application/msword' });
+  const html = '<html><head><meta charset="utf-8"><title>' + ref + '</title><style>body{font-family:Calibri;font-size:11pt;margin:2cm;}h1{font-size:15pt;text-align:center;color:' + co.color + ';border-bottom:2px solid ' + co.color + ';padding-bottom:8px;margin-bottom:16px;}table{width:100%;border-collapse:collapse;margin:14px 0;}th{background:#1a1a2e;color:#c9a84c;padding:8px;font-size:9pt;border:1px solid #ddd;}td{padding:7px;border:1px solid #ddd;}</style></head><body>'
+    + '<h1>PROFORMA INVOICE</h1>'
+    + '<table><tr><td style="width:50%;border:none;vertical-align:top;"><strong>From:</strong><br>' + document.getElementById('inv-from').value + '<br>' + document.getElementById('inv-addr').value + '<br>' + document.getElementById('inv-contact').value + '</td><td style="width:50%;border:none;text-align:right;vertical-align:top;"><strong>Ref:</strong> ' + ref + '<br><strong>Date:</strong> ' + document.getElementById('inv-date').value + '<br><strong>Valid:</strong> ' + document.getElementById('inv-valid').value + '</td></tr></table>'
+    + '<div style="background:#f0f0f0;padding:10px;margin-bottom:14px;"><strong>Bill To:</strong> ' + document.getElementById('inv-client').value + '<br>' + document.getElementById('inv-client-addr').value + '</div>'
+    + '<table><thead><tr><th>Sr.</th><th>Description</th><th>Barcode</th><th>Qty</th><th>Unit Price</th><th>VAT 5%</th><th>Net Amount</th></tr></thead><tbody>' + getInvRows() + '</tbody></table>'
+    + '<table style="margin-left:auto;width:40%;"><tr><td>Subtotal:</td><td style="text-align:right">' + document.getElementById('inv-subtotal').textContent + '</td></tr><tr><td>VAT:</td><td style="text-align:right;color:green">' + document.getElementById('inv-vat').textContent + '</td></tr><tr style="font-weight:700;color:' + co.color + '"><td>Net Total:</td><td style="text-align:right">' + document.getElementById('inv-total').textContent + '</td></tr></table>'
+    + '<p style="text-align:center;margin-top:40px;color:#aaa;font-size:9pt;">Powered by AZHAR-AI ✦ ' + co.name + '</p></body></html>';
+  const blob = new Blob([html], {type:'application/msword'});
   const url = URL.createObjectURL(blob);
-  const a = document.createElement('a'); a.href = url; a.download = ref + '.doc'; a.click();
+  const a = document.createElement('a'); a.href=url; a.download=ref+'.doc'; a.click();
   URL.revokeObjectURL(url);
 }
 
-// ─── EXCEL ────────────────────────────────────────────────────
+// ── EXCEL ──────────────────────────────────────────────────────
 async function doExcel() {
   const q = document.getElementById('xl-q').value.trim();
   if (!q) { alert('Please enter your question.'); return; }
   document.getElementById('xl-out').classList.remove('show');
-  setLoad('xl-loader', 'xl-btn', true);
+  setLoad('xl-loader','xl-btn',true);
   try {
     const ctx = document.getElementById('xl-ctx').value.trim();
     const fd = new FormData();
     fd.append('question', q + (ctx ? '\n\nData:\n' + ctx : ''));
     const fi = document.getElementById('xl-file');
     if (fi.files[0]) fd.append('file', fi.files[0]);
-    const r = await fetch('/api/excel', { method: 'POST', body: fd });
+    const r = await fetch('/api/excel', {method:'POST', body:fd});
     const d = await r.json();
     if (d.error) throw new Error(d.error);
-    showOut('xl-out', 'xl-answer', d.result || 'No response.');
-  } catch (e) { alert('Error: ' + e.message); }
-  setLoad('xl-loader', 'xl-btn', false);
+    showOut('xl-out','xl-answer', d.result||'No response.');
+  } catch(e) { alert('Error: ' + e.message); }
+  setLoad('xl-loader','xl-btn',false);
 }
 
-// ─── INIT ─────────────────────────────────────────────────────
+// ── INIT ───────────────────────────────────────────────────────
 setCompany('aki');
 addInvItem();
 loadStatus();
-
-// Admin password - change this to your own password!
-const ADMIN_PWD = 'azhar2026';
-
-function checkAdminPwd() {
-  const pwd = document.getElementById('admin-pwd').value;
-  if (pwd === ADMIN_PWD) {
-    document.getElementById('admin-lock').style.display = 'none';
-    document.getElementById('admin-upload').style.display = 'block';
-    document.getElementById('admin-pwd').value = '';
-  } else {
-    document.getElementById('admin-pwd').style.borderColor = 'var(--red)';
-    document.getElementById('admin-pwd').placeholder = 'Wrong password!';
-    setTimeout(() => {
-      document.getElementById('admin-pwd').style.borderColor = 'var(--border)';
-      document.getElementById('admin-pwd').placeholder = 'Enter admin password...';
-    }, 2000);
-  }
-}
-
-function lockAdmin() {
-  document.getElementById('admin-lock').style.display = 'block';
-  document.getElementById('admin-upload').style.display = 'none';
-}
-
 </script>
 </body>
 </html>
