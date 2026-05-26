@@ -5,7 +5,262 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AZHAR-AI | Operations & Customer Service Intelligence</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600;700&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js">
+// DOWNLOAD QUOTATION AS WORD
+function downloadQuoteWord() {
+  const text = document.getElementById('quote-out-text').textContent;
+  if (!text.trim()) { alert('Please generate a quotation first.'); return; }
+  
+  const company = document.getElementById('q-company').value || 'Company';
+  const client = document.getElementById('q-client').value || 'Client';
+  const ref = document.getElementById('q-ref').value || 'Quotation';
+  
+  // Build HTML that Word can open
+  const html = `
+    <html xmlns:o="urn:schemas-microsoft-com:office:office" 
+          xmlns:w="urn:schemas-microsoft-com:office:word"
+          xmlns="http://www.w3.org/TR/REC-html40">
+    <head>
+      <meta charset="utf-8">
+      <title>${ref}</title>
+      <style>
+        body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; color: #1a1a1a; margin: 2cm; }
+        h1 { font-size: 18pt; font-weight: bold; text-align: center; color: #1a1a2e; border-bottom: 2px solid #c9a84c; padding-bottom: 10px; margin-bottom: 20px; }
+        .header-box { display: flex; justify-content: space-between; margin-bottom: 20px; }
+        .from-box, .to-box { width: 48%; }
+        .label { font-size: 9pt; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+        .value { font-size: 11pt; font-weight: bold; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th { background: #1a1a2e; color: #c9a84c; padding: 8px 10px; text-align: left; font-size: 9pt; letter-spacing: 1px; text-transform: uppercase; }
+        td { padding: 8px 10px; border-bottom: 1px solid #eee; font-size: 10pt; }
+        tr:nth-child(even) td { background: #f9f9f9; }
+        .totals-table { margin-left: auto; width: 40%; }
+        .totals-table td { border: none; }
+        .grand-total td { font-weight: bold; font-size: 12pt; color: #c9a84c; border-top: 2px solid #c9a84c; }
+        .notes { margin-top: 20px; padding: 12px; background: #f9f9f9; border-left: 3px solid #c9a84c; font-size: 10pt; }
+        .signature { margin-top: 40px; display: flex; justify-content: space-between; }
+        .sig-box { text-align: center; width: 200px; border-top: 1px solid #333; padding-top: 8px; font-size: 10pt; }
+        .gold { color: #c9a84c; font-weight: bold; }
+        .footer { margin-top: 30px; text-align: center; font-size: 9pt; color: #888; border-top: 1px solid #eee; padding-top: 10px; }
+      </style>
+    </head>
+    <body>
+      <h1>PROFORMA INVOICE</h1>
+      
+      <table style="margin-bottom:20px;">
+        <tr>
+          <td style="width:50%;vertical-align:top;border:none;">
+            <div class="label">From</div>
+            <div class="value">${document.getElementById('q-company').value || ''}</div>
+            <div>${document.getElementById('q-address').value || ''}</div>
+            <div>${document.getElementById('q-contact').value || ''}</div>
+          </td>
+          <td style="width:50%;vertical-align:top;border:none;text-align:right;">
+            <div class="label">Invoice Reference</div>
+            <div class="value gold">${document.getElementById('q-ref').value || 'PRO-INV-' + Date.now().toString().slice(-8)}</div>
+            <div class="label" style="margin-top:8px;">Date</div>
+            <div>${document.getElementById('q-date').value || ''}</div>
+            <div class="label" style="margin-top:8px;">Valid Until</div>
+            <div>${document.getElementById('q-valid').value || '30 days'}</div>
+          </td>
+        </tr>
+      </table>
+
+      <div style="background:#f0f0f0;padding:12px;margin-bottom:20px;">
+        <div class="label">Bill To</div>
+        <div class="value">${document.getElementById('q-client').value || ''}</div>
+        <div>${document.getElementById('q-client-address').value || ''}</div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th style="width:5%;">Sr.</th>
+            <th style="width:40%;">Item Description</th>
+            <th style="width:10%;text-align:center;">Qty</th>
+            <th style="width:15%;text-align:right;">Unit Price (AED)</th>
+            <th style="width:15%;text-align:right;">Amount (AED)</th>
+            <th style="width:15%;text-align:right;">VAT 5% (AED)</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${getItemsHTML()}
+        </tbody>
+      </table>
+
+      <table class="totals-table">
+        <tr><td>Subtotal:</td><td style="text-align:right;">${document.getElementById('q-subtotal').textContent}</td></tr>
+        <tr><td>VAT (5%):</td><td style="text-align:right;">${document.getElementById('q-vat').textContent}</td></tr>
+        <tr class="grand-total"><td>GRAND TOTAL:</td><td style="text-align:right;">${document.getElementById('q-total').textContent}</td></tr>
+      </table>
+
+      <div class="notes">
+        <strong>Payment Terms:</strong> ${document.getElementById('q-terms').value || 'As agreed'}<br>
+        ${document.getElementById('q-notes').value ? '<strong>Notes:</strong> ' + document.getElementById('q-notes').value : ''}
+      </div>
+
+      <div class="signature">
+        <div class="sig-box">Prepared By</div>
+        <div class="sig-box">Authorized Signatory</div>
+        <div class="sig-box">Client Acknowledgement</div>
+      </div>
+
+      <div class="footer">
+        Powered by AZHAR-AI ✦ ${document.getElementById('q-company').value || ''}
+      </div>
+    </body>
+    </html>`;
+
+  const blob = new Blob([html], { type: 'application/msword' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = (ref || 'Quotation') + '.doc';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function getItemsHTML() {
+  let rows = '';
+  document.querySelectorAll('.quote-item-row').forEach((row, i) => {
+    const inputs = row.querySelectorAll('input');
+    const desc = inputs[0]?.value || '';
+    const barcode = inputs[1]?.value || '';
+    const qty = inputs[2]?.value || '';
+    const price = inputs[3]?.value || '';
+    const amount = inputs[4]?.value || '';
+    const vat = inputs[5]?.value || '';
+    if (desc) {
+      rows += `<tr>
+        <td style="text-align:center;padding:7px 6px;border:1px solid #ddd;">${i+1}</td>
+        <td style="padding:7px 6px;border:1px solid #ddd;">${desc}</td>
+        <td style="text-align:center;padding:7px 6px;border:1px solid #ddd;">${barcode}</td>
+        <td style="text-align:center;padding:7px 6px;border:1px solid #ddd;">${qty}</td>
+        <td style="text-align:right;padding:7px 6px;border:1px solid #ddd;">${price}</td>
+        <td style="text-align:right;padding:7px 6px;border:1px solid #ddd;">${vat}</td>
+        <td style="text-align:right;padding:7px 6px;border:1px solid #ddd;">${amount}</td>
+      </tr>`;
+    }
+  });
+  // Add empty rows to reach minimum 15 lines
+  const filledRows = document.querySelectorAll('.quote-item-row').length;
+  for(let i = filledRows; i < 15; i++) {
+    rows += `<tr>
+      <td style="text-align:center;padding:7px 6px;border:1px solid #ddd;color:#aaa;">${i+1}</td>
+      <td style="padding:7px 6px;border:1px solid #ddd;">&nbsp;</td>
+      <td style="padding:7px 6px;border:1px solid #ddd;">&nbsp;</td>
+      <td style="padding:7px 6px;border:1px solid #ddd;">&nbsp;</td>
+      <td style="padding:7px 6px;border:1px solid #ddd;">&nbsp;</td>
+      <td style="padding:7px 6px;border:1px solid #ddd;">&nbsp;</td>
+      <td style="padding:7px 6px;border:1px solid #ddd;">&nbsp;</td>
+    </tr>`;
+  }
+  return rows;
+}
+
+// DOWNLOAD AS PDF (using print)
+function downloadQuotePDF() {
+  const text = document.getElementById('quote-out-text').textContent;
+  if (!text.trim()) { alert('Please generate a quotation first.'); return; }
+  
+  const ref = document.getElementById('q-ref').value || 'Proforma-Invoice';
+  
+  const printWindow = window.open('', '_blank');
+  printWindow.document.write(`
+    <html>
+    <head>
+      <title>${ref}</title>
+      <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; color: #1a1a1a; padding: 30px 40px; }
+        h1 { font-size: 20pt; font-weight: bold; text-align: center; color: #1a1a2e; border-bottom: 3px solid #c9a84c; padding-bottom: 12px; margin-bottom: 24px; letter-spacing: 2px; }
+        .header-table { width: 100%; margin-bottom: 20px; }
+        .header-table td { vertical-align: top; padding: 4px 0; }
+        .label { font-size: 8pt; color: #888; text-transform: uppercase; letter-spacing: 1px; }
+        .value { font-size: 11pt; font-weight: bold; color: #1a1a2e; }
+        .bill-to { background: #f5f5f5; padding: 12px; margin-bottom: 20px; border-left: 4px solid #c9a84c; }
+        table.items { width: 100%; border-collapse: collapse; margin: 16px 0; }
+        table.items th { background: #1a1a2e; color: #c9a84c; padding: 8px 10px; text-align: left; font-size: 9pt; letter-spacing: 1px; }
+        table.items td { padding: 8px 10px; border-bottom: 1px solid #eee; font-size: 10pt; }
+        table.items tr:nth-child(even) td { background: #fafafa; }
+        .totals { margin-left: auto; width: 45%; margin-top: 16px; }
+        .totals table { width: 100%; }
+        .totals td { padding: 6px 10px; font-size: 11pt; }
+        .grand-total td { font-weight: bold; font-size: 13pt; color: #c9a84c; border-top: 2px solid #c9a84c; padding-top: 10px; }
+        .notes { margin-top: 20px; padding: 12px; background: #f9f9f9; border-left: 3px solid #c9a84c; font-size: 10pt; }
+        .sigs { display: flex; justify-content: space-between; margin-top: 50px; }
+        .sig { text-align: center; width: 30%; border-top: 1px solid #333; padding-top: 8px; font-size: 10pt; }
+        .footer { margin-top: 30px; text-align: center; font-size: 9pt; color: #aaa; border-top: 1px solid #eee; padding-top: 10px; }
+        .gold { color: #c9a84c; }
+        @media print { body { padding: 20px; } }
+      </style>
+    </head>
+    <body>
+      <h1>PROFORMA INVOICE</h1>
+      <table class="header-table">
+        <tr>
+          <td style="width:50%">
+            <div class="label">From</div>
+            <div class="value">${document.getElementById('q-company').value}</div>
+            <div style="font-size:10pt;color:#444;">${document.getElementById('q-address').value}</div>
+            <div style="font-size:10pt;color:#444;">${document.getElementById('q-contact').value}</div>
+          </td>
+          <td style="width:50%;text-align:right;">
+            <div class="label">Reference No</div>
+            <div class="value gold">${document.getElementById('q-ref').value || ref}</div>
+            <div class="label" style="margin-top:8px;">Date</div>
+            <div style="font-size:11pt;">${document.getElementById('q-date').value}</div>
+            <div class="label" style="margin-top:8px;">Valid For</div>
+            <div style="font-size:11pt;">${document.getElementById('q-valid').value || '30 days'}</div>
+          </td>
+        </tr>
+      </table>
+      <div class="bill-to">
+        <div class="label">Bill To</div>
+        <div class="value">${document.getElementById('q-client').value}</div>
+        <div style="font-size:10pt;color:#444;">${document.getElementById('q-client-address').value}</div>
+      </div>
+      <table class="items">
+        <thead>
+          <tr>
+            <th style="width:5%;">Sr.</th>
+            <th style="width:38%;">Item Description</th>
+            <th style="width:10%;text-align:center;">Qty</th>
+            <th style="width:15%;text-align:right;">Unit Price (AED)</th>
+            <th style="width:16%;text-align:right;">Amount (AED)</th>
+            <th style="width:16%;text-align:right;">VAT 5% (AED)</th>
+          </tr>
+        </thead>
+        <tbody>${getItemsHTML()}</tbody>
+      </table>
+      <div class="totals">
+        <table>
+          <tr><td>Subtotal:</td><td style="text-align:right;">${document.getElementById('q-subtotal').textContent}</td></tr>
+          <tr><td>VAT (5%):</td><td style="text-align:right;">${document.getElementById('q-vat').textContent}</td></tr>
+          <tr class="grand-total"><td>GRAND TOTAL:</td><td style="text-align:right;">${document.getElementById('q-total').textContent}</td></tr>
+        </table>
+      </div>
+      <div class="notes">
+        <strong>Payment Terms:</strong> ${document.getElementById('q-terms').value || 'As agreed'}
+        ${document.getElementById('q-notes').value ? '<br><strong>Notes:</strong> ' + document.getElementById('q-notes').value : ''}
+      </div>
+      <div class="sigs">
+        <div class="sig">Prepared By</div>
+        <div class="sig">Authorized Signatory</div>
+        <div class="sig">Client Acknowledgement</div>
+      </div>
+      <div class="footer">Powered by AZHAR-AI ✦ ${document.getElementById('q-company').value}</div>
+    </body>
+    </html>
+  `);
+  printWindow.document.close();
+  setTimeout(() => {
+    printWindow.print();
+    printWindow.close();
+  }, 500);
+}
+
+</script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
 :root{--black:#050505;--dark:#0a0a08;--surface:#111109;--card:#161612;--border:#2a2a1e;--gold:#c9a84c;--gold2:#e8c878;--gold3:#f5e0a0;--goldglow:rgba(201,168,76,0.12);--text:#f0ece0;--muted:#7a7660;--white:#faf8f0;--green:#4ecb8d;--red:#e84b4b;}
@@ -426,31 +681,48 @@ footer{position:relative;z-index:5;text-align:center;padding:28px;border-top:1px
 
       <!-- Line Items Table -->
       <div class="field-label" style="margin-top:24px;">Line Items</div>
-      <div style="display:grid;grid-template-columns:0.5fr 3fr 1fr 1fr 1fr 1fr auto;gap:6px;margin-bottom:8px;padding:8px 0;border-bottom:1px solid var(--border);">
-        <div style="font-size:9px;letter-spacing:1px;color:var(--gold);text-transform:uppercase;">Sr.</div>
-        <div style="font-size:9px;letter-spacing:1px;color:var(--gold);text-transform:uppercase;">Item Description</div>
-        <div style="font-size:9px;letter-spacing:1px;color:var(--gold);text-transform:uppercase;">Qty</div>
-        <div style="font-size:9px;letter-spacing:1px;color:var(--gold);text-transform:uppercase;">Unit Price</div>
-        <div style="font-size:9px;letter-spacing:1px;color:var(--gold);text-transform:uppercase;">Amount</div>
-        <div style="font-size:9px;letter-spacing:1px;color:var(--gold);text-transform:uppercase;">VAT 5%</div>
-        <div></div>
+      <div style="overflow-x:auto;">
+      <table id="quote-table" style="width:100%;border-collapse:collapse;table-layout:fixed;">
+        <colgroup>
+          <col style="width:4%">
+          <col style="width:30%">
+          <col style="width:14%">
+          <col style="width:7%">
+          <col style="width:14%">
+          <col style="width:13%">
+          <col style="width:14%">
+          <col style="width:4%">
+        </colgroup>
+        <thead>
+          <tr style="background:#1a1a2e;border-bottom:2px solid var(--gold);">
+            <th style="padding:10px 6px;font-size:9px;letter-spacing:1px;color:var(--gold);text-transform:uppercase;text-align:center;border:1px solid var(--border);">Sr.</th>
+            <th style="padding:10px 6px;font-size:9px;letter-spacing:1px;color:var(--gold);text-transform:uppercase;text-align:left;border:1px solid var(--border);">Description</th>
+            <th style="padding:10px 6px;font-size:9px;letter-spacing:1px;color:var(--gold);text-transform:uppercase;text-align:center;border:1px solid var(--border);">Barcode</th>
+            <th style="padding:10px 6px;font-size:9px;letter-spacing:1px;color:var(--gold);text-transform:uppercase;text-align:center;border:1px solid var(--border);">Qty</th>
+            <th style="padding:10px 6px;font-size:9px;letter-spacing:1px;color:var(--gold);text-transform:uppercase;text-align:right;border:1px solid var(--border);">Unit Price (AED)</th>
+            <th style="padding:10px 6px;font-size:9px;letter-spacing:1px;color:var(--gold);text-transform:uppercase;text-align:right;border:1px solid var(--border);">VAT 5% (AED)</th>
+            <th style="padding:10px 6px;font-size:9px;letter-spacing:1px;color:var(--gold);text-transform:uppercase;text-align:right;border:1px solid var(--border);">Net Amount (AED)</th>
+            <th style="border:1px solid var(--border);"></th>
+          </tr>
+        </thead>
+        <tbody id="quote-items"></tbody>
+      </table>
       </div>
-      <div id="quote-items"></div>
       <button class="add-item-btn" onclick="addItem()">+ Add Line Item</button>
       
       <!-- Totals -->
       <div style="margin-top:20px;padding:16px;background:var(--surface);border:1px solid var(--border);">
         <div style="display:flex;justify-content:flex-end;gap:40px;margin-bottom:8px;">
-          <span style="font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;">Subtotal:</span>
-          <span style="font-size:13px;color:var(--text);min-width:100px;text-align:right;" id="q-subtotal">AED 0.00</span>
+          <span style="font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;min-width:140px;">Subtotal (excl. VAT):</span>
+          <span style="font-size:13px;color:var(--text);min-width:120px;text-align:right;" id="q-subtotal">AED 0.00</span>
         </div>
         <div style="display:flex;justify-content:flex-end;gap:40px;margin-bottom:8px;">
-          <span style="font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;">VAT (5%):</span>
-          <span style="font-size:13px;color:var(--text);min-width:100px;text-align:right;" id="q-vat">AED 0.00</span>
+          <span style="font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;min-width:140px;">VAT (5%):</span>
+          <span style="font-size:13px;color:var(--green);min-width:120px;text-align:right;" id="q-vat">AED 0.00</span>
         </div>
         <div style="display:flex;justify-content:flex-end;gap:40px;padding-top:8px;border-top:1px solid var(--border);">
-          <span style="font-size:12px;color:var(--gold);letter-spacing:1px;text-transform:uppercase;font-weight:600;">Total:</span>
-          <span style="font-size:16px;color:var(--gold);font-weight:700;min-width:100px;text-align:right;font-family:'Cormorant Garamond',serif;" id="q-total">AED 0.00</span>
+          <span style="font-size:12px;color:var(--gold);letter-spacing:1px;text-transform:uppercase;font-weight:600;min-width:140px;">Net Total (incl. VAT):</span>
+          <span style="font-size:18px;color:var(--gold);font-weight:700;min-width:120px;text-align:right;font-family:'Cormorant Garamond',serif;" id="q-total">AED 0.00</span>
         </div>
       </div>
 
@@ -460,7 +732,14 @@ footer{position:relative;z-index:5;text-align:center;padding:28px;border-top:1px
       <button class="btn-primary" id="quote-btn" onclick="runQuotation()" style="margin-top:16px;"><span>Generate Professional Proforma Invoice</span></button>
       <div class="loader" id="quote-loader"><div class="loader-ring"></div><div class="loader-text">Generating proforma invoice...</div></div>
       <div class="output-wrap" id="quote-out">
-        <div class="output-header"><span class="output-label">✦ Proforma Invoice Ready</span><button class="copy-btn" onclick="copyEl('quote-out-text')">Copy</button></div>
+        <div class="output-header">
+          <span class="output-label">✦ Proforma Invoice Ready</span>
+          <div style="display:flex;gap:8px;">
+            <button class="copy-btn" onclick="copyEl('quote-out-text')">Copy</button>
+            <button class="copy-btn" style="border-color:var(--gold);color:var(--gold);" onclick="downloadQuoteWord()">⬇ Word</button>
+            <button class="copy-btn" style="border-color:var(--red);color:var(--red);" onclick="downloadQuotePDF()">⬇ PDF</button>
+          </div>
+        </div>
         <div class="output-body" id="quote-out-text"></div>
       </div>
     </div>
@@ -862,6 +1141,261 @@ async function runExcel() {
   setLoading('excel-loader', 'excel-btn', false);
 }
 
+
+
+// DOWNLOAD QUOTATION AS WORD
+function downloadQuoteWord() {
+  const text = document.getElementById('quote-out-text').textContent;
+  if (!text.trim()) { alert('Please generate a quotation first.'); return; }
+  
+  const company = document.getElementById('q-company').value || 'Company';
+  const client = document.getElementById('q-client').value || 'Client';
+  const ref = document.getElementById('q-ref').value || 'Quotation';
+  
+  // Build HTML that Word can open
+  const html = `
+    <html xmlns:o="urn:schemas-microsoft-com:office:office" 
+          xmlns:w="urn:schemas-microsoft-com:office:word"
+          xmlns="http://www.w3.org/TR/REC-html40">
+    <head>
+      <meta charset="utf-8">
+      <title>${ref}</title>
+      <style>
+        body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; color: #1a1a1a; margin: 2cm; }
+        h1 { font-size: 18pt; font-weight: bold; text-align: center; color: #1a1a2e; border-bottom: 2px solid #c9a84c; padding-bottom: 10px; margin-bottom: 20px; }
+        .header-box { display: flex; justify-content: space-between; margin-bottom: 20px; }
+        .from-box, .to-box { width: 48%; }
+        .label { font-size: 9pt; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+        .value { font-size: 11pt; font-weight: bold; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th { background: #1a1a2e; color: #c9a84c; padding: 8px 10px; text-align: left; font-size: 9pt; letter-spacing: 1px; text-transform: uppercase; }
+        td { padding: 8px 10px; border-bottom: 1px solid #eee; font-size: 10pt; }
+        tr:nth-child(even) td { background: #f9f9f9; }
+        .totals-table { margin-left: auto; width: 40%; }
+        .totals-table td { border: none; }
+        .grand-total td { font-weight: bold; font-size: 12pt; color: #c9a84c; border-top: 2px solid #c9a84c; }
+        .notes { margin-top: 20px; padding: 12px; background: #f9f9f9; border-left: 3px solid #c9a84c; font-size: 10pt; }
+        .signature { margin-top: 40px; display: flex; justify-content: space-between; }
+        .sig-box { text-align: center; width: 200px; border-top: 1px solid #333; padding-top: 8px; font-size: 10pt; }
+        .gold { color: #c9a84c; font-weight: bold; }
+        .footer { margin-top: 30px; text-align: center; font-size: 9pt; color: #888; border-top: 1px solid #eee; padding-top: 10px; }
+      </style>
+    </head>
+    <body>
+      <h1>PROFORMA INVOICE</h1>
+      
+      <table style="margin-bottom:20px;">
+        <tr>
+          <td style="width:50%;vertical-align:top;border:none;">
+            <div class="label">From</div>
+            <div class="value">${document.getElementById('q-company').value || ''}</div>
+            <div>${document.getElementById('q-address').value || ''}</div>
+            <div>${document.getElementById('q-contact').value || ''}</div>
+          </td>
+          <td style="width:50%;vertical-align:top;border:none;text-align:right;">
+            <div class="label">Invoice Reference</div>
+            <div class="value gold">${document.getElementById('q-ref').value || 'PRO-INV-' + Date.now().toString().slice(-8)}</div>
+            <div class="label" style="margin-top:8px;">Date</div>
+            <div>${document.getElementById('q-date').value || ''}</div>
+            <div class="label" style="margin-top:8px;">Valid Until</div>
+            <div>${document.getElementById('q-valid').value || '30 days'}</div>
+          </td>
+        </tr>
+      </table>
+
+      <div style="background:#f0f0f0;padding:12px;margin-bottom:20px;">
+        <div class="label">Bill To</div>
+        <div class="value">${document.getElementById('q-client').value || ''}</div>
+        <div>${document.getElementById('q-client-address').value || ''}</div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th style="width:5%;">Sr.</th>
+            <th style="width:40%;">Item Description</th>
+            <th style="width:10%;text-align:center;">Qty</th>
+            <th style="width:15%;text-align:right;">Unit Price (AED)</th>
+            <th style="width:15%;text-align:right;">Amount (AED)</th>
+            <th style="width:15%;text-align:right;">VAT 5% (AED)</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${getItemsHTML()}
+        </tbody>
+      </table>
+
+      <table class="totals-table">
+        <tr><td>Subtotal:</td><td style="text-align:right;">${document.getElementById('q-subtotal').textContent}</td></tr>
+        <tr><td>VAT (5%):</td><td style="text-align:right;">${document.getElementById('q-vat').textContent}</td></tr>
+        <tr class="grand-total"><td>GRAND TOTAL:</td><td style="text-align:right;">${document.getElementById('q-total').textContent}</td></tr>
+      </table>
+
+      <div class="notes">
+        <strong>Payment Terms:</strong> ${document.getElementById('q-terms').value || 'As agreed'}<br>
+        ${document.getElementById('q-notes').value ? '<strong>Notes:</strong> ' + document.getElementById('q-notes').value : ''}
+      </div>
+
+      <div class="signature">
+        <div class="sig-box">Prepared By</div>
+        <div class="sig-box">Authorized Signatory</div>
+        <div class="sig-box">Client Acknowledgement</div>
+      </div>
+
+      <div class="footer">
+        Powered by AZHAR-AI ✦ ${document.getElementById('q-company').value || ''}
+      </div>
+    </body>
+    </html>`;
+
+  const blob = new Blob([html], { type: 'application/msword' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = (ref || 'Quotation') + '.doc';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function getItemsHTML() {
+  let rows = '';
+  document.querySelectorAll('.quote-item-row').forEach((row, i) => {
+    const inputs = row.querySelectorAll('input');
+    const desc = inputs[0]?.value || '';
+    const barcode = inputs[1]?.value || '';
+    const qty = inputs[2]?.value || '';
+    const price = inputs[3]?.value || '';
+    const amount = inputs[4]?.value || '';
+    const vat = inputs[5]?.value || '';
+    if (desc) {
+      rows += `<tr>
+        <td style="text-align:center;padding:7px 6px;border:1px solid #ddd;">${i+1}</td>
+        <td style="padding:7px 6px;border:1px solid #ddd;">${desc}</td>
+        <td style="text-align:center;padding:7px 6px;border:1px solid #ddd;">${barcode}</td>
+        <td style="text-align:center;padding:7px 6px;border:1px solid #ddd;">${qty}</td>
+        <td style="text-align:right;padding:7px 6px;border:1px solid #ddd;">${price}</td>
+        <td style="text-align:right;padding:7px 6px;border:1px solid #ddd;">${vat}</td>
+        <td style="text-align:right;padding:7px 6px;border:1px solid #ddd;">${amount}</td>
+      </tr>`;
+    }
+  });
+  // Add empty rows to reach minimum 15 lines
+  const filledRows = document.querySelectorAll('.quote-item-row').length;
+  for(let i = filledRows; i < 15; i++) {
+    rows += `<tr>
+      <td style="text-align:center;padding:7px 6px;border:1px solid #ddd;color:#aaa;">${i+1}</td>
+      <td style="padding:7px 6px;border:1px solid #ddd;">&nbsp;</td>
+      <td style="padding:7px 6px;border:1px solid #ddd;">&nbsp;</td>
+      <td style="padding:7px 6px;border:1px solid #ddd;">&nbsp;</td>
+      <td style="padding:7px 6px;border:1px solid #ddd;">&nbsp;</td>
+      <td style="padding:7px 6px;border:1px solid #ddd;">&nbsp;</td>
+      <td style="padding:7px 6px;border:1px solid #ddd;">&nbsp;</td>
+    </tr>`;
+  }
+  return rows;
+}
+
+// DOWNLOAD AS PDF (using print)
+function downloadQuotePDF() {
+  const text = document.getElementById('quote-out-text').textContent;
+  if (!text.trim()) { alert('Please generate a quotation first.'); return; }
+  
+  const ref = document.getElementById('q-ref').value || 'Proforma-Invoice';
+  
+  const printWindow = window.open('', '_blank');
+  printWindow.document.write(`
+    <html>
+    <head>
+      <title>${ref}</title>
+      <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; color: #1a1a1a; padding: 30px 40px; }
+        h1 { font-size: 20pt; font-weight: bold; text-align: center; color: #1a1a2e; border-bottom: 3px solid #c9a84c; padding-bottom: 12px; margin-bottom: 24px; letter-spacing: 2px; }
+        .header-table { width: 100%; margin-bottom: 20px; }
+        .header-table td { vertical-align: top; padding: 4px 0; }
+        .label { font-size: 8pt; color: #888; text-transform: uppercase; letter-spacing: 1px; }
+        .value { font-size: 11pt; font-weight: bold; color: #1a1a2e; }
+        .bill-to { background: #f5f5f5; padding: 12px; margin-bottom: 20px; border-left: 4px solid #c9a84c; }
+        table.items { width: 100%; border-collapse: collapse; margin: 16px 0; }
+        table.items th { background: #1a1a2e; color: #c9a84c; padding: 8px 10px; text-align: left; font-size: 9pt; letter-spacing: 1px; }
+        table.items td { padding: 8px 10px; border-bottom: 1px solid #eee; font-size: 10pt; }
+        table.items tr:nth-child(even) td { background: #fafafa; }
+        .totals { margin-left: auto; width: 45%; margin-top: 16px; }
+        .totals table { width: 100%; }
+        .totals td { padding: 6px 10px; font-size: 11pt; }
+        .grand-total td { font-weight: bold; font-size: 13pt; color: #c9a84c; border-top: 2px solid #c9a84c; padding-top: 10px; }
+        .notes { margin-top: 20px; padding: 12px; background: #f9f9f9; border-left: 3px solid #c9a84c; font-size: 10pt; }
+        .sigs { display: flex; justify-content: space-between; margin-top: 50px; }
+        .sig { text-align: center; width: 30%; border-top: 1px solid #333; padding-top: 8px; font-size: 10pt; }
+        .footer { margin-top: 30px; text-align: center; font-size: 9pt; color: #aaa; border-top: 1px solid #eee; padding-top: 10px; }
+        .gold { color: #c9a84c; }
+        @media print { body { padding: 20px; } }
+      </style>
+    </head>
+    <body>
+      <h1>PROFORMA INVOICE</h1>
+      <table class="header-table">
+        <tr>
+          <td style="width:50%">
+            <div class="label">From</div>
+            <div class="value">${document.getElementById('q-company').value}</div>
+            <div style="font-size:10pt;color:#444;">${document.getElementById('q-address').value}</div>
+            <div style="font-size:10pt;color:#444;">${document.getElementById('q-contact').value}</div>
+          </td>
+          <td style="width:50%;text-align:right;">
+            <div class="label">Reference No</div>
+            <div class="value gold">${document.getElementById('q-ref').value || ref}</div>
+            <div class="label" style="margin-top:8px;">Date</div>
+            <div style="font-size:11pt;">${document.getElementById('q-date').value}</div>
+            <div class="label" style="margin-top:8px;">Valid For</div>
+            <div style="font-size:11pt;">${document.getElementById('q-valid').value || '30 days'}</div>
+          </td>
+        </tr>
+      </table>
+      <div class="bill-to">
+        <div class="label">Bill To</div>
+        <div class="value">${document.getElementById('q-client').value}</div>
+        <div style="font-size:10pt;color:#444;">${document.getElementById('q-client-address').value}</div>
+      </div>
+      <table class="items">
+        <thead>
+          <tr>
+            <th style="width:5%;">Sr.</th>
+            <th style="width:38%;">Item Description</th>
+            <th style="width:10%;text-align:center;">Qty</th>
+            <th style="width:15%;text-align:right;">Unit Price (AED)</th>
+            <th style="width:16%;text-align:right;">Amount (AED)</th>
+            <th style="width:16%;text-align:right;">VAT 5% (AED)</th>
+          </tr>
+        </thead>
+        <tbody>${getItemsHTML()}</tbody>
+      </table>
+      <div class="totals">
+        <table>
+          <tr><td>Subtotal:</td><td style="text-align:right;">${document.getElementById('q-subtotal').textContent}</td></tr>
+          <tr><td>VAT (5%):</td><td style="text-align:right;">${document.getElementById('q-vat').textContent}</td></tr>
+          <tr class="grand-total"><td>GRAND TOTAL:</td><td style="text-align:right;">${document.getElementById('q-total').textContent}</td></tr>
+        </table>
+      </div>
+      <div class="notes">
+        <strong>Payment Terms:</strong> ${document.getElementById('q-terms').value || 'As agreed'}
+        ${document.getElementById('q-notes').value ? '<br><strong>Notes:</strong> ' + document.getElementById('q-notes').value : ''}
+      </div>
+      <div class="sigs">
+        <div class="sig">Prepared By</div>
+        <div class="sig">Authorized Signatory</div>
+        <div class="sig">Client Acknowledgement</div>
+      </div>
+      <div class="footer">Powered by AZHAR-AI ✦ ${document.getElementById('q-company').value}</div>
+    </body>
+    </html>
+  `);
+  printWindow.document.close();
+  setTimeout(() => {
+    printWindow.print();
+    printWindow.close();
+  }, 500);
+}
 
 </script>
 </body>
