@@ -8,7 +8,12 @@ const path = require('path');
 const fs = require('fs');
 
 const app = express();
-const upload = multer({ dest: 'uploads/', limits: { fileSize: 50 * 1024 * 1024 } });
+// Create uploads dir if not exists
+if (!fs.existsSync('uploads')) { fs.mkdirSync('uploads', { recursive: true }); }
+
+// Use memory storage for reliability on cloud
+const storage = multer.memoryStorage();
+const upload = multer({ storage: storage, limits: { fileSize: 50 * 1024 * 1024 } });
 
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
@@ -51,18 +56,17 @@ app.post('/api/dispatch/upload', upload.single('file'), async (req, res) => {
     if (req.file) {
       const ext = path.extname(req.file.originalname).toLowerCase();
       if (ext === '.xlsx' || ext === '.xls') {
-        // Handle Excel file
-        const workbook = XLSX.readFile(req.file.path);
+        // Handle Excel file from buffer
+        const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
         const sheetName = workbook.SheetNames[0];
         const sheet = workbook.Sheets[sheetName];
         csvText = XLSX.utils.sheet_to_csv(sheet);
-        console.log('Excel file converted to CSV, size:', csvText.length);
+        console.log('Excel converted from buffer, size:', csvText.length);
       } else {
-        // Handle CSV/text file
-        csvText = fs.readFileSync(req.file.path, 'utf8');
-        console.log('CSV file uploaded, size:', csvText.length, 'chars');
+        // Handle CSV/text file from buffer
+        csvText = req.file.buffer.toString('utf8');
+        console.log('CSV from buffer, size:', csvText.length, 'chars');
       }
-      fs.unlinkSync(req.file.path);
     } else if (req.body.csvText) {
       csvText = req.body.csvText;
       console.log('CSV text received, size:', csvText.length, 'chars');
