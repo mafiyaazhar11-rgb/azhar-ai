@@ -127,8 +127,14 @@ textarea::placeholder,input::placeholder{color:var(--muted);}
 .kpi-val{font-family:'Cormorant Garamond',serif;font-size:30px;font-weight:700;color:var(--gold);margin-bottom:4px;}
 .kpi-label{font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;}
 .quick-btns{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px;}
-.quick-btn{padding:7px 14px;background:var(--surface);border:1px solid var(--border);color:var(--muted);font-family:'Montserrat',sans-serif;font-size:9px;letter-spacing:1px;cursor:pointer;transition:all 0.2s;text-transform:uppercase;}
+.quick-btn{padding:8px 16px;background:var(--surface);border:1px solid var(--border);color:var(--muted);font-family:'Montserrat',sans-serif;font-size:10px;letter-spacing:1px;cursor:pointer;transition:all 0.2s;text-transform:uppercase;font-weight:500;}
 .quick-btn:hover{border-color:var(--gold);color:var(--gold);background:var(--goldglow);}
+.stat-btn{border-color:rgba(201,168,76,0.4);color:var(--gold);}
+.stat-btn:hover{background:var(--gold);color:var(--black);}
+.cust-btn{border-color:rgba(78,203,141,0.3);color:var(--green);}
+.cust-btn:hover{background:var(--green);color:var(--black);}
+.city-btn{border-color:rgba(91,141,238,0.3);color:#5b8dee;}
+.city-btn:hover{background:#5b8dee;color:#fff;}
 .chat-input-row{display:flex;gap:10px;align-items:flex-end;}
 .chat-textarea{flex:1;min-height:52px;max-height:120px;resize:none;padding:14px 16px;}
 .send-btn{width:52px;height:52px;flex-shrink:0;background:linear-gradient(135deg,var(--gold),var(--gold2));border:none;color:var(--black);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;}
@@ -232,18 +238,32 @@ footer{position:relative;z-index:5;text-align:center;padding:28px;border-top:1px
         <div class="kpi"><div class="kpi-val" id="kpi-luluval">—</div><div class="kpi-label">Lulu Value (AED)</div></div>
       </div>
       <div id="quick-section" style="display:none">
-        <div class="field-label">Quick Questions</div>
-        <div class="quick-btns">
-          <button class="quick-btn" onclick="askQuick('How many Lulu orders today and total value?')">🛒 Lulu Orders</button>
-          <button class="quick-btn" onclick="askQuick('Break down all orders and values by city')">🏙️ By City</button>
-          <button class="quick-btn" onclick="askQuick('Who are top 5 drivers by deliveries today?')">🚚 Top Drivers</button>
-          <button class="quick-btn" onclick="askQuick('Top 10 customers by order value today?')">💰 Top Customers</button>
-          <button class="quick-btn" onclick="askQuick('Show all Lulu Food orders and values')">🍎 Lulu Food</button>
-          <button class="quick-btn" onclick="askQuick('Total orders and value for Dubai today?')">📍 Dubai</button>
-          <button class="quick-btn" onclick="askQuick('Total orders and value for Abu Dhabi today?')">📍 Abu Dhabi</button>
-          <button class="quick-btn" onclick="askQuick('How many orders does each route have?')">🗺️ Routes</button>
-          <button class="quick-btn" onclick="askQuick('What is total Carrefour orders and value?')">🛍️ Carrefour</button>
-          <button class="quick-btn" onclick="askQuick('Show orders summary by customer category')">📦 By Category</button>
+        <div class="field-label" style="margin-bottom:10px;">📊 Key Stats — One Click</div>
+        <div class="quick-btns" style="margin-bottom:16px;">
+          <button class="quick-btn stat-btn" onclick="askQuick('What is the total number of orders and total value in AED for today? Give me just the numbers clearly.')">📦 Total Orders</button>
+          <button class="quick-btn stat-btn" onclick="askQuick('Who are the top 5 drivers by number of deliveries today? List name and count.')">🚚 Top 5 Drivers</button>
+          <button class="quick-btn stat-btn" onclick="askQuick('What is the total sales value in AED for today? Break it down by city.')">💰 Total Sales</button>
+          <button class="quick-btn stat-btn" onclick="askQuick('How many routes are running today and how many orders per route?')">🗺️ Routes Today</button>
+        </div>
+        <div class="field-label" style="margin-bottom:10px;">🛒 By Customer — One Click</div>
+        <div class="quick-btns" style="margin-bottom:16px;">
+          <button class="quick-btn cust-btn" onclick="askQuick('Show me all LULU orders today — total count, total value in AED, and breakdown by branch.')">🟡 Lulu</button>
+          <button class="quick-btn cust-btn" onclick="askQuick('Show me all CARREFOUR orders today — total count and total value in AED.')">🔵 Carrefour</button>
+          <button class="quick-btn cust-btn" onclick="askQuick('Show me all UNION COOP orders today — total count and total value in AED.')">🟢 Union Coop</button>
+          <button class="quick-btn cust-btn" onclick="askQuick('Show me all SPINNEYS orders today — total count and total value in AED.')">🟣 Spinneys</button>
+          <button class="quick-btn cust-btn" onclick="askQuick('Show me all WAITROSE orders today — total count and total value in AED.')">⚪ Waitrose</button>
+          <button class="quick-btn cust-btn" onclick="askQuick('Show me all CHOITHRAMS orders today — total count and total value in AED.')">🟠 Choithrams</button>
+          <button class="quick-btn cust-btn" onclick="askQuick('Show me all WEST ZONE orders today — total count and total value in AED.')">🔴 West Zone</button>
+          <button class="quick-btn cust-btn" onclick="askQuick('Show me all GEANT orders today — total count and total value in AED.')">🟤 Geant</button>
+        </div>
+        <div class="field-label" style="margin-bottom:10px;">📍 By City — One Click</div>
+        <div class="quick-btns" style="margin-bottom:20px;">
+          <button class="quick-btn city-btn" onclick="askQuick('Total orders and total value for DUBAI today.')">📍 Dubai</button>
+          <button class="quick-btn city-btn" onclick="askQuick('Total orders and total value for ABU DHABI today.')">📍 Abu Dhabi</button>
+          <button class="quick-btn city-btn" onclick="askQuick('Total orders and total value for SHARJAH today.')">📍 Sharjah</button>
+          <button class="quick-btn city-btn" onclick="askQuick('Total orders and total value for FUJAIRAH today.')">📍 Fujairah</button>
+          <button class="quick-btn city-btn" onclick="askQuick('Total orders and total value for AL AIN today.')">📍 Al Ain</button>
+          <button class="quick-btn city-btn" onclick="askQuick('Total orders and total value for RAK and northern emirates today.')">📍 RAK/North</button>
         </div>
         <div class="field-label">Ask Anything About Today's Dispatch</div>
         <div class="chat-input-row">
@@ -365,55 +385,82 @@ footer{position:relative;z-index:5;text-align:center;padding:28px;border-top:1px
   <!-- QUOTATION MAKER -->
   <div class="panel" id="quotation">
     <div class="card">
-      <div class="card-eyebrow">Quotation Maker</div>
-      <h3>Generate Professional Quotations</h3>
-      <p>Fill in the details below — AZHAR-AI will generate a complete professional quotation ready to send to your customer or client.</p>
-      <div class="quote-grid">
+      <div class="card-eyebrow">Proforma Invoice / Quotation Maker</div>
+      <h3>Generate Professional Proforma Invoice</h3>
+      <p>Fill in the details — get a complete proforma invoice with VAT 5% calculated automatically, ready to send to your customer.</p>
+      
+      <!-- Header Details -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div>
+          <div class="field-label">Your Company Name</div>
+          <input type="text" id="q-company" placeholder="e.g. Al Khayyat Investments LLC" value="Al Khayyat Investments LLC"/>
+          <div class="field-label">Company Address</div>
+          <textarea id="q-address" style="min-height:55px" placeholder="e.g. P.O Box 11245, Dubai, UAE">P.O Box 11245, Dubai, UAE</textarea>
+          <div class="field-label">Company Tel / Email</div>
+          <input type="text" id="q-contact" placeholder="e.g. Tel: 04 810 5555 | info@company.com"/>
+        </div>
         <div>
           <div class="field-label">Client / Customer Name</div>
-          <input type="text" id="q-client" placeholder="e.g. Lulu Hypermarket, Carrefour UAE..."/>
-          <div class="field-label">Your Company Name</div>
-          <input type="text" id="q-company" placeholder="e.g. Al Khayyat Investments"/>
-          <div class="field-label">Quotation Date</div>
+          <input type="text" id="q-client" placeholder="e.g. Lulu Hypermarket LLC"/>
+          <div class="field-label">Client Address</div>
+          <textarea id="q-client-address" style="min-height:55px" placeholder="e.g. Dubai, UAE"></textarea>
+          <div class="field-label">Invoice / Reference No</div>
+          <input type="text" id="q-ref" placeholder="e.g. PRO-INV-26052026"/>
+        </div>
+      </div>
+      
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:4px;">
+        <div>
+          <div class="field-label">Date</div>
           <input type="text" id="q-date" placeholder="e.g. 26 May 2026"/>
+        </div>
+        <div>
           <div class="field-label">Valid Until</div>
           <input type="text" id="q-valid" placeholder="e.g. 30 days"/>
         </div>
         <div>
-          <div class="field-label">Service / Product Type</div>
-          <div class="options-row" id="q-type">
-            <div class="option-pill sel" onclick="selOpt(this,'q-type')">Distribution</div>
-            <div class="option-pill" onclick="selOpt(this,'q-type')">Logistics</div>
-            <div class="option-pill" onclick="selOpt(this,'q-type')">Warehousing</div>
-            <div class="option-pill" onclick="selOpt(this,'q-type')">Supply Chain</div>
-            <div class="option-pill" onclick="selOpt(this,'q-type')">Other</div>
-          </div>
           <div class="field-label">Payment Terms</div>
-          <input type="text" id="q-terms" placeholder="e.g. 30 days net, Cash on delivery..."/>
-          <div class="field-label">Special Notes</div>
-          <textarea id="q-notes" style="min-height:60px" placeholder="e.g. VAT 5% applicable, prices in AED..."></textarea>
+          <input type="text" id="q-terms" placeholder="e.g. 30 days net"/>
         </div>
       </div>
-      <div class="field-label">Line Items</div>
-      <div style="display:grid;grid-template-columns:3fr 1fr 1fr auto;gap:8px;margin-bottom:6px;">
-        <div style="font-size:9px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;padding:6px 0;">Description</div>
-        <div style="font-size:9px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;padding:6px 0;">Qty</div>
-        <div style="font-size:9px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;padding:6px 0;">Unit Price (AED)</div>
+
+      <!-- Line Items Table -->
+      <div class="field-label" style="margin-top:24px;">Line Items</div>
+      <div style="display:grid;grid-template-columns:0.5fr 3fr 1fr 1fr 1fr 1fr auto;gap:6px;margin-bottom:8px;padding:8px 0;border-bottom:1px solid var(--border);">
+        <div style="font-size:9px;letter-spacing:1px;color:var(--gold);text-transform:uppercase;">Sr.</div>
+        <div style="font-size:9px;letter-spacing:1px;color:var(--gold);text-transform:uppercase;">Item Description</div>
+        <div style="font-size:9px;letter-spacing:1px;color:var(--gold);text-transform:uppercase;">Qty</div>
+        <div style="font-size:9px;letter-spacing:1px;color:var(--gold);text-transform:uppercase;">Unit Price</div>
+        <div style="font-size:9px;letter-spacing:1px;color:var(--gold);text-transform:uppercase;">Amount</div>
+        <div style="font-size:9px;letter-spacing:1px;color:var(--gold);text-transform:uppercase;">VAT 5%</div>
         <div></div>
       </div>
-      <div id="quote-items">
-        <div class="quote-item-row">
-          <input type="text" placeholder="Service or product description"/>
-          <input type="text" placeholder="1"/>
-          <input type="text" placeholder="0.00"/>
-          <button class="remove-btn" onclick="removeItem(this)">×</button>
+      <div id="quote-items"></div>
+      <button class="add-item-btn" onclick="addItem()">+ Add Line Item</button>
+      
+      <!-- Totals -->
+      <div style="margin-top:20px;padding:16px;background:var(--surface);border:1px solid var(--border);">
+        <div style="display:flex;justify-content:flex-end;gap:40px;margin-bottom:8px;">
+          <span style="font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;">Subtotal:</span>
+          <span style="font-size:13px;color:var(--text);min-width:100px;text-align:right;" id="q-subtotal">AED 0.00</span>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:40px;margin-bottom:8px;">
+          <span style="font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;">VAT (5%):</span>
+          <span style="font-size:13px;color:var(--text);min-width:100px;text-align:right;" id="q-vat">AED 0.00</span>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:40px;padding-top:8px;border-top:1px solid var(--border);">
+          <span style="font-size:12px;color:var(--gold);letter-spacing:1px;text-transform:uppercase;font-weight:600;">Total:</span>
+          <span style="font-size:16px;color:var(--gold);font-weight:700;min-width:100px;text-align:right;font-family:'Cormorant Garamond',serif;" id="q-total">AED 0.00</span>
         </div>
       </div>
-      <button class="add-item-btn" onclick="addItem()">+ Add Line Item</button>
-      <button class="btn-primary" id="quote-btn" onclick="runQuotation()" style="margin-top:16px;"><span>Generate Quotation</span></button>
-      <div class="loader" id="quote-loader"><div class="loader-ring"></div><div class="loader-text">Generating quotation...</div></div>
+
+      <div class="field-label">Special Notes / Terms & Conditions</div>
+      <textarea id="q-notes" style="min-height:60px" placeholder="e.g. All prices are in AED. VAT 5% included. Delivery within 3-5 working days."></textarea>
+
+      <button class="btn-primary" id="quote-btn" onclick="runQuotation()" style="margin-top:16px;"><span>Generate Professional Proforma Invoice</span></button>
+      <div class="loader" id="quote-loader"><div class="loader-ring"></div><div class="loader-text">Generating proforma invoice...</div></div>
       <div class="output-wrap" id="quote-out">
-        <div class="output-header"><span class="output-label">✦ Professional Quotation</span><button class="copy-btn" onclick="copyEl('quote-out-text')">Copy</button></div>
+        <div class="output-header"><span class="output-label">✦ Proforma Invoice Ready</span><button class="copy-btn" onclick="copyEl('quote-out-text')">Copy</button></div>
         <div class="output-body" id="quote-out-text"></div>
       </div>
     </div>
@@ -815,10 +862,7 @@ async function runExcel() {
   setLoading('excel-loader', 'excel-btn', false);
 }
 
-// Load dispatch on page load
-window.addEventListener('load', function() {
-  loadDispatchStatus();
-});
+
 </script>
 </body>
 </html>
