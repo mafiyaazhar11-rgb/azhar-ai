@@ -182,13 +182,20 @@ function parseDispatchCSV(csvText, dateKey) {
   const luluOrders = luluEntries.reduce((s,[,v]) => s + v.orders, 0);
   const luluValue  = luluEntries.reduce((s,[,v]) => s + v.value, 0);
 
-  // Food vs Non-food - count by customer type or order prefix
-  let foodOrders = 0;
+  // Type from ORDER CODE: DCV/DCF=Food, DGC/DGS/DSN=NonFood, HCP=3PL
+  let foodOrders = 0, foodValue = 0;
+  let nonFoodOrders = 0, nonFoodValue = 0;
+  let plOrders = 0;
   for (let i = 1; i < lines.length; i++) {
-    const row = lines[i].split(',');
-    const order = orderIdx >= 0 ? (row[orderIdx]||'').trim() : '';
-    // Food orders typically have DCV or Food type prefix
-    if (order.includes('DCV') || order.includes('FOOD')) foodOrders++;
+    const row = lines[i].split(',').map(c => c.trim().replace(/^"|"$/g,''));
+    if (!row[0]) continue;
+    const order = (orderIdx >= 0 ? row[orderIdx] : '').trim().toUpperCase();
+    const amt = amtIdx >= 0 ? parseFloat(row[amtIdx]) || 0 : 0;
+    const typeMatch = order.match(/[A-Z]{2,3}/);
+    const tc = typeMatch ? typeMatch[0] : '';
+    if (tc === 'DCV' || tc === 'DCF') { foodOrders++; foodValue += amt; }
+    else if (tc === 'DGC' || tc === 'DGS' || tc === 'DSN') { nonFoodOrders++; nonFoodValue += amt; }
+    else if (tc === 'HCP') { plOrders++; }
   }
 
   return {
