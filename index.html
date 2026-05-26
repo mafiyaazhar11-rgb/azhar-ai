@@ -429,14 +429,32 @@ footer{position:relative;z-index:5;text-align:center;padding:28px;border-top:1px
       </div>
 
       <div style="margin-top:24px;padding-top:20px;border-top:1px solid var(--border);">
-        <div class="card-ey">Admin Only — Upload Today's Excel File</div>
-        <div class="upload" id="ds-upload-box" onclick="document.getElementById('ds-file').click()">
-          <div class="upload-icon">📊</div>
-          <div class="upload-txt">Click to Upload Dispatch Report (.xlsx or .csv)</div>
-          <div class="upload-sub" id="ds-file-name">Admin uploads once — team sees live data automatically</div>
+        <!-- Admin Login -->
+        <div id="admin-lock" style="text-align:center;padding:20px;">
+          <div style="font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:12px;">🔒 Admin Access Required</div>
+          <div style="display:flex;gap:8px;max-width:360px;margin:0 auto;">
+            <input type="password" id="admin-pwd" placeholder="Enter admin password..." 
+              style="flex:1;height:42px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:Montserrat,sans-serif;font-size:13px;outline:none;"
+              onkeydown="if(event.key==='Enter')checkAdminPwd()"/>
+            <button onclick="checkAdminPwd()" 
+              style="padding:10px 20px;background:transparent;border:1px solid var(--gold);color:var(--gold);font-family:Montserrat,sans-serif;font-size:10px;font-weight:600;letter-spacing:2px;text-transform:uppercase;cursor:pointer;">
+              Unlock
+            </button>
+          </div>
         </div>
-        <input type="file" id="ds-file" accept=".xlsx,.xls,.csv,.txt" style="display:none" onchange="doUpload(this)"/>
-        <div class="loader" id="ds-loader"><div class="ring"></div><div class="ring-txt">Processing your Excel file...</div></div>
+
+        <!-- Admin Upload (hidden until password entered) -->
+        <div id="admin-upload" style="display:none;">
+          <div class="card-ey">Admin Only — Upload Today's Excel File</div>
+          <div class="upload" id="ds-upload-box" onclick="document.getElementById('ds-file').click()">
+            <div class="upload-icon">📊</div>
+            <div class="upload-txt">Click to Upload Dispatch Report (.xlsx or .csv)</div>
+            <div class="upload-sub" id="ds-file-name">Admin uploads once — team sees live data automatically</div>
+          </div>
+          <input type="file" id="ds-file" accept=".xlsx,.xls,.csv,.txt" style="display:none" onchange="doUpload(this)"/>
+          <div class="loader" id="ds-loader"><div class="ring"></div><div class="ring-txt">Processing your Excel file...</div></div>
+          <button onclick="lockAdmin()" style="margin-top:10px;padding:6px 16px;background:transparent;border:1px solid var(--border);color:var(--muted);font-family:Montserrat,sans-serif;font-size:9px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;">🔒 Lock Admin</button>
+        </div>
       </div>
     </div>
   </div>
@@ -1109,6 +1127,31 @@ async function doExcel() {
 setCompany('aki');
 addInvItem();
 loadStatus();
+
+// Admin password - change this to your own password!
+const ADMIN_PWD = 'azhar2026';
+
+function checkAdminPwd() {
+  const pwd = document.getElementById('admin-pwd').value;
+  if (pwd === ADMIN_PWD) {
+    document.getElementById('admin-lock').style.display = 'none';
+    document.getElementById('admin-upload').style.display = 'block';
+    document.getElementById('admin-pwd').value = '';
+  } else {
+    document.getElementById('admin-pwd').style.borderColor = 'var(--red)';
+    document.getElementById('admin-pwd').placeholder = 'Wrong password!';
+    setTimeout(() => {
+      document.getElementById('admin-pwd').style.borderColor = 'var(--border)';
+      document.getElementById('admin-pwd').placeholder = 'Enter admin password...';
+    }, 2000);
+  }
+}
+
+function lockAdmin() {
+  document.getElementById('admin-lock').style.display = 'block';
+  document.getElementById('admin-upload').style.display = 'none';
+}
+
 </script>
 </body>
 </html>
