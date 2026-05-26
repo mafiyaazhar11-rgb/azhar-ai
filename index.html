@@ -543,6 +543,15 @@ textarea::placeholder,input::placeholder{color:var(--muted);}
 .cust-btn:hover{background:var(--green);color:var(--black);}
 .city-btn{border-color:rgba(91,141,238,0.3);color:#5b8dee;}
 .city-btn:hover{background:#5b8dee;color:#fff;}
+.date-pill{padding:6px 12px;background:var(--surface);border:1px solid var(--border);color:var(--muted);font-family:'Montserrat',sans-serif;font-size:10px;cursor:pointer;transition:all 0.2s;white-space:nowrap;}
+.date-pill:hover{border-color:var(--gold);color:var(--gold);}
+.date-pill.active{background:var(--gold);color:var(--black);border-color:var(--gold);font-weight:700;}
+.date-pill.today{border-color:var(--green);color:var(--green);}
+.date-pill.today.active{background:var(--green);color:var(--black);}
+.detail-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:12px;}
+.detail-row:last-child{border-bottom:none;}
+.detail-name{color:var(--text);}
+.detail-val{color:var(--gold);font-weight:600;}
 .chat-input-row{display:flex;gap:10px;align-items:flex-end;}
 .chat-textarea{flex:1;min-height:52px;max-height:120px;resize:none;padding:14px 16px;}
 .send-btn{width:52px;height:52px;flex-shrink:0;background:linear-gradient(135deg,var(--gold),var(--gold2));border:none;color:var(--black);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;}
@@ -632,11 +641,22 @@ footer{position:relative;z-index:5;text-align:center;padding:28px;border-top:1px
     <div class="card">
       <div class="card-eyebrow">Daily Dispatch Control</div>
       <h3>Daily Dispatch Control</h3>
-      <p>Upload today's dispatch report once — your entire operations team gets instant answers about orders, customers, drivers and values.</p>
-      <div class="dispatch-status" id="dispatch-status">
-        <div class="dispatch-status-icon">⏳</div>
-        <div class="dispatch-status-text">Checking for today's dispatch data...</div>
+      <p>Upload today's dispatch report — your whole team sees live data instantly. Use the date slicer to view any previous day.</p>
+
+      <!-- STATUS + DATE SLICER ROW -->
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:16px;">
+        <div class="dispatch-status" id="dispatch-status" style="flex:1;margin-bottom:0;">
+          <div class="dispatch-status-icon">⏳</div>
+          <div class="dispatch-status-text">Checking for today's dispatch data...</div>
+        </div>
+        <!-- DATE SLICER -->
+        <div id="date-slicer-wrap" style="display:none;flex-shrink:0;">
+          <div style="font-size:9px;letter-spacing:2px;color:var(--gold);text-transform:uppercase;margin-bottom:6px;">📅 Select Date</div>
+          <div id="date-slicer" style="display:flex;gap:6px;flex-wrap:wrap;max-width:500px;"></div>
+        </div>
       </div>
+
+      <!-- KPI DASHBOARD -->
       <div class="kpi-grid" id="kpi-grid" style="display:none">
         <div class="kpi"><div class="kpi-val" id="kpi-orders">—</div><div class="kpi-label">Total Orders</div></div>
         <div class="kpi"><div class="kpi-val" id="kpi-value">—</div><div class="kpi-label">Total Value (AED)</div></div>
@@ -644,6 +664,22 @@ footer{position:relative;z-index:5;text-align:center;padding:28px;border-top:1px
         <div class="kpi"><div class="kpi-val" id="kpi-routes">—</div><div class="kpi-label">Routes</div></div>
         <div class="kpi"><div class="kpi-val" id="kpi-drivers">—</div><div class="kpi-label">Drivers</div></div>
         <div class="kpi"><div class="kpi-val" id="kpi-luluval">—</div><div class="kpi-label">Lulu Value (AED)</div></div>
+      </div>
+
+      <!-- TOP CUSTOMERS + TOP DRIVERS TABLES -->
+      <div id="detail-tables" style="display:none;margin-bottom:20px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+          <!-- Top Customers -->
+          <div style="background:var(--surface);border:1px solid var(--border);padding:16px;">
+            <div style="font-size:9px;letter-spacing:2px;color:var(--gold);text-transform:uppercase;margin-bottom:12px;">💰 Top Customers by Value</div>
+            <div id="top-customers-table"></div>
+          </div>
+          <!-- Top Drivers -->
+          <div style="background:var(--surface);border:1px solid var(--border);padding:16px;">
+            <div style="font-size:9px;letter-spacing:2px;color:var(--gold);text-transform:uppercase;margin-bottom:12px;">🚚 Top 5 Drivers</div>
+            <div id="top-drivers-table"></div>
+          </div>
+        </div>
       </div>
       <div id="quick-section" style="display:none">
         <div class="field-label" style="margin-bottom:10px;">📊 Key Stats — One Click</div>
