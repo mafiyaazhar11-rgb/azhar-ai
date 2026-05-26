@@ -230,98 +230,1398 @@ footer{position:relative;z-index:5;text-align:center;padding:28px;border-top:1px
 
   <!-- DISPATCH CONTROL -->
   <div class="panel active" id="dispatch">
-    <div class="card">
+    <div class="card" style="padding:28px;">
       <div class="card-eyebrow">Daily Dispatch Control</div>
-      <h3>Daily Dispatch Control</h3>
-      <p>Upload today's dispatch report — your whole team sees live data instantly. Use the date slicer to view any previous day.</p>
+      <h3>Operations Dashboard</h3>
+      <p>Upload your daily Excel dispatch report — full live dashboard for your entire team.</p>
 
-      <!-- STATUS + DATE SLICER ROW -->
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:16px;">
-        <div class="dispatch-status" id="dispatch-status" style="flex:1;margin-bottom:0;">
+      <!-- STATUS + DATE SLICER -->
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:20px;">
+        <div class="dispatch-status" id="dispatch-status" style="flex:1;min-width:200px;margin:0;">
           <div class="dispatch-status-icon">⏳</div>
           <div class="dispatch-status-text">Checking for today's dispatch data...</div>
         </div>
-        <!-- DATE SLICER -->
-        <div id="date-slicer-wrap" style="display:none;flex-shrink:0;">
+        <div id="date-slicer-wrap" style="display:none;">
           <div style="font-size:9px;letter-spacing:2px;color:var(--gold);text-transform:uppercase;margin-bottom:6px;">📅 Select Date</div>
-          <div id="date-slicer" style="display:flex;gap:6px;flex-wrap:wrap;max-width:500px;"></div>
+          <div id="date-slicer" style="display:flex;gap:6px;flex-wrap:wrap;max-width:460px;"></div>
         </div>
       </div>
 
-      <!-- KPI DASHBOARD -->
-      <div class="kpi-grid" id="kpi-grid" style="display:none">
-        <div class="kpi"><div class="kpi-val" id="kpi-orders">—</div><div class="kpi-label">Total Orders</div></div>
-        <div class="kpi"><div class="kpi-val" id="kpi-value">—</div><div class="kpi-label">Total Value (AED)</div></div>
-        <div class="kpi"><div class="kpi-val" id="kpi-lulu">—</div><div class="kpi-label">Lulu Orders</div></div>
-        <div class="kpi"><div class="kpi-val" id="kpi-routes">—</div><div class="kpi-label">Routes</div></div>
-        <div class="kpi"><div class="kpi-val" id="kpi-drivers">—</div><div class="kpi-label">Drivers</div></div>
-        <div class="kpi"><div class="kpi-val" id="kpi-luluval">—</div><div class="kpi-label">Lulu Value (AED)</div></div>
+      <!-- KPI ROW -->
+      <div class="kpi-grid" id="kpi-grid" style="display:none;grid-template-columns:repeat(6,1fr);margin-bottom:20px;">
+        <div class="kpi" style="border-color:rgba(201,168,76,0.4);">
+          <div class="kpi-val" id="kpi-orders" style="font-size:26px;">—</div>
+          <div class="kpi-label">Total Orders</div>
+          <div style="font-size:10px;color:var(--green);margin-top:4px;" id="kpi-orders-sub">↑ vs yesterday</div>
+        </div>
+        <div class="kpi" style="border-color:rgba(201,168,76,0.4);">
+          <div class="kpi-val" id="kpi-value" style="font-size:22px;">—</div>
+          <div class="kpi-label">Total Value (AED)</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:4px;">Million</div>
+        </div>
+        <div class="kpi" style="border-color:rgba(78,203,141,0.4);">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:2px;">
+            <div class="kpi-val" id="kpi-food" style="font-size:20px;color:#4ecb8d;">—</div>
+            <div style="font-size:10px;color:var(--muted);">FOOD</div>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;">
+            <div class="kpi-val" id="kpi-nonfood" style="font-size:20px;color:#e84b8a;">—</div>
+            <div style="font-size:10px;color:var(--muted);">NON-FOOD</div>
+          </div>
+          <div class="kpi-label">Food / Non-Food</div>
+        </div>
+        <div class="kpi" style="border-color:rgba(91,141,238,0.4);">
+          <div class="kpi-val" id="kpi-routes" style="font-size:26px;color:#5b8dee;">—</div>
+          <div class="kpi-label">Routes</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:4px;" id="kpi-drivers-sub">— drivers</div>
+        </div>
+        <div class="kpi" style="border-color:rgba(78,203,141,0.4);">
+          <div class="kpi-val" id="kpi-dubai" style="font-size:26px;color:#4ecb8d;">—</div>
+          <div class="kpi-label">Dubai Orders</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:4px;" id="kpi-dubai-sub">AED —</div>
+        </div>
+        <div class="kpi" style="border-color:rgba(91,141,238,0.4);">
+          <div class="kpi-val" id="kpi-abudhabi" style="font-size:26px;color:#5b8dee;">—</div>
+          <div class="kpi-label">Abu Dhabi</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:4px;" id="kpi-abudhabi-sub">AED —</div>
+        </div>
       </div>
 
-      <!-- TOP CUSTOMERS + TOP DRIVERS TABLES -->
-      <div id="detail-tables" style="display:none;margin-bottom:20px;">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-          <!-- Top Customers -->
-          <div style="background:var(--surface);border:1px solid var(--border);padding:16px;">
-            <div style="font-size:9px;letter-spacing:2px;color:var(--gold);text-transform:uppercase;margin-bottom:12px;">💰 Top Customers by Value</div>
+      <!-- CHARTS ROW: Bar chart + Top Customers -->
+      <div id="detail-tables" style="display:none;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+
+          <!-- ORDERS BY CITY BAR CHART -->
+          <div style="background:var(--surface);border:1px solid var(--border);padding:20px;">
+            <div style="font-size:10px;letter-spacing:2px;color:var(--gold);text-transform:uppercase;margin-bottom:16px;">📊 Orders by City</div>
+            <div id="city-bars" style="display:flex;align-items:flex-end;gap:12px;height:120px;justify-content:center;"></div>
+            <div id="city-labels" style="display:flex;gap:12px;justify-content:center;margin-top:8px;flex-wrap:wrap;"></div>
+          </div>
+
+          <!-- TOP CUSTOMERS -->
+          <div style="background:var(--surface);border:1px solid var(--border);padding:20px;">
+            <div style="font-size:10px;letter-spacing:2px;color:var(--gold);text-transform:uppercase;margin-bottom:12px;">💰 Top Customers by Value</div>
             <div id="top-customers-table"></div>
           </div>
-          <!-- Top Drivers -->
-          <div style="background:var(--surface);border:1px solid var(--border);padding:16px;">
-            <div style="font-size:9px;letter-spacing:2px;color:var(--gold);text-transform:uppercase;margin-bottom:12px;">🚚 Top 5 Drivers</div>
+        </div>
+
+        <!-- DRIVERS + CITY CARDS ROW -->
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:20px;">
+
+          <!-- TOP 5 DRIVERS -->
+          <div style="background:var(--surface);border:1px solid var(--border);padding:20px;">
+            <div style="font-size:10px;letter-spacing:2px;color:var(--gold);text-transform:uppercase;margin-bottom:12px;">🚚 Top 5 Drivers</div>
             <div id="top-drivers-table"></div>
           </div>
+
+          <!-- CITY VALUE CARDS -->
+          <div style="background:var(--surface);border:1px solid var(--border);padding:20px;">
+            <div style="font-size:10px;letter-spacing:2px;color:var(--gold);text-transform:uppercase;margin-bottom:12px;">📍 Value by City</div>
+            <div id="city-value-list"></div>
+          </div>
+
+          <!-- AI ASK BOX -->
+          <div style="background:#0d1508;border:1px solid rgba(78,203,141,0.3);padding:20px;">
+            <div style="font-size:10px;letter-spacing:2px;color:var(--green);text-transform:uppercase;margin-bottom:12px;">✦ Ask AI Anything</div>
+            <button class="quick-btn" onclick="askQuick('How many Lulu orders today and total value?')" style="width:100%;margin-bottom:6px;text-align:left;padding:8px 12px;font-size:11px;">🛒 How many Lulu orders?</button>
+            <button class="quick-btn" onclick="askQuick('Who is the top driver today?')" style="width:100%;margin-bottom:6px;text-align:left;padding:8px 12px;font-size:11px;">🚚 Top driver today?</button>
+            <button class="quick-btn" onclick="askQuick('Total value for Dubai today?')" style="width:100%;margin-bottom:12px;text-align:left;padding:8px 12px;font-size:11px;">📍 Dubai total value?</button>
+            <div style="display:flex;gap:6px;">
+              <input type="text" id="dispatch-quick-input" placeholder="Ask anything..." style="flex:1;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:Montserrat,sans-serif;font-size:11px;padding:8px 10px;outline:none;" onkeydown="if(event.key==='Enter'){askQuick(this.value);this.value='';}"/>
+              <button onclick="askQuick(document.getElementById('dispatch-quick-input').value);document.getElementById('dispatch-quick-input').value='';" style="padding:8px 12px;background:var(--green);border:none;color:var(--black);cursor:pointer;font-weight:700;">→</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- FULL QUICK BUTTONS -->
+        <div style="background:var(--surface);border:1px solid var(--border);padding:20px;margin-bottom:16px;">
+          <div style="font-size:10px;letter-spacing:2px;color:var(--gold);text-transform:uppercase;margin-bottom:12px;">🛒 Quick Reports — One Click</div>
+          <div class="quick-btns" style="margin-bottom:8px;">
+            <button class="quick-btn cust-btn" onclick="askQuick('All LULU orders today — total count, total value AED, breakdown by branch.')">🟡 Lulu</button>
+            <button class="quick-btn cust-btn" onclick="askQuick('All CARREFOUR orders today — total count and value AED.')">🔵 Carrefour</button>
+            <button class="quick-btn cust-btn" onclick="askQuick('All UNION COOP orders today — count and value.')">🟢 Union Coop</button>
+            <button class="quick-btn cust-btn" onclick="askQuick('All SPINNEYS orders today — count and value.')">🟣 Spinneys</button>
+            <button class="quick-btn cust-btn" onclick="askQuick('All WAITROSE orders today — count and value.')">⚪ Waitrose</button>
+            <button class="quick-btn cust-btn" onclick="askQuick('All CHOITHRAMS orders today — count and value.')">🟠 Choithrams</button>
+            <button class="quick-btn cust-btn" onclick="askQuick('All WEST ZONE orders today — count and value.')">🔴 West Zone</button>
+            <button class="quick-btn cust-btn" onclick="askQuick('All GEANT orders today — count and value.')">🟤 Geant</button>
+          </div>
+          <div class="quick-btns">
+            <button class="quick-btn city-btn" onclick="askQuick('All orders for DUBAI today — count and value.')">📍 Dubai</button>
+            <button class="quick-btn city-btn" onclick="askQuick('All orders for ABU DHABI today — count and value.')">📍 Abu Dhabi</button>
+            <button class="quick-btn city-btn" onclick="askQuick('All orders for SHARJAH today — count and value.')">📍 Sharjah</button>
+            <button class="quick-btn city-btn" onclick="askQuick('All orders for FUJAIRAH today — count and value.')">📍 Fujairah</button>
+            <button class="quick-btn city-btn" onclick="askQuick('All orders for AL AIN today — count and value.')">📍 Al Ain</button>
+            <button class="quick-btn city-btn" onclick="askQuick('All orders for RAK today — count and value.')">📍 RAK</button>
+          </div>
+        </div>
+
+        <!-- AI ANSWER -->
+        <div class="output-wrap" id="dispatch-out">
+          <div class="output-header"><span class="output-label">✦ Dispatch Intelligence</span><button class="copy-btn" onclick="copyEl('dispatch-out-text')">Copy</button></div>
+          <div class="output-body" id="dispatch-out-text"></div>
         </div>
       </div>
-      <div id="quick-section" style="display:none">
-        <div class="field-label" style="margin-bottom:10px;">📊 Key Stats — One Click</div>
-        <div class="quick-btns" style="margin-bottom:16px;">
-          <button class="quick-btn stat-btn" onclick="askQuick('What is the total number of orders and total value in AED for today? Give me just the numbers clearly.')">📦 Total Orders</button>
-          <button class="quick-btn stat-btn" onclick="askQuick('Who are the top 5 drivers by number of deliveries today? List name and count.')">🚚 Top 5 Drivers</button>
-          <button class="quick-btn stat-btn" onclick="askQuick('What is the total sales value in AED for today? Break it down by city.')">💰 Total Sales</button>
-          <button class="quick-btn stat-btn" onclick="askQuick('How many routes are running today and how many orders per route?')">🗺️ Routes Today</button>
-        </div>
-        <div class="field-label" style="margin-bottom:10px;">🛒 By Customer — One Click</div>
-        <div class="quick-btns" style="margin-bottom:16px;">
-          <button class="quick-btn cust-btn" onclick="askQuick('Show me all LULU orders today — total count, total value in AED, and breakdown by branch.')">🟡 Lulu</button>
-          <button class="quick-btn cust-btn" onclick="askQuick('Show me all CARREFOUR orders today — total count and total value in AED.')">🔵 Carrefour</button>
-          <button class="quick-btn cust-btn" onclick="askQuick('Show me all UNION COOP orders today — total count and total value in AED.')">🟢 Union Coop</button>
-          <button class="quick-btn cust-btn" onclick="askQuick('Show me all SPINNEYS orders today — total count and total value in AED.')">🟣 Spinneys</button>
-          <button class="quick-btn cust-btn" onclick="askQuick('Show me all WAITROSE orders today — total count and total value in AED.')">⚪ Waitrose</button>
-          <button class="quick-btn cust-btn" onclick="askQuick('Show me all CHOITHRAMS orders today — total count and total value in AED.')">🟠 Choithrams</button>
-          <button class="quick-btn cust-btn" onclick="askQuick('Show me all WEST ZONE orders today — total count and total value in AED.')">🔴 West Zone</button>
-          <button class="quick-btn cust-btn" onclick="askQuick('Show me all GEANT orders today — total count and total value in AED.')">🟤 Geant</button>
-        </div>
-        <div class="field-label" style="margin-bottom:10px;">📍 By City — One Click</div>
-        <div class="quick-btns" style="margin-bottom:20px;">
-          <button class="quick-btn city-btn" onclick="askQuick('Total orders and total value for DUBAI today.')">📍 Dubai</button>
-          <button class="quick-btn city-btn" onclick="askQuick('Total orders and total value for ABU DHABI today.')">📍 Abu Dhabi</button>
-          <button class="quick-btn city-btn" onclick="askQuick('Total orders and total value for SHARJAH today.')">📍 Sharjah</button>
-          <button class="quick-btn city-btn" onclick="askQuick('Total orders and total value for FUJAIRAH today.')">📍 Fujairah</button>
-          <button class="quick-btn city-btn" onclick="askQuick('Total orders and total value for AL AIN today.')">📍 Al Ain</button>
-          <button class="quick-btn city-btn" onclick="askQuick('Total orders and total value for RAK and northern emirates today.')">📍 RAK/North</button>
-        </div>
-        <div class="field-label">Ask Anything About Today's Dispatch</div>
-        <div class="chat-input-row">
-          <textarea id="dispatch-input" class="chat-textarea" placeholder="e.g. How many Lulu orders? What is total value for Sharjah? Which driver has most deliveries?" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();askDispatch()}" rows="2"></textarea>
-          <button class="send-btn" id="dispatch-send" onclick="askDispatch()">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-          </button>
-        </div>
-      </div>
-      <div class="output-wrap" id="dispatch-out" style="margin-top:14px;">
-        <div class="output-header"><span class="output-label">✦ Dispatch Intelligence</span><button class="copy-btn" onclick="copyEl('dispatch-out-text')">Copy</button></div>
-        <div class="output-body" id="dispatch-out-text"></div>
-      </div>
-      <div style="margin-top:28px;padding-top:22px;border-top:1px solid var(--border);">
-        <div class="card-eyebrow">Admin Only — Upload Today's Dispatch Data</div>
+
+      <!-- ADMIN UPLOAD -->
+      <div style="margin-top:24px;padding-top:20px;border-top:1px solid var(--border);">
+        <div class="card-eyebrow">Admin Only — Upload Today's Excel File</div>
         <div class="upload-box" onclick="document.getElementById('dispatch-file').click()">
           <div class="upload-icon">📊</div>
-          <div class="upload-text">Upload Today's Dispatch Report (.xlsx or .csv)</div>
-          <div class="upload-sub" id="dispatch-file-name">Admin uploads once daily — entire team sees live data automatically</div>
+          <div class="upload-text">Upload Daily Dispatch Report (.xlsx or .csv)</div>
+          <div class="upload-sub" id="dispatch-file-name">Admin uploads once every morning — team sees live dashboard automatically</div>
         </div>
-        <input type="file" id="dispatch-file" accept=".csv,.xlsx,.xls,.txt" style="display:none" onchange="uploadDispatch(this)"/>
-        <div class="loader" id="dispatch-loader"><div class="loader-ring"></div><div class="loader-text">Processing dispatch data...</div></div>
+        <input type="file" id="dispatch-file" accept=".xlsx,.xls,.csv,.txt" style="display:none" onchange="uploadDispatch(this)"/>
+        <div class="loader" id="dispatch-loader"><div class="loader-ring"></div><div class="loader-text">Processing your Excel file...</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- REJECTION ANALYSIS -->
+  <div class="panel" id="rejection">
+    <div class="card">
+      <div class="card-eyebrow">Daily Rejection Analysis</div>
+      <h3>Daily Rejection Analysis</h3>
+      <p>Upload your daily rejection report or paste rejection data — get a full analysis with reasons, patterns, top customers with rejections, and recommendations to reduce returns.</p>
+      <div class="upload-box" onclick="document.getElementById('rejection-file').click()">
+        <div class="upload-icon">📋</div>
+        <div class="upload-text">Upload Daily Rejection Report (.xlsx or .csv)</div>
+        <div class="upload-sub" id="rejection-file-name">Or paste rejection data below</div>
+      </div>
+      <input type="file" id="rejection-file" accept=".csv,.xlsx,.xls,.txt" style="display:none" onchange="handleGenericFile(this,'rejection-data','rejection-file-name','rejection-upload-box')"/>
+      <div class="upload-box" id="rejection-upload-box" style="display:none"></div>
+      <div class="field-label">Rejection Data (paste here or upload above)</div>
+      <textarea id="rejection-data" style="min-height:130px" placeholder="Paste your rejection/returns data here...&#10;&#10;e.g. Order#, Customer, Item, Reason, Value, Date..."></textarea>
+      <div class="field-label">Analysis Type</div>
+      <div class="options-row" id="rej-type">
+        <div class="option-pill sel" onclick="selOpt(this,'rej-type')">Full Analysis</div>
+        <div class="option-pill" onclick="selOpt(this,'rej-type')">By Customer</div>
+        <div class="option-pill" onclick="selOpt(this,'rej-type')">By Reason</div>
+        <div class="option-pill" onclick="selOpt(this,'rej-type')">By Product</div>
+        <div class="option-pill" onclick="selOpt(this,'rej-type')">Recommendations</div>
+      </div>
+      <button class="btn-primary" id="rej-btn" onclick="runRejection()"><span>Analyse Daily Rejections</span></button>
+      <div class="loader" id="rej-loader"><div class="loader-ring"></div><div class="loader-text">Analysing daily rejection data...</div></div>
+      <div class="output-wrap" id="rej-out">
+        <div class="output-header"><span class="output-label">✦ Daily Rejection Analysis</span><button class="copy-btn" onclick="copyEl('rej-out-text')">Copy</button></div>
+        <div class="output-body" id="rej-out-text"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EXECUTIVE SUMMARY -->
+  <div class="panel" id="summary">
+    <div class="card">
+      <div class="card-eyebrow">Executive Summary</div>
+      <h3>Executive Summary Generator</h3>
+      <p>Paste any report, email thread, meeting notes or document — receive a sharp executive summary ready for your CEO or GM.</p>
+      <div class="field-label">Source Document or Report</div>
+      <textarea id="summary-text" style="min-height:160px" placeholder="Paste your document, report, email thread, or meeting notes here..."></textarea>
+      <div class="field-label">Output Format</div>
+      <div class="options-row" id="sum-type">
+        <div class="option-pill sel" onclick="selOpt(this,'sum-type')">Executive Brief</div>
+        <div class="option-pill" onclick="selOpt(this,'sum-type')">Bullet Points</div>
+        <div class="option-pill" onclick="selOpt(this,'sum-type')">Action Items</div>
+        <div class="option-pill" onclick="selOpt(this,'sum-type')">Key Decisions</div>
+        <div class="option-pill" onclick="selOpt(this,'sum-type')">Operations Report</div>
+      </div>
+      <button class="btn-primary" id="sum-btn" onclick="runSummary()"><span>Generate Executive Summary</span></button>
+      <div class="loader" id="sum-loader"><div class="loader-ring"></div><div class="loader-text">Processing your document...</div></div>
+      <div class="output-wrap" id="sum-out">
+        <div class="output-header"><span class="output-label">✦ Executive Summary</span><button class="copy-btn" onclick="copyEl('sum-out-text')">Copy</button></div>
+        <div class="output-body" id="sum-out-text"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EMAIL WRITER -->
+  <div class="panel" id="email">
+    <div class="card">
+      <div class="card-eyebrow">Professional Email Writer</div>
+      <h3>Professional Email Writer</h3>
+      <p>Paste your draft or describe what you need — receive a professionally written email with subject line options. Perfect for customer complaints, supplier communications and management updates.</p>
+      <div class="field-label">Your Draft or Description</div>
+      <textarea id="email-body" style="min-height:130px" placeholder="Paste your email draft here, or describe what you need to communicate...&#10;&#10;e.g. Write email to Lulu complaining about 3 rejected deliveries this week and requesting urgent meeting"></textarea>
+      <div class="field-label">Email Type</div>
+      <div class="options-row" id="email-type">
+        <div class="option-pill sel" onclick="selOpt(this,'email-type')">Fix Grammar &amp; Polish</div>
+        <div class="option-pill" onclick="selOpt(this,'email-type')">Customer Complaint</div>
+        <div class="option-pill" onclick="selOpt(this,'email-type')">Supplier Communication</div>
+        <div class="option-pill" onclick="selOpt(this,'email-type')">Management Update</div>
+        <div class="option-pill" onclick="selOpt(this,'email-type')">Apology Letter</div>
+        <div class="option-pill" onclick="selOpt(this,'email-type')">Follow Up</div>
+      </div>
+      <div class="field-label">Recipient (Optional)</div>
+      <textarea id="email-recipient" style="min-height:48px" placeholder="e.g. Lulu procurement manager, CEO, Supplier, HR..."></textarea>
+      <button class="btn-primary" id="email-btn" onclick="runEmail()"><span>Write Professional Email</span></button>
+      <div class="loader" id="email-loader"><div class="loader-ring"></div><div class="loader-text">Writing professional email...</div></div>
+      <div class="diff-wrap" id="email-out">
+        <div class="diff-nav">
+          <button class="diff-btn on" onclick="switchDiff('corrected',this)">Final Email</button>
+          <button class="diff-btn" onclick="switchDiff('subject',this)">Subject Lines</button>
+          <button class="diff-btn" onclick="switchDiff('changes',this)">Notes</button>
+          <button class="diff-copy" onclick="copyDiff()">Copy</button>
+        </div>
+        <div class="diff-body" id="diff-corrected"></div>
+        <div class="diff-body" id="diff-subject" style="display:none"></div>
+        <div class="diff-body" id="diff-changes" style="display:none"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- QUOTATION MAKER -->
+  <div class="panel" id="quotation">
+    <div class="card">
+      <div class="card-eyebrow">Proforma Invoice</div>
+      <h3>Proforma Invoice Generator</h3>
+      <p>Select letterhead → fill details → add items → Preview → Download</p>
+
+      <!-- COMPANY SELECTOR -->
+      <div class="field-label">Select Company Letterhead</div>
+      <div class="options-row" id="q-company-sel" style="margin-bottom:24px;">
+        <div class="option-pill sel" onclick="selOpt(this,'q-company-sel');selectCompany('aki')" style="display:flex;align-items:center;gap:8px;padding:10px 16px;">
+          <img src="data:image/png;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDAAUDBAQEAwUEBAQFBQUGBwwIBwcHBw8LCwkMEQ8SEhEPERETFhwXExQaFRERGCEYGh0dHx8fExciJCIeJBweHx7/2wBDAQUFBQcGBw4ICA4eFBEUHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh7/wAARCAEtAawDASIAAhEBAxEB/8QAHQABAAEEAwEAAAAAAAAAAAAAAAYBBQcIAwQJAv/EAFsQAAEDAwIDBAUFBw0NBgcAAAEAAgMEBREGIQcSMQhBUWETFCJxgRUykaGzIzdCUnKx0RYnM1Vic3R1gpKUssEJFxgkNDZDVoOTotLwJSY4Y2ThRFNllaPC8f/EABoBAQACAwEAAAAAAAAAAAAAAAACAwEEBQb/xAAuEQACAgECBAQEBwEAAAAAAAAAAQIDEQQSBSExQRMyUXEUIjNhFSM0QlKBobH/2gAMAwEAAhEDEQA/ANy0REAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAERMoAiZCZWMoBEyiZAREWQEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAVHdNlVEBB9VVHFGCrqJNN27S9XSDeFlXVTRykYGeYhpbnOVgDWXaZ4jaPvstk1Fw/t1BXR78kk8mHN/Ga4ZDm+YK22wtdO3XpSkuHDel1QyINrbTVMYXgbuhk9ktP8AK5SPj4rd0LqlaoWxyn7lNyko5TMd/wCGFqn/AFSs/wDSJf0J/hg6p/1Ss/8ASJf0LWfYphei/DtN/H/pz/ibPU2Y/wAMHVP+qVn/AKRL+hd7T/as1rfL5Q2ag0baZKquqGU8LfWJd3vcGj6ytWcLLPZFoGXDj3YGyN5mwemqPcWxOwfpKp1Gh08KpSUehKu+yUksnoXTGU08ZmDRKWjn5emcb48lyINgAEXljqBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAWK+1lTNqeAGqA7/RxRSD3tmYVlRYy7Un3gtW/wRv2jFdp/qx90Qs8jPOQYREXtzihZ07DkXpOOjH8oIjtVS/3bxj+1YLWwHYObnjNWuwMNsk/1ywrT17xp5+xdR9RG9ARUBVV45HXCIiAIiIAiIgCIiAIiIAiIgCIiAIiIAiIgCIiAIiIAiIgCIiAIiIAiIgCIiAIiIAiIgCIiAIiIAiIgCIiAIiIAsZdqX7wWrf4I0f/AJGLJuVbdTWO16lsVVZLzTCqt9WzknhLi0PbkHGQQRuB0U65bJqXoyM1ui0eVWEwt5tVdlLhzcuaS01F2ssmPZbFP6WP+bICfocFhPiL2Xdd6djfV6flp9SUjWlxbCPRVDf9mSeb+SSfJeqp4nRZhN4f3OZZp5owLgrYTsFj9d65/wASS/bQrANTT1FJUSU1VBJBPG7lkjkYWuaR1BB3Cz/2DPvvXP8AiSX7aFT1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" style="height:30px;width:auto;"/> AKI
+        </div>
+        <div class="option-pill" onclick="selOpt(this,'q-company-sel');selectCompany('alphamed')" style="display:flex;align-items:center;gap:8px;padding:10px 16px;">
+          <img src="data:image/png;base64,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" style="height:26px;width:auto;"/> ALPHAMED
+        </div>
+      </div>
+
+      <!-- FROM / TO / REF -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:24px;">
+        <div>
+          <div class="field-label">From (Your Company)</div>
+          <input type="text" id="q-company" placeholder="Company name" style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:Montserrat,sans-serif;font-size:13px;padding:10px 12px;outline:none;margin-bottom:6px;display:block;"/>
+          <textarea id="q-address" placeholder="Address" style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:Montserrat,sans-serif;font-size:13px;padding:10px 12px;outline:none;resize:none;height:70px;display:block;margin-bottom:6px;"></textarea>
+          <input type="text" id="q-contact" placeholder="Tel / Email" style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:Montserrat,sans-serif;font-size:13px;padding:10px 12px;outline:none;display:block;"/>
+        </div>
+        <div>
+          <div class="field-label">Bill To (Client)</div>
+          <input type="text" id="q-client" placeholder="Client name" style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:Montserrat,sans-serif;font-size:13px;padding:10px 12px;outline:none;margin-bottom:6px;display:block;"/>
+          <textarea id="q-client-address" placeholder="Client address" style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:Montserrat,sans-serif;font-size:13px;padding:10px 12px;outline:none;resize:none;height:70px;display:block;"></textarea>
+        </div>
+        <div>
+          <div class="field-label">Invoice Details</div>
+          <input type="text" id="q-ref" placeholder="Reference No: PRO-INV-..." style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:Montserrat,sans-serif;font-size:13px;padding:10px 12px;outline:none;margin-bottom:6px;display:block;"/>
+          <input type="text" id="q-date" placeholder="Date: 26 May 2026" style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:Montserrat,sans-serif;font-size:13px;padding:10px 12px;outline:none;margin-bottom:6px;display:block;"/>
+          <input type="text" id="q-valid" placeholder="Valid Until: 30 days" style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:Montserrat,sans-serif;font-size:13px;padding:10px 12px;outline:none;margin-bottom:6px;display:block;"/>
+          <input type="text" id="q-terms" placeholder="Payment Terms" style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:Montserrat,sans-serif;font-size:13px;padding:10px 12px;outline:none;display:block;"/>
+        </div>
+      </div>
+
+      <!-- LINE ITEMS - CARD STYLE -->
+      <div class="field-label">Line Items</div>
+      <div id="quote-items" style="display:flex;flex-direction:column;gap:10px;margin-bottom:12px;"></div>
+
+      <button class="add-item-btn" onclick="addItem()" style="margin-bottom:20px;">+ Add Line Item</button>
+
+      <!-- TOTALS -->
+      <div style="padding:16px;background:var(--surface);border:1px solid var(--border);margin-bottom:16px;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+          <span style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Subtotal (excl. VAT)</span>
+          <span style="font-size:14px;color:var(--text);" id="q-subtotal">AED 0.00</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+          <span style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">VAT (5%)</span>
+          <span style="font-size:14px;color:var(--green);" id="q-vat">AED 0.00</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding-top:10px;border-top:1px solid var(--border);">
+          <span style="font-size:13px;color:var(--gold);text-transform:uppercase;letter-spacing:1px;font-weight:700;">Net Total (incl. VAT)</span>
+          <span style="font-size:22px;color:var(--gold);font-weight:700;font-family:'Cormorant Garamond',serif;" id="q-total">AED 0.00</span>
+        </div>
+      </div>
+
+      <!-- NOTES -->
+      <div class="field-label">Special Notes / Terms & Conditions</div>
+      <textarea id="q-notes" placeholder="e.g. All prices in AED. VAT 5% applicable." style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:Montserrat,sans-serif;font-size:13px;padding:12px 14px;resize:vertical;outline:none;min-height:60px;margin-bottom:16px;"></textarea>
+
+      <!-- ACTION BUTTONS -->
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button onclick="previewInvoice()" style="flex:1;padding:14px;background:transparent;border:1px solid var(--gold);color:var(--gold);font-family:Montserrat,sans-serif;font-size:10px;font-weight:600;letter-spacing:2px;text-transform:uppercase;cursor:pointer;">👁 Preview &amp; Print PDF</button>
+        <button onclick="downloadQuoteWord()" style="flex:1;padding:14px;background:transparent;border:1px solid #5b8dee;color:#5b8dee;font-family:Montserrat,sans-serif;font-size:10px;font-weight:600;letter-spacing:2px;text-transform:uppercase;cursor:pointer;">⬇ Download Word</button>
+        <button class="btn-primary" id="quote-btn" onclick="runQuotation()" style="flex:1;margin:0;"><span>✦ AI Generate Invoice</span></button>
+      </div>
+
+      <div class="loader" id="quote-loader" style="margin-top:16px;"><div class="loader-ring"></div><div class="loader-text">Generating your proforma invoice...</div></div>
+      <div class="output-wrap" id="quote-out" style="margin-top:16px;">
+        <div class="output-header"><span class="output-label">✦ AI Enhanced Invoice</span><button class="copy-btn" onclick="copyEl('quote-out-text')">Copy</button></div>
+        <div class="output-body" id="quote-out-text"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EXCEL SUPPORT -->
+  <div class="panel" id="excel">
+    <div class="card">
+      <div class="card-eyebrow">Excel Support</div>
+      <h3>Excel Support & Data Analysis</h3>
+      <p>Upload your Excel/CSV file or paste a formula — get instant fixes, explanations and data insights.</p>
+      <div class="upload-box" onclick="document.getElementById('excel-file').click()">
+        <div class="upload-icon">📊</div>
+        <div class="upload-text">Upload .csv or .xlsx file</div>
+        <div class="upload-sub" id="excel-file-name">File → Save As → CSV in Excel first</div>
+      </div>
+      <input type="file" id="excel-file" accept=".csv,.txt,.xlsx" style="display:none" onchange="handleExcelFile(this)"/>
+      <div class="field-label">Your Formula or Question</div>
+      <textarea id="excel-formula" placeholder="e.g. Fix my VLOOKUP returning #N/A&#10;e.g. Sum column C where column A equals Dubai&#10;e.g. Analyse this data and give me key insights"></textarea>
+      <div class="field-label">Context (Optional)</div>
+      <textarea id="excel-context" style="min-height:55px" placeholder="e.g. Column A = Date, Column B = Customer, Column C = Amount..."></textarea>
+      <button class="btn-primary" id="excel-btn" onclick="runExcel()"><span>Analyse & Fix Excel</span></button>
+      <div class="loader" id="excel-loader"><div class="loader-ring"></div><div class="loader-text">Analysing your Excel data...</div></div>
+      <div class="output-wrap" id="excel-out">
+        <div class="output-header"><span class="output-label">✦ Excel Analysis Complete</span><button class="copy-btn" onclick="copyEl('excel-out-text')">Copy</button></div>
+        <div class="output-body" id="excel-out-text"></div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="footer-text">
+    <span class="footer-gold">✦</span> Powered by Azhar <span class="footer-gold">✦</span>
+  </div>
+</footer>
+
+<script>
+
+// Company data
+const companies = {
+  aki: {
+    name: 'Al Khayyat Investments LLC',
+    address: 'P.O Box 11245, Dubai, UAE',
+    contact: 'Tel: 04 810 5555 | Fax: 04 885 9081 | info@aki.ae',
+    logo: 'data:image/png;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDAAUDBAQEAwUEBAQFBQUGBwwIBwcHBw8LCwkMEQ8SEhEPERETFhwXExQaFRERGCEYGh0dHx8fExciJCIeJBweHx7/2wBDAQUFBQcGBw4ICA4eFBEUHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh7/wAARCAEtAawDASIAAhEBAxEB/8QAHQABAAEEAwEAAAAAAAAAAAAAAAYBBQcIAwQJAv/EAFsQAAEDAwIDBAUFBw0NBgcAAAEAAgMEBREGIQcSMQhBUWETFCJxgRUykaGzIzdCUnKx0RYnM1Vic3R1gpKUssEJFxgkNDZDVoOTotLwJSY4Y2ThRFNllaPC8f/EABoBAQACAwEAAAAAAAAAAAAAAAACAwEEBQb/xAAuEQACAgECBAQEBwEAAAAAAAAAAQIDEQQSBSExQRMyUXEUIjNhFSM0QlKBobH/2gAMAwEAAhEDEQA/ANy0REAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAERMoAiZCZWMoBEyiZAREWQEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAVHdNlVEBB9VVHFGCrqJNN27S9XSDeFlXVTRykYGeYhpbnOVgDWXaZ4jaPvstk1Fw/t1BXR78kk8mHN/Ga4ZDm+YK22wtdO3XpSkuHDel1QyINrbTVMYXgbuhk9ktP8AK5SPj4rd0LqlaoWxyn7lNyko5TMd/wCGFqn/AFSs/wDSJf0J/hg6p/1Ss/8ASJf0LWfYphei/DtN/H/pz/ibPU2Y/wAMHVP+qVn/AKRL+hd7T/as1rfL5Q2ag0baZKquqGU8LfWJd3vcGj6ytWcLLPZFoGXDj3YGyN5mwemqPcWxOwfpKp1Gh08KpSUehKu+yUksnoXTGU08ZmDRKWjn5emcb48lyINgAEXljqBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAWK+1lTNqeAGqA7/RxRSD3tmYVlRYy7Un3gtW/wRv2jFdp/qx90Qs8jPOQYREXtzihZ07DkXpOOjH8oIjtVS/3bxj+1YLWwHYObnjNWuwMNsk/1ywrT17xp5+xdR9RG9ARUBVV45HXCIiAIiIAiIgCIiAIiIAiIgCIiAIiIAiIgCIiAIiIAiIgCIiAIiIAiIgCIiAIiIAiIgCIiAIiIAiIgCIiAIiIAsZdqX7wWrf4I0f/AJGLJuVbdTWO16lsVVZLzTCqt9WzknhLi0PbkHGQQRuB0U65bJqXoyM1ui0eVWEwt5tVdlLhzcuaS01F2ssmPZbFP6WP+bICfocFhPiL2Xdd6djfV6flp9SUjWlxbCPRVDf9mSeb+SSfJeqp4nRZhN4f3OZZp5owLgrYTsFj9d65/wASS/bQrANTT1FJUSU1VBJBPG7lkjkYWuaR1BB3Cz/2DPvvXP8AiSX7aFT17zp5EaPqI3gaF9KjeiqvHnXCIiAIiIAiL5e9jBl7mtHiSjeAfSK3yXm0sdyvulE0g4wZ2j+1c9NXUdRj0FVDLnpyPB/MoKyD6MzhnZRAQUUk8mAiIsgIiIAiIgCIiAIiIAiIgCIiAIiIAiIgCIiAIiIAiIgCIiAIiIAiIgCIhQAkAZKims+IGl9KSR0tzrzJcZ9qa3Usbp6qc93LG3Jx5nA81hXtNdoM6YnqNIaKmZJemjkq63HM2kJ/BaO+T37D39J32feGMWk7HFqG+ukr9YXWP01xrqkiSVheAfRBx3AGBnxPkABsvT7K1ZZ36IqVik8IkMV04hXylZLbbFbdORyYcH3aY1E4b5wxENB98hx3hd6Cw6qc0Gu1xVekzuaO308TPoe2Q/WpSxuF9KhTx0RZ1IHqDTGunUT/AJA4j1lPVAfczXW2mmjJ8DyMY7HxWu+teOvGvhrqd1i1bbLFVvaA+OT1dzWzxno9rmuGRt3jY9QtxCMrXjt06XpbnwwptRCForrTWMaJe/0Mvsub7ubkPwW7orIu1QsimmVXJqLaZZ9JdrzT9UWRam01W25xwHTUkgnZ7+U8rgPpWedE640lrSi9b0zfKO4sAy9sbsSM/KYcOb8QvL3GF37DebtYbrDdbNcamgroDmOeCQtc3xGR3Hw6LrXcGqa/LeGakNW1ykb/APHrgtYOJFplqIYYaDUMcZ9WrmNA5z3MlwMub59R3d4OBuxdZrhp/j3qCyXandTV1Fap4Z4j+C4TQ9D3jGCD3grJfZr4/M1o6LTGrXRU1/a3lp6hvsx1uB4d0mASR0Pd3hZQ/UZHDxjh11SsYwzWeW31gAAL3elifG4+Jw14z5Bct220Rlp7fTkXqEZ4nEm7eiqqNVVzjaCIiAK1X6/22ztjbUyufUS59DTQsMk02O5rBuff0HerXqPUVR8qnT2nYmVd4LWvmc7eGijd/pJcdScHlYN3eQyV3dN6cprT6Spkmlr7jOAKitqMGSTy8GtyThrcAeGck5wDoOj1jd3B4mp9P0jh8wAVFT8T8xvw5veulPw3t1XzPr7zequZ25fLUh30AjAU3AwFVVSrU/MZUmuhhXW3DaotFHLcbZUuqqeMF0kb2gPY3x22OPcFAInSRyB8b3McD1a4g/Utpp42ywvjc0Oa5pBB6ELV+5QGluVTTHOYpnM38iQuJxDTxqaceRtUy3cmSnS2v71Z5o4quV9fRB3tMkOXtHk7r8DlZss1zpLrboa+jlEkMrcg948QR3FayLJnAm4y+uV9pJLoywVDf3Ls8p+nI+hT4fq571XLnkxbWksoy6iBF3DVCIiAIiIAiIgCIiAIiIAiIgCIiAIiIAiIgCIiAIiIAiIgCIiAIiIAsZdpLX8vDzhhWXSicwXOqcKSh5t+WR4OX47+VoJ9+Fk1ao/3Qr1r1HR/KHeq+mqucjpz8sfLn4c31rZ0datvjF9Cq6W2DZqXNUTPrDVOkMkxd6Qveclzs5JPic7r0w4Qa3t2v9CW/UFvez0kkYZVwtO8EwGHMI7t9x4gg968yVnnsTaruNn4rM06yZzrbe4nslhPQSsYXsePA4a4e4+QXoOJ6Xxaty/b/wANHT27ZY9Te5qqvlnRfS8sdNBYs7V8DKjgBqoO/AgjkHvErCsprGvaeDTwF1eH4x6htnx524+tXaflbF/dELPKzzhGfFVKHqqL2yeeZxTs0VVVUNVFW0U8lPUwPbJFKw4cxwOQQe4gr0g4C67i4h8NbdfnPb681vq9exowGzswHbdwOzh5OXm03otqv7n5fHCr1TpuR3suZDWxDwwSx5+ti5XFqVOnf3RtaaxqW3sbchVVGo4gDJXl0dJFSQOqiOq9R1j7mNL6Yaya9yRiSaZzeaGgiP8ApJMdXH8Fmxcd+gJXR1jq2pnvzNE6TnppNRzRelnke8FltgOxme38J245Wd5IJwN1IdI6codN280tIXzTSv8AS1dVKQZqqU/OkkPe4/QBgDAACntx1GeZ96WsFFp+2mlpTNLJLIZqmpndzy1Ep+c97u8n6AMAYACvA6Iii3kyERRes4h6DpKuWjqtZ6ehqIXmOWKS5Qtexw6tILsgjwKyk30MN4JQd9lr/wAU7HPZ9UVE/o3Glq3mWOTG2TklvvBz8FlIcTeHX+vemf8A7rB/zLrXHX3C+40zqau1lpSohd1Y+5wEf1lRqtFK+G1olCxRfUwZnbPxWX+CVgmo6aovVVC6N1SwRwA7Eszkux5nH0ea4qW68EqapbPDqPSQe08zea7ROAPiAX4UhbxL4ctaB+rzTAx3fKsP/MtPTcLtrs3yXQsnqFKOES9FYrDrDSt/q30li1HaLpOxnO+OjrI5nNbkDJDSSBuN/MK+jddNpp4ZSmn0CIiwZCIiAIiIAiIgCIiAIiIAiIgCIiAIiIAiIgCIiAIiIAiIgCIiAHqoHxy4e0vErQNVp+WYU1UHCejqCM+imaDgkd4IJB8ip4QqYUoTcJKUeqIyjuWGebOouC/E6x3SWgqNH3SoLHENmpIHTxSDOxa5oI+nB8QFn7sjcEb/AKdv7dcaupnUEzInMoKF+PSAuGDI/B9n2cgNO+5zjAztRhMLoXcUttr8Poa8NLGLyGjCqgRc02gsY9qX7wWrf4I37RiycsY9qQfrBat/gjftGK2j6kfdELPKzznK+VUqi9ulg4pXJWwvYJc7++/dG59k2OUkf7aH9K15WwvYJ+/BdD4WKX7eFafEP00/Yto+ojeHICwb2lOOVHoCifYbHJDUamqGZaHAOZSM/HePxj+C09ep22PH2mOONLoGjk09p6SOp1LPGebo5tEwjZ7h0LvxW/E7ddF7lW1dyrZa6vqZamqmeXyyyuLnPcTkkkri8P4a7cWWdDdv1ChmK6kl0Zry/ac4hU2tG1lRVXGOoMs5klJNS137Ix57w4Z9xwe4L0g0TqO3as0vQaitUvpKSthErPFvi0+BBBB8wvLMLYnsYcUTpzUbtEXeoa213WTmo3yPIENTsA3wAf0/KDfErocT0anXvgua/wCFGltxLDN3kVAdgqrzJ0grNfNLacvVNLT3Ww2ytZKCHielY/Oe/cdfNXlETa5ow0n1PP7tWcKKXhvqmkrLG1zbHdQ90ETnFxgkZjmZk9R7QIzv1HcsMe5bwdvehbNwlt1eA3npLtGMkb8r45AcfHl+haP9F63htrtoTl1RytRBQnhBERdAo6G5/YG05T02i71qZ8Q9ara31VjyBkRRNB297nuz+SFsysMdjGmFPwGtTsYM1TUyH/ekf2LM68XrJbr5+52KViCCIi1i0IiIAiIgCIiAIiIAiIgCIiAIiIAiIgCIiAIiIAiIgCIiAIiIAiIgCLp3W6221Ub6y6V9NRUzN3S1EojY33k7BYq1P2keFFlc9kd9fdZWnHLQQOlBPgHbN+tWV1Ts8iyQlOMerMwotUb72v45Kj1fTOiKioe53LEaupAc89w5GA7+WVkPSdPxw1zSMrtTXag0Nb5MFtJbqQSVpHi50vMIz8CfEBWz0tlazZyMRtjLymYrlXUlvpH1dbVQ0tPGMvlmeGtaPMnYLB/aQ1l8ucHNT0unrVVV9tFK31q6vHoqZg524EZcOaYnb5gLfFw6LJlv4f6cgmgqrhDPfK6EhzKu6zOqpGu/GaHktYfyA1R7tQjl4A6sA7qRv2jFGjarY+6FnODPOY9FRUBVV7Y4wWaux3FfaniZcKPT9RDR1NRaJI5ayQcxpovTRFz2N/CfsAAdskE7DBwqthOwZ9925/xJL9tCtPXvGnk0W0+dGMeNmk7zoziLdLRe6qatmdKZ4qyUkmqjectk37+oPmCOihS397VvDE6+0Ga+3RF17swfPSta3JnZj24viACPMDxK0CORsRgqGg1K1FSx1XUzfW4WcyhX1E98UjZI3lj2nLXA4IPivlFv47MpPQrsu8ThxE0HFHXzsdfbY1sNezo5+3sy48HAb/ug7yWXh0XmXwZ17X8OteUOoKUvfTBwiroGn9ngJ9pvvGA4eYC9JrFdrfe7PSXa11LKmirIWzQSt6OY4ZBXkuI6TwLMrozq6axTj90d5EQ9FzzYMG9uBodwJqc91wpv6xWhTuufFb69t77xNT/GFN/XWhRXpuD/AEP7ObrPOiiIi65qnoh2RmBnZ/01gAczZ3bec8iywsWdk7/w/wClv3iT7Z6ymvEal/nT92dmvyoIiKkmEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAWu/aL7RFPoypm0xpJtNX35oxUVDzzQ0Z/FIHzn+XQd/gsn8dtXu0PwtvWoIHhtXFD6KlJGfuzzysOPInPwXmtVTzVVTLVVMz5p5Xl8kjzlz3E5JJ7ySutwzRK5uc+iNTU3OHyou2rtV6j1bcn1+orxV3GZ7i77tIS1vk1vzWjyACsu5zn3plV7tl6WEFFckc5tyZtf2IuF9HUUsnEW80rJntlMNqjkbkMLdnzYO2c7A92HeS2za0DpsonwYssen+FWmrVE0N9FbYXSYHWRzA55+LiVL14zVXSutcmdeqO2KGFjLtR/eE1Z/BG/aMWTVjLtSfeE1Z/BG/aMUKOVsX90Ss8jPORFUqi9wzihbCdgrfi/cx/wDRJftoVr2thOwV99+5fxJL9tCtPX/p5+xbR50bwOaC0g9Fop2w+F50fq79VVpp3iy3iQukDW+zT1JyXN8g75w9zvJb2qOcSNJW3W+jbjpq6MzDVxEMeBvFIN2vHm04P1d68xodU9NYp9jp2174tHl4iu+s9O3PSWqK/T14gMFZRyljh3OHUOHkRgj3q0L2MZKaUl3ORJYeAtpuxHxQNLWP4c3mc+hnc6a1Pe7aN3V8O/cd3AeId4hasrmoKmoobhT11JM+Cop5GywyMOHMe05a4HxBAKo1WnV9bgydVmyaZ6wsOQqnosd9n7iJScR+H9NdA6Nlzp8QXGBrslkoAy4fuXdR8R3FZEPReNsg65OMuqOxGSksowb23vvE1P8AGFN/XWhR6rfXtvfeJqf4wpv660KK9Jwb6D9znavzFERF1zUPRTsn/eA0t+8SfavWVFizsn/eA0t+8SfavWU14fUr86XudqvyIIiKomEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREBrp2+KmSLhXa6dmeSa7s58HryxSkfX+ZaSFegfbA0vNqbgxcHUjS6qtMrLjG0fhBgcHj4Mc8/BefjvDvXp+DSi6XFdcnM1a+fJ8rkhGZGAnAJC4199BncY8F1ZPkay6nqvYWtZZaFjBhraeMAeXKF3lH+HNzjvOgrDdo3h7Ku3QTZBzu6NpI+BV/wC9eFmsSZ2ovkiqxp2nXwDgVqqOeVsfpKTljyM8z+Zpa0DxJGFkl72saXOcAB1WPWNbxB1I6sJkOmLV6SGnBb9zr6pzXRvlB72Rgua09HOc8/ggnNTxNS9BJZTR5topdxb0VcNAa6r9PV8eGxvL6WXumhJ9h4946juIIUTwF7eFkZxUo9GcWSw8M+VsH2CyBxhuIJGTZJcD/bQrXxZ27DVSION7mOIAntNREPfzRu/MwrW1/wCnn7FlPnRviqIN1XC8auh2DW3tq8Lv1QafGurNS81ztcXLWtYN5qYHOfezJP5JPgtKWbjK9ZKiGOeF8M0bZI3tLXscMhwPUEeC87+0zw3dw44gyw0rCLNci6otzsbNbn2ove0kfAtXoOEatyXgyfToaGqr57kYsX0vlVyu61k0TIvZ+4k1fDTXkFzy59qqsQXKEAkuiz85o/Gadx47jvXovbK+kuVvpq6gqI6mlqImywyxu5mva4ZBB8wvKI7jBWy3ZD4zt0/URaF1RWctsnk/7OqZX4FPIf8ARuPcxx6HuPkduNxXRb14sOq6m5pLdvyyZl/tvva3gVO1xALrjTAfzif7CtCz1W63b2usUfDOzWpr/ulbdGyBveWxxuz9bm/StKCc7+Kt4RHFH9kdU8yCIi6pqnon2TnB3AHS+O6KUH4TPWVVhPsW3GKt4FW+mY8F9DV1EDwD0Jfzj6nhZsXiNUsXzX3OzU8wQREVJYEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREB8TRtkjcx7Q5rhhwIyCPBaY9oXs3Xa13Gr1JoGjfXWqVxlltsQzLTEkk+jb1ezwA3G43HTdFUcMhbGn1M9PLdArsrViwzyeq6Wpo6l9NVwS080Zw+ORha5p8COoXHkYznbxXqLqbRWktTtA1Bpy13Ijo+opmue33OxkKHT9n7hFM8vfo+EEnJ5Kqdg+hrwuzDjVbXzRZpvRvPJmIOyFxpsVt0yzQurK+O3yUr3G3VU7sRSMccmMu/BIJJGdiDjrsdiqvX2jqZpP6oKGpkxzNgpJBUTP/Jjjy53wCjVDwG4R0cnpItE0DnA5+7PklH0PcQprYNN2HT9Maax2egtkJ6spadsYPv5QMrk6myiye6tNZNuCkliRE6mDUevmer1lJU6c0zID6eGR/LX1zPxTyn7gw9+Dzkbewp1b6KloKGGio6eKnp4GCOKKJgaxjRsAAOgXOAvodFquWeRbggXGLhbpziZYm0F5jdDVQ5NJWxD7rA4ju8WnbLTsfIgFaXcSez9xF0bUSSx2t97toJ5au3sLzj91Hu5v1jzXocqOaD1APvW3ptfbp+S5opspjPqeTlTDNTTugqYpIZm9Y5Glrh8CpVwf1e/QnEaz6m9E6SKlmIqGN6uhcOV4Hng5HmAvSK/aY05f4jHe7DbLk3/1VKyXH84HCiVVwR4U1P7Joe0NHhFGYx/wkLpPjFdkHGcevoa/wji8pkr0vqewamtMN0sN1pK+llYHB8ModjIzgjqD4g7hItU2CW/ssEN0pprm5rnmmifzvY0dS7HzR78Z7lEaXgbwpppPSQ6MoGu6HLpCD7wXYKmen9P2TT1F6lYrRQ2ymzkxUsDYmk+JDQMlcWfh5+XJtxz3LoFAePHD6l4j8P6uxSBjK1h9PQzOH7HM0HG/gRlp8j5KfjoqEZUYTcJKS6kmso8ra7Tl/oq2ajqLNcGzQSOjkb6s84c04I6eS4vkS8/tRcP6K/8AQvVUsb4KvI3wC7K43JLDgafwSfc8qfkS8/tRcP6K/wDQqizXkEEWi457v8Wf+heqvIPBOQeCfjcu8EPgl/I8xNSXLXuo6C10N7F4roLVAYKMS08jjGwnJ3xuegyd8NA7grJ8iXn9qLh/RX/oXqtyDwTkHgsR4y4rEYLAejT/AHHlT8iXn9qLh/RX/oT5EvP7UXD+iv8A0L1W5B4JyDwCl+Ny/h/o+CX8jQbs18R75wuvdXDcbBd6ux3HlM7Iqd3PDINhI0EYdtsRkZ28N9ydJ8TdG6nlp4LXdXmpqNo6eellhkzjOMPaPAqXGMYGy+gxoOQN1zdVqYaiW/bhmzXXsWMn0EQItUsCIiAIiIAiIgCIiAIiIAiIgCIiAIiIAiIgCIiAIiIAiIgCIiAKhIHVcNXWUtIznqqmKBvjI8NH1rHXF+/Xa111vittdJTRyxPL+QD2jkY3IVF1yrjklGOWZMBBRcVIS6nic45JYCfoXLlXR5rJELhrqunoaSSrqpWxQRN5nvd0aPFcyjmt6G9XGnpqa1OpfQulxWMnAIfGcZG4Pn4HzULZOMcoyi9W+upbhSR1dHM2aCUZY9vQrs5UV0ta71QRXCiqZKSKj5i23inbgxNOfLzB33zlWmCx3uiqrfDXa15nsqeYxvd7UwJbhuCd84Oxz1VKtkksoltRkBE7kWyQCLilqYIozJJMxjB1c5wA/wCtlbrvfaShsU94ic2qp4W82YnA82+Dg9Oqi5xXUF2VOYZwsX6i1zXV2jTdLWyS3P8AXxTAkhxc3k5s9NlMdC1NRVaRoqqpldLPJGS57tyTkqmOphKW2Ppkk4tEgyixjwuvt4u+q6+K418s8UcLixhADWnnA6ALJwCnTarVuQlFxeGEUZ17quPS9JBIaV1RLUOLWNDsAYAyT9Ku1grpK+y0dbO1jJJ4WyODegyM7ZWfFi5be5jBcFQuAOEDgVjG/X+7x8VILTHXSMovWIGmFoABBAJycZPVYtujWlnuZUWzJ+UXHI+OGPmke1jGjcuOAF8UtXTVcJlpZ45mAlvMx2RkdVZuWcETnRRHWFyroLpbWUF4t1JGybNZHNOxrnN27j8eilMU0csbXxPa9rhkOacghQjapNoy1g5ScKgcCo/xErqq3aQrayilMM7OTkeACW5eAevkVDbdqC8HhTW3V1dI6tbVFjZnAEtHM0YAIx3lV2ahVycWu2SSjlZMp5RRHhRX1ty0uKuvqZKid07wXv6422UuVtVniQUl3ItYeAiIrDAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEPREPRAYj4873K1j/AMqT87Vx8af8rs2B/wDDOP5lx8Vpm3vXFBaaN3O+NghJbuOd7tx8BgqX8QdHTahbTSUlSyKamYWNbJnlcDjqRuOnh3rj2Qla7Nnqi+LUWskupDikiz+IPzLHNTfrrqHiC+w0FbNR0FM54kfTuAe7lHtHJH42ykDWa39RFP6KyB4j5A8yyE9MZ+ao1p2wan0nfJa51uiu4qosSvhlAe05yfnY+KvulN7IpPHcgklk5dJ6lu1BrObTN2qn1sZmdFDLIBzggZByOoIU71HK+LT1ylje6ORlJK5rmnBBDDgg+Kx1R6S1TWahl1HIKagqxU+nhilfzA7/ADSW9PZ2UruMGs6y3z0bqexBk0To3ETS5AcCPxfNKHZFSUk8dg0soj3A+rqqqK7OqZ5ZnB8WDI8uO4d4q0amGeNdOf8A1VL+Zivui9Mas0vFUsp22if1gtLjJNJty58G+a69w0hqus1dHqI/JLJmSRv9GJX8p5QBj5vkqn4jpimnnJL5cl+4r3WvtWmo57bUup5XVDWOe0DOC1xxuPIKNX65V03B+grZKyd1TJMOeXnIc72394V31fYtYajtjKKdllgayUSZjmkJJAIxu3zXRqtIarqNH02m3G0CGB/MJRK/mO5PTl81K3xXOTSfNYENqaLXcJHv4KUrnvc5xq9yTkn7o5XOiwOBcx8YpPtiqSaO1RNpam05JNa46aKX0hla97nHckbYHefqV1vlirLbw7FhpKmi9AyJ3rFTUucwNHNzEgAHvUVXPm2v24GUjHWP1sDjqbyPsQsscOjnQ1t84j+cqA23SV4uel32qhrbTNBHWmZ0vpJA4PDeUtLSzZS+w2/WFps0Fshjsj2QsLQ900ufoDVDTRlGW7HLBOySaIrwYP8A3tuPnTu/rtWXwFCuHmjp9PVFRXVtVHNVTN5OWIHkaM56nf6lMpC8RnkxzY2z0yt7SwddeGU2NSeUY049n/FrUP3ch+pqaH05LfrRHctQSTyRGJsVHAyUsZGxoA5gB3nH/wDcrn1npnVupzTCpNphbTl3KGSv9rmx19nyV/pYtYUtJFTQUVgZHE0MY0Ty7ADb8Fa7rbvcpJ4LNy2JEV4f3quteranStyqnzxekeyBzySWkbjfwIH0q36hB/v1058aqnP/AAhXf9Ruo5tbQ6inktkWJmPkZFI87AAHGWrv6r0ZXVeqYdRWiqp21DXMc6Ofm5SW9DkfDbCqddsq8NdGN0U/6LpxT/zEuJ/cM+0arHwsjq5eHFXHQSNjqnSzCJzugdgYK4taVt5qqObT9xqrBSSVMfPj08pcGtPNn5mPwSvvh1T6ho9ONjs0tirqV0rniUzSg52BGOXyVrluv5ehj9mDs8OdKQ09jlqr1RiWsrc+lE45i1mdhv0Pef8A2Ue0jcZtL68n05LM51BJUejY12/IXfMI+rPvU5J1sT/k1hx+/wAv/Kole9DapumojenSWmGUvjfyslkxlgGPwfJYsjJbFUny+xhSXclPFX/MS4e+P7RqgVu+8pXfwz/9mKY6ktWsL7aZbXUfI1PDMW872SSFwAIO2W+IC+KjRk0OgZtPUdTG+okkErpJAWtLuYE4xnA2WbYTsm5JdsGYySWCvBb/ADMb/CH/ANinCjfDyx1en7ALfWSQySiVz8xEluDjHUDwUkW5pouNSTITeZNhERXkAiIgCIiAIiIAiIgCIiAIiIAiIgCIiAIiIAiIgOldbtbbVEJbhWwUzXZ5fSPA5sdw8Vz0lTFVU0dRA4PikaHscOhB3BWNuKtvnvFHca9jiWWl7GRNH0yn6HM/mK88I7r8o6Rjp3uzLROMDx5dW/UfqWpHUN3eG/6JuKUNxdpNV2kajhsUUrpquV5aQxuzMAk5J27u7KuF/gpai2SMraqamgBBfJFMYjj8ob4WN6kE8docnvH2Kyq8ZYQdws1WuxSz2Yaxgh2mqbQ1true2VdFLWSHZ7qn0sm/hkn6lJPle1CsND6/TesjrDzjnHw6rEHDCeko9ZXKeoMccMEE7ySNmgPCydpOiOam9VQxWV7g8tdjMUY+ZHkeA3PmfJVaa3esJJc+ZKyOGfVs1TabnfZLRQSummijL3uDSGDBAxk9Tur9gFYi0tWMouK19k9BUTve+drY4W8znHnHiQB0O5wFO9Pautt5uc9tjjqaasgB5oZ2crttj0JGyso1G5Pd64MShh8iRBoVVGHa0t77jW0FHR11ZLRBxnMTG4bynBxzOGd/DwXGdeWT5FF3jbVzUgf6OR0cWTE7GcOGduoVvjQ9SGGSpOijser7dLp8XyOnq3Uhfy7RjmO/LnGfHZdd+ubUy8ss8tLcI657mtbE6EDJPTfOFnxYeo2slZCYVhrdVW+jrKumqIapppIhLM8MBa1h6HIPfjAHVW5uvbYLfBcpqG4QW+eQxsqXxt5cjyBJ7j3dxR31rqxhksdyjJJAwN1wXGjgr6KaiqW80MzCx48QVjrjZdqmOitjaGpmjp6gOc50cnKyQEDAz1P/ALrIdpqTU0jXup54CABiUAE7ddidlGFysk4ehlxwsluirrHYgKGpu8URa0ANqZxzYGw3O57lc6Gtoq+H01FUxVEecc0bg4fSsbcfmtFNa3ADmc6QE95Hs7KU2i72yxaLtU9wqGU8bqZnKOUkuPKCcAf9bqqFyU5QfJIk4/KmSkAIeiicuu7fFaI7ubbdHUD3FvpxC3lG+M7uBwT3/wBq5LlrmzUNFSV0kdY+kq2l0M0cWWux1HXY+R8Fb49a7kNrJQAq4VgqNU0kNuoa40da+KucGwtawc5LhluRnvGfoXHJq6i9dmo6akrKyenj9JUNga0+h8iSQM9dhnoVPxYLlkYZIsBMBWAavsh058vCoc6kzy4DTz834vL4rmh1BG6sp6apt9dSesnlhklY0sccZ5ctccHA6FHbH1GGctxsFmr7gyvrKGGaoZGYw9w/BOcjz6ldizWyhtNC2it8DYIGkkNb4nqsaw3audxgnjc6tngg9II6YHp7G5AJxv192FNL7q+zWUsiq5n+svAxTsbzSb+IGw+lUVXVyzLGMPBNwawiRphROt13a7fco6G50dwoXSM52PlhHK4b+BJ+pfc+t7dSXeC23GjrqGSox6F08YDX5OAdicb+PxwrfGh6kdrJThCArNe9R2611tNQymSetqnBsVPC3me7PfvgAe8ritmqrZW1NXSvMlJVUYzPDUANc0YznIJBG/UKSnHOEYwy/YRRel1ta66rnprZBWXB8LA8mniyHDPcSQP+tlzaf1ZbNQU1WaAVDZ6cH0kMrA146+eO7xUfHg+SfMztZIeYZxkZVVifhFdaye83aWrNZWSPEYLuYO5Bl2M5Ow9ynZ1LTyVtZSUNHV10lEQ2cw8gDXHOG+04ZOx6KNWpjZDcJRaeC+oujZbnT3ahbWUweGFxaWvaWua4bEEHoQV3lenkiERFkBERAEREAREQBERAEREAREQBERAF1rpVx0NvqKyU4ZDG559wC7Kt18tVFd6Y0tfHJJAfnMbK5gd7+UjKjNNxeDK6lktFgqJdOiGqudVGatjpaiMMjLeaT2nDducZJ71BuEtU+y6yrdPzkBspczJPV8ecY94ysuU1KyClbTsLyxreUczyXY953ViOhtNGu9eNA/1nn9J6X1mXm5vHPMtSyhuUZx6osUljDIbVEf39YCCOo7//ACVlV/RWI6RsRufyoaWX13mDvTmplLsjp+Er1UwR1FO6CXn5HDB5Xlp+kHIU6KpQUs92RlJPGDCHD620l21bc6OrjbJG+GowD3EvAyPP9C7/AAWrqmDU9Xa5JXGGSFzgxx2D2EbgdxwT9HkshUGi9P2+pbVUNFJBM3OHNqZe/r+EuN2h9PPuwuZo3CcP59pXBvNnOcZ8VrR0tkGpLsycpxZEtCAHi9f8t/8AnH/jauK0O9FxtreUYbmQnHf7AKnlDpOw0NydcaWkkjq3El0oqJCXZ65y7fKpFpKxQ3P5ShpJW1nMX+m9Zl5iT/K39yn8PPal3TyPETZBbNeq/UlxvDaGGhtlIyJz6h8UI9PMPaABd4nxwcL54QW+C7aVvlDUNzFUuDPd7Ox+B3U2OirELhNWx00kT5xiZkUz2Mkz1BaDgg+HRdN8Ok9BP9YIfRtrHcoAc97dvBu4AGQq/h5KSlPos/6Y3LBE+GFJcJa+fT1ZkUltqvWJAR1kGwb7sgOHuVx40WuSH1DUtGOWWlkDJHN6gZyw/wA7b4qY6YpnspprhPCIqiukM72YGWtIAY0+YaBnzJVruN5tWpap2m6R8kzxMPW8xENZGw5dudtyA34+Smqo+Fsk+vQwpfNkt1ZcJLToiqv9xt8c9XcXNe6Bw9kNcMMY7yDR9JPiopqmW5VvDmiuFZJTQ076oCnpaWPkYwe0C4/Xt0+lZfrrfR19A+gq4Gy00jeVzHdMdysLNB6e9RNG6Gpki5i5ofUvPIT1LRnAKWaWyXJPlgkppEA4ohzNI6UJc7Lafr/IYsxUr2uiZyvDjyg7HOystZpGyVdmhtFRSOkpYDmLmmcXMPk4nP8AYu7p6xW+x0xhoY3DOOZz3l7jjzP5lbVTKuxv1wRlJOKRAeP29Jafy5fzNXY1kAeDtGeuIqfG/fspbfdLWW9VAmudI6pc3IbzTPAHToA7A6BfE2lLLPbI7XLTzOo4zzNiNTJyjHT8LoO4dyhPTzc5vs0Z3xwl6EQeP1iQBn9gGf8AfL6sFn+XODUVG39nb6V8J8HCR5A+O4+Kl/6lbMbM20ery+ojf0PrMgaO/wDG6Z3wu3ZbPQWamNLboXQwEl3IZHOAPfjmJx8FiOme7MumMGHYsED4VPq7rbaaOphPorP6QQucdnyP+aP5I5h/KCtXCQR1Fwu1uq66elrJMEgOAdJguDskjJIJHmsr2y3UdugfFRwNhY+R0rg0ndzjkndWW86H07dq51ZU0jmTPOXuikLOc+JA7/NPhpJxa7BTWMFkvGi7GyxT2W33EwT1FQ10Yll5h6VrSeU+8Z+gKO2q7an0rqChsl3/AMbpJJWMjEhD8tJADmO65B7iskDS9kZa47ZHQtjpo5BI0Me5rg/8bmBzzeeVVmmraLhBXz+sVdRTjEL6iZ0no/cD3+azPTNtOPIKSXUgVs246VGQRnn6/vQTjMGu1LYRkFv1fPapteNHWK7XNlxq6V/rTQB6SOVzCRjG5CV+j9P1hp/WaDmFO0NhAmeBGOuwDtlW9NNQcV3eSTmm0yHcZwz5Z08CGn7o7PjjmYuDjdlt8sJaTnDyN/3bFOrtpWy3WeGa4UslRJC3ljLp5PZHlh3Xbqq3fStlu00U1wpZKh8I5Yy6ok9keWHeSzPSTkpffH+GFJcjHd5kEXGeJ9XUSwRu5GxyBw9kGPAxnIG56+andFp20UOoTdW1k0txnY7JklBLxy4OwHTC7V70vZr1AyK4UnpHRt5WSekcHgflZyfjlUtGlLPao5G0NKY3yM5HyGVxkLfAOzkD3KyGnmpPPQOyLIJwSwb7e8jblad+487lThrhvEDUjWjbExH+9wp3adJWO1TyT2+kfTySt5ZCyok9oeY5vNfVr0rZLZXurqGkfDUPzzvE8h58nJyC7B+Krr001s+2R4keZBOBfK2vvZeQDiPIO3QvXHqGw361XOt1NpW4B9LI90krGHJbgnmBadnAb+amx0Ppx1yfXmiIkeS57BK4McSe9ucfDou07TFuc6o9CamlbUucZ44KhzGSE9SRnAJ8sLK0stmx9g7E3k6HDG91F+08ayqjYydk7o5HMGA8gAh2PcQpYujaLXRWmiZRUEDYYGdGt/63XeW7VFxik+pXJ5eQiIrDAREQBERAEREAREQBERAEREAREQBMIiAIiIAiIgCphVRAMKmAqosYAXBVUlNVcgqaeKYMdzNEjQ7lPiM9650WQUDQFww0dLBLJLBTxRySHL3NYAXe8jqudFhxT5gYREWQEREATCIgGEwiIBhMIiAEAphEWMAYREWQMJhEQDCYREAwmERAMJhEQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQH/2Q==',
+    color: '#1a237e',
+    tagline: 'Al Khayyat Investments LLC'
+  },
+  alphamed: {
+    name: 'Alphamed General Trading LLC',
+    address: 'P.O Box 11245, Dubai, UAE',
+    contact: 'Tel: 04 810 5555 | Fax: 04 885 9081 | alphamed@emirates.net',
+    logo: 'data:image/png;base64,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',
+    color: '#cc0000',
+    tagline: 'Alphamed General Trading LLC'
+  }
+};
+
+let selectedCompany = 'aki';
+
+function selectCompany(key) {
+  selectedCompany = key;
+  const co = companies[key];
+  document.getElementById('q-company').value = co.name;
+  document.getElementById('q-address').value = co.address;
+  document.getElementById('q-contact').value = co.contact;
+}
+
+// Call on load to set AKI defaults
+
+let activeDiff = 'corrected';
+let dispatchLoaded = false;
+let itemCount = 0;
+
+function switchTab(id, btn) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+}
+
+function selOpt(el, g) {
+  document.querySelectorAll('#' + g + ' .option-pill').forEach(e => e.classList.remove('sel'));
+  el.classList.add('sel');
+}
+
+function getOpt(g) {
+  return document.querySelector('#' + g + ' .option-pill.sel')?.textContent.trim() || '';
+}
+
+function switchDiff(tab, btn) {
+  activeDiff = tab;
+  document.querySelectorAll('.diff-btn').forEach(t => t.classList.remove('on'));
+  btn.classList.add('on');
+  document.querySelectorAll('.diff-body').forEach(c => c.style.display = 'none');
+  document.getElementById('diff-' + tab).style.display = 'block';
+}
+
+function copyDiff() {
+  navigator.clipboard.writeText(document.getElementById('diff-' + activeDiff).textContent).then(() => {
+    const btn = event.target; btn.textContent = 'Copied'; setTimeout(() => btn.textContent = 'Copy', 2000);
+  });
+}
+
+function copyEl(id) {
+  navigator.clipboard.writeText(document.getElementById(id).textContent).then(() => {
+    const btn = event.target; btn.textContent = 'Copied'; setTimeout(() => btn.textContent = 'Copy', 2000);
+  });
+}
+
+function setLoading(lid, bid, on) {
+  document.getElementById(lid).style.display = on ? 'block' : 'none';
+  if (bid) document.getElementById(bid).disabled = on;
+}
+
+function showOut(outId, textId, text) {
+  document.getElementById(textId).textContent = text;
+  document.getElementById(outId).classList.add('show');
+}
+
+async function callAPI(prompt) {
+  const r = await fetch('/api/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt })
+  });
+  const d = await r.json();
+  if (d.error) throw new Error(d.error);
+  return d.result || 'No response.';
+}
+
+// DISPATCH
+async function loadDispatchStatus() {
+  try {
+    const r = await fetch('/api/dispatch/status');
+    const d = await r.json();
+    const statusEl = document.getElementById('dispatch-status');
+    if (d.hasData && d.summary) {
+      const s = d.summary;
+      const t = new Date(d.uploadedAt).toLocaleString('en-AE');
+      statusEl.className = 'dispatch-status live';
+      statusEl.innerHTML = '<div class="dispatch-status-icon">✅</div><div class="dispatch-status-text">Live data — uploaded by ' + d.uploadedBy + ' at ' + t + '</div>';
+      document.getElementById('kpi-orders').textContent = (s.total_orders || 0).toLocaleString();
+      document.getElementById('kpi-value').textContent = s.total_value ? Math.round(s.total_value).toLocaleString() : '—';
+      document.getElementById('kpi-lulu').textContent = (s.lulu_orders || 0).toLocaleString();
+      document.getElementById('kpi-routes').textContent = (s.total_routes || 0).toLocaleString();
+      document.getElementById('kpi-drivers').textContent = (s.total_drivers || 0).toLocaleString();
+      document.getElementById('kpi-luluval').textContent = s.lulu_value ? Math.round(s.lulu_value).toLocaleString() : '—';
+      document.getElementById('kpi-grid').style.display = 'grid';
+      document.getElementById('quick-section').style.display = 'block';
+      dispatchLoaded = true;
+    } else {
+      statusEl.className = 'dispatch-status';
+      statusEl.innerHTML = '<div class="dispatch-status-icon">⚠️</div><div class="dispatch-status-text">No dispatch data loaded today. Upload below to activate.</div>';
+    }
+  } catch (e) {
+    document.getElementById('dispatch-status').innerHTML = '<div class="dispatch-status-icon">⚠️</div><div class="dispatch-status-text">Could not connect to server.</div>';
+  }
+}
+
+function askQuick(q) {
+  document.getElementById('dispatch-input').value = q;
+  askDispatch();
+}
+
+async function askDispatch() {
+  const q = document.getElementById('dispatch-input').value.trim();
+  if (!q) { alert('Please enter a question.'); return; }
+  document.getElementById('dispatch-send').disabled = true;
+  document.getElementById('dispatch-out').classList.add('show');
+  document.getElementById('dispatch-out-text').textContent = '✦ Analysing your dispatch data...';
+  try {
+    const r = await fetch('/api/dispatch/ask', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question: q })
+    });
+    const d = await r.json();
+    document.getElementById('dispatch-out-text').textContent = d.result || 'No answer found.';
+  } catch (e) {
+    document.getElementById('dispatch-out-text').textContent = 'Error: ' + e.message;
+  }
+  document.getElementById('dispatch-send').disabled = false;
+}
+
+async function uploadDispatch(input) {
+  const file = input.files[0]; if (!file) return;
+  const nameEl = document.getElementById('dispatch-file-name');
+  nameEl.textContent = '✓ ' + file.name + ' uploading...';
+  document.getElementById('dispatch-loader').style.display = 'block';
+  try {
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('uploadedBy', 'Azhar');
+    const r = await fetch('/api/dispatch/upload', { method: 'POST', body: fd });
+    const d = await r.json();
+    document.getElementById('dispatch-loader').style.display = 'none';
+    if (d.success) {
+      nameEl.textContent = '✓ ' + file.name + ' — ' + (d.summary?.total_orders || '') + ' orders loaded';
+      nameEl.classList.add('loaded');
+      loadDispatchStatus();
+      alert('✅ Dispatch data uploaded!\n\nYour team can now ask questions.');
+    } else {
+      nameEl.textContent = 'Upload failed: ' + (d.error || 'Unknown error');
+      alert('Upload failed: ' + (d.error || 'Unknown error'));
+    }
+  } catch (e) {
+    document.getElementById('dispatch-loader').style.display = 'none';
+    nameEl.textContent = 'Error: ' + e.message;
+  }
+}
+
+// FILE HANDLERS
+function handleGenericFile(input, targetId, nameId, boxId) {
+  const file = input.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    document.getElementById(targetId).value = 'FILE: ' + file.name + '\n\n' + e.target.result.substring(0, 5000);
+    document.getElementById(nameId).textContent = '✓ ' + file.name + ' loaded';
+    document.getElementById(nameId).classList.add('loaded');
+  };
+  reader.readAsText(file);
+}
+
+function handleExcelFile(input) {
+  const file = input.files[0]; if (!file) return;
+  const nameEl = document.getElementById('excel-file-name');
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const text = e.target.result;
+    document.getElementById('excel-context').value = 'FILE: ' + file.name + '\n\nDATA:\n' + text.substring(0, 4000);
+    nameEl.textContent = '✓ ' + file.name + ' — ' + text.split('\n').length + ' rows loaded';
+    nameEl.classList.add('loaded');
+    if (!document.getElementById('excel-formula').value.trim())
+      document.getElementById('excel-formula').value = 'Analyse this data. Find key insights, fix any formula errors, and give a summary.';
+  };
+  reader.readAsText(file);
+}
+
+// REJECTION
+async function runRejection() {
+  const data = document.getElementById('rejection-data').value.trim();
+  if (!data) { alert('Please paste rejection data or upload a file.'); return; }
+  const type = getOpt('rej-type');
+  document.getElementById('rej-out').classList.remove('show');
+  setLoading('rej-loader', 'rej-btn', true);
+  try {
+    const r = await callAPI(`You are AZHAR-AI Operations Intelligence for a UAE logistics/distribution company.
+
+Analyse the following rejection/returns data.
+Analysis Type: ${type}
+
+Data:
+${data}
+
+Provide:
+1. Total rejections count and value
+2. Top reasons for rejection
+3. Top customers with most rejections
+4. Top products/items being rejected
+5. Trend analysis if dates available
+6. Specific recommendations to reduce rejections
+7. Action items for the operations team
+
+Format with clear sections and bullet points.`);
+    showOut('rej-out', 'rej-out-text', r);
+  } catch (e) { alert('Error: ' + e.message); }
+  setLoading('rej-loader', 'rej-btn', false);
+}
+
+// SUMMARY
+async function runSummary() {
+  const text = document.getElementById('summary-text').value.trim();
+  if (!text) { alert('Please paste your document.'); return; }
+  const type = getOpt('sum-type');
+  const styles = {
+    'Executive Brief': 'Write a concise 4-6 sentence executive summary highlighting key points and outcomes.',
+    'Bullet Points': 'Summarise as clear bullet points organised by theme. Each bullet one sentence.',
+    'Action Items': 'Extract all action items, next steps, and responsibilities. Who does what by when.',
+    'Key Decisions': 'Identify key decisions made or needed with supporting context.',
+    'Operations Report': 'Format as a professional operations report with sections: Overview, Key Metrics, Issues, Actions Required.'
+  };
+  document.getElementById('sum-out').classList.remove('show');
+  setLoading('sum-loader', 'sum-btn', true);
+  try {
+    const r = await callAPI(`You are AZHAR-AI, executive assistant for a UAE logistics/distribution operations team.
+
+Summarise the following document.
+Style: ${type}
+Instructions: ${styles[type] || styles['Executive Brief']}
+
+Document:
+${text}`);
+    showOut('sum-out', 'sum-out-text', r);
+  } catch (e) { alert('Error: ' + e.message); }
+  setLoading('sum-loader', 'sum-btn', false);
+}
+
+// EMAIL
+async function runEmail() {
+  const body = document.getElementById('email-body').value.trim();
+  if (!body) { alert('Please enter your email or description.'); return; }
+  const type = getOpt('email-type');
+  const recipient = document.getElementById('email-recipient').value.trim();
+  document.getElementById('email-out').classList.remove('show');
+  setLoading('email-loader', 'email-btn', true);
+  try {
+    const raw = await callAPI(`You are AZHAR-AI, a professional business email writer for a UAE logistics/distribution company.
+
+Task: ${type}
+${recipient ? 'Recipient: ' + recipient : ''}
+Email content/request:
+${body}
+
+Respond in this EXACT format:
+
+FINAL EMAIL:
+[complete professional email]
+
+SUBJECT LINE:
+[3 subject line options]
+
+NOTES:
+[key points about the email approach]`);
+    const c = raw.match(/FINAL EMAIL:\s*([\s\S]*?)(?=SUBJECT LINE:|$)/i);
+    const s = raw.match(/SUBJECT LINE:\s*([\s\S]*?)(?=NOTES:|$)/i);
+    const n = raw.match(/NOTES:\s*([\s\S]*?)$/i);
+    document.getElementById('diff-corrected').textContent = c ? c[1].trim() : raw;
+    document.getElementById('diff-subject').textContent = s ? s[1].trim() : '';
+    document.getElementById('diff-changes').textContent = n ? n[1].trim() : '';
+    document.querySelectorAll('.diff-btn').forEach(t => t.classList.remove('on'));
+    document.querySelectorAll('.diff-btn')[0].classList.add('on');
+    document.querySelectorAll('.diff-body').forEach(c => c.style.display = 'none');
+    document.getElementById('diff-corrected').style.display = 'block';
+    activeDiff = 'corrected';
+    document.getElementById('email-out').classList.add('show');
+  } catch (e) { alert('Error: ' + e.message); }
+  setLoading('email-loader', 'email-btn', false);
+}
+
+// QUOTATION
+function addItem() {
+  itemCount++;
+  const card = document.createElement('div');
+  card.className = 'quote-item-row';
+  card.style.cssText = 'background:var(--surface);border:1px solid var(--border);padding:20px;margin-bottom:10px;position:relative;';
+
+  const fs = 'width:100%;background:var(--card);border:1px solid var(--border);color:var(--text);font-family:Montserrat,sans-serif;font-size:14px;padding:12px 14px;outline:none;display:block;box-sizing:border-box;transition:border 0.2s;';
+  const lbl = 'font-size:9px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;display:block;';
+
+  card.innerHTML = `
+    <!-- Description + Delete button on same row -->
+    <div style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end;margin-bottom:14px;">
+      <div>
+        <label style="${lbl}">✦ Item ${itemCount} — Description</label>
+        <input type="text" placeholder="Enter full item description here..." oninput="calcTotals()"
+          style="${fs}" onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border)'"/>
+      </div>
+      <button class="remove-item-btn" onclick="removeItem(this)"
+        style="background:transparent;border:1px solid rgba(232,75,75,0.4);color:#e84b4b;cursor:pointer;font-size:11px;padding:12px 16px;font-family:Montserrat,sans-serif;letter-spacing:1px;text-transform:uppercase;height:46px;white-space:nowrap;"
+        onmouseover="this.style.background='rgba(232,75,75,0.15)'"
+        onmouseout="this.style.background='transparent'">
+        🗑 Delete
+      </button>
+    </div>
+
+    <!-- Barcode + Qty - side by side -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+      <div>
+        <label style="${lbl}">Barcode</label>
+        <input type="text" placeholder="Enter barcode number"
+          style="${fs}" onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border)'"/>
+      </div>
+      <div>
+        <label style="${lbl}">Quantity</label>
+        <input type="text" placeholder="0" oninput="calcTotals()"
+          style="${fs}text-align:center;"
+          onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border)'"/>
+      </div>
+    </div>
+
+    <!-- Unit Price + VAT toggle + VAT amount + Net Amount -->
+    <div style="display:grid;grid-template-columns:1fr auto 1fr 1fr;gap:14px;align-items:end;">
+      <div>
+        <label style="${lbl}">Unit Price (AED)</label>
+        <input type="text" placeholder="0.00" oninput="calcTotals()"
+          style="${fs}text-align:right;"
+          onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border)'"/>
+      </div>
+      <div style="padding-bottom:4px;">
+        <label style="${lbl}">VAT</label>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;height:46px;padding:0 10px;background:var(--card);border:1px solid var(--border);">
+          <input type="checkbox" checked class="vat-toggle" onchange="calcTotals()"
+            style="width:16px;height:16px;cursor:pointer;accent-color:var(--gold);"/>
+          <span style="font-size:11px;color:var(--muted);white-space:nowrap;">5% VAT</span>
+        </label>
+      </div>
+      <div>
+        <label style="${lbl};color:var(--green);">VAT Amount (AED)</label>
+        <input type="text" readonly placeholder="Auto" class="line-vat"
+          style="${fs}text-align:right;color:var(--green);font-weight:600;background:rgba(78,203,141,0.05);cursor:default;border-color:rgba(78,203,141,0.2);"/>
+      </div>
+      <div>
+        <label style="${lbl};color:var(--gold);">Net Amount (AED)</label>
+        <input type="text" readonly placeholder="Auto" class="line-amount"
+          style="${fs}text-align:right;color:var(--gold);font-weight:700;font-size:16px;background:rgba(201,168,76,0.05);cursor:default;border-color:rgba(201,168,76,0.2);"/>
+      </div>
+    </div>
+  `;
+  document.getElementById('quote-items').appendChild(card);
+  card.querySelector('input').focus();
+}
+
+
+function calcTotals() {
+  let subtotal = 0;
+  let totalVat = 0;
+  document.querySelectorAll('.quote-item-row').forEach(row => {
+    const inputs = row.querySelectorAll('input:not([type=checkbox])');
+    const vatToggle = row.querySelector('.vat-toggle');
+    const hasVat = vatToggle ? vatToggle.checked : true;
+    // inputs: 0=desc, 1=barcode, 2=qty, 3=price
+    const qty = parseFloat(inputs[2]?.value) || 0;
+    const price = parseFloat(inputs[3]?.value) || 0;
+    const lineAmt = qty * price;
+    const lineVat = hasVat ? lineAmt * 0.05 : 0;
+    const netAmt = lineAmt + lineVat;
+    const vatEl = row.querySelector('.line-vat');
+    const amtEl = row.querySelector('.line-amount');
+    if(vatEl) {
+      vatEl.value = lineVat > 0 ? lineVat.toFixed(2) : '0.00';
+      vatEl.style.color = hasVat ? 'var(--green)' : 'var(--muted)';
+    }
+    if(amtEl) amtEl.value = netAmt > 0 ? netAmt.toFixed(2) : '';
+    subtotal += lineAmt;
+    totalVat += lineVat;
+  });
+  const total = subtotal + totalVat;
+  document.getElementById('q-subtotal').textContent = 'AED ' + subtotal.toFixed(2);
+  document.getElementById('q-vat').textContent = 'AED ' + totalVat.toFixed(2);
+  document.getElementById('q-total').textContent = 'AED ' + total.toFixed(2);
+}
+
+function removeItem(btn) {
+  const rows = document.querySelectorAll('.quote-item-row');
+  if (rows.length > 1) { btn.closest('.quote-item-row').remove(); calcTotals(); }
+}
+
+
+function previewInvoice() {
+  const co = companies[selectedCompany];
+  const ref = document.getElementById('q-ref').value || ('PRO-INV-' + Date.now().toString().slice(-8));
+  const win = window.open('', '_blank', 'width=1000,height=750');
+  if (!win) { alert('Please allow popups for this site to use Preview.'); return; }
+  
+  const css = [
+    '*{margin:0;padding:0;box-sizing:border-box;}',
+    'body{font-family:Calibri,Arial,sans-serif;font-size:11pt;color:#1a1a1a;padding:30px 40px;background:#fff;}',
+    '.lh{display:flex;justify-content:space-between;align-items:flex-end;padding-bottom:12px;border-bottom:3px solid ' + co.color + ';margin-bottom:20px;}',
+    '.lh img{height:55px;width:auto;}',
+    '.lh-right{text-align:right;font-size:9pt;color:#666;}',
+    'h1{font-size:18pt;text-align:center;color:' + co.color + ';letter-spacing:3px;margin:16px 0;}',
+    '.meta{display:flex;justify-content:space-between;margin-bottom:16px;}',
+    '.label{font-size:8pt;color:#999;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;}',
+    '.val{font-size:11pt;font-weight:600;}',
+    'table{width:100%;border-collapse:collapse;margin-bottom:16px;}',
+    'th{background:#1a1a2e;color:#c9a84c;padding:9px 8px;font-size:9pt;text-transform:uppercase;letter-spacing:1px;border:1px solid #ddd;}',
+    'td{padding:8px;border:1px solid #e0e0e0;font-size:10pt;}',
+    'tr:nth-child(even) td{background:#fafafa;}',
+    '.totals{margin-left:auto;width:45%;}',
+    '.totals table{width:100%;}',
+    '.totals td{border:none;padding:6px 8px;}',
+    '.gt td{font-weight:700;font-size:13pt;color:' + co.color + ';border-top:2px solid ' + co.color + ';padding-top:8px;}',
+    '.notes{margin-top:16px;padding:10px;background:#f9f9f9;border-left:3px solid ' + co.color + ';font-size:10pt;}',
+    '.sigs{display:flex;justify-content:space-between;margin-top:50px;}',
+    '.sig{text-align:center;width:30%;border-top:1px solid #333;padding-top:8px;font-size:10pt;}',
+    '.footer{margin-top:24px;text-align:center;font-size:9pt;color:#aaa;border-top:1px solid #eee;padding-top:8px;}',
+    '.print-btn{position:fixed;top:20px;right:20px;padding:12px 24px;background:' + co.color + ';color:#fff;border:none;font-size:12pt;cursor:pointer;font-family:Calibri;letter-spacing:1px;}',
+    '@media print{.print-btn{display:none;}}'
+  ].join('\n');
+
+  const body = [
+    '<button class="print-btn" onclick="window.print()">Print / Save PDF</button>',
+    '<div class="lh">',
+    '  <img src="' + co.logo + '" />',
+    '  <div class="lh-right"><div>' + document.getElementById('q-address').value + '</div><div>' + document.getElementById('q-contact').value + '</div></div>',
+    '</div>',
+    '<h1>PROFORMA INVOICE</h1>',
+    '<div class="meta">',
+    '  <div><div class="label">Bill To</div><div class="val">' + document.getElementById('q-client').value + '</div><div style="font-size:10pt;color:#444;margin-top:4px;">' + document.getElementById('q-client-address').value + '</div></div>',
+    '  <div style="text-align:right;"><div class="label">Reference No</div><div class="val" style="color:' + co.color + '">' + ref + '</div>',
+    '  <div style="margin-top:6px;"><span class="label">Date: </span>' + document.getElementById('q-date').value + '</div>',
+    '  <div><span class="label">Valid: </span>' + document.getElementById('q-valid').value + '</div>',
+    '  <div><span class="label">Terms: </span>' + document.getElementById('q-terms').value + '</div></div>',
+    '</div>',
+    '<table><thead><tr>',
+    '<th style="width:4%;text-align:center;">Sr.</th>',
+    '<th style="width:32%;text-align:left;">Description</th>',
+    '<th style="width:14%;text-align:center;">Barcode</th>',
+    '<th style="width:7%;text-align:center;">Qty</th>',
+    '<th style="width:15%;text-align:right;">Unit Price (AED)</th>',
+    '<th style="width:13%;text-align:right;">VAT 5%</th>',
+    '<th style="width:15%;text-align:right;">Net Amount</th>',
+    '</tr></thead><tbody>' + getItemsHTML() + '</tbody></table>',
+    '<div class="totals"><table>',
+    '<tr><td>Subtotal (excl. VAT):</td><td style="text-align:right;">' + document.getElementById('q-subtotal').textContent + '</td></tr>',
+    '<tr><td>VAT (5%):</td><td style="text-align:right;color:green;">' + document.getElementById('q-vat').textContent + '</td></tr>',
+    '<tr class="gt"><td>Net Total (incl. VAT):</td><td style="text-align:right;">' + document.getElementById('q-total').textContent + '</td></tr>',
+    '</table></div>',
+    document.getElementById('q-notes').value ? '<div class="notes"><strong>Notes:</strong> ' + document.getElementById('q-notes').value + '</div>' : '',
+    '<div class="sigs">',
+    '<div class="sig">Prepared By</div>',
+    '<div class="sig">Authorized Signatory</div>',
+    '<div class="sig">Client Acknowledgement</div>',
+    '</div>',
+    '<div class="footer">Powered by AZHAR-AI ✦ ' + co.name + '</div>'
+  ].join('\n');
+
+  const html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>' + ref + '</title><style>' + css + '</style></head><body>' + body + '</body></html>';
+  win.document.open();
+  win.document.write(html);
+  win.document.close();
+}
+
+
+// DOWNLOAD WORD
+function downloadQuoteWord() {
+  const co = companies[selectedCompany];
+  const ref = document.getElementById('q-ref').value || ('PRO-INV-' + Date.now().toString().slice(-8));
+  const html = '<html><head><meta charset="utf-8"><title>' + ref + '</title><style>body{font-family:Calibri,Arial,sans-serif;font-size:11pt;margin:2cm;}h1{font-size:16pt;text-align:center;color:' + co.color + ';border-bottom:3px solid ' + co.color + ';padding-bottom:10px;margin-bottom:20px;}table{width:100%;border-collapse:collapse;margin:16px 0;}th{background:#1a1a2e;color:#c9a84c;padding:8px;font-size:9pt;text-transform:uppercase;border:1px solid #ddd;}td{padding:8px;border:1px solid #ddd;}</style></head><body>'
+    + '<h1>PROFORMA INVOICE</h1>'
+    + '<table><tr><td style="width:50%;border:none;vertical-align:top;"><strong>From:</strong><br>' + document.getElementById('q-company').value + '<br>' + document.getElementById('q-address').value + '<br>' + document.getElementById('q-contact').value + '</td>'
+    + '<td style="width:50%;border:none;text-align:right;vertical-align:top;"><strong>Ref:</strong> ' + ref + '<br><strong>Date:</strong> ' + document.getElementById('q-date').value + '<br><strong>Valid:</strong> ' + document.getElementById('q-valid').value + '</td></tr></table>'
+    + '<div style="background:#f0f0f0;padding:10px;margin-bottom:16px;"><strong>Bill To:</strong> ' + document.getElementById('q-client').value + '<br>' + document.getElementById('q-client-address').value + '</div>'
+    + '<table><thead><tr><th>Sr.</th><th>Description</th><th>Barcode</th><th>Qty</th><th>Unit Price (AED)</th><th>VAT 5% (AED)</th><th>Net Amount (AED)</th></tr></thead><tbody>' + getItemsHTML() + '</tbody></table>'
+    + '<div style="margin-left:auto;width:40%;"><table><tr><td>Subtotal:</td><td style="text-align:right">' + document.getElementById('q-subtotal').textContent + '</td></tr><tr><td>VAT:</td><td style="text-align:right;color:green">' + document.getElementById('q-vat').textContent + '</td></tr><tr style="font-weight:bold;font-size:12pt;color:' + co.color + '"><td>Net Total:</td><td style="text-align:right">' + document.getElementById('q-total').textContent + '</td></tr></table></div>'
+    + '<p style="text-align:center;margin-top:40px;color:#aaa;">Powered by AZHAR-AI</p></body></html>';
+  const blob = new Blob([html], {type:'application/msword'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = (ref||'Invoice') + '.doc'; a.click();
+  URL.revokeObjectURL(url);
+}
+
+// EXCEL
+async function runExcel() {
+  const f = document.getElementById('excel-formula').value.trim();
+  if (!f) { alert('Please enter a formula or question.'); return; }
+  const c = document.getElementById('excel-context').value.trim();
+  document.getElementById('excel-out').classList.remove('show');
+  setLoading('excel-loader', 'excel-btn', true);
+  try {
+    const fd = new FormData();
+    fd.append('question', f);
+    const fi = document.getElementById('excel-file');
+    if (fi.files[0]) fd.append('file', fi.files[0]);
+    else if (c) fd.append('question', f + '\n\nData:\n' + c);
+    const r = await fetch('/api/excel', { method: 'POST', body: fd });
+    const d = await r.json();
+    if (d.error) throw new Error(d.error);
+    showOut('excel-out', 'excel-out-text', d.result || 'No response.');
+  } catch (e) { alert('Error: ' + e.message); }
+  setLoading('excel-loader', 'excel-btn', false);
+}
+
+// CHAT
+let chatHistory = [];
+function chatKeydown(e) { if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChat();} }
+function clearChat() {
+  chatHistory = [];
+  document.getElementById('chat-window').innerHTML = '<div class="chat-welcome"><div class="chat-welcome-icon">✦</div><div class="chat-welcome-title">How can I assist you today?</div><div class="chat-welcome-sub">Ask me anything — I am here to help</div></div>';
+}
+function addChatMessage(role, text) {
+  const win = document.getElementById('chat-window');
+  const welcome = win.querySelector('.chat-welcome'); if(welcome) welcome.remove();
+  const div = document.createElement('div');
+  div.className = 'chat-msg ' + role;
+  div.innerHTML = '<div class="chat-avatar">' + (role==='user'?'A':'✦') + '</div><div class="chat-bubble">' + text.replace(/\n/g,'<br>') + '</div>';
+  win.appendChild(div); win.scrollTop = win.scrollHeight;
+}
+function addTyping() {
+  const win = document.getElementById('chat-window');
+  const div = document.createElement('div'); div.className='chat-msg ai'; div.id='chat-typing-indicator';
+  div.innerHTML='<div class="chat-avatar">✦</div><div class="chat-bubble"><div class="chat-typing"><span></span><span></span><span></span></div></div>';
+  win.appendChild(div); win.scrollTop = win.scrollHeight;
+}
+function removeTyping() { const t=document.getElementById('chat-typing-indicator'); if(t) t.remove(); }
+async function sendChat() {
+  const input = document.getElementById('chat-input');
+  const msg = input.value.trim(); if (!msg) return;
+  input.value = '';
+  document.getElementById('chat-send').disabled = true;
+  addChatMessage('user', msg);
+  chatHistory.push({role:'user', content:msg});
+  addTyping();
+  try {
+    const r = await fetch('/api/chat', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({prompt:msg, history:chatHistory.slice(-10)})});
+    const d = await r.json(); removeTyping();
+    const reply = d.result || 'I apologise, there was an error.';
+    addChatMessage('ai', reply);
+    chatHistory.push({role:'assistant', content:reply});
+  } catch(e) { removeTyping(); addChatMessage('ai','Error: ' + e.message); }
+  document.getElementById('chat-send').disabled = false;
+  input.focus();
+}
+
+</script>
+</body>
+</html>function updateDashboard(d) {
+  const s = d.summary;
+  const today = new Date().toISOString().split('T')[0];
+  const dateLabel = d.date === today ? 'Today — ' + new Date().toLocaleDateString('en-AE',{weekday:'long',day:'numeric',month:'long'}) : d.date;
+
+  // Status bar
+  const statusEl = document.getElementById('dispatch-status');
+  statusEl.className = 'dispatch-status live';
+  statusEl.innerHTML = '<div class="dispatch-status-icon">✅</div><div class="dispatch-status-text"><strong>' + dateLabel + '</strong> &nbsp;|&nbsp; ' + (s.total_orders||0).toLocaleString() + ' Orders &nbsp;|&nbsp; AED ' + (s.total_value ? (s.total_value/1000000).toFixed(2) + 'M' : '0') + ' &nbsp;|&nbsp; Uploaded by ' + d.uploadedBy + '</div>';
+
+  // KPI Cards
+  document.getElementById('kpi-orders').textContent = (s.total_orders||0).toLocaleString();
+  const valM = s.total_value ? (s.total_value/1000000).toFixed(2) + 'M' : '—';
+  document.getElementById('kpi-value').textContent = valM;
+  document.getElementById('kpi-food').textContent = (s.food_orders||0).toLocaleString();
+  document.getElementById('kpi-nonfood').textContent = (s.non_food_orders||0).toLocaleString();
+  document.getElementById('kpi-routes').textContent = (s.total_routes||0).toLocaleString();
+  document.getElementById('kpi-drivers-sub').textContent = (s.total_drivers||0) + ' drivers';
+
+  // Dubai & Abu Dhabi from by_city
+  if (s.by_city && s.by_city.length) {
+    const dubai = s.by_city.find(c => c.city && c.city.toUpperCase().includes('DUBAI'));
+    const adh = s.by_city.find(c => c.city && (c.city.toUpperCase().includes('ABU') || c.city.toUpperCase().includes('ABUDHABI')));
+    if (dubai) { document.getElementById('kpi-dubai').textContent = (dubai.orders||0).toLocaleString(); document.getElementById('kpi-dubai-sub').textContent = 'AED ' + Math.round(dubai.value||0).toLocaleString(); }
+    if (adh) { document.getElementById('kpi-abudhabi').textContent = (adh.orders||0).toLocaleString(); document.getElementById('kpi-abudhabi-sub').textContent = 'AED ' + Math.round(adh.value||0).toLocaleString(); }
+  }
+
+  document.getElementById('kpi-grid').style.display = 'grid';
+
+  // BAR CHART - Orders by City
+  const cityColors = ['#c9a84c','#e84b8a','#5b8dee','#4ecb8d','#e8854b','#a84bcb'];
+  if (s.by_city && s.by_city.length) {
+    const cities = s.by_city.slice(0,6);
+    const maxOrders = Math.max(...cities.map(c => c.orders||0));
+    const barsEl = document.getElementById('city-bars');
+    const labelsEl = document.getElementById('city-labels');
+    barsEl.innerHTML = cities.map((c,i) => {
+      const h = maxOrders > 0 ? Math.max(8, Math.round(((c.orders||0)/maxOrders)*110)) : 8;
+      return '<div style="display:flex;flex-direction:column;align-items:center;gap:4px;">' +
+        '<div style="font-size:11px;color:' + cityColors[i] + ';font-weight:700;">' + (c.orders||0).toLocaleString() + '</div>' +
+        '<div style="width:40px;height:' + h + 'px;background:' + cityColors[i] + ';border-radius:3px 3px 0 0;"></div>' +
+      '</div>';
+    }).join('');
+    labelsEl.innerHTML = cities.map((c,i) =>
+      '<div style="font-size:10px;color:' + cityColors[i] + ';font-weight:600;text-align:center;min-width:40px;">' + (c.city||'').replace('Abu Dhabi','AbuDhabi') + '</div>'
+    ).join('');
+
+    // City value list
+    document.getElementById('city-value-list').innerHTML = cities.map((c,i) =>
+      '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);">' +
+      '<span style="font-size:12px;color:' + cityColors[i] + ';font-weight:600;">📍 ' + c.city + '</span>' +
+      '<div style="text-align:right;">' +
+      '<div style="font-size:12px;color:var(--gold);font-weight:700;">AED ' + Math.round(c.value||0).toLocaleString() + '</div>' +
+      '<div style="font-size:10px;color:var(--muted);">' + (c.orders||0).toLocaleString() + ' orders</div>' +
+      '</div></div>'
+    ).join('');
+  }
+
+  // TOP CUSTOMERS
+  const custEl = document.getElementById('top-customers-table');
+  if (s.top_customers && s.top_customers.length) {
+    custEl.innerHTML = s.top_customers.slice(0,6).map((c,i) =>
+      '<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);">' +
+      '<span style="font-size:12px;color:var(--text);">' + (i+1) + '. ' + c.name + '</span>' +
+      '<div style="text-align:right;">' +
+      '<div style="font-size:12px;color:var(--gold);font-weight:700;">AED ' + Math.round(c.value||0).toLocaleString() + '</div>' +
+      '<div style="font-size:10px;color:var(--muted);">' + (c.orders||0) + ' orders</div>' +
+      '</div></div>'
+    ).join('');
+  }
+
+  // TOP DRIVERS with progress bar
+  const drvEl = document.getElementById('top-drivers-table');
+  if (s.top_drivers && s.top_drivers.length) {
+    const maxDrops = s.top_drivers[0].orders || 1;
+    drvEl.innerHTML = s.top_drivers.slice(0,5).map((dr,i) => {
+      const pct = Math.round((dr.orders/maxDrops)*100);
+      const col = i < 3 ? 'var(--gold)' : 'var(--muted)';
+      return '<div style="margin-bottom:10px;">' +
+        '<div style="display:flex;justify-content:space-between;margin-bottom:4px;">' +
+        '<span style="font-size:12px;color:' + col + ';font-weight:' + (i<3?'700':'400') + ';">' + (i+1) + '. ' + dr.name + '</span>' +
+        '<span style="font-size:12px;color:' + col + ';font-weight:700;">' + dr.orders + ' drops</span>' +
+        '</div>' +
+        '<div style="height:3px;background:var(--border);border-radius:2px;">' +
+        '<div style="height:3px;background:' + col + ';border-radius:2px;width:' + pct + '%;transition:width 0.8s ease;"></div>' +
+        '</div></div>';
+    }).join('') +
+    '<div style="font-size:10px;color:var(--green);margin-top:8px;">Updated: ' + new Date().toLocaleString('en-AE',{hour:'2-digit',minute:'2-digit'}) + '</div>';
+  }
+
+  document.getElementById('detail-tables').style.display = 'block';
+  document.getElementById('quick-section') && (document.getElementById('quick-section').style.display = 'block');
+  dispatchLoaded = true;
+}!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AZHAR-AI | Operations &amp; Customer Service Intelligence Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600;700&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{--black:#050505;--dark:#0a0a08;--surface:#111109;--card:#161612;--border:#2a2a1e;--gold:#c9a84c;--gold2:#e8c878;--gold3:#f5e0a0;--goldglow:rgba(201,168,76,0.12);--text:#f0ece0;--muted:#7a7660;--white:#faf8f0;--green:#4ecb8d;--red:#e84b4b;}
+body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--text);min-height:100vh;overflow-x:hidden;}
+.bg-luxury{position:fixed;inset:0;z-index:0;background:radial-gradient(ellipse at 20% 20%,rgba(201,168,76,0.04) 0%,transparent 50%),radial-gradient(ellipse at 80% 80%,rgba(201,168,76,0.03) 0%,transparent 50%),var(--black);}
+.bg-lines{position:fixed;inset:0;z-index:0;background-image:linear-gradient(rgba(201,168,76,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(201,168,76,0.04) 1px,transparent 1px);background-size:60px 60px;}
+.bg-vignette{position:fixed;inset:0;z-index:0;background:radial-gradient(ellipse at center,transparent 40%,rgba(0,0,0,0.7) 100%);}
+
+/* HEADER */
+header{position:relative;z-index:10;display:flex;align-items:center;justify-content:space-between;padding:0 48px;height:80px;border-bottom:1px solid var(--border);background:rgba(5,5,5,0.95);backdrop-filter:blur(20px);}
+.header-left{display:flex;align-items:center;gap:20px;}
+.logo-mark{width:44px;height:44px;border:1px solid var(--gold);display:flex;align-items:center;justify-content:center;position:relative;flex-shrink:0;}
+.logo-mark::before{content:'';position:absolute;inset:3px;border:1px solid rgba(201,168,76,0.3);}
+.logo-mark svg{width:22px;height:22px;}
+.brand{display:flex;flex-direction:column;gap:2px;}
+.brand-name{font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:700;letter-spacing:5px;background:linear-gradient(135deg,#fff5cc,var(--gold),var(--gold3),#fff0a0,var(--gold));background-size:200% auto;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:shine 3s linear infinite;filter:drop-shadow(0 0 8px rgba(201,168,76,0.5));}
+@keyframes shine{0%{background-position:0% center}100%{background-position:200% center}}
+.brand-sub{font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;font-weight:500;}
+.header-right{display:flex;align-items:center;gap:20px;}
+.status-indicator{display:flex;align-items:center;gap:8px;font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;}
+.status-dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:glow 2s infinite;}
+@keyframes glow{0%,100%{opacity:1}50%{opacity:0.5}}
+.version{font-size:10px;letter-spacing:2px;color:var(--muted);border:1px solid var(--border);padding:3px 10px;text-transform:uppercase;}
+
+/* MAIN */
+main{position:relative;z-index:5;max-width:1100px;margin:0 auto;padding:40px 24px 80px;}
+
+/* HERO */
+.hero{text-align:center;margin-bottom:40px;animation:fadeUp 0.8s ease both;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+.hero-eyebrow{font-size:10px;letter-spacing:4px;color:var(--gold);text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;justify-content:center;gap:12px;}
+.hero-eyebrow::before,.hero-eyebrow::after{content:'';width:40px;height:1px;background:var(--gold);opacity:0.4;}
+.hero-title{font-family:'Cormorant Garamond',serif;font-size:48px;font-weight:300;line-height:1.1;margin-bottom:10px;color:var(--white);}
+.hero-title strong{font-weight:700;background:linear-gradient(135deg,var(--gold),var(--gold3));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.hero-desc{font-size:12px;color:var(--muted);letter-spacing:1px;line-height:1.8;}
+
+/* DIVIDER */
+.divider{display:flex;align-items:center;gap:16px;margin-bottom:32px;}
+.divider-line{flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--border),transparent);}
+.divider-diamond{width:8px;height:8px;background:var(--gold);transform:rotate(45deg);flex-shrink:0;}
+
+/* NAV TABS */
+.nav-tabs{display:grid;grid-template-columns:repeat(6,1fr);gap:0;border:1px solid var(--border);margin-bottom:40px;}
+.nav-tab{padding:14px 6px;border:none;background:transparent;color:var(--muted);font-family:'Montserrat',sans-serif;font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;transition:all 0.3s;display:flex;flex-direction:column;align-items:center;gap:6px;border-right:1px solid var(--border);position:relative;}
+.nav-tab:last-child{border-right:none;}
+.nav-tab::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:var(--gold);transform:scaleX(0);transition:transform 0.3s;}
+.nav-tab.active{color:var(--gold);background:var(--goldglow);}
+.nav-tab.active::after{transform:scaleX(1);}
+.nav-tab:hover:not(.active){color:var(--text);}
+.nav-icon{font-size:20px;}
+
+/* PANELS */
+.panel{display:none;animation:fadeUp 0.4s ease both;}
+.panel.active{display:block;}
+
+/* CARD */
+.card{background:var(--card);border:1px solid var(--border);padding:36px;margin-bottom:16px;position:relative;overflow:hidden;}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:0.5;}
+.card-eyebrow{font-size:9px;letter-spacing:3px;color:var(--gold);text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;gap:10px;}
+.card-eyebrow::after{content:'';flex:1;height:1px;background:var(--border);}
+.card h3{font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:600;color:var(--white);margin-bottom:6px;}
+.card p{color:var(--muted);font-size:12px;line-height:1.8;margin-bottom:20px;}
+
+/* FORM */
+.field-label{font-size:9px;letter-spacing:2px;color:var(--gold);text-transform:uppercase;margin-bottom:8px;margin-top:18px;}
+textarea,input[type=text]{width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:'Montserrat',sans-serif;font-size:13px;padding:14px 16px;resize:vertical;outline:none;transition:border 0.3s;line-height:1.7;}
+textarea{min-height:100px;}
+textarea:focus,input[type=text]:focus{border-color:var(--gold);}
+textarea::placeholder,input::placeholder{color:var(--muted);}
+
+/* OPTIONS */
+.options-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;}
+.option-pill{padding:6px 14px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:'Montserrat',sans-serif;font-size:9px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all 0.2s;}
+.option-pill.sel{border-color:var(--gold);color:var(--gold);background:var(--goldglow);}
+
+/* BUTTONS */
+.btn-primary{width:100%;padding:15px;background:transparent;border:1px solid var(--gold);color:var(--gold);font-family:'Montserrat',sans-serif;font-size:10px;font-weight:600;letter-spacing:3px;text-transform:uppercase;cursor:pointer;transition:all 0.3s;position:relative;overflow:hidden;margin-bottom:8px;}
+.btn-primary::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,var(--gold),var(--gold2));opacity:0;transition:opacity 0.3s;}
+.btn-primary:hover::before{opacity:1;}
+.btn-primary:hover{color:var(--black);}
+.btn-primary span{position:relative;z-index:1;}
+.btn-primary:disabled{opacity:0.3;cursor:not-allowed;}
+.btn-gold{width:100%;padding:15px;background:linear-gradient(135deg,var(--gold),var(--gold2));border:none;color:var(--black);font-family:'Montserrat',sans-serif;font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;cursor:pointer;transition:all 0.3s;display:none;margin-bottom:8px;}
+.btn-gold:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(201,168,76,0.3);}
+
+/* OUTPUT */
+.output-wrap{background:var(--surface);border:1px solid var(--border);margin-top:16px;display:none;}
+.output-wrap.show{display:block;}
+.output-header{display:flex;justify-content:space-between;align-items:center;padding:10px 18px;border-bottom:1px solid var(--border);}
+.output-label{font-size:9px;letter-spacing:2px;color:var(--gold);text-transform:uppercase;}
+.copy-btn{background:transparent;border:1px solid var(--border);color:var(--muted);font-size:9px;padding:4px 10px;cursor:pointer;font-family:'Montserrat',sans-serif;text-transform:uppercase;transition:all 0.2s;}
+.copy-btn:hover{border-color:var(--gold);color:var(--gold);}
+.output-body{padding:22px;font-size:13px;line-height:1.9;white-space:pre-wrap;max-height:500px;overflow-y:auto;}
+
+/* LOADER */
+.loader{display:none;text-align:center;padding:36px;}
+.loader-ring{width:32px;height:32px;margin:0 auto 14px;border:1px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin 1s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loader-text{font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;}
+
+/* UPLOAD BOX */
+.upload-box{background:var(--surface);border:1px dashed var(--border);padding:22px;text-align:center;cursor:pointer;transition:all 0.3s;margin-bottom:8px;}
+.upload-box:hover{border-color:var(--gold);background:var(--goldglow);}
+.upload-box.has-file{border-color:var(--green);border-style:solid;}
+.upload-icon{font-size:24px;margin-bottom:6px;}
+.upload-text{font-size:11px;color:var(--muted);letter-spacing:1px;}
+.upload-sub{font-size:10px;color:var(--muted);margin-top:3px;}
+.upload-sub.loaded{color:var(--green);}
+
+/* DISPATCH DASHBOARD */
+.dispatch-status{display:flex;align-items:center;gap:12px;padding:14px 18px;border:1px solid var(--border);background:var(--surface);margin-bottom:18px;}
+.dispatch-status.live{border-color:var(--green);background:rgba(78,203,141,0.05);}
+.dispatch-status-icon{font-size:18px;}
+.dispatch-status-text{font-size:11px;color:var(--muted);letter-spacing:0.5px;}
+.dispatch-status.live .dispatch-status-text{color:var(--green);}
+.kpi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px;}
+.kpi{background:var(--surface);border:1px solid var(--border);padding:20px;text-align:center;position:relative;}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:0.4;}
+.kpi-val{font-family:'Cormorant Garamond',serif;font-size:30px;font-weight:700;color:var(--gold);margin-bottom:4px;}
+.kpi-label{font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;}
+.quick-btns{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px;}
+.quick-btn{padding:8px 16px;background:var(--surface);border:1px solid var(--border);color:var(--muted);font-family:'Montserrat',sans-serif;font-size:10px;letter-spacing:1px;cursor:pointer;transition:all 0.2s;text-transform:uppercase;font-weight:500;}
+.quick-btn:hover{border-color:var(--gold);color:var(--gold);background:var(--goldglow);}
+.stat-btn{border-color:rgba(201,168,76,0.4);color:var(--gold);}
+.stat-btn:hover{background:var(--gold);color:var(--black);}
+.cust-btn{border-color:rgba(78,203,141,0.3);color:var(--green);}
+.cust-btn:hover{background:var(--green);color:var(--black);}
+.city-btn{border-color:rgba(91,141,238,0.3);color:#5b8dee;}
+.city-btn:hover{background:#5b8dee;color:#fff;}
+.date-pill{padding:6px 12px;background:var(--surface);border:1px solid var(--border);color:var(--muted);font-family:'Montserrat',sans-serif;font-size:10px;cursor:pointer;transition:all 0.2s;white-space:nowrap;}
+.date-pill:hover{border-color:var(--gold);color:var(--gold);}
+.date-pill.active{background:var(--gold);color:var(--black);border-color:var(--gold);font-weight:700;}
+.date-pill.today{border-color:var(--green);color:var(--green);}
+.date-pill.today.active{background:var(--green);color:var(--black);}
+.detail-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:12px;}
+.detail-row:last-child{border-bottom:none;}
+.detail-name{color:var(--text);}
+.detail-val{color:var(--gold);font-weight:600;}
+.chat-input-row{display:flex;gap:10px;align-items:flex-end;}
+.chat-textarea{flex:1;min-height:52px;max-height:120px;resize:none;padding:14px 16px;}
+.send-btn{width:52px;height:52px;flex-shrink:0;background:linear-gradient(135deg,var(--gold),var(--gold2));border:none;color:var(--black);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;}
+.send-btn:hover{transform:translateY(-2px);}
+.send-btn:disabled{opacity:0.4;cursor:not-allowed;transform:none;}
+
+/* EMAIL DIFF */
+.diff-wrap{background:var(--surface);border:1px solid var(--border);margin-top:16px;display:none;}
+.diff-wrap.show{display:block;}
+.diff-nav{display:flex;border-bottom:1px solid var(--border);}
+.diff-btn{padding:10px 18px;border:none;background:transparent;color:var(--muted);font-family:'Montserrat',sans-serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:all 0.2s;border-right:1px solid var(--border);position:relative;}
+.diff-btn::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:var(--gold);transform:scaleX(0);transition:transform 0.2s;}
+.diff-btn.on{color:var(--gold);}
+.diff-btn.on::after{transform:scaleX(1);}
+.diff-copy{margin-left:auto;padding:10px 18px;border:none;background:transparent;color:var(--muted);font-family:'Montserrat',sans-serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;}
+.diff-copy:hover{color:var(--gold);}
+.diff-body{padding:22px;font-size:13px;line-height:1.9;white-space:pre-wrap;max-height:440px;overflow-y:auto;}
+
+/* SUCCESS */
+.success-note{display:none;margin-top:10px;padding:10px 18px;border:1px solid rgba(78,203,141,0.3);background:rgba(78,203,141,0.05);font-size:10px;letter-spacing:1px;color:var(--green);text-transform:uppercase;}
+.success-note.show{display:block;}
+
+/* QUOTATION */
+.quote-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.quote-items{margin-top:12px;}
+.quote-item-row{display:grid;grid-template-columns:3fr 1fr 1fr auto;gap:8px;margin-bottom:8px;align-items:center;}
+.quote-item-row input{padding:10px 12px;font-size:12px;}
+.add-item-btn{padding:10px 18px;background:transparent;border:1px solid var(--border);color:var(--muted);font-family:'Montserrat',sans-serif;font-size:9px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all 0.2s;margin-top:8px;}
+.add-item-btn:hover{border-color:var(--gold);color:var(--gold);}
+.remove-btn{width:32px;height:32px;background:transparent;border:1px solid var(--border);color:var(--red);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:all 0.2s;flex-shrink:0;}
+.remove-btn:hover{background:rgba(232,75,75,0.1);}
+
+/* FOOTER */
+footer{position:relative;z-index:5;text-align:center;padding:28px;border-top:1px solid var(--border);}
+.footer-text{font-size:10px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;display:flex;align-items:center;justify-content:center;gap:16px;}
+.footer-text::before,.footer-text::after{content:'';width:30px;height:1px;background:var(--gold);opacity:0.3;}
+.footer-gold{color:var(--gold);}
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-track{background:var(--surface);}
+::-webkit-scrollbar-thumb{background:var(--border);}
+::-webkit-scrollbar-thumb:hover{background:var(--gold);}
+</style>
+</head>
+<body>
+<div class="bg-luxury"></div>
+<div class="bg-lines"></div>
+<div class="bg-vignette"></div>
+
+<header>
+  <div class="header-left">
+    <div class="logo-mark">
+      <svg viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M11 2L13.5 8.5H20L14.5 12.5L16.5 19L11 15L5.5 19L7.5 12.5L2 8.5H8.5L11 2Z" stroke="#c9a84c" stroke-width="1" fill="none"/>
+        <circle cx="11" cy="11" r="3" stroke="#c9a84c" stroke-width="0.5" fill="rgba(201,168,76,0.1)"/>
+      </svg>
+    </div>
+    <div class="brand">
+      <div class="brand-name">AZHAR — AI</div>
+      <div class="brand-sub">Operations &amp; Customer Service Intelligence Platform</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="status-indicator"><div class="status-dot"></div>System Active</div>
+    <div class="version">V 3.0</div>
+  </div>
+</header>
+
+<main>
+  <div class="hero">
+    <div class="hero-eyebrow">Operations Intelligence Platform</div>
+    <h1 class="hero-title">Operations &amp; Customer Service<br><strong>AI Command Centre</strong></h1>
+    <p class="hero-desc">Daily Dispatch · Daily Rejection · Executive Summary · Email Writer · Proforma Invoice · Excel Support</p>
+  </div>
+  <div class="divider"><div class="divider-line"></div><div class="divider-diamond"></div><div class="divider-line"></div></div>
+
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="switchTab('dispatch',this);loadDispatchStatus()"><span class="nav-icon">🚚</span>Daily Dispatch</button>
+    <button class="nav-tab" onclick="switchTab('rejection',this)"><span class="nav-icon">📊</span>Daily Rejection</button>
+    <button class="nav-tab" onclick="switchTab('summary',this)"><span class="nav-icon">📋</span>Executive Summary</button>
+    <button class="nav-tab" onclick="switchTab('email',this)"><span class="nav-icon">✉️</span>Email Writer</button>
+    <button class="nav-tab" onclick="switchTab('quotation',this)"><span class="nav-icon">💼</span>Proforma Invoice</button>
+    <button class="nav-tab" onclick="switchTab('excel',this)"><span class="nav-icon">📐</span>Excel Support</button>
+  </div>
+
+  <!-- DISPATCH CONTROL -->
+  <div class="panel active" id="dispatch">
+    <div class="card" style="padding:28px;">
+      <div class="card-eyebrow">Daily Dispatch Control</div>
+      <h3>Operations Dashboard</h3>
+      <p>Upload your daily Excel dispatch report — full live dashboard for your entire team.</p>
+
+      <!-- STATUS + DATE SLICER -->
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:20px;">
+        <div class="dispatch-status" id="dispatch-status" style="flex:1;min-width:200px;margin:0;">
+          <div class="dispatch-status-icon">⏳</div>
+          <div class="dispatch-status-text">Checking for today's dispatch data...</div>
+        </div>
+        <div id="date-slicer-wrap" style="display:none;">
+          <div style="font-size:9px;letter-spacing:2px;color:var(--gold);text-transform:uppercase;margin-bottom:6px;">📅 Select Date</div>
+          <div id="date-slicer" style="display:flex;gap:6px;flex-wrap:wrap;max-width:460px;"></div>
+        </div>
+      </div>
+
+      <!-- KPI ROW -->
+      <div class="kpi-grid" id="kpi-grid" style="display:none;grid-template-columns:repeat(6,1fr);margin-bottom:20px;">
+        <div class="kpi" style="border-color:rgba(201,168,76,0.4);">
+          <div class="kpi-val" id="kpi-orders" style="font-size:26px;">—</div>
+          <div class="kpi-label">Total Orders</div>
+          <div style="font-size:10px;color:var(--green);margin-top:4px;" id="kpi-orders-sub">↑ vs yesterday</div>
+        </div>
+        <div class="kpi" style="border-color:rgba(201,168,76,0.4);">
+          <div class="kpi-val" id="kpi-value" style="font-size:22px;">—</div>
+          <div class="kpi-label">Total Value (AED)</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:4px;">Million</div>
+        </div>
+        <div class="kpi" style="border-color:rgba(78,203,141,0.4);">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:2px;">
+            <div class="kpi-val" id="kpi-food" style="font-size:20px;color:#4ecb8d;">—</div>
+            <div style="font-size:10px;color:var(--muted);">FOOD</div>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;">
+            <div class="kpi-val" id="kpi-nonfood" style="font-size:20px;color:#e84b8a;">—</div>
+            <div style="font-size:10px;color:var(--muted);">NON-FOOD</div>
+          </div>
+          <div class="kpi-label">Food / Non-Food</div>
+        </div>
+        <div class="kpi" style="border-color:rgba(91,141,238,0.4);">
+          <div class="kpi-val" id="kpi-routes" style="font-size:26px;color:#5b8dee;">—</div>
+          <div class="kpi-label">Routes</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:4px;" id="kpi-drivers-sub">— drivers</div>
+        </div>
+        <div class="kpi" style="border-color:rgba(78,203,141,0.4);">
+          <div class="kpi-val" id="kpi-dubai" style="font-size:26px;color:#4ecb8d;">—</div>
+          <div class="kpi-label">Dubai Orders</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:4px;" id="kpi-dubai-sub">AED —</div>
+        </div>
+        <div class="kpi" style="border-color:rgba(91,141,238,0.4);">
+          <div class="kpi-val" id="kpi-abudhabi" style="font-size:26px;color:#5b8dee;">—</div>
+          <div class="kpi-label">Abu Dhabi</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:4px;" id="kpi-abudhabi-sub">AED —</div>
+        </div>
+      </div>
+
+      <!-- CHARTS ROW: Bar chart + Top Customers -->
+      <div id="detail-tables" style="display:none;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+
+          <!-- ORDERS BY CITY BAR CHART -->
+          <div style="background:var(--surface);border:1px solid var(--border);padding:20px;">
+            <div style="font-size:10px;letter-spacing:2px;color:var(--gold);text-transform:uppercase;margin-bottom:16px;">📊 Orders by City</div>
+            <div id="city-bars" style="display:flex;align-items:flex-end;gap:12px;height:120px;justify-content:center;"></div>
+            <div id="city-labels" style="display:flex;gap:12px;justify-content:center;margin-top:8px;flex-wrap:wrap;"></div>
+          </div>
+
+          <!-- TOP CUSTOMERS -->
+          <div style="background:var(--surface);border:1px solid var(--border);padding:20px;">
+            <div style="font-size:10px;letter-spacing:2px;color:var(--gold);text-transform:uppercase;margin-bottom:12px;">💰 Top Customers by Value</div>
+            <div id="top-customers-table"></div>
+          </div>
+        </div>
+
+        <!-- DRIVERS + CITY CARDS ROW -->
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:20px;">
+
+          <!-- TOP 5 DRIVERS -->
+          <div style="background:var(--surface);border:1px solid var(--border);padding:20px;">
+            <div style="font-size:10px;letter-spacing:2px;color:var(--gold);text-transform:uppercase;margin-bottom:12px;">🚚 Top 5 Drivers</div>
+            <div id="top-drivers-table"></div>
+          </div>
+
+          <!-- CITY VALUE CARDS -->
+          <div style="background:var(--surface);border:1px solid var(--border);padding:20px;">
+            <div style="font-size:10px;letter-spacing:2px;color:var(--gold);text-transform:uppercase;margin-bottom:12px;">📍 Value by City</div>
+            <div id="city-value-list"></div>
+          </div>
+
+          <!-- AI ASK BOX -->
+          <div style="background:#0d1508;border:1px solid rgba(78,203,141,0.3);padding:20px;">
+            <div style="font-size:10px;letter-spacing:2px;color:var(--green);text-transform:uppercase;margin-bottom:12px;">✦ Ask AI Anything</div>
+            <button class="quick-btn" onclick="askQuick('How many Lulu orders today and total value?')" style="width:100%;margin-bottom:6px;text-align:left;padding:8px 12px;font-size:11px;">🛒 How many Lulu orders?</button>
+            <button class="quick-btn" onclick="askQuick('Who is the top driver today?')" style="width:100%;margin-bottom:6px;text-align:left;padding:8px 12px;font-size:11px;">🚚 Top driver today?</button>
+            <button class="quick-btn" onclick="askQuick('Total value for Dubai today?')" style="width:100%;margin-bottom:12px;text-align:left;padding:8px 12px;font-size:11px;">📍 Dubai total value?</button>
+            <div style="display:flex;gap:6px;">
+              <input type="text" id="dispatch-quick-input" placeholder="Ask anything..." style="flex:1;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:Montserrat,sans-serif;font-size:11px;padding:8px 10px;outline:none;" onkeydown="if(event.key==='Enter'){askQuick(this.value);this.value='';}"/>
+              <button onclick="askQuick(document.getElementById('dispatch-quick-input').value);document.getElementById('dispatch-quick-input').value='';" style="padding:8px 12px;background:var(--green);border:none;color:var(--black);cursor:pointer;font-weight:700;">→</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- FULL QUICK BUTTONS -->
+        <div style="background:var(--surface);border:1px solid var(--border);padding:20px;margin-bottom:16px;">
+          <div style="font-size:10px;letter-spacing:2px;color:var(--gold);text-transform:uppercase;margin-bottom:12px;">🛒 Quick Reports — One Click</div>
+          <div class="quick-btns" style="margin-bottom:8px;">
+            <button class="quick-btn cust-btn" onclick="askQuick('All LULU orders today — total count, total value AED, breakdown by branch.')">🟡 Lulu</button>
+            <button class="quick-btn cust-btn" onclick="askQuick('All CARREFOUR orders today — total count and value AED.')">🔵 Carrefour</button>
+            <button class="quick-btn cust-btn" onclick="askQuick('All UNION COOP orders today — count and value.')">🟢 Union Coop</button>
+            <button class="quick-btn cust-btn" onclick="askQuick('All SPINNEYS orders today — count and value.')">🟣 Spinneys</button>
+            <button class="quick-btn cust-btn" onclick="askQuick('All WAITROSE orders today — count and value.')">⚪ Waitrose</button>
+            <button class="quick-btn cust-btn" onclick="askQuick('All CHOITHRAMS orders today — count and value.')">🟠 Choithrams</button>
+            <button class="quick-btn cust-btn" onclick="askQuick('All WEST ZONE orders today — count and value.')">🔴 West Zone</button>
+            <button class="quick-btn cust-btn" onclick="askQuick('All GEANT orders today — count and value.')">🟤 Geant</button>
+          </div>
+          <div class="quick-btns">
+            <button class="quick-btn city-btn" onclick="askQuick('All orders for DUBAI today — count and value.')">📍 Dubai</button>
+            <button class="quick-btn city-btn" onclick="askQuick('All orders for ABU DHABI today — count and value.')">📍 Abu Dhabi</button>
+            <button class="quick-btn city-btn" onclick="askQuick('All orders for SHARJAH today — count and value.')">📍 Sharjah</button>
+            <button class="quick-btn city-btn" onclick="askQuick('All orders for FUJAIRAH today — count and value.')">📍 Fujairah</button>
+            <button class="quick-btn city-btn" onclick="askQuick('All orders for AL AIN today — count and value.')">📍 Al Ain</button>
+            <button class="quick-btn city-btn" onclick="askQuick('All orders for RAK today — count and value.')">📍 RAK</button>
+          </div>
+        </div>
+
+        <!-- AI ANSWER -->
+        <div class="output-wrap" id="dispatch-out">
+          <div class="output-header"><span class="output-label">✦ Dispatch Intelligence</span><button class="copy-btn" onclick="copyEl('dispatch-out-text')">Copy</button></div>
+          <div class="output-body" id="dispatch-out-text"></div>
+        </div>
+      </div>
+
+      <!-- ADMIN UPLOAD -->
+      <div style="margin-top:24px;padding-top:20px;border-top:1px solid var(--border);">
+        <div class="card-eyebrow">Admin Only — Upload Today's Excel File</div>
+        <div class="upload-box" onclick="document.getElementById('dispatch-file').click()">
+          <div class="upload-icon">📊</div>
+          <div class="upload-text">Upload Daily Dispatch Report (.xlsx or .csv)</div>
+          <div class="upload-sub" id="dispatch-file-name">Admin uploads once every morning — team sees live dashboard automatically</div>
+        </div>
+        <input type="file" id="dispatch-file" accept=".xlsx,.xls,.csv,.txt" style="display:none" onchange="uploadDispatch(this)"/>
+        <div class="loader" id="dispatch-loader"><div class="loader-ring"></div><div class="loader-text">Processing your Excel file...</div></div>
       </div>
     </div>
   </div>
