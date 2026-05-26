@@ -133,9 +133,28 @@ function parseDispatchCSV(csvText, dateKey) {
     .map(([city, v]) => ({ city, orders: v.orders, value: Math.round(v.value) }))
     .sort((a,b) => b.orders - a.orders);
 
-  // Top customers by value
-  const topCustomers = Object.entries(customers)
-    .map(([name, v]) => ({ name, orders: v.orders, value: Math.round(v.value) }))
+  // Group customers by base name (club same customer across branches/locations)
+  const baseCust = {};
+  Object.entries(customers).forEach(([name, v]) => {
+    // Extract base customer name - remove branch/location specific text
+    let base = name;
+    const stripAfter = [',Branch', ', Branch', ',Br.', ', Br.', ' -Branch', 
+                        ',CPD', ' CPD', '- Branch', '-Branch'];
+    for (const kw of stripAfter) {
+      const idx = base.toLowerCase().indexOf(kw.toLowerCase());
+      if (idx > 3) { base = base.substring(0, idx).trim(); break; }
+    }
+    // Also strip trailing LLC, L.L.C variations if after comma
+    base = base.replace(/,\s*(LLC|L\.L\.C|llc).*$/i, '').trim();
+    
+    if (!baseCust[base]) baseCust[base] = { orders: 0, value: 0, locations: 0 };
+    baseCust[base].orders += v.orders;
+    baseCust[base].value += v.value;
+    baseCust[base].locations++;
+  });
+
+  const topCustomers = Object.entries(baseCust)
+    .map(([name, v]) => ({ name, orders: v.orders, value: Math.round(v.value), locations: v.locations }))
     .sort((a,b) => b.value - a.value)
     .slice(0, 6);
 
@@ -218,23 +237,7 @@ app.post('/api/dispatch/upload', upload.single('file'), async (req, res) => {
     // Parse CSV directly for accuracy
     const summary = parseDispatchCSV(csvText, dateKey);
     
-    // Use AI only for top customers names cleanup
-    try {
-      const aiMsg = await anthropic.messages.create({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 500,
-        messages: [{
-          role: 'user',
-          content: `From this dispatch data, list top 6 customers by total value as JSON array only:
-[{"name":"Customer Name","orders":0,"value":0}]
-No markdown. CSV sample:
-${csvText.substring(0, 5000)}`
-        }]
-      });
-      const raw = aiMsg.content[0].text.replace(/```json|```/g, '').trim();
-      const topCusts = JSON.parse(raw);
-      if (Array.isArray(topCusts)) summary.top_customers = topCusts;
-    } catch(e) { /* keep calculated values */ }
+    // Top customers already calculated accurately in parseDispatchCSV - no AI needed
 
     const entry = { uploadedAt: new Date().toISOString(), uploadedBy, csvText, summary, date: dateKey };
     dispatchHistory[dateKey] = entry;
