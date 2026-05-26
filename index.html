@@ -376,6 +376,27 @@ footer{position:relative;z-index:5;text-align:center;padding:28px;border-top:1px
         </div>
       </div>
 
+      <!-- ROUTE SUMMARY TABLE -->
+      <div id="ds-routes-wrap" style="display:none;margin-bottom:14px;">
+        <div class="chart-box" style="background:var(--surface);border:1px solid var(--border);padding:18px;">
+          <div class="chart-title">🗺️ Route Summary — Drops per Route</div>
+          <div style="overflow-x:auto;">
+            <table style="width:100%;border-collapse:collapse;" id="ds-routes-table">
+              <thead>
+                <tr style="background:#1a1a2e;border-bottom:2px solid var(--gold);">
+                  <th style="padding:8px 10px;font-size:9px;color:var(--gold);text-transform:uppercase;letter-spacing:1px;text-align:left;border:1px solid var(--border);">Route</th>
+                  <th style="padding:8px 10px;font-size:9px;color:var(--gold);text-transform:uppercase;letter-spacing:1px;text-align:center;border:1px solid var(--border);">Driver ID</th>
+                  <th style="padding:8px 10px;font-size:9px;color:var(--gold);text-transform:uppercase;letter-spacing:1px;text-align:center;border:1px solid var(--border);">Drops (Locations)</th>
+                  <th style="padding:8px 10px;font-size:9px;color:var(--gold);text-transform:uppercase;letter-spacing:1px;text-align:center;border:1px solid var(--border);">Order Lines</th>
+                  <th style="padding:8px 10px;font-size:9px;color:var(--gold);text-transform:uppercase;letter-spacing:1px;text-align:right;border:1px solid var(--border);">Value (AED)</th>
+                </tr>
+              </thead>
+              <tbody id="ds-routes-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
       <div class="qbtns" id="ds-qbtns">
         <button class="qbtn cust" onclick="doAsk('All LULU orders — count, value, branches')">🟡 Lulu</button>
         <button class="qbtn cust" onclick="doAsk('All CARREFOUR orders — count and value')">🔵 Carrefour</button>
@@ -393,6 +414,7 @@ footer{position:relative;z-index:5;text-align:center;padding:28px;border-top:1px
         <button class="qbtn city" onclick="doAsk('Total orders and value for RAK today')">📍 RAK</button>
         <button class="qbtn stat" onclick="doAsk('Top 5 drivers by deliveries today with count')">🚚 Top 5 Drivers</button>
         <button class="qbtn stat" onclick="doAsk('Total orders count and total value in AED')">📦 Total Summary</button>
+        <button class="qbtn stat" onclick="doAsk('List all routes with their drop count and driver name')">🗺️ All Routes</button>
       </div>
 
       <div class="ask-row" id="ds-ask-row">
@@ -772,6 +794,21 @@ function buildDashboard(d) {
       const col = i < 3 ? 'var(--gold)' : 'var(--muted)';
       return '<div class="driver-row"><div class="driver-info"><span class="driver-name" style="color:' + col + ';font-weight:' + (i<3?'700':'400') + '">' + (i+1) + '. ' + dr.name + '</span><span class="driver-count" style="color:' + col + '">' + dr.orders + ' drops</span></div><div class="progress"><div class="progress-fill" style="width:' + pct + '%;background:' + col + '"></div></div></div>';
     }).join('');
+  }
+
+  // Build route summary table
+  if (s.top_routes && s.top_routes.length) {
+    const tbody = document.getElementById('ds-routes-body');
+    tbody.innerHTML = s.top_routes.map((r, i) =>
+      '<tr style="border-bottom:1px solid var(--border);background:' + (i%2===0?'var(--surface)':'var(--card)') + ';">' +
+      '<td style="padding:8px 10px;font-size:12px;color:var(--gold);font-weight:600;border:1px solid var(--border);">' + r.route + '</td>' +
+      '<td style="padding:8px 10px;font-size:12px;color:var(--text);text-align:center;border:1px solid var(--border);">' + (r.driver||'—') + '</td>' +
+      '<td style="padding:8px 10px;font-size:14px;color:var(--gold);font-weight:700;text-align:center;border:1px solid var(--border);">' + r.drops + '</td>' +
+      '<td style="padding:8px 10px;font-size:12px;color:var(--muted);text-align:center;border:1px solid var(--border);">' + (r.order_lines||'—') + '</td>' +
+      '<td style="padding:8px 10px;font-size:12px;color:var(--gold);text-align:right;border:1px solid var(--border);">AED ' + (r.value||0).toLocaleString() + '</td>' +
+      '</tr>'
+    ).join('');
+    document.getElementById('ds-routes-wrap').style.display = 'block';
   }
 
   ['ds-charts','ds-charts2','ds-qbtns'].forEach(id => { const el = document.getElementById(id); if(el) el.style.display = id === 'ds-qbtns' ? 'flex' : 'grid'; });
