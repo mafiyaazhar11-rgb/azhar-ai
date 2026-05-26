@@ -325,17 +325,26 @@ footer span{color:var(--gold);}
               <div style="font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:700;color:var(--orange);" id="k-nonfood">—</div>
               <div style="font-size:10px;color:var(--muted);margin-bottom:8px;" id="k-nonfood-val">AED —</div>
               <div style="border-top:1px solid rgba(232,133,75,0.15);padding-top:8px;">
-                <div style="padding:3px 0;border-bottom:1px solid rgba(232,133,75,0.1);">
-                  <div style="display:flex;justify-content:space-between;font-size:10px;"><span style="color:var(--muted);">DGC</span><span id="k-dgc-orders" style="color:var(--text);">—</span></div>
-                  <div style="font-size:10px;color:var(--orange);text-align:right;" id="k-dgc-val">—</div>
+                <div style="padding:4px 0;border-bottom:1px solid rgba(232,133,75,0.08);">
+                  <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <span style="font-size:10px;color:var(--muted);font-weight:600;">DGC</span>
+                    <span id="k-dgc-orders" style="font-size:10px;color:var(--text);">—</span>
+                  </div>
+                  <div style="font-size:11px;color:var(--orange);font-weight:700;text-align:right;margin-top:2px;" id="k-dgc-val">AED —</div>
                 </div>
-                <div style="padding:3px 0;border-bottom:1px solid rgba(232,133,75,0.1);">
-                  <div style="display:flex;justify-content:space-between;font-size:10px;"><span style="color:var(--muted);">DGS</span><span id="k-dgs-orders" style="color:var(--text);">—</span></div>
-                  <div style="font-size:10px;color:var(--orange);text-align:right;" id="k-dgs-val">—</div>
+                <div style="padding:4px 0;border-bottom:1px solid rgba(232,133,75,0.08);">
+                  <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <span style="font-size:10px;color:var(--muted);font-weight:600;">DGS</span>
+                    <span id="k-dgs-orders" style="font-size:10px;color:var(--text);">—</span>
+                  </div>
+                  <div style="font-size:11px;color:var(--orange);font-weight:700;text-align:right;margin-top:2px;" id="k-dgs-val">AED —</div>
                 </div>
-                <div style="padding:3px 0;">
-                  <div style="display:flex;justify-content:space-between;font-size:10px;"><span style="color:var(--muted);">DSN</span><span id="k-dsn-orders" style="color:var(--text);">—</span></div>
-                  <div style="font-size:10px;color:var(--orange);text-align:right;" id="k-dsn-val">—</div>
+                <div style="padding:4px 0;">
+                  <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <span style="font-size:10px;color:var(--muted);font-weight:600;">DSN</span>
+                    <span id="k-dsn-orders" style="font-size:10px;color:var(--text);">—</span>
+                  </div>
+                  <div style="font-size:11px;color:var(--orange);font-weight:700;text-align:right;margin-top:2px;" id="k-dsn-val">AED —</div>
                 </div>
               </div>
             </div>
@@ -759,7 +768,9 @@ function buildDashboard(d) {
   if (dropsEl) dropsEl.textContent = (s.total_drops||0).toLocaleString() + ' total drops';
   document.getElementById('k-value').textContent = 'AED ' + val;
   document.getElementById('k-food').textContent = (s.food_orders||0).toLocaleString();
+  document.getElementById('k-food-val').textContent = 'AED ' + (s.food_value ? Math.round(s.food_value).toLocaleString() : '0');
   document.getElementById('k-nonfood').textContent = (s.non_food_orders||0).toLocaleString();
+  document.getElementById('k-nonfood-val').textContent = 'AED ' + (s.non_food_value ? Math.round(s.non_food_value).toLocaleString() : '0');
   document.getElementById('k-pl').textContent = (s.pl_orders||0).toLocaleString();
 
   document.getElementById('ds-kpis').style.display = 'grid';
