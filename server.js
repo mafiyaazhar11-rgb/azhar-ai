@@ -29,6 +29,166 @@ app.get('/', (req, res) => {
 // Health check
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
+
+// Direct CSV parser - tuned for AZHAR-AI dispatch format
+// Columns: ORDER CODE, ROUTE, Keep Together, CITY, LOCATION_ID, CUSTOMER, 
+//          CUSTOMER ADDRESS, TOTAL_AMOUNT, ETA, SPECIAL INSTRUCTIONS, 
+//          VEHICLE_ID, DRIVER_ID, DRIVER CONTACT DETAILS
+
+function parseDispatchCSV(csvText, dateKey) {
+  const lines = csvText.split('\n').filter(l => l.trim());
+  if (lines.length < 2) return { total_orders: 0, date: dateKey };
+  
+  // Parse headers - find column indices
+  const headers = lines[0].split(',').map(h => h.trim().replace(/['"]/g,'').toUpperCase());
+  const idx = (names) => {
+    for (const n of names) {
+      const i = headers.findIndex(h => h.includes(n));
+      if (i >= 0) return i;
+    }
+    return -1;
+  };
+  
+  const routeIdx   = idx(['ROUTE']);
+  const cityIdx    = idx(['CITY']);
+  const custIdx    = idx(['CUSTOMER']);
+  const amtIdx     = idx(['TOTAL_AMOUNT','AMOUNT']);
+  const driverIdx   = idx(['DRIVER CONTACT','DRIVER_CONTACT']);
+  const driverIdIdx = idx(['DRIVER_ID']);
+  const orderIdx    = idx(['ORDER CODE','ORDER_CODE']);
+  const locationIdx = idx(['LOCATION_ID','LOCATION']);
+
+  let totalOrders = 0, totalValue = 0;
+  const cities = {}, customers = {}, routes = {}, driverSet = new Set();
+
+  for (let i = 1; i < lines.length; i++) {
+    // Handle CSV with commas inside quoted fields
+    const row = [];
+    let cell = '', inQ = false;
+    for (const ch of lines[i]) {
+      if (ch === '"') { inQ = !inQ; }
+      else if (ch === ',' && !inQ) { row.push(cell.trim()); cell = ''; }
+      else { cell += ch; }
+    }
+    row.push(cell.trim());
+    
+    if (!row[0] || row[0] === '') continue;
+    totalOrders++;
+
+    const amt = amtIdx >= 0 ? parseFloat(row[amtIdx]) || 0 : 0;
+    totalValue += amt;
+
+    // City - normalize case
+    if (cityIdx >= 0 && row[cityIdx]) {
+      const rawCity = row[cityIdx].trim();
+      // Normalize: Title Case, fix variations
+      let city = rawCity.charAt(0).toUpperCase() + rawCity.slice(1).toLowerCase();
+      if (city.toLowerCase().includes('abu dhabi') || city.toLowerCase() === 'abu dhabi') city = 'Abu Dhabi';
+      else if (city.toLowerCase().includes('ras al') || city.toLowerCase().includes('rak')) city = 'Ras Al Khaimah';
+      else if (city.toLowerCase().includes('umm al')) city = 'Umm Al Quwain';
+      else if (city.toLowerCase() === 'al ain' || city.toLowerCase() === 'al-ain') city = 'Al Ain';
+      else if (city.toLowerCase() === 'dubai') city = 'Dubai';
+      else if (city.toLowerCase() === 'sharjah') city = 'Sharjah';
+      else if (city.toLowerCase() === 'ajman') city = 'Ajman';
+      else if (city.toLowerCase() === 'fujairah') city = 'Fujairah';
+      else if (city.toLowerCase() === 'hatta') city = 'Hatta';
+      if (!cities[city]) cities[city] = { orders: 0, value: 0 };
+      cities[city].orders++;
+      cities[city].value += amt;
+    }
+
+    // Customer
+    if (custIdx >= 0 && row[custIdx]) {
+      const cust = row[custIdx].trim();
+      if (!customers[cust]) customers[cust] = { orders: 0, value: 0 };
+      customers[cust].orders++;
+      customers[cust].value += amt;
+    }
+
+    // Route - drops = unique LOCATION_ID per route
+    if (routeIdx >= 0 && row[routeIdx]) {
+      const route = row[routeIdx].trim();
+      const locId = locationIdx >= 0 ? row[locationIdx]?.trim() : '';
+      let driverName = '';
+      if (driverIdx >= 0 && row[driverIdx]) {
+        const contact = row[driverIdx].trim();
+        // Extract name before phone: "Faiz Ullah 056-5362317" -> "Faiz Ullah"
+        const match = contact.match(/^([A-Za-z][A-Za-z\s]+?)(?:[\-\+\s]+[0-9]|$)/);
+        driverName = match ? match[1].trim() : contact.split(/[\-\+0-9]/)[0].trim();
+      }
+      if (!routes[route]) routes[route] = { locations: new Set(), driver: driverName, value: 0, orderLines: 0 };
+      if (locId) routes[route].locations.add(locId);
+      routes[route].orderLines++;
+      routes[route].value += amt;
+      if (driverName && !routes[route].driver) routes[route].driver = driverName;
+    }
+
+    // Driver unique count using DRIVER_ID
+    if (driverIdIdx >= 0 && row[driverIdIdx]) driverSet.add(row[driverIdIdx].trim());
+    else if (routeIdx >= 0 && row[routeIdx]) driverSet.add(row[routeIdx].trim()); // one driver per route
+  }
+
+  // Sort cities
+  const byCity = Object.entries(cities)
+    .map(([city, v]) => ({ city, orders: v.orders, value: Math.round(v.value) }))
+    .sort((a,b) => b.orders - a.orders);
+
+  // Top customers by value
+  const topCustomers = Object.entries(customers)
+    .map(([name, v]) => ({ name, orders: v.orders, value: Math.round(v.value) }))
+    .sort((a,b) => b.value - a.value)
+    .slice(0, 6);
+
+  // Top routes - drops = unique locations
+  const topRoutes = Object.entries(routes)
+    .map(([route, v]) => ({ 
+      route, 
+      drops: v.locations.size,   // unique locations = drops
+      order_lines: v.orderLines, // total order lines
+      driver: v.driver, 
+      value: Math.round(v.value) 
+    }))
+    .sort((a,b) => b.drops - a.drops)
+    .slice(0, 30);
+
+  // Top drivers - from routes sorted by drops
+  const topDrivers = Object.entries(routes)
+    .filter(([,v]) => v.driver)
+    .map(([route, v]) => ({ name: v.driver, orders: v.locations.size, route }))
+    .sort((a,b) => b.orders - a.orders)
+    .slice(0, 5);
+
+  // Lulu stats
+  const luluEntries = Object.entries(customers).filter(([n]) => n.toUpperCase().includes('LULU'));
+  const luluOrders = luluEntries.reduce((s,[,v]) => s + v.orders, 0);
+  const luluValue  = luluEntries.reduce((s,[,v]) => s + v.value, 0);
+
+  // Food vs Non-food - count by customer type or order prefix
+  let foodOrders = 0;
+  for (let i = 1; i < lines.length; i++) {
+    const row = lines[i].split(',');
+    const order = orderIdx >= 0 ? (row[orderIdx]||'').trim() : '';
+    // Food orders typically have DCV or Food type prefix
+    if (order.includes('DCV') || order.includes('FOOD')) foodOrders++;
+  }
+
+  return {
+    total_orders: totalOrders,
+    total_value: Math.round(totalValue),
+    total_routes: Object.keys(routes).length,
+    total_drivers: driverSet.size || Object.keys(routes).length,
+    lulu_orders: luluOrders,
+    lulu_value: Math.round(luluValue),
+    food_orders: foodOrders,
+    non_food_orders: totalOrders - foodOrders,
+    by_city: byCity,
+    top_customers: topCustomers,
+    top_drivers: topDrivers,
+    top_routes: topRoutes,
+    date: dateKey
+  };
+}
+
 // ─── DISPATCH MEMORY STORE ───────────────────────────────────
 let dispatchHistory = {};
 let currentDispatch = null;
@@ -55,40 +215,26 @@ app.post('/api/dispatch/upload', upload.single('file'), async (req, res) => {
     const uploadedBy = req.body.uploadedBy || 'Admin';
 
     // Generate summary with AI
-    const msg = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 1000,
-      messages: [{
-        role: 'user',
-        content: `Analyse this dispatch CSV and return ONLY a JSON object, no markdown, no explanation:
-{
-  "total_orders": <count all rows>,
-  "total_value": <sum of TOTAL_AMOUNT column>,
-  "total_routes": <count unique ROUTE values>,
-  "total_drivers": <count unique DRIVER_ID values>,
-  "lulu_orders": <count rows where CUSTOMER contains LULU>,
-  "lulu_value": <sum TOTAL_AMOUNT where CUSTOMER contains LULU>,
-  "food_orders": <count rows where CUSTOMER contains FOOD>,
-  "non_food_orders": <total_orders minus food_orders>,
-  "by_city": [{"city":"Dubai","orders":0,"value":0}],
-  "top_customers": [{"name":"Customer","orders":0,"value":0}],
-  "top_drivers": [{"name":"Driver","orders":0}],
-  "date": "${dateKey}"
-}
-top_customers: top 6 by value. top_drivers: top 5 by order count.
-
-CSV (first 10000 chars):
-${csvText.substring(0, 10000)}`
-      }]
-    });
-
-    let summary = {};
+    // Parse CSV directly for accuracy
+    const summary = parseDispatchCSV(csvText, dateKey);
+    
+    // Use AI only for top customers names cleanup
     try {
-      const raw = msg.content[0].text.replace(/```json|```/g, '').trim();
-      summary = JSON.parse(raw);
-    } catch(e) {
-      summary = { total_orders: 0, error: 'Could not parse summary' };
-    }
+      const aiMsg = await anthropic.messages.create({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 500,
+        messages: [{
+          role: 'user',
+          content: `From this dispatch data, list top 6 customers by total value as JSON array only:
+[{"name":"Customer Name","orders":0,"value":0}]
+No markdown. CSV sample:
+${csvText.substring(0, 5000)}`
+        }]
+      });
+      const raw = aiMsg.content[0].text.replace(/```json|```/g, '').trim();
+      const topCusts = JSON.parse(raw);
+      if (Array.isArray(topCusts)) summary.top_customers = topCusts;
+    } catch(e) { /* keep calculated values */ }
 
     const entry = { uploadedAt: new Date().toISOString(), uploadedBy, csvText, summary, date: dateKey };
     dispatchHistory[dateKey] = entry;
