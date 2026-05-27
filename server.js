@@ -31,23 +31,16 @@ app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
 
 // Direct CSV parser - tuned for AZHAR-AI dispatch format
-// Columns: ORDER CODE, ORG, type, ROUTE, Keep Together, CITY, LOCATION_ID, CUSTOMER,
-//          CUSTOMER ADDRESS, TOTAL_AMOUNT, ETA, SPECIAL INSTRUCTIONS,
+// Columns: ORDER CODE, ROUTE, Keep Together, CITY, LOCATION_ID, CUSTOMER, 
+//          CUSTOMER ADDRESS, TOTAL_AMOUNT, ETA, SPECIAL INSTRUCTIONS, 
 //          VEHICLE_ID, DRIVER_ID, DRIVER CONTACT DETAILS
-//
-// TYPE column values: Food, Noon Food, 3 PL, Van
-// ORG mapping:
-//   Food      -> DCV, DCF
-//   Noon Food -> DGC, DSN
-//   3 PL      -> 3 PL  (HCP orders, value = 0)
-//   Van       -> DPS   (value = 0)
 
 function parseDispatchCSV(csvText, dateKey) {
   const lines = csvText.split('\n').filter(l => l.trim());
   if (lines.length < 2) return { total_orders: 0, date: dateKey };
-
-  // Parse headers
-  const headers = lines[0].split(',').map(h => h.trim().replace(/['"]/g, '').toUpperCase());
+  
+  // Parse headers - find column indices
+  const headers = lines[0].split(',').map(h => h.trim().replace(/['"]/g,'').toUpperCase());
   const idx = (names) => {
     for (const n of names) {
       const i = headers.findIndex(h => h.includes(n));
@@ -55,38 +48,22 @@ function parseDispatchCSV(csvText, dateKey) {
     }
     return -1;
   };
-
-  const routeIdx    = idx(['ROUTE']);
-  const cityIdx     = idx(['CITY']);
-  const custIdx     = idx(['CUSTOMER']);
-  const amtIdx      = idx(['TOTAL_AMOUNT', 'AMOUNT']);
-  const driverIdx   = idx(['DRIVER CONTACT', 'DRIVER_CONTACT']);
+  
+  const routeIdx   = idx(['ROUTE']);
+  const cityIdx    = idx(['CITY']);
+  const custIdx    = idx(['CUSTOMER']);
+  const amtIdx     = idx(['TOTAL_AMOUNT','AMOUNT']);
+  const driverIdx   = idx(['DRIVER CONTACT','DRIVER_CONTACT']);
   const driverIdIdx = idx(['DRIVER_ID']);
-  const orderIdx    = idx(['ORDER CODE', 'ORDER_CODE']);
-  const locationIdx = idx(['LOCATION_ID', 'LOCATION']);
-  const typeColIdx  = idx(['TYPE']);   // column "type"
-  const orgColIdx   = idx(['ORG']);    // column "ORG"
+  const orderIdx    = idx(['ORDER CODE','ORDER_CODE']);
+  const locationIdx = idx(['LOCATION_ID','LOCATION']);
+  const typeColIdx  = idx(['TYPE','type']);  // Direct type column
 
   let totalOrders = 0, totalValue = 0;
   const cities = {}, customers = {}, routes = {}, driverSet = new Set();
 
-  // ORG-level accumulators: DCV, DCF, DGC, DGS, DSN, HCP
-  const orgStats = {
-    DCV: { o: 0, v: 0 },
-    DCF: { o: 0, v: 0 },
-    DGC: { o: 0, v: 0 },
-    DGS: { o: 0, v: 0 },
-    DSN: { o: 0, v: 0 },
-    HCP: { o: 0, v: 0 }
-  };
-
-  // Type-level accumulators
-  let foodOrders = 0, foodValue = 0;
-  let noonFoodOrders = 0, noonFoodValue = 0;
-  let plOrders = 0, vanOrders = 0;
-
   for (let i = 1; i < lines.length; i++) {
-    // Proper CSV parse (handles quoted fields with commas)
+    // Handle CSV with commas inside quoted fields
     const row = [];
     let cell = '', inQ = false;
     for (const ch of lines[i]) {
@@ -95,57 +72,33 @@ function parseDispatchCSV(csvText, dateKey) {
       else { cell += ch; }
     }
     row.push(cell.trim());
-
+    
     if (!row[0] || row[0] === '') continue;
     totalOrders++;
 
     const amt = amtIdx >= 0 ? parseFloat(row[amtIdx]) || 0 : 0;
     totalValue += amt;
 
-    // ── TYPE column (Food / Noon Food / 3 PL / Van) ──────────────
-    const rawType = typeColIdx >= 0 ? (row[typeColIdx] || '').trim() : '';
-    const typeUpper = rawType.toUpperCase();
-
-    if (typeUpper === 'FOOD') {
-      foodOrders++;
-      foodValue += amt;
-    } else if (typeUpper === 'NOON FOOD') {
-      noonFoodOrders++;
-      noonFoodValue += amt;
-    } else if (typeUpper === '3 PL' || typeUpper === '3PL') {
-      plOrders++;
-    } else if (typeUpper === 'VAN') {
-      vanOrders++;
-    }
-
-    // ── ORG column (DCV / DCF / DGC / DSN / DPS / 3 PL) ─────────
-    const rawOrg = orgColIdx >= 0 ? (row[orgColIdx] || '').trim().toUpperCase() : '';
-    if (rawOrg === 'DCV')       { orgStats.DCV.o++; orgStats.DCV.v += amt; }
-    else if (rawOrg === 'DCF')  { orgStats.DCF.o++; orgStats.DCF.v += amt; }
-    else if (rawOrg === 'DGC')  { orgStats.DGC.o++; orgStats.DGC.v += amt; }
-    else if (rawOrg === 'DGS')  { orgStats.DGS.o++; orgStats.DGS.v += amt; }
-    else if (rawOrg === 'DSN')  { orgStats.DSN.o++; orgStats.DSN.v += amt; }
-    else if (rawOrg === '3 PL' || rawOrg === 'HCP') { orgStats.HCP.o++; orgStats.HCP.v += amt; }
-
-    // ── City ──────────────────────────────────────────────────────
+    // City - normalize case
     if (cityIdx >= 0 && row[cityIdx]) {
       const rawCity = row[cityIdx].trim();
+      // Normalize: Title Case, fix variations
       let city = rawCity.charAt(0).toUpperCase() + rawCity.slice(1).toLowerCase();
-      if (city.toLowerCase().includes('abu dhabi'))              city = 'Abu Dhabi';
-      else if (city.toLowerCase().includes('ras al') || city.toLowerCase() === 'rak') city = 'Ras Al Khaimah';
-      else if (city.toLowerCase().includes('umm al'))            city = 'Umm Al Quwain';
+      if (city.toLowerCase().includes('abu dhabi') || city.toLowerCase() === 'abu dhabi') city = 'Abu Dhabi';
+      else if (city.toLowerCase().includes('ras al') || city.toLowerCase().includes('rak')) city = 'Ras Al Khaimah';
+      else if (city.toLowerCase().includes('umm al')) city = 'Umm Al Quwain';
       else if (city.toLowerCase() === 'al ain' || city.toLowerCase() === 'al-ain') city = 'Al Ain';
-      else if (city.toLowerCase() === 'dubai')                   city = 'Dubai';
-      else if (city.toLowerCase() === 'sharjah')                 city = 'Sharjah';
-      else if (city.toLowerCase() === 'ajman')                   city = 'Ajman';
-      else if (city.toLowerCase() === 'fujairah')                city = 'Fujairah';
-      else if (city.toLowerCase() === 'hatta')                   city = 'Hatta';
+      else if (city.toLowerCase() === 'dubai') city = 'Dubai';
+      else if (city.toLowerCase() === 'sharjah') city = 'Sharjah';
+      else if (city.toLowerCase() === 'ajman') city = 'Ajman';
+      else if (city.toLowerCase() === 'fujairah') city = 'Fujairah';
+      else if (city.toLowerCase() === 'hatta') city = 'Hatta';
       if (!cities[city]) cities[city] = { orders: 0, value: 0 };
       cities[city].orders++;
       cities[city].value += amt;
     }
 
-    // ── Customer ─────────────────────────────────────────────────
+    // Customer
     if (custIdx >= 0 && row[custIdx]) {
       const cust = row[custIdx].trim();
       if (!customers[cust]) customers[cust] = { orders: 0, value: 0 };
@@ -153,13 +106,14 @@ function parseDispatchCSV(csvText, dateKey) {
       customers[cust].value += amt;
     }
 
-    // ── Route / drops ─────────────────────────────────────────────
+    // Route - drops = unique LOCATION_ID per route
     if (routeIdx >= 0 && row[routeIdx]) {
       const route = row[routeIdx].trim();
       const locId = locationIdx >= 0 ? row[locationIdx]?.trim() : '';
       let driverName = '';
       if (driverIdx >= 0 && row[driverIdx]) {
         const contact = row[driverIdx].trim();
+        // Extract name before phone: "Faiz Ullah 056-5362317" -> "Faiz Ullah"
         const match = contact.match(/^([A-Za-z][A-Za-z\s]+?)(?:[\-\+\s]+[0-9]|$)/);
         driverName = match ? match[1].trim() : contact.split(/[\-\+0-9]/)[0].trim();
       }
@@ -170,90 +124,139 @@ function parseDispatchCSV(csvText, dateKey) {
       if (driverName && !routes[route].driver) routes[route].driver = driverName;
     }
 
-    // ── Driver unique count ───────────────────────────────────────
+    // Driver unique count using DRIVER_ID
     if (driverIdIdx >= 0 && row[driverIdIdx]) driverSet.add(row[driverIdIdx].trim());
-    else if (routeIdx >= 0 && row[routeIdx])  driverSet.add(row[routeIdx].trim());
+    else if (routeIdx >= 0 && row[routeIdx]) driverSet.add(row[routeIdx].trim()); // one driver per route
   }
 
   // Sort cities
   const byCity = Object.entries(cities)
     .map(([city, v]) => ({ city, orders: v.orders, value: Math.round(v.value) }))
-    .sort((a, b) => b.orders - a.orders);
+    .sort((a,b) => b.orders - a.orders);
 
-  // Group customers by base name
+  // Group customers by base name (club same customer across branches/locations)
   const baseCust = {};
   Object.entries(customers).forEach(([name, v]) => {
+    // Extract base customer name - remove branch/location specific text
     let base = name;
-    const stripAfter = [',Branch', ', Branch', ',Br.', ', Br.', ' -Branch',
+    const stripAfter = [',Branch', ', Branch', ',Br.', ', Br.', ' -Branch', 
                         ',CPD', ' CPD', '- Branch', '-Branch'];
     for (const kw of stripAfter) {
-      const i = base.toLowerCase().indexOf(kw.toLowerCase());
-      if (i > 3) { base = base.substring(0, i).trim(); break; }
+      const idx = base.toLowerCase().indexOf(kw.toLowerCase());
+      if (idx > 3) { base = base.substring(0, idx).trim(); break; }
     }
+    // Also strip trailing LLC, L.L.C variations if after comma
     base = base.replace(/,\s*(LLC|L\.L\.C|llc).*$/i, '').trim();
+    
     if (!baseCust[base]) baseCust[base] = { orders: 0, value: 0, locations: 0 };
-    baseCust[base].orders   += v.orders;
-    baseCust[base].value    += v.value;
+    baseCust[base].orders += v.orders;
+    baseCust[base].value += v.value;
     baseCust[base].locations++;
   });
 
   const topCustomers = Object.entries(baseCust)
     .map(([name, v]) => ({ name, orders: v.orders, value: Math.round(v.value), locations: v.locations }))
-    .sort((a, b) => b.value - a.value)
+    .sort((a,b) => b.value - a.value)
     .slice(0, 6);
 
+  // Top routes - drops = unique locations
   const topRoutes = Object.entries(routes)
-    .map(([route, v]) => ({
-      route,
-      drops: v.locations.size,
-      order_lines: v.orderLines,
-      driver: v.driver,
-      value: Math.round(v.value)
+    .map(([route, v]) => ({ 
+      route, 
+      drops: v.locations.size,   // unique locations = drops
+      order_lines: v.orderLines, // total order lines
+      driver: v.driver, 
+      value: Math.round(v.value) 
     }))
-    .sort((a, b) => b.drops - a.drops)
+    .sort((a,b) => b.drops - a.drops)
     .slice(0, 30);
 
+  // Top drivers - from routes sorted by drops
   const topDrivers = Object.entries(routes)
-    .filter(([, v]) => v.driver)
+    .filter(([,v]) => v.driver)
     .map(([route, v]) => ({ name: v.driver, orders: v.locations.size, route }))
-    .sort((a, b) => b.orders - a.orders)
+    .sort((a,b) => b.orders - a.orders)
     .slice(0, 5);
 
   // Lulu stats
   const luluEntries = Object.entries(customers).filter(([n]) => n.toUpperCase().includes('LULU'));
-  const luluOrders  = luluEntries.reduce((s, [, v]) => s + v.orders, 0);
-  const luluValue   = luluEntries.reduce((s, [, v]) => s + v.value,  0);
+  const luluOrders = luluEntries.reduce((s,[,v]) => s + v.orders, 0);
+  const luluValue  = luluEntries.reduce((s,[,v]) => s + v.value, 0);
+
+  // Type detection - use TYPE column if exists, else fall back to ORDER CODE
+  const typeStats = { DCV:{o:0,v:0}, DCF:{o:0,v:0}, DGC:{o:0,v:0}, DGS:{o:0,v:0}, DSN:{o:0,v:0}, HCP:{o:0,v:0} };
+  let foodOrders=0, foodValue=0, nonFoodOrders=0, nonFoodValue=0, plOrders=0, vanOrders=0;
+  const hasTypeCol = typeColIdx >= 0;
+
+  for (let i = 1; i < lines.length; i++) {
+    const row = lines[i].split(',').map(c => c.trim().replace(/^"|"$/g,''));
+    if (!row[0]) continue;
+    const amt = amtIdx >= 0 ? parseFloat(row[amtIdx]) || 0 : 0;
+
+    if (hasTypeCol) {
+      // Use TYPE column directly: Food, Non Food, Noon Food, 3 PL, Van
+      const typeVal = (row[typeColIdx]||'').trim().toUpperCase();
+      // Use flexible matching - handles extra spaces, typos, encoding issues
+      const isFood = typeVal === 'FOOD' || typeVal === 'FOOD ';
+      const isNonFood = typeVal.includes('NON') || typeVal.includes('NOON') || typeVal === 'NONFOOD' || typeVal === 'NON-FOOD';
+      const is3PL = typeVal.includes('3') && (typeVal.includes('PL') || typeVal.includes('P L'));
+      const isVan = typeVal === 'VAN' || typeVal === 'VAN ';
+      const isValidType = isFood || isNonFood || is3PL || isVan;
+
+      if (!isValidType) {
+        // TYPE column has wrong data - fall back to ORDER CODE
+        const order = (orderIdx >= 0 ? row[orderIdx] : '').trim().toUpperCase();
+        const typeMatch = order.match(/[A-Z]{2,3}/);
+        const tc = typeMatch ? typeMatch[0] : '';
+        if (typeStats[tc]) { typeStats[tc].o++; typeStats[tc].v += amt; }
+        if (tc==='DCV'||tc==='DCF') { foodOrders++; foodValue+=amt; }
+        else if (tc==='DGC'||tc==='DGS'||tc==='DSN') { nonFoodOrders++; nonFoodValue+=amt; }
+        else if (tc==='HCP') plOrders++;
+      } else {
+        if (isFood) { foodOrders++; foodValue += amt; typeStats.DCV.o++; typeStats.DCV.v += amt; }
+        else if (isNonFood) { nonFoodOrders++; nonFoodValue += amt; typeStats.DGC.o++; typeStats.DGC.v += amt; }
+        else if (is3PL) { plOrders++; typeStats.HCP.o++; }
+        else if (isVan) { vanOrders++; }
+      }
+    } else {
+      // Fall back to ORDER CODE pattern
+      const order = (orderIdx >= 0 ? row[orderIdx] : '').trim().toUpperCase();
+      const typeMatch = order.match(/[A-Z]{2,3}/);
+      const tc = typeMatch ? typeMatch[0] : '';
+      if (typeStats[tc]) { typeStats[tc].o++; typeStats[tc].v += amt; }
+      if (tc==='DCV'||tc==='DCF') { foodOrders++; foodValue+=amt; }
+      else if (tc==='DGC'||tc==='DGS'||tc==='DSN') { nonFoodOrders++; nonFoodValue+=amt; }
+      else if (tc==='HCP') plOrders++;
+    }
+  }
 
   return {
-    total_orders:     totalOrders,
-    total_value:      Math.round(totalValue),
-    total_routes:     Object.keys(routes).length,
-    total_drivers:    driverSet.size || Object.keys(routes).length,
-    lulu_orders:      luluOrders,
-    lulu_value:       Math.round(luluValue),
-    // Food = type "Food"
-    food_orders:      foodOrders,
-    food_value:       Math.round(foodValue),
-    // Non-Food = type "Noon Food"
-    non_food_orders:  noonFoodOrders,
-    non_food_value:   Math.round(noonFoodValue),
-    pl_orders:        plOrders,
-    van_orders:       vanOrders,
-    total_drops:      Object.values(routes).reduce((s, r) => s + (r.locations ? r.locations.size : 0), 0),
-    // ORG-level breakdown (for sub-breakdown cards)
+    total_orders: totalOrders,
+    total_value: Math.round(totalValue),
+    total_routes: Object.keys(routes).length,
+    total_drivers: driverSet.size || Object.keys(routes).length,
+    lulu_orders: luluOrders,
+    lulu_value: Math.round(luluValue),
+    food_orders: foodOrders,
+    food_value: Math.round(foodValue),
+    non_food_orders: nonFoodOrders,
+    non_food_value: Math.round(nonFoodValue),
+    pl_orders: plOrders,
+    van_orders: vanOrders,
+    total_drops: Object.values(routes).reduce((s, r) => s + (r.locations ? r.locations.size : 0), 0),
     type_breakdown: {
-      DCV: { orders: orgStats.DCV.o, value: Math.round(orgStats.DCV.v) },
-      DCF: { orders: orgStats.DCF.o, value: Math.round(orgStats.DCF.v) },
-      DGC: { orders: orgStats.DGC.o, value: Math.round(orgStats.DGC.v) },
-      DGS: { orders: orgStats.DGS.o, value: Math.round(orgStats.DGS.v) },
-      DSN: { orders: orgStats.DSN.o, value: Math.round(orgStats.DSN.v) },
-      HCP: { orders: orgStats.HCP.o, value: Math.round(orgStats.HCP.v) }
+      DCV: { orders: typeStats.DCV.o, value: Math.round(typeStats.DCV.v) },
+      DCF: { orders: typeStats.DCF.o, value: Math.round(typeStats.DCF.v) },
+      DGC: { orders: typeStats.DGC.o, value: Math.round(typeStats.DGC.v) },
+      DGS: { orders: typeStats.DGS.o, value: Math.round(typeStats.DGS.v) },
+      DSN: { orders: typeStats.DSN.o, value: Math.round(typeStats.DSN.v) },
+      HCP: { orders: typeStats.HCP.o, value: Math.round(typeStats.HCP.v) }
     },
-    by_city:       byCity,
+    by_city: byCity,
     top_customers: topCustomers,
-    top_drivers:   topDrivers,
-    top_routes:    topRoutes,
-    date:          dateKey
+    top_drivers: topDrivers,
+    top_routes: topRoutes,
+    date: dateKey
   };
 }
 
@@ -279,10 +282,14 @@ app.post('/api/dispatch/upload', upload.single('file'), async (req, res) => {
     }
     if (!csvText) return res.status(400).json({ error: 'No file received' });
 
-    const dateKey    = req.body.dateKey    || new Date().toISOString().split('T')[0];
+    const dateKey = req.body.dateKey || new Date().toISOString().split('T')[0];
     const uploadedBy = req.body.uploadedBy || 'Admin';
 
+    // Generate summary with AI
+    // Parse CSV directly for accuracy
     const summary = parseDispatchCSV(csvText, dateKey);
+    
+    // Top customers already calculated accurately in parseDispatchCSV - no AI needed
 
     const entry = { uploadedAt: new Date().toISOString(), uploadedBy, csvText, summary, date: dateKey };
     dispatchHistory[dateKey] = entry;
@@ -304,11 +311,11 @@ app.get('/api/dispatch/status', (req, res) => {
   const availableDates = Object.keys(dispatchHistory).sort().reverse();
   if (!currentDispatch) return res.json({ hasData: false, availableDates });
   res.json({
-    hasData:    true,
+    hasData: true,
     uploadedAt: currentDispatch.uploadedAt,
     uploadedBy: currentDispatch.uploadedBy,
-    summary:    currentDispatch.summary,
-    date:       currentDispatch.date,
+    summary: currentDispatch.summary,
+    date: currentDispatch.date,
     availableDates
   });
 });
@@ -330,31 +337,27 @@ app.post('/api/dispatch/ask', async (req, res) => {
       max_tokens: 1500,
       messages: [{
         role: 'user',
-        content: `You are AZHAR-AI Dispatch Intelligence for a UAE logistics company.
+        content: `You are AZHAR-AI Dispatch Intelligence for UAE logistics company in UAE.
 
-DISPATCH SUMMARY:
+IMPORTANT FACTS about this dispatch data:
+- Total orders: ${currentDispatch.summary.total_orders || 'unknown'}
+- Total value: AED ${currentDispatch.summary.total_value || 'unknown'}
+- Food orders (numeric order codes): ${currentDispatch.summary.food_orders || 'unknown'} orders, AED ${currentDispatch.summary.food_value || 'unknown'}
+- Non-food/3PL orders (HCP codes): ${currentDispatch.summary.non_food_orders || 'unknown'} orders
+- Total routes: ${currentDispatch.summary.total_routes || 'unknown'}
+- Total drivers: ${currentDispatch.summary.total_drivers || 'unknown'}
 - Date: ${currentDispatch.date}
-- Total orders: ${currentDispatch.summary.total_orders}
-- Total value: AED ${currentDispatch.summary.total_value?.toLocaleString()}
-- Food orders (type=Food, ORG=DCV/DCF): ${currentDispatch.summary.food_orders} orders, AED ${currentDispatch.summary.food_value?.toLocaleString()}
-- Noon Food orders (type=Noon Food, ORG=DGC/DSN): ${currentDispatch.summary.non_food_orders} orders, AED ${currentDispatch.summary.non_food_value?.toLocaleString()}
-- 3PL orders: ${currentDispatch.summary.pl_orders}
-- Van orders: ${currentDispatch.summary.van_orders}
-- Total routes: ${currentDispatch.summary.total_routes}
-- Total drivers: ${currentDispatch.summary.total_drivers}
-
-ORG Breakdown:
-- DCV: ${currentDispatch.summary.type_breakdown?.DCV?.orders} orders, AED ${currentDispatch.summary.type_breakdown?.DCV?.value?.toLocaleString()}
-- DCF: ${currentDispatch.summary.type_breakdown?.DCF?.orders} orders, AED ${currentDispatch.summary.type_breakdown?.DCF?.value?.toLocaleString()}
-- DGC: ${currentDispatch.summary.type_breakdown?.DGC?.orders} orders, AED ${currentDispatch.summary.type_breakdown?.DGC?.value?.toLocaleString()}
-- DSN: ${currentDispatch.summary.type_breakdown?.DSN?.orders} orders, AED ${currentDispatch.summary.type_breakdown?.DSN?.value?.toLocaleString()}
 
 CSV Data (for detailed queries):
 ${currentDispatch.csvText.substring(0, 10000)}
 
+Columns: ORDER CODE, ROUTE, CITY, LOCATION_ID, CUSTOMER, TOTAL_AMOUNT, ETA, VEHICLE_ID, DRIVER_ID, DRIVER CONTACT DETAILS
+
+Note: Numeric order codes = Food orders. HCP_ prefix = Non-food/3PL orders.
+
 Question: ${req.body.question}
 
-Answer with exact numbers. Use AED for currency.`
+Answer with exact numbers from the data above. Use AED for currency values.`
       }]
     });
     res.json({ result: msg.content[0].text });
@@ -370,7 +373,7 @@ app.post('/api/chat', async (req, res) => {
     let messages = [];
     if (history && history.length > 0) {
       messages = history.slice(-10).map(h => ({ role: h.role === 'assistant' ? 'assistant' : 'user', content: h.content }));
-      if (!messages.length || messages[messages.length - 1].content !== prompt) {
+      if (!messages.length || messages[messages.length-1].content !== prompt) {
         messages.push({ role: 'user', content: prompt });
       }
     } else {
