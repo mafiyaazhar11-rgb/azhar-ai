@@ -321,7 +321,7 @@ footer span{color:var(--gold);}
 
             <!-- NON-FOOD -->
             <div style="background:rgba(91,141,238,0.05);border:1px solid rgba(91,141,238,0.2);padding:12px;">
-              <div style="font-size:9px;color:var(--blue);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;font-weight:700;">🟠 NOON FOOD</div>
+              <div style="font-size:9px;color:var(--blue);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;font-weight:700;">🟠 NON FOOD</div>
               <div style="font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:700;color:var(--blue);" id="k-nonfood">—</div>
               <div style="font-size:10px;color:var(--muted);margin-bottom:8px;" id="k-nonfood-val">AED —</div>
               <div style="border-top:1px solid rgba(91,141,238,0.15);padding-top:8px;">
@@ -429,7 +429,7 @@ footer span{color:var(--gold);}
           <button class="qbtn city" onclick="doAsk('Total orders and value for FUJAIRAH today')">📍 Fujairah</button>
           <button class="qbtn city" onclick="doAsk('Total orders and value for AL AIN today')">📍 Al Ain</button>
           <button class="qbtn stat" onclick="doAsk('Top 5 drivers by deliveries today')">🚚 Top Drivers</button>
-          <button class="qbtn stat" onclick="doAsk('Total food orders value and noon food orders value')">📊 Food vs Noon Food</button>
+          <button class="qbtn stat" onclick="doAsk('Total food orders value and non food orders value')">📊 Food vs Non Food</button>
           <button class="qbtn stat" onclick="doAsk('Summary of all routes with drops and values')">🗺️ All Routes</button>
         </div>
         <div class="ask-row">
@@ -815,7 +815,7 @@ function buildDashboard(d) {
     document.getElementById('donut-center').textContent = (s.total_orders||0).toLocaleString();
     document.getElementById('ds-donut-legend').innerHTML =
       '<div class="donut-item"><div class="donut-dot" style="background:var(--green)"></div><span>Food: <strong>' + (s.food_orders||0) + '</strong></span></div>' +
-      '<div class="donut-item"><div class="donut-dot" style="background:var(--blue)"></div><span>Noon Food: <strong>' + (s.non_food_orders||0) + '</strong></span></div>' +
+      '<div class="donut-item"><div class="donut-dot" style="background:var(--blue)"></div><span>Non Food: <strong>' + (s.non_food_orders||0) + '</strong></span></div>' +
       '<div class="donut-item"><div class="donut-dot" style="background:var(--gold)"></div><span>3PL: <strong>' + (s.pl_orders||0) + '</strong></span></div>';
   }
 
