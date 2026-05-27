@@ -250,6 +250,51 @@ app.post('/api/dispatch/ask', async (req, res) => {
   } catch(e) { res.status(500).json({ error:e.message }); }
 });
 
+
+// ── REJECTION ANALYSIS ────────────────────────────────────────
+app.post('/api/rejection', upload.single('file'), async (req, res) => {
+  try {
+    let csvText = '';
+    if (req.file) {
+      const ext = path.extname(req.file.originalname||'').toLowerCase();
+      if (ext === '.xlsx' || ext === '.xls') {
+        const wb = XLSX.read(req.file.buffer, { type:'buffer' });
+        csvText = XLSX.utils.sheet_to_csv(wb.Sheets[wb.SheetNames[0]]);
+      } else {
+        csvText = req.file.buffer.toString('utf8');
+      }
+    }
+    if (!csvText) return res.status(400).json({ error:'No file received' });
+
+    const analysisType = req.body.analysisType || 'Full Analysis';
+    const sample = csvText.substring(0, 12000);
+
+    const msg = await anthropic.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 2000,
+      messages: [{ role:'user', content:
+        `You are AZHAR-AI Operations Intelligence for UAE logistics company.
+Analyse this rejection/returns data. Analysis Type: ${analysisType}
+
+Provide a structured analysis with:
+1. OVERVIEW: Total rejections count, total value (AED), date range
+2. TOP 10 CUSTOMERS by rejection value with count and AED value
+3. TOP REJECTION REASONS with count and percentage
+4. TOP REJECTED PRODUCTS/ITEMS
+5. MONTHLY TREND if dates are available
+6. KEY RECOMMENDATIONS to reduce rejections
+
+Data (CSV format):
+${sample}`
+      }]
+    });
+    res.json({ result: msg.content[0].text });
+  } catch(e) {
+    console.error('Rejection error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ── OTHER ENDPOINTS ────────────────────────────────────────────
 app.post('/api/chat', async (req, res) => {
   try {
