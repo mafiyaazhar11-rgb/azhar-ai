@@ -8,62 +8,47 @@ const fs = require('fs');
 
 const app = express();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
-app.use(express.static('public'));
 app.use(express.static('.'));
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
-// Serve index.html
 app.get('/', (req, res) => {
-  const p1 = path.join(__dirname, 'public', 'index.html');
-  const p2 = path.join(__dirname, 'index.html');
-  if (fs.existsSync(p1)) res.sendFile(p1);
-  else if (fs.existsSync(p2)) res.sendFile(p2);
+  const p = path.join(__dirname, 'index.html');
+  if (fs.existsSync(p)) res.sendFile(p);
   else res.send('AZHAR-AI Running');
 });
 
-// Health check
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
-
-// Direct CSV parser - tuned for AZHAR-AI dispatch format
-// Columns: ORDER CODE, ROUTE, Keep Together, CITY, LOCATION_ID, CUSTOMER, 
-//          CUSTOMER ADDRESS, TOTAL_AMOUNT, ETA, SPECIAL INSTRUCTIONS, 
-//          VEHICLE_ID, DRIVER_ID, DRIVER CONTACT DETAILS
+// ── DISPATCH STORE ─────────────────────────────────────────────
+let dispatchHistory = {};
+let currentDispatch = null;
 
 function parseDispatchCSV(csvText, dateKey) {
   const lines = csvText.split('\n').filter(l => l.trim());
   if (lines.length < 2) return { total_orders: 0, date: dateKey };
-  
-  // Parse headers - find column indices
-  const headers = lines[0].split(',').map(h => h.trim().replace(/['"]/g,'').toUpperCase());
-  const idx = (names) => {
-    for (const n of names) {
-      const i = headers.findIndex(h => h.includes(n));
-      if (i >= 0) return i;
-    }
-    return -1;
-  };
-  
-  const routeIdx   = idx(['ROUTE']);
-  const cityIdx    = idx(['CITY']);
-  const custIdx    = idx(['CUSTOMER']);
-  const amtIdx     = idx(['TOTAL_AMOUNT','AMOUNT']);
-  const driverIdx   = idx(['DRIVER CONTACT','DRIVER_CONTACT']);
-  const driverIdIdx = idx(['DRIVER_ID']);
-  const orderIdx    = idx(['ORDER CODE','ORDER_CODE']);
-  const locationIdx = idx(['LOCATION_ID','LOCATION']);
-  const typeColIdx  = idx(['TYPE','type']);  // Direct type column
 
-  let totalOrders = 0, totalValue = 0;
-  const cities = {}, customers = {}, routes = {}, driverSet = new Set();
+  const headers = lines[0].split(',').map(h => h.trim().replace(/['"]/g,'').toUpperCase());
+  const col = (names) => { for (const n of names) { const i = headers.findIndex(h => h.includes(n)); if (i >= 0) return i; } return -1; };
+
+  const routeIdx    = col(['ROUTE']);
+  const cityIdx     = col(['CITY']);
+  const custIdx     = col(['CUSTOMER']);
+  const amtIdx      = col(['TOTAL_AMOUNT','AMOUNT']);
+  const driverIdx   = col(['DRIVER CONTACT','DRIVER_CONTACT']);
+  const driverIdIdx = col(['DRIVER_ID']);
+  const orderIdx    = col(['ORDER CODE','ORDER_CODE']);
+  const locationIdx = col(['LOCATION_ID','LOCATION']);
+  const typeColIdx  = col(['TYPE']);
+
+  let totalOrders=0, totalValue=0;
+  const cities={}, customers={}, routes={}, driverSet=new Set();
+  const typeStats={ DCV:{o:0,v:0}, DCF:{o:0,v:0}, DGC:{o:0,v:0}, DGS:{o:0,v:0}, DSN:{o:0,v:0}, HCP:{o:0,v:0} };
+  let foodOrders=0, foodValue=0, nonFoodOrders=0, nonFoodValue=0, plOrders=0, vanOrders=0;
 
   for (let i = 1; i < lines.length; i++) {
-    // Handle CSV with commas inside quoted fields
     const row = [];
     let cell = '', inQ = false;
     for (const ch of lines[i]) {
@@ -72,365 +57,232 @@ function parseDispatchCSV(csvText, dateKey) {
       else { cell += ch; }
     }
     row.push(cell.trim());
-    
-    if (!row[0] || row[0] === '') continue;
+    if (!row[0]) continue;
     totalOrders++;
 
     const amt = amtIdx >= 0 ? parseFloat(row[amtIdx]) || 0 : 0;
     totalValue += amt;
 
-    // City - normalize case
+    // City
     if (cityIdx >= 0 && row[cityIdx]) {
-      const rawCity = row[cityIdx].trim();
-      // Normalize: Title Case, fix variations
-      let city = rawCity.charAt(0).toUpperCase() + rawCity.slice(1).toLowerCase();
-      if (city.toLowerCase().includes('abu dhabi') || city.toLowerCase() === 'abu dhabi') city = 'Abu Dhabi';
-      else if (city.toLowerCase().includes('ras al') || city.toLowerCase().includes('rak')) city = 'Ras Al Khaimah';
-      else if (city.toLowerCase().includes('umm al')) city = 'Umm Al Quwain';
-      else if (city.toLowerCase() === 'al ain' || city.toLowerCase() === 'al-ain') city = 'Al Ain';
-      else if (city.toLowerCase() === 'dubai') city = 'Dubai';
-      else if (city.toLowerCase() === 'sharjah') city = 'Sharjah';
-      else if (city.toLowerCase() === 'ajman') city = 'Ajman';
-      else if (city.toLowerCase() === 'fujairah') city = 'Fujairah';
-      else if (city.toLowerCase() === 'hatta') city = 'Hatta';
-      if (!cities[city]) cities[city] = { orders: 0, value: 0 };
-      cities[city].orders++;
-      cities[city].value += amt;
+      let city = row[cityIdx].trim();
+      const cu = city.toUpperCase();
+      if (cu.includes('ABU DHABI') || cu === 'ABUDHABI') city = 'Abu Dhabi';
+      else if (cu.includes('RAS AL') || cu === 'RAK') city = 'Ras Al Khaimah';
+      else if (cu.includes('UMM AL')) city = 'Umm Al Quwain';
+      else if (cu === 'AL AIN' || cu === 'AL-AIN') city = 'Al Ain';
+      else city = city.charAt(0).toUpperCase() + city.slice(1).toLowerCase();
+      if (!cities[city]) cities[city] = { orders:0, value:0 };
+      cities[city].orders++; cities[city].value += amt;
     }
 
     // Customer
     if (custIdx >= 0 && row[custIdx]) {
       const cust = row[custIdx].trim();
-      if (!customers[cust]) customers[cust] = { orders: 0, value: 0 };
-      customers[cust].orders++;
-      customers[cust].value += amt;
+      if (!customers[cust]) customers[cust] = { orders:0, value:0 };
+      customers[cust].orders++; customers[cust].value += amt;
     }
 
-    // Route - drops = unique LOCATION_ID per route
+    // Route + drops
     if (routeIdx >= 0 && row[routeIdx]) {
       const route = row[routeIdx].trim();
-      const locId = locationIdx >= 0 ? row[locationIdx]?.trim() : '';
+      const locId = locationIdx >= 0 ? (row[locationIdx]||'').trim() : '';
       let driverName = '';
       if (driverIdx >= 0 && row[driverIdx]) {
         const contact = row[driverIdx].trim();
-        // Extract name before phone: "Faiz Ullah 056-5362317" -> "Faiz Ullah"
-        const match = contact.match(/^([A-Za-z][A-Za-z\s]+?)(?:[\-\+\s]+[0-9]|$)/);
-        driverName = match ? match[1].trim() : contact.split(/[\-\+0-9]/)[0].trim();
+        const m = contact.match(/^([A-Za-z][A-Za-z\s]+?)(?:[\-\+\s]+[0-9]|$)/);
+        driverName = m ? m[1].trim() : contact.split(/[\-\+0-9]/)[0].trim();
       }
-      if (!routes[route]) routes[route] = { locations: new Set(), driver: driverName, value: 0, orderLines: 0 };
+      if (!routes[route]) routes[route] = { locations: new Set(), driver: driverName, value:0, orderLines:0 };
       if (locId) routes[route].locations.add(locId);
       routes[route].orderLines++;
       routes[route].value += amt;
       if (driverName && !routes[route].driver) routes[route].driver = driverName;
     }
 
-    // Driver unique count using DRIVER_ID
+    // Driver count
     if (driverIdIdx >= 0 && row[driverIdIdx]) driverSet.add(row[driverIdIdx].trim());
-    else if (routeIdx >= 0 && row[routeIdx]) driverSet.add(row[routeIdx].trim()); // one driver per route
-  }
+    else if (routeIdx >= 0 && row[routeIdx]) driverSet.add(row[routeIdx].trim());
 
-  // Sort cities
-  const byCity = Object.entries(cities)
-    .map(([city, v]) => ({ city, orders: v.orders, value: Math.round(v.value) }))
-    .sort((a,b) => b.orders - a.orders);
-
-  // Group customers by base name (club same customer across branches/locations)
-  const baseCust = {};
-  Object.entries(customers).forEach(([name, v]) => {
-    // Extract base customer name - remove branch/location specific text
-    let base = name;
-    const stripAfter = [',Branch', ', Branch', ',Br.', ', Br.', ' -Branch', 
-                        ',CPD', ' CPD', '- Branch', '-Branch'];
-    for (const kw of stripAfter) {
-      const idx = base.toLowerCase().indexOf(kw.toLowerCase());
-      if (idx > 3) { base = base.substring(0, idx).trim(); break; }
-    }
-    // Also strip trailing LLC, L.L.C variations if after comma
-    base = base.replace(/,\s*(LLC|L\.L\.C|llc).*$/i, '').trim();
-    
-    if (!baseCust[base]) baseCust[base] = { orders: 0, value: 0, locations: 0 };
-    baseCust[base].orders += v.orders;
-    baseCust[base].value += v.value;
-    baseCust[base].locations++;
-  });
-
-  const topCustomers = Object.entries(baseCust)
-    .map(([name, v]) => ({ name, orders: v.orders, value: Math.round(v.value), locations: v.locations }))
-    .sort((a,b) => b.value - a.value)
-    .slice(0, 6);
-
-  // Top routes - drops = unique locations
-  const topRoutes = Object.entries(routes)
-    .map(([route, v]) => ({ 
-      route, 
-      drops: v.locations.size,   // unique locations = drops
-      order_lines: v.orderLines, // total order lines
-      driver: v.driver, 
-      value: Math.round(v.value) 
-    }))
-    .sort((a,b) => b.drops - a.drops)
-    .slice(0, 30);
-
-  // Top drivers - from routes sorted by drops
-  const topDrivers = Object.entries(routes)
-    .filter(([,v]) => v.driver)
-    .map(([route, v]) => ({ name: v.driver, orders: v.locations.size, route }))
-    .sort((a,b) => b.orders - a.orders)
-    .slice(0, 5);
-
-  // Lulu stats
-  const luluEntries = Object.entries(customers).filter(([n]) => n.toUpperCase().includes('LULU'));
-  const luluOrders = luluEntries.reduce((s,[,v]) => s + v.orders, 0);
-  const luluValue  = luluEntries.reduce((s,[,v]) => s + v.value, 0);
-
-  // Type detection - use TYPE column if exists, else fall back to ORDER CODE
-  const typeStats = { DCV:{o:0,v:0}, DCF:{o:0,v:0}, DGC:{o:0,v:0}, DGS:{o:0,v:0}, DSN:{o:0,v:0}, HCP:{o:0,v:0} };
-  let foodOrders=0, foodValue=0, nonFoodOrders=0, nonFoodValue=0, plOrders=0, vanOrders=0;
-  const hasTypeCol = typeColIdx >= 0;
-
-  for (let i = 1; i < lines.length; i++) {
-    const row = lines[i].split(',').map(c => c.trim().replace(/^"|"$/g,''));
-    if (!row[0]) continue;
-    const amt = amtIdx >= 0 ? parseFloat(row[amtIdx]) || 0 : 0;
-
-    if (hasTypeCol) {
-      // Use TYPE column directly: Food, Non Food, Noon Food, 3 PL, Van
-      const typeVal = (row[typeColIdx]||'').trim().toUpperCase();
-      // Use flexible matching - handles extra spaces, typos, encoding issues
-      const isFood = typeVal === 'FOOD' || typeVal === 'FOOD ';
-      const isNonFood = typeVal.includes('NON') || typeVal.includes('NOON') || typeVal === 'NONFOOD' || typeVal === 'NON-FOOD';
-      const is3PL = typeVal.includes('3') && (typeVal.includes('PL') || typeVal.includes('P L'));
-      const isVan = typeVal === 'VAN' || typeVal === 'VAN ';
-      const isValidType = isFood || isNonFood || is3PL || isVan;
-
-      if (!isValidType) {
-        // TYPE column has wrong data - fall back to ORDER CODE
-        const order = (orderIdx >= 0 ? row[orderIdx] : '').trim().toUpperCase();
-        const typeMatch = order.match(/[A-Z]{2,3}/);
-        const tc = typeMatch ? typeMatch[0] : '';
-        if (typeStats[tc]) { typeStats[tc].o++; typeStats[tc].v += amt; }
-        if (tc==='DCV'||tc==='DCF') { foodOrders++; foodValue+=amt; }
-        else if (tc==='DGC'||tc==='DGS'||tc==='DSN') { nonFoodOrders++; nonFoodValue+=amt; }
-        else if (tc==='HCP') plOrders++;
-      } else {
-        if (isFood) { foodOrders++; foodValue += amt; typeStats.DCV.o++; typeStats.DCV.v += amt; }
-        else if (isNonFood) { nonFoodOrders++; nonFoodValue += amt; typeStats.DGC.o++; typeStats.DGC.v += amt; }
-        else if (is3PL) { plOrders++; typeStats.HCP.o++; }
-        else if (isVan) { vanOrders++; }
-      }
+    // Type classification
+    if (typeColIdx >= 0) {
+      const tv = (row[typeColIdx]||'').trim().toUpperCase();
+      const isFood    = tv === 'FOOD';
+      const isNonFood = tv.includes('NON') || tv.includes('NOON');
+      const is3PL     = tv.includes('3') && tv.includes('P');
+      const isVan     = tv.includes('VAN');
+      if      (isFood)    { foodOrders++;    foodValue    += amt; typeStats.DCV.o++; typeStats.DCV.v += amt; }
+      else if (isNonFood) { nonFoodOrders++; nonFoodValue += amt; typeStats.DGC.o++; typeStats.DGC.v += amt; }
+      else if (is3PL)     { plOrders++;  typeStats.HCP.o++; }
+      else if (isVan)     { vanOrders++; }
     } else {
-      // Fall back to ORDER CODE pattern
       const order = (orderIdx >= 0 ? row[orderIdx] : '').trim().toUpperCase();
-      const typeMatch = order.match(/[A-Z]{2,3}/);
-      const tc = typeMatch ? typeMatch[0] : '';
+      const m = order.match(/[A-Z]{2,3}/);
+      const tc = m ? m[0] : '';
       if (typeStats[tc]) { typeStats[tc].o++; typeStats[tc].v += amt; }
-      if (tc==='DCV'||tc==='DCF') { foodOrders++; foodValue+=amt; }
-      else if (tc==='DGC'||tc==='DGS'||tc==='DSN') { nonFoodOrders++; nonFoodValue+=amt; }
+      if      (tc==='DCV'||tc==='DCF') { foodOrders++;    foodValue    += amt; }
+      else if (tc==='DGC'||tc==='DGS'||tc==='DSN') { nonFoodOrders++; nonFoodValue += amt; }
       else if (tc==='HCP') plOrders++;
     }
   }
 
+  // City list sorted
+  const byCity = Object.entries(cities)
+    .map(([city,v]) => ({ city, orders:v.orders, value:Math.round(v.value) }))
+    .sort((a,b) => b.orders - a.orders);
+
+  // Group customers by base name
+  const baseCust = {};
+  Object.entries(customers).forEach(([name,v]) => {
+    let base = name;
+    for (const kw of [',Branch',', Branch',',Br.',', Br.',' -Branch','-Branch']) {
+      const idx = base.toLowerCase().indexOf(kw.toLowerCase());
+      if (idx > 3) { base = base.substring(0, idx).trim(); break; }
+    }
+    base = base.replace(/,\s*(LLC|L\.L\.C|llc).*$/i,'').trim();
+    if (!baseCust[base]) baseCust[base] = { orders:0, value:0, locations:0 };
+    baseCust[base].orders   += v.orders;
+    baseCust[base].value    += v.value;
+    baseCust[base].locations++;
+  });
+
+  const topCustomers = Object.entries(baseCust)
+    .map(([name,v]) => ({ name, orders:v.orders, value:Math.round(v.value), locations:v.locations }))
+    .sort((a,b) => b.value - a.value).slice(0,6);
+
+  const topRoutes = Object.entries(routes)
+    .map(([route,v]) => ({ route, drops:v.locations.size, driver:v.driver, value:Math.round(v.value), order_lines:v.orderLines }))
+    .sort((a,b) => b.drops - a.drops).slice(0,30);
+
+  const topDrivers = Object.entries(routes)
+    .filter(([,v]) => v.driver)
+    .map(([,v]) => ({ name:v.driver, orders:v.locations.size }))
+    .sort((a,b) => b.orders - a.orders).slice(0,5);
+
+  const luluEntries = Object.entries(customers).filter(([n]) => n.toUpperCase().includes('LULU'));
+
   return {
-    total_orders: totalOrders,
-    total_value: Math.round(totalValue),
-    total_routes: Object.keys(routes).length,
-    total_drivers: driverSet.size || Object.keys(routes).length,
-    lulu_orders: luluOrders,
-    lulu_value: Math.round(luluValue),
-    food_orders: foodOrders,
-    food_value: Math.round(foodValue),
+    total_orders:    totalOrders,
+    total_value:     Math.round(totalValue),
+    total_routes:    Object.keys(routes).length,
+    total_drivers:   driverSet.size || Object.keys(routes).length,
+    total_drops:     Object.values(routes).reduce((s,r) => s + r.locations.size, 0),
+    food_orders:     foodOrders,
+    food_value:      Math.round(foodValue),
     non_food_orders: nonFoodOrders,
-    non_food_value: Math.round(nonFoodValue),
-    pl_orders: plOrders,
-    van_orders: vanOrders,
-    total_drops: Object.values(routes).reduce((s, r) => s + (r.locations ? r.locations.size : 0), 0),
+    non_food_value:  Math.round(nonFoodValue),
+    pl_orders:       plOrders,
+    van_orders:      vanOrders,
+    lulu_orders:     luluEntries.reduce((s,[,v]) => s+v.orders, 0),
+    lulu_value:      Math.round(luluEntries.reduce((s,[,v]) => s+v.value, 0)),
     type_breakdown: {
-      DCV: { orders: typeStats.DCV.o, value: Math.round(typeStats.DCV.v) },
-      DCF: { orders: typeStats.DCF.o, value: Math.round(typeStats.DCF.v) },
-      DGC: { orders: typeStats.DGC.o, value: Math.round(typeStats.DGC.v) },
-      DGS: { orders: typeStats.DGS.o, value: Math.round(typeStats.DGS.v) },
-      DSN: { orders: typeStats.DSN.o, value: Math.round(typeStats.DSN.v) },
-      HCP: { orders: typeStats.HCP.o, value: Math.round(typeStats.HCP.v) }
+      DCV: { orders:typeStats.DCV.o, value:Math.round(typeStats.DCV.v) },
+      DCF: { orders:typeStats.DCF.o, value:Math.round(typeStats.DCF.v) },
+      DGC: { orders:typeStats.DGC.o, value:Math.round(typeStats.DGC.v) },
+      DGS: { orders:typeStats.DGS.o, value:Math.round(typeStats.DGS.v) },
+      DSN: { orders:typeStats.DSN.o, value:Math.round(typeStats.DSN.v) },
+      HCP: { orders:typeStats.HCP.o, value:Math.round(typeStats.HCP.v) }
     },
-    by_city: byCity,
+    by_city:       byCity,
     top_customers: topCustomers,
-    top_drivers: topDrivers,
-    top_routes: topRoutes,
-    date: dateKey
+    top_drivers:   topDrivers,
+    top_routes:    topRoutes,
+    date:          dateKey
   };
 }
 
-// ─── DISPATCH MEMORY STORE ───────────────────────────────────
-let dispatchHistory = {};
-let currentDispatch = null;
-
-// Upload dispatch
+// ── DISPATCH ENDPOINTS ─────────────────────────────────────────
 app.post('/api/dispatch/upload', upload.single('file'), async (req, res) => {
   try {
     let csvText = '';
     if (req.file) {
-      const ext = path.extname(req.file.originalname || '').toLowerCase();
+      const ext = path.extname(req.file.originalname||'').toLowerCase();
       if (ext === '.xlsx' || ext === '.xls') {
-        const wb = XLSX.read(req.file.buffer, { type: 'buffer' });
-        const ws = wb.Sheets[wb.SheetNames[0]];
-        csvText = XLSX.utils.sheet_to_csv(ws);
+        const wb = XLSX.read(req.file.buffer, { type:'buffer' });
+        csvText = XLSX.utils.sheet_to_csv(wb.Sheets[wb.SheetNames[0]]);
       } else {
         csvText = req.file.buffer.toString('utf8');
       }
     } else if (req.body.csvText) {
       csvText = req.body.csvText;
     }
-    if (!csvText) return res.status(400).json({ error: 'No file received' });
+    if (!csvText) return res.status(400).json({ error:'No file received' });
 
-    const dateKey = req.body.dateKey || new Date().toISOString().split('T')[0];
+    const dateKey    = req.body.dateKey || new Date().toISOString().split('T')[0];
     const uploadedBy = req.body.uploadedBy || 'Admin';
+    const summary    = parseDispatchCSV(csvText, dateKey);
+    const entry      = { uploadedAt: new Date().toISOString(), uploadedBy, csvText, summary, date: dateKey };
 
-    // Generate summary with AI
-    // Parse CSV directly for accuracy
-    const summary = parseDispatchCSV(csvText, dateKey);
-    
-    // Top customers already calculated accurately in parseDispatchCSV - no AI needed
-
-    const entry = { uploadedAt: new Date().toISOString(), uploadedBy, csvText, summary, date: dateKey };
     dispatchHistory[dateKey] = entry;
     currentDispatch = entry;
 
-    // Keep only 30 days
     const keys = Object.keys(dispatchHistory).sort();
     if (keys.length > 30) delete dispatchHistory[keys[0]];
 
-    res.json({ success: true, summary, uploadedAt: entry.uploadedAt, date: dateKey });
-  } catch (e) {
-    console.error('Upload error:', e.message);
-    res.status(500).json({ error: e.message });
-  }
+    res.json({ success:true, summary, uploadedAt:entry.uploadedAt, date:dateKey });
+  } catch(e) { console.error(e); res.status(500).json({ error:e.message }); }
 });
 
-// Get status
 app.get('/api/dispatch/status', (req, res) => {
   const availableDates = Object.keys(dispatchHistory).sort().reverse();
-  if (!currentDispatch) return res.json({ hasData: false, availableDates });
-  res.json({
-    hasData: true,
-    uploadedAt: currentDispatch.uploadedAt,
-    uploadedBy: currentDispatch.uploadedBy,
-    summary: currentDispatch.summary,
-    date: currentDispatch.date,
-    availableDates
-  });
+  if (!currentDispatch) return res.json({ hasData:false, availableDates });
+  res.json({ hasData:true, uploadedAt:currentDispatch.uploadedAt, uploadedBy:currentDispatch.uploadedBy, summary:currentDispatch.summary, date:currentDispatch.date, availableDates });
 });
 
-// Load specific date
 app.get('/api/dispatch/date/:dateKey', (req, res) => {
   const entry = dispatchHistory[req.params.dateKey];
-  if (!entry) return res.json({ hasData: false });
+  if (!entry) return res.json({ hasData:false });
   currentDispatch = entry;
-  res.json({ hasData: true, uploadedAt: entry.uploadedAt, uploadedBy: entry.uploadedBy, summary: entry.summary, date: entry.date });
+  res.json({ hasData:true, uploadedAt:entry.uploadedAt, uploadedBy:entry.uploadedBy, summary:entry.summary, date:entry.date });
 });
 
-// Ask dispatch question
 app.post('/api/dispatch/ask', async (req, res) => {
   try {
-    if (!currentDispatch) return res.json({ result: 'No dispatch data loaded. Please ask admin to upload today\'s report.' });
+    if (!currentDispatch) return res.json({ result:'No dispatch data loaded. Please upload today\'s report.' });
+    const s = currentDispatch.summary;
     const msg = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 1500,
-      messages: [{
-        role: 'user',
-        content: `You are AZHAR-AI Dispatch Intelligence for UAE logistics company in UAE.
-
-IMPORTANT FACTS about this dispatch data:
-- Total orders: ${currentDispatch.summary.total_orders || 'unknown'}
-- Total value: AED ${currentDispatch.summary.total_value || 'unknown'}
-- Food orders (numeric order codes): ${currentDispatch.summary.food_orders || 'unknown'} orders, AED ${currentDispatch.summary.food_value || 'unknown'}
-- Non-food/3PL orders (HCP codes): ${currentDispatch.summary.non_food_orders || 'unknown'} orders
-- Total routes: ${currentDispatch.summary.total_routes || 'unknown'}
-- Total drivers: ${currentDispatch.summary.total_drivers || 'unknown'}
-- Date: ${currentDispatch.date}
-
-CSV Data (for detailed queries):
-${currentDispatch.csvText.substring(0, 10000)}
-
-Columns: ORDER CODE, ROUTE, CITY, LOCATION_ID, CUSTOMER, TOTAL_AMOUNT, ETA, VEHICLE_ID, DRIVER_ID, DRIVER CONTACT DETAILS
-
-Note: Numeric order codes = Food orders. HCP_ prefix = Non-food/3PL orders.
-
-Question: ${req.body.question}
-
-Answer with exact numbers from the data above. Use AED for currency values.`
+      model: 'claude-haiku-4-5-20251001', max_tokens: 1500,
+      messages: [{ role:'user', content:
+        `AZHAR-AI Dispatch Intelligence — UAE Logistics\n\nKEY FACTS:\n- Total orders: ${s.total_orders}\n- Total value: AED ${s.total_value}\n- Food orders: ${s.food_orders} (AED ${s.food_value})\n- Non-Food orders: ${s.non_food_orders} (AED ${s.non_food_value})\n- 3PL orders: ${s.pl_orders}\n- Routes: ${s.total_routes}, Drivers: ${s.total_drivers}, Drops: ${s.total_drops}\n- Date: ${s.date}\n\nCSV DATA:\n${currentDispatch.csvText.substring(0,10000)}\n\nQuestion: ${req.body.question}\n\nAnswer with exact numbers. Use AED for currency.`
       }]
     });
     res.json({ result: msg.content[0].text });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
+  } catch(e) { res.status(500).json({ error:e.message }); }
 });
 
-// ─── GENERAL CHAT ─────────────────────────────────────────────
+// ── OTHER ENDPOINTS ────────────────────────────────────────────
 app.post('/api/chat', async (req, res) => {
   try {
     const { prompt, history } = req.body;
-    let messages = [];
-    if (history && history.length > 0) {
-      messages = history.slice(-10).map(h => ({ role: h.role === 'assistant' ? 'assistant' : 'user', content: h.content }));
-      if (!messages.length || messages[messages.length-1].content !== prompt) {
-        messages.push({ role: 'user', content: prompt });
-      }
-    } else {
-      messages = [{ role: 'user', content: prompt }];
-    }
+    const messages = history && history.length
+      ? [...history.slice(-10).map(h => ({ role: h.role==='assistant'?'assistant':'user', content:h.content })), { role:'user', content:prompt }]
+      : [{ role:'user', content:prompt }];
     const msg = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 2000,
-      system: 'You are AZHAR-AI, a professional executive assistant for a UAE logistics company. Be concise and helpful.',
+      model:'claude-haiku-4-5-20251001', max_tokens:2000,
+      system:'You are AZHAR-AI, a professional executive assistant for a UAE logistics company.',
       messages
     });
     res.json({ result: msg.content[0].text });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
+  } catch(e) { res.status(500).json({ error:e.message }); }
 });
 
-// ─── EXCEL ANALYSIS ───────────────────────────────────────────
 app.post('/api/excel', upload.single('file'), async (req, res) => {
   try {
     let question = req.body.question || 'Analyse this data';
     let dataText = '';
     if (req.file) {
-      const ext = path.extname(req.file.originalname || '').toLowerCase();
-      if (ext === '.xlsx' || ext === '.xls') {
-        const wb = XLSX.read(req.file.buffer, { type: 'buffer' });
+      const ext = path.extname(req.file.originalname||'').toLowerCase();
+      if (ext==='.xlsx'||ext==='.xls') {
+        const wb = XLSX.read(req.file.buffer, { type:'buffer' });
         dataText = XLSX.utils.sheet_to_csv(wb.Sheets[wb.SheetNames[0]]);
-      } else {
-        dataText = req.file.buffer.toString('utf8');
-      }
+      } else { dataText = req.file.buffer.toString('utf8'); }
     }
     const msg = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 2000,
-      messages: [{ role: 'user', content: `${question}\n\n${dataText ? 'Data:\n' + dataText.substring(0, 8000) : ''}` }]
+      model:'claude-haiku-4-5-20251001', max_tokens:2000,
+      messages:[{ role:'user', content: question + (dataText ? '\n\nData:\n' + dataText.substring(0,8000) : '') }]
     });
     res.json({ result: msg.content[0].text });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-// ─── POWERPOINT ───────────────────────────────────────────────
-app.post('/api/powerpoint', upload.single('file'), async (req, res) => {
-  try {
-    const { topic, slides, tone } = req.body;
-    let extra = '';
-    if (req.file) extra = '\n\nSource content:\n' + req.file.buffer.toString('utf8').substring(0, 3000);
-    const msg = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 3000,
-      messages: [{ role: 'user', content: `Create a ${slides || 5}-slide ${tone || 'professional'} presentation about: ${topic}${extra}\n\nFormat each slide as:\nSlide 1: [Title]\n- Bullet point\n- Bullet point\n\nSpeaker Notes: [notes]` }]
-    });
-    res.json({ result: msg.content[0].text });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
+  } catch(e) { res.status(500).json({ error:e.message }); }
 });
 
 const PORT = process.env.PORT || 3000;
