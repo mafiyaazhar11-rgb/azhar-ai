@@ -7,753 +7,328 @@ const path = require('path');
 const fs = require('fs');
 
 const app = express();
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
-
-app.use(cors());
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
-
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 100 * 1024 * 1024 } });
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-// ── PERSIST PATHS ─────────────────────────────────────────────
-const DATA_DIR = path.join(__dirname, '.data');
-if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-const DISPATCH_FILE  = path.join(DATA_DIR, 'dispatch.json');
-const REJECTION_FILE = path.join(DATA_DIR, 'rejection.json');
+app.use(cors());
+app.use(express.json({ limit: '100mb' }));
+app.use(express.static('.'));
 
-function saveJSON(filepath, data) {
-  try { fs.writeFileSync(filepath, JSON.stringify(data)); } catch (e) { console.error('Save error:', e.message); }
-}
-function loadJSON(filepath) {
-  try { if (fs.existsSync(filepath)) return JSON.parse(fs.readFileSync(filepath, 'utf8')); } catch (e) {}
-  return null;
-}
-
-// ── STATIC FILES ──────────────────────────────────────────────
-// Serve index.html from public/ or root
 app.get('/', (req, res) => {
-  const p1 = path.join(__dirname, 'public', 'index.html');
-  const p2 = path.join(__dirname, 'azhar-ai-v4.html');
-  const p3 = path.join(__dirname, 'index.html');
-  if (fs.existsSync(p1)) return res.sendFile(p1);
-  if (fs.existsSync(p2)) return res.sendFile(p2);
-  if (fs.existsSync(p3)) return res.sendFile(p3);
-  res.status(404).send('No index file found. Please add azhar-ai-v4.html to the project root.');
+  const p = path.join(__dirname, 'index.html');
+  if (fs.existsSync(p)) res.sendFile(p);
+  else res.send('AZHAR-AI Running');
 });
 
-app.use(express.static(path.join(__dirname, 'public')));
-app.use(express.static(__dirname));
+app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
-app.get('/health', (req, res) => res.json({ status: 'ok', time: new Date().toISOString() }));
+// ── DISPATCH STORE ─────────────────────────────────────────────
+let dispatchHistory = {};
+let currentDispatch = null;
 
-// ─────────────────────────────────────────────────────────────
-// DISPATCH PARSER — FIXED TYPE COLUMN
-// TYPE values in your file: Food / Non Food / 3PL / Van
-// ─────────────────────────────────────────────────────────────
-function normaliseType(raw) {
-  if (!raw) return 'unknown';
-  const t = raw.toString().trim().toUpperCase().replace(/\s+/g, ' ');
-  if (t === 'FOOD')     return 'food';
-  if (t === 'NON FOOD') return 'nonfood';
-  if (t === '3PL' || t === '3 PL') return '3pl';
-  if (t === 'VAN')      return 'van';
-  return t.toLowerCase();
-}
+function parseDispatchCSV(csvText, dateKey) {
+  const lines = csvText.split('\n').filter(l => l.trim());
+  if (lines.length < 2) return { total_orders: 0, date: dateKey };
 
-function parseDispatchData(input) {
-  // input = Buffer (xlsx/xls) or string (csv/txt)
-  let rows = [];
+  const headers = lines[0].split(',').map(h => h.trim().replace(/['"]/g,'').toUpperCase());
+  const col = (names) => { for (const n of names) { const i = headers.findIndex(h => h.includes(n)); if (i >= 0) return i; } return -1; };
 
-  if (Buffer.isBuffer(input)) {
-    const wb = XLSX.read(input, { type: 'buffer' });
-    const ws = wb.Sheets[wb.SheetNames[0]];
-    rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
-  } else {
-    // CSV string — parse manually so we keep header names
-    const lines = input.split('\n').map(l => l.trim()).filter(Boolean);
-    if (lines.length < 2) return null;
-    const headers = parseCSVLine(lines[0]);
-    for (let i = 1; i < lines.length; i++) {
-      const vals = parseCSVLine(lines[i]);
-      if (!vals.length || !vals[0]) continue;
-      const row = {};
-      headers.forEach((h, idx) => { row[h.trim()] = (vals[idx] || '').trim(); });
-      rows.push(row);
+  const routeIdx    = col(['ROUTE']);
+  const cityIdx     = col(['CITY']);
+  const custIdx     = col(['CUSTOMER']);
+  const amtIdx      = col(['TOTAL_AMOUNT','AMOUNT']);
+  const driverIdx   = col(['DRIVER CONTACT','DRIVER_CONTACT']);
+  const driverIdIdx = col(['DRIVER_ID']);
+  const orderIdx    = col(['ORDER CODE','ORDER_CODE']);
+  const locationIdx = col(['LOCATION_ID','LOCATION']);
+  const typeColIdx  = col(['TYPE']);
+
+  let totalOrders=0, totalValue=0;
+  const cities={}, customers={}, routes={}, driverSet=new Set();
+  const typeStats={ DCV:{o:0,v:0}, DCF:{o:0,v:0}, DGC:{o:0,v:0}, DGS:{o:0,v:0}, DSN:{o:0,v:0}, HCP:{o:0,v:0} };
+  let foodOrders=0, foodValue=0, nonFoodOrders=0, nonFoodValue=0, plOrders=0, vanOrders=0;
+
+  for (let i = 1; i < lines.length; i++) {
+    const row = [];
+    let cell = '', inQ = false;
+    for (const ch of lines[i]) {
+      if (ch === '"') { inQ = !inQ; }
+      else if (ch === ',' && !inQ) { row.push(cell.trim()); cell = ''; }
+      else { cell += ch; }
     }
-  }
-
-  if (!rows.length) return null;
-
-  // Detect column names (case-insensitive)
-  const sampleKeys = Object.keys(rows[0]).map(k => k.toUpperCase());
-  const findCol = (...names) => {
-    for (const n of names) {
-      const found = Object.keys(rows[0]).find(k => k.toUpperCase().includes(n.toUpperCase()));
-      if (found) return found;
-    }
-    return null;
-  };
-
-  const COL_ROUTE    = findCol('ROUTE');
-  const COL_CITY     = findCol('CITY');
-  const COL_CUSTOMER = findCol('CUSTOMER');
-  const COL_AMOUNT   = findCol('TOTAL_AMOUNT', 'AMOUNT', 'VALUE');
-  const COL_DRIVER   = findCol('DRIVER CONTACT', 'DRIVER_CONTACT', 'DRIVER');
-  const COL_LOCATION = findCol('LOCATION_ID', 'LOCATION');
-  const COL_TYPE     = findCol('TYPE');
-  const COL_ORG      = findCol('ORG');
-  const COL_ORDER    = findCol('ORDER CODE', 'ORDER_CODE', 'ORDER');
-
-  console.log('Detected columns:', { COL_TYPE, COL_ORG, COL_ROUTE, COL_CITY, COL_AMOUNT });
-
-  // Counters
-  let totalOrders = 0, totalValue = 0;
-  let foodOrders = 0, foodValue = 0;
-  let nonFoodOrders = 0, nonFoodValue = 0;
-  let plOrders = 0, vanOrders = 0;
-
-  const cities = {};
-  const customers = {};
-  const routes = {};
-  const orgStats = {
-    DCV: { o: 0, v: 0 }, DCF: { o: 0, v: 0 },
-    DGC: { o: 0, v: 0 }, DGS: { o: 0, v: 0 },
-    DSN: { o: 0, v: 0 }, HCP: { o: 0, v: 0 }
-  };
-  const driverSet = new Set();
-
-  for (const row of rows) {
-    const amt = parseFloat(row[COL_AMOUNT]) || 0;
+    row.push(cell.trim());
+    if (!row[0]) continue;
     totalOrders++;
+
+    const amt = amtIdx >= 0 ? parseFloat(row[amtIdx]) || 0 : 0;
     totalValue += amt;
 
-    // ── TYPE (most important fix) ──────────────────────────
-    const rawType = COL_TYPE ? (row[COL_TYPE] || '') : '';
-    const type = normaliseType(rawType);
-
-    if (type === 'food') {
-      foodOrders++;
-      foodValue += amt;
-    } else if (type === 'nonfood') {
-      nonFoodOrders++;
-      nonFoodValue += amt;
-    } else if (type === '3pl') {
-      plOrders++;
-    } else if (type === 'van') {
-      vanOrders++;
+    // City
+    if (cityIdx >= 0 && row[cityIdx]) {
+      let city = row[cityIdx].trim();
+      const cu = city.toUpperCase();
+      if (cu.includes('ABU DHABI') || cu === 'ABUDHABI') city = 'Abu Dhabi';
+      else if (cu.includes('RAS AL') || cu === 'RAK') city = 'Ras Al Khaimah';
+      else if (cu.includes('UMM AL')) city = 'Umm Al Quwain';
+      else if (cu === 'AL AIN' || cu === 'AL-AIN') city = 'Al Ain';
+      else city = city.charAt(0).toUpperCase() + city.slice(1).toLowerCase();
+      if (!cities[city]) cities[city] = { orders:0, value:0 };
+      cities[city].orders++; cities[city].value += amt;
     }
 
-    // ── ORG ───────────────────────────────────────────────
-    const rawOrg = COL_ORG ? (row[COL_ORG] || '').trim().toUpperCase() : '';
-    if (orgStats[rawOrg]) {
-      orgStats[rawOrg].o++;
-      orgStats[rawOrg].v += amt;
-    } else if (rawOrg === '3 PL' || rawOrg === 'HCP') {
-      orgStats.HCP.o++;
-      orgStats.HCP.v += amt;
+    // Customer
+    if (custIdx >= 0 && row[custIdx]) {
+      const cust = row[custIdx].trim();
+      if (!customers[cust]) customers[cust] = { orders:0, value:0 };
+      customers[cust].orders++; customers[cust].value += amt;
     }
 
-    // ── CITY ──────────────────────────────────────────────
-    if (COL_CITY && row[COL_CITY]) {
-      const city = normaliseCity(row[COL_CITY]);
-      if (!cities[city]) cities[city] = { orders: 0, value: 0 };
-      cities[city].orders++;
-      cities[city].value += amt;
-    }
-
-    // ── CUSTOMER ──────────────────────────────────────────
-    if (COL_CUSTOMER && row[COL_CUSTOMER]) {
-      const cust = row[COL_CUSTOMER].trim();
-      if (!customers[cust]) customers[cust] = { orders: 0, value: 0 };
-      customers[cust].orders++;
-      customers[cust].value += amt;
-    }
-
-    // ── ROUTES & DRIVERS ──────────────────────────────────
-    if (COL_ROUTE && row[COL_ROUTE]) {
-      const route = row[COL_ROUTE].trim();
-      if (!routes[route]) routes[route] = { locations: new Set(), driver: '', value: 0 };
-      const locId = COL_LOCATION ? (row[COL_LOCATION] || '').trim() : '';
-      if (locId) routes[route].locations.add(locId);
-      routes[route].value += amt;
-
-      // Extract driver name from contact field
-      if (COL_DRIVER && row[COL_DRIVER] && !routes[route].driver) {
-        routes[route].driver = extractDriverName(row[COL_DRIVER]);
+    // Route + drops
+    if (routeIdx >= 0 && row[routeIdx]) {
+      const route = row[routeIdx].trim();
+      const locId = locationIdx >= 0 ? (row[locationIdx]||'').trim() : '';
+      let driverName = '';
+      if (driverIdx >= 0 && row[driverIdx]) {
+        const contact = row[driverIdx].trim();
+        const m = contact.match(/^([A-Za-z][A-Za-z\s]+?)(?:[\-\+\s]+[0-9]|$)/);
+        driverName = m ? m[1].trim() : contact.split(/[\-\+0-9]/)[0].trim();
       }
+      if (!routes[route]) routes[route] = { locations: new Set(), driver: driverName, value:0, orderLines:0 };
+      if (locId) routes[route].locations.add(locId);
+      routes[route].orderLines++;
+      routes[route].value += amt;
+      if (driverName && !routes[route].driver) routes[route].driver = driverName;
     }
 
-    // Track unique drivers
-    if (COL_DRIVER && row[COL_DRIVER]) {
-      const drvKey = extractDriverName(row[COL_DRIVER]) || row[COL_DRIVER].trim();
-      if (drvKey) driverSet.add(drvKey);
+    // Driver count
+    if (driverIdIdx >= 0 && row[driverIdIdx]) driverSet.add(row[driverIdIdx].trim());
+    else if (routeIdx >= 0 && row[routeIdx]) driverSet.add(row[routeIdx].trim());
+
+    // Type classification
+    if (typeColIdx >= 0) {
+      const tv = (row[typeColIdx]||'').trim().toUpperCase();
+      const isFood    = tv === 'FOOD';
+      const isNonFood = tv.includes('NON') || tv.includes('NOON');
+      const is3PL     = tv.includes('3') && tv.includes('P');
+      const isVan     = tv.includes('VAN');
+      if      (isFood)    { foodOrders++;    foodValue    += amt; typeStats.DCV.o++; typeStats.DCV.v += amt; }
+      else if (isNonFood) { nonFoodOrders++; nonFoodValue += amt; typeStats.DGC.o++; typeStats.DGC.v += amt; }
+      else if (is3PL)     { plOrders++;  typeStats.HCP.o++; }
+      else if (isVan)     { vanOrders++; }
+    } else {
+      const order = (orderIdx >= 0 ? row[orderIdx] : '').trim().toUpperCase();
+      const m = order.match(/[A-Z]{2,3}/);
+      const tc = m ? m[0] : '';
+      if (typeStats[tc]) { typeStats[tc].o++; typeStats[tc].v += amt; }
+      if      (tc==='DCV'||tc==='DCF') { foodOrders++;    foodValue    += amt; }
+      else if (tc==='DGC'||tc==='DGS'||tc==='DSN') { nonFoodOrders++; nonFoodValue += amt; }
+      else if (tc==='HCP') plOrders++;
     }
   }
 
-  // Debug log to verify counts
-  console.log(`TYPE counts — food:${foodOrders} nonfood:${nonFoodOrders} 3pl:${plOrders} van:${vanOrders} total:${totalOrders}`);
-
-  // ── AGGREGATE ─────────────────────────────────────────────
+  // City list sorted
   const byCity = Object.entries(cities)
-    .map(([city, v]) => ({ city, orders: v.orders, value: Math.round(v.value) }))
-    .sort((a, b) => b.orders - a.orders);
+    .map(([city,v]) => ({ city, orders:v.orders, value:Math.round(v.value) }))
+    .sort((a,b) => b.orders - a.orders);
 
-  // Merge customer branches
+  // Group customers by base name
   const baseCust = {};
-  for (const [name, v] of Object.entries(customers)) {
-    const base = stripBranch(name);
-    if (!baseCust[base]) baseCust[base] = { orders: 0, value: 0 };
-    baseCust[base].orders += v.orders;
-    baseCust[base].value  += v.value;
-  }
+  Object.entries(customers).forEach(([name,v]) => {
+    let base = name;
+    for (const kw of [',Branch',', Branch',',Br.',', Br.',' -Branch','-Branch']) {
+      const idx = base.toLowerCase().indexOf(kw.toLowerCase());
+      if (idx > 3) { base = base.substring(0, idx).trim(); break; }
+    }
+    base = base.replace(/,\s*(LLC|L\.L\.C|llc).*$/i,'').trim();
+    if (!baseCust[base]) baseCust[base] = { orders:0, value:0, locations:0 };
+    baseCust[base].orders   += v.orders;
+    baseCust[base].value    += v.value;
+    baseCust[base].locations++;
+  });
+
   const topCustomers = Object.entries(baseCust)
-    .map(([name, v]) => ({ name, orders: v.orders, value: Math.round(v.value) }))
-    .sort((a, b) => b.value - a.value).slice(0, 6);
+    .map(([name,v]) => ({ name, orders:v.orders, value:Math.round(v.value), locations:v.locations }))
+    .sort((a,b) => b.value - a.value).slice(0,6);
 
   const topRoutes = Object.entries(routes)
-    .map(([route, v]) => ({
-      route,
-      drops: v.locations.size,
-      driver: v.driver,
-      value: Math.round(v.value)
-    }))
-    .sort((a, b) => b.drops - a.drops).slice(0, 30);
+    .map(([route,v]) => ({ route, drops:v.locations.size, driver:v.driver, value:Math.round(v.value), order_lines:v.orderLines }))
+    .sort((a,b) => b.drops - a.drops).slice(0,30);
 
-  // Top drivers by drops
-  const driverDrops = {};
-  for (const [route, v] of Object.entries(routes)) {
-    const drv = v.driver;
-    if (!drv) continue;
-    if (!driverDrops[drv]) driverDrops[drv] = 0;
-    driverDrops[drv] += v.locations.size;
-  }
-  const topDrivers = Object.entries(driverDrops)
-    .map(([name, orders]) => ({ name, orders }))
-    .sort((a, b) => b.orders - a.orders).slice(0, 5);
+  const topDrivers = Object.entries(routes)
+    .filter(([,v]) => v.driver)
+    .map(([,v]) => ({ name:v.driver, orders:v.locations.size }))
+    .sort((a,b) => b.orders - a.orders).slice(0,5);
 
-  const totalDrops = Object.values(routes).reduce((s, r) => s + r.locations.size, 0);
+  const luluEntries = Object.entries(customers).filter(([n]) => n.toUpperCase().includes('LULU'));
 
   return {
     total_orders:    totalOrders,
     total_value:     Math.round(totalValue),
     total_routes:    Object.keys(routes).length,
     total_drivers:   driverSet.size || Object.keys(routes).length,
-    total_drops:     totalDrops,
+    total_drops:     Object.values(routes).reduce((s,r) => s + r.locations.size, 0),
     food_orders:     foodOrders,
     food_value:      Math.round(foodValue),
     non_food_orders: nonFoodOrders,
     non_food_value:  Math.round(nonFoodValue),
     pl_orders:       plOrders,
     van_orders:      vanOrders,
+    lulu_orders:     luluEntries.reduce((s,[,v]) => s+v.orders, 0),
+    lulu_value:      Math.round(luluEntries.reduce((s,[,v]) => s+v.value, 0)),
     type_breakdown: {
-      DCV: { orders: orgStats.DCV.o, value: Math.round(orgStats.DCV.v) },
-      DCF: { orders: orgStats.DCF.o, value: Math.round(orgStats.DCF.v) },
-      DGC: { orders: orgStats.DGC.o, value: Math.round(orgStats.DGC.v) },
-      DGS: { orders: orgStats.DGS.o, value: Math.round(orgStats.DGS.v) },
-      DSN: { orders: orgStats.DSN.o, value: Math.round(orgStats.DSN.v) },
-      HCP: { orders: orgStats.HCP.o, value: Math.round(orgStats.HCP.v) }
+      DCV: { orders:typeStats.DCV.o, value:Math.round(typeStats.DCV.v) },
+      DCF: { orders:typeStats.DCF.o, value:Math.round(typeStats.DCF.v) },
+      DGC: { orders:typeStats.DGC.o, value:Math.round(typeStats.DGC.v) },
+      DGS: { orders:typeStats.DGS.o, value:Math.round(typeStats.DGS.v) },
+      DSN: { orders:typeStats.DSN.o, value:Math.round(typeStats.DSN.v) },
+      HCP: { orders:typeStats.HCP.o, value:Math.round(typeStats.HCP.v) }
     },
     by_city:       byCity,
     top_customers: topCustomers,
     top_drivers:   topDrivers,
-    top_routes:    topRoutes
+    top_routes:    topRoutes,
+    date:          dateKey
   };
 }
 
-// ── HELPERS ───────────────────────────────────────────────────
-function parseCSVLine(line) {
-  const result = [];
-  let cell = '', inQ = false;
-  for (const ch of line) {
-    if (ch === '"') { inQ = !inQ; }
-    else if (ch === ',' && !inQ) { result.push(cell); cell = ''; }
-    else { cell += ch; }
-  }
-  result.push(cell);
-  return result;
-}
-
-function normaliseCity(raw) {
-  const c = (raw || '').trim().toLowerCase();
-  if (c.includes('abu dhabi'))  return 'Abu Dhabi';
-  if (c.includes('dubai'))      return 'Dubai';
-  if (c.includes('sharjah'))    return 'Sharjah';
-  if (c.includes('ajman'))      return 'Ajman';
-  if (c.includes('fujairah'))   return 'Fujairah';
-  if (c.includes('al ain') || c.includes('al-ain') || c === 'alain') return 'Al Ain';
-  if (c.includes('ras al') || c === 'rak') return 'Ras Al Khaimah';
-  if (c.includes('umm'))        return 'Umm Al Quwain';
-  return raw.trim().charAt(0).toUpperCase() + raw.trim().slice(1).toLowerCase();
-}
-
-function extractDriverName(contact) {
-  if (!contact) return '';
-  const str = contact.trim();
-  const match = str.match(/^([A-Za-z][A-Za-z\s]{1,30?}?)(?:\s*[-+\d])/);
-  if (match) return match[1].trim();
-  const parts = str.split(/[-+\d]/);
-  return (parts[0] || '').trim();
-}
-
-function stripBranch(name) {
-  let base = name;
-  const stripAfter = [',Branch', ', Branch', ',Br.', ', Br.', ' -Branch', ',CPD', ' CPD', '- Branch', '-Branch'];
-  for (const kw of stripAfter) {
-    const i = base.toLowerCase().indexOf(kw.toLowerCase());
-    if (i > 3) { base = base.substring(0, i).trim(); break; }
-  }
-  return base.replace(/,\s*(LLC|L\.L\.C|llc).*$/i, '').trim();
-}
-
-// ─────────────────────────────────────────────────────────────
-// DISPATCH MEMORY  (persisted to disk)
-// ─────────────────────────────────────────────────────────────
-let dispatchHistory = {};
-let currentDispatch = null;
-
-const savedDispatch = loadJSON(DISPATCH_FILE);
-if (savedDispatch) {
-  dispatchHistory = savedDispatch.history || {};
-  const keys = Object.keys(dispatchHistory).sort().reverse();
-  if (keys.length > 0) currentDispatch = dispatchHistory[keys[0]];
-  console.log('Loaded dispatch history:', keys.length, 'dates');
-}
-
-// ── DISPATCH ROUTES ───────────────────────────────────────────
+// ── DISPATCH ENDPOINTS ─────────────────────────────────────────
 app.post('/api/dispatch/upload', upload.single('file'), async (req, res) => {
   try {
-    let summary = null;
     let csvText = '';
-
     if (req.file) {
-      const ext = path.extname(req.file.originalname || '').toLowerCase();
+      const ext = path.extname(req.file.originalname||'').toLowerCase();
       if (ext === '.xlsx' || ext === '.xls') {
-        summary  = parseDispatchData(req.file.buffer);
-        // Also keep CSV for AI queries
-        const wb = XLSX.read(req.file.buffer, { type: 'buffer' });
-        csvText  = XLSX.utils.sheet_to_csv(wb.Sheets[wb.SheetNames[0]]);
+        const wb = XLSX.read(req.file.buffer, { type:'buffer' });
+        csvText = XLSX.utils.sheet_to_csv(wb.Sheets[wb.SheetNames[0]]);
       } else {
-        csvText  = req.file.buffer.toString('utf8');
-        summary  = parseDispatchData(csvText);
+        csvText = req.file.buffer.toString('utf8');
       }
     } else if (req.body.csvText) {
       csvText = req.body.csvText;
-      summary = parseDispatchData(csvText);
     }
+    if (!csvText) return res.status(400).json({ error:'No file received' });
 
-    if (!summary) return res.status(400).json({ error: 'No data parsed from file. Check file format.' });
-
-    const dateKey    = req.body.dateKey    || new Date().toISOString().split('T')[0];
+    const dateKey    = req.body.dateKey || new Date().toISOString().split('T')[0];
     const uploadedBy = req.body.uploadedBy || 'Admin';
-
-    const entry = {
-      uploadedAt: new Date().toISOString(),
-      uploadedBy,
-      csvText: csvText.substring(0, 200000), // keep for AI, cap size
-      summary,
-      date: dateKey
-    };
+    const summary    = parseDispatchCSV(csvText, dateKey);
+    const entry      = { uploadedAt: new Date().toISOString(), uploadedBy, csvText, summary, date: dateKey };
 
     dispatchHistory[dateKey] = entry;
     currentDispatch = entry;
 
-    // Keep only last 30 dates
     const keys = Object.keys(dispatchHistory).sort();
-    while (keys.length > 30) { delete dispatchHistory[keys.shift()]; }
+    if (keys.length > 30) delete dispatchHistory[keys[0]];
 
-    saveJSON(DISPATCH_FILE, { history: dispatchHistory });
-    console.log(`Dispatch saved: ${dateKey} — ${summary.total_orders} orders, AED ${summary.total_value}`);
-
-    res.json({ success: true, summary, uploadedAt: entry.uploadedAt, date: dateKey });
-  } catch (e) {
-    console.error('Dispatch upload error:', e.message, e.stack);
-    res.status(500).json({ error: e.message });
-  }
+    res.json({ success:true, summary, uploadedAt:entry.uploadedAt, date:dateKey });
+  } catch(e) { console.error(e); res.status(500).json({ error:e.message }); }
 });
 
 app.get('/api/dispatch/status', (req, res) => {
   const availableDates = Object.keys(dispatchHistory).sort().reverse();
-  if (!currentDispatch) return res.json({ hasData: false, availableDates });
-  res.json({
-    hasData: true,
-    uploadedAt:  currentDispatch.uploadedAt,
-    uploadedBy:  currentDispatch.uploadedBy,
-    summary:     currentDispatch.summary,
-    date:        currentDispatch.date,
-    availableDates
-  });
+  if (!currentDispatch) return res.json({ hasData:false, availableDates });
+  res.json({ hasData:true, uploadedAt:currentDispatch.uploadedAt, uploadedBy:currentDispatch.uploadedBy, summary:currentDispatch.summary, date:currentDispatch.date, availableDates });
 });
 
 app.get('/api/dispatch/date/:dateKey', (req, res) => {
   const entry = dispatchHistory[req.params.dateKey];
-  if (!entry) return res.json({ hasData: false });
+  if (!entry) return res.json({ hasData:false });
   currentDispatch = entry;
-  res.json({
-    hasData:    true,
-    uploadedAt: entry.uploadedAt,
-    uploadedBy: entry.uploadedBy,
-    summary:    entry.summary,
-    date:       entry.date
-  });
+  res.json({ hasData:true, uploadedAt:entry.uploadedAt, uploadedBy:entry.uploadedBy, summary:entry.summary, date:entry.date });
 });
 
 app.post('/api/dispatch/ask', async (req, res) => {
   try {
-    if (!currentDispatch) {
-      return res.json({ result: 'No dispatch data loaded. Please upload today\'s report.' });
-    }
+    if (!currentDispatch) return res.json({ result:'No dispatch data loaded. Please upload today\'s report.' });
     const s = currentDispatch.summary;
-    const context = `
-Dispatch Date: ${currentDispatch.date}
-Total Orders: ${s.total_orders}
-Total Value: AED ${s.total_value?.toLocaleString()}
-Food Orders: ${s.food_orders} orders | AED ${s.food_value?.toLocaleString()}
-Non-Food Orders: ${s.non_food_orders} orders | AED ${s.non_food_value?.toLocaleString()}
-3PL Orders: ${s.pl_orders}
-Van Orders: ${s.van_orders || 0}
-Total Routes: ${s.total_routes}
-Total Drivers: ${s.total_drivers}
-Total Drops: ${s.total_drops}
-
-ORG Breakdown:
-${Object.entries(s.type_breakdown || {}).map(([k, v]) => `  ${k}: ${v.orders} orders, AED ${v.value?.toLocaleString()}`).join('\n')}
-
-Top Cities:
-${(s.by_city || []).slice(0, 8).map(c => `  ${c.city}: ${c.orders} orders`).join('\n')}
-
-Top Customers:
-${(s.top_customers || []).map((c, i) => `  ${i+1}. ${c.name}: ${c.orders} orders, AED ${c.value?.toLocaleString()}`).join('\n')}
-
-Top Drivers:
-${(s.top_drivers || []).map((d, i) => `  ${i+1}. ${d.name}: ${d.orders} drops`).join('\n')}
-
-Top Routes:
-${(s.top_routes || []).slice(0, 10).map(r => `  ${r.route} | ${r.driver || '—'} | ${r.drops} drops | AED ${r.value?.toLocaleString()}`).join('\n')}
-
-CSV Sample (first 8000 chars):
-${currentDispatch.csvText?.substring(0, 8000) || ''}`;
-
     const msg = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 1500,
-      messages: [{
-        role: 'user',
-        content: `You are AZHAR-AI Dispatch Intelligence for UAE logistics.\n\n${context}\n\nQuestion: ${req.body.question}\n\nAnswer with exact numbers. Use AED for currency. Be concise and precise.`
+      model: 'claude-haiku-4-5-20251001', max_tokens: 1500,
+      messages: [{ role:'user', content:
+        `AZHAR-AI Dispatch Intelligence — UAE Logistics\n\nKEY FACTS:\n- Total orders: ${s.total_orders}\n- Total value: AED ${s.total_value}\n- Food orders: ${s.food_orders} (AED ${s.food_value})\n- Non-Food orders: ${s.non_food_orders} (AED ${s.non_food_value})\n- 3PL orders: ${s.pl_orders}\n- Routes: ${s.total_routes}, Drivers: ${s.total_drivers}, Drops: ${s.total_drops}\n- Date: ${s.date}\n\nCSV DATA:\n${currentDispatch.csvText.substring(0,10000)}\n\nQuestion: ${req.body.question}\n\nAnswer with exact numbers. Use AED for currency.`
       }]
     });
     res.json({ result: msg.content[0].text });
-  } catch (e) {
-    console.error('Dispatch ask error:', e.message);
-    res.status(500).json({ error: e.message });
-  }
+  } catch(e) { res.status(500).json({ error:e.message }); }
 });
 
-// ─────────────────────────────────────────────────────────────
-// REJECTION STORE  (persisted to disk)
-// ─────────────────────────────────────────────────────────────
-let rejectionData = null;
 
-const savedRejection = loadJSON(REJECTION_FILE);
-if (savedRejection) {
-  rejectionData = savedRejection;
-  console.log('Loaded rejection data — uploadedAt:', rejectionData.uploadedAt);
-}
-
-app.post('/api/rejection/upload', upload.single('file'), async (req, res) => {
+// ── REJECTION ANALYSIS ────────────────────────────────────────
+app.post('/api/rejection', upload.single('file'), async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ error: 'No file received' });
-    const ext = path.extname(req.file.originalname || '').toLowerCase();
-    if (ext !== '.xlsx' && ext !== '.xls') {
-      return res.status(400).json({ error: 'Please upload .xlsx or .xls file' });
-    }
-
-    const wb   = XLSX.read(req.file.buffer, { type: 'buffer' });
-    const ws   = wb.Sheets[wb.SheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
-
-    if (!rows.length) return res.status(400).json({ error: 'No rows found in file' });
-
-    // Detect column names
-    const sampleKeys = Object.keys(rows[0]);
-    const findRejCol = (...names) => sampleKeys.find(k => names.some(n => k.toUpperCase().includes(n.toUpperCase()))) || null;
-
-    const ROOT_COL   = findRejCol('ROOT CAUSE', 'ROOT_CAUSE', 'FINA') || 'fina- Root Cause';
-    const ORG_COL    = findRejCol('ORGANIZATION', 'ORG') || 'Organization';
-    const DATE_COL   = findRejCol('D DATE', 'DATE', 'DELIVERY DATE') || 'D DATE';
-    const STATUS_COL = findRejCol('STATUS') || 'Status';
-    const CUST_COL   = findRejCol('CUSTOMER NAME', 'CUSTOMER') || 'CUSTOMER NAME';
-    const AREA_COL   = findRejCol('AREA', 'CITY') || 'Area';
-    const VALUE_COL  = findRejCol('VALUE', 'AMOUNT') || 'Value';
-    const TYPE_COL   = findRejCol('TYPE') || null;
-
-    console.log('Rejection cols:', { ROOT_COL, ORG_COL, DATE_COL, STATUS_COL });
-
-    const isRej = (row) => {
-      const s = String(row[STATUS_COL] || '').trim().toUpperCase();
-      return s === 'R/D' || s === 'HOLD' || s === 'RD' || s === 'REJECTED' || s === 'R';
-    };
-    const isDel = (row) => {
-      const s = String(row[STATUS_COL] || '').trim().toUpperCase();
-      return s.includes('DELIVER') || s === 'D' || s === 'DELIVERED';
-    };
-
-    const parseDate = (v) => {
-      if (!v) return null;
-      if (v instanceof Date) return v;
-      if (typeof v === 'number') {
-        // Excel serial date
-        const d = XLSX.SSF.parse_date_code(v);
-        if (d) return new Date(d.y, d.m - 1, d.d);
-      }
-      const d = new Date(v);
-      return isNaN(d) ? null : d;
-    };
-
-    const orgMap   = {};
-    const monthMap = {};
-    let totalRej = 0, totalDel = 0, totalVal = 0;
-
-    for (const row of rows) {
-      const rej = isRej(row);
-      const del = isDel(row);
-      if (!rej && !del) continue;
-
-      const d    = parseDate(row[DATE_COL]);
-      const mo   = d ? d.getMonth() + 1 : null;
-      const day  = d ? d.getDate() : null;
-      const org  = String(row[ORG_COL]  || '').trim().toUpperCase();
-      const root = String(row[ROOT_COL] || '').trim();
-      const cust = String(row[CUST_COL] || '').trim();
-      const area = String(row[AREA_COL] || '').trim();
-      const val  = parseFloat(row[VALUE_COL]) || 0;
-      const type = TYPE_COL ? normaliseType(row[TYPE_COL] || '') : 'unknown';
-
-      if (del) totalDel++;
-      if (rej) { totalRej++; totalVal += val; }
-
-      // ORG level
-      if (org) {
-        if (!orgMap[org]) orgMap[org] = {
-          tDel: 0, tRej: 0, val: 0,
-          del: [0,0,0,0,0,0,0,0,0,0,0,0],
-          rej: [0,0,0,0,0,0,0,0,0,0,0,0],
-          reasons: {}, custs: {}, areas: {}
-        };
-        if (del) { orgMap[org].tDel++; if (mo) orgMap[org].del[mo-1]++; }
-        if (rej) {
-          orgMap[org].tRej++;
-          orgMap[org].val += val;
-          if (mo) orgMap[org].rej[mo-1]++;
-          if (root) orgMap[org].reasons[root] = (orgMap[org].reasons[root] || 0) + 1;
-          if (cust) orgMap[org].custs[cust]   = (orgMap[org].custs[cust]   || 0) + 1;
-          if (area) orgMap[org].areas[area]   = (orgMap[org].areas[area]   || 0) + 1;
-        }
-      }
-
-      // Month/Day level
-      if (mo) {
-        if (!monthMap[mo]) monthMap[mo] = {
-          days: new Set(), tDel: 0, tRej: 0, val: 0, reasons: {}, data: {}
-        };
-        if (del) monthMap[mo].tDel++;
-        if (rej) {
-          monthMap[mo].tRej++;
-          monthMap[mo].val += val;
-          if (root) monthMap[mo].reasons[root] = (monthMap[mo].reasons[root] || 0) + 1;
-          if (day) monthMap[mo].days.add(day);
-        }
-        if (day) {
-          if (!monthMap[mo].data[day]) monthMap[mo].data[day] = {
-            tDel: 0, tRej: 0, val: 0, reasons: {}, custs: {}, areas: {}
-          };
-          if (del) monthMap[mo].data[day].tDel++;
-          if (rej) {
-            monthMap[mo].data[day].tRej++;
-            monthMap[mo].data[day].val += val;
-            if (root) monthMap[mo].data[day].reasons[root] = (monthMap[mo].data[day].reasons[root] || 0) + 1;
-            if (cust) monthMap[mo].data[day].custs[cust]   = (monthMap[mo].data[day].custs[cust]   || 0) + 1;
-            if (area) monthMap[mo].data[day].areas[area]   = (monthMap[mo].data[day].areas[area]   || 0) + 1;
-          }
-        }
+    let csvText = '';
+    if (req.file) {
+      const ext = path.extname(req.file.originalname||'').toLowerCase();
+      if (ext === '.xlsx' || ext === '.xls') {
+        const wb = XLSX.read(req.file.buffer, { type:'buffer' });
+        csvText = XLSX.utils.sheet_to_csv(wb.Sheets[wb.SheetNames[0]]);
+      } else {
+        csvText = req.file.buffer.toString('utf8');
       }
     }
+    if (!csvText) return res.status(400).json({ error:'No file received' });
 
-    const fmtVal = (v) => v >= 1000000 ? 'AED ' + (v / 1000000).toFixed(2) + 'M' : 'AED ' + Math.round(v / 1000) + 'K';
-    const top5   = (obj) => Object.entries(obj).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([l, n]) => ({ l, n }));
-    const top5c  = (obj) => Object.entries(obj).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([n, c]) => ({ n, c, v: '' }));
-    const top6a  = (obj) => Object.entries(obj).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([a, n]) => ({ a, n }));
+    const analysisType = req.body.analysisType || 'Full Analysis';
+    const sample = csvText.substring(0, 12000);
 
-    // Build ALL combined
-    const allReasons = {}, allCusts = {}, allAreas = {};
-    const allDel = [0,0,0,0,0,0,0,0,0,0,0,0];
-    const allRej = [0,0,0,0,0,0,0,0,0,0,0,0];
-    for (const v of Object.values(orgMap)) {
-      for (const [k, n] of Object.entries(v.reasons)) allReasons[k] = (allReasons[k] || 0) + n;
-      for (const [k, n] of Object.entries(v.custs))   allCusts[k]   = (allCusts[k]   || 0) + n;
-      for (const [k, n] of Object.entries(v.areas))   allAreas[k]   = (allAreas[k]   || 0) + n;
-      v.del.forEach((d, i) => allDel[i] += d);
-      v.rej.forEach((r, i) => allRej[i] += r);
-    }
-
-    // Serialise months (Set → Array)
-    const monthsOut = {};
-    for (const [mo, md] of Object.entries(monthMap)) {
-      const dataOut = {};
-      for (const [day, dd] of Object.entries(md.data)) {
-        dataOut[day] = {
-          tDel: dd.tDel, tRej: dd.tRej, val: fmtVal(dd.val),
-          reasons: top5(dd.reasons), custs: top5c(dd.custs), areas: top6a(dd.areas)
-        };
-      }
-      monthsOut[mo] = {
-        days:    Array.from(md.days).sort((a, b) => a - b),
-        tDel:    md.tDel,
-        tRej:    md.tRej,
-        val:     fmtVal(md.val),
-        reasons: top5(md.reasons),
-        data:    dataOut
-      };
-    }
-
-    // Serialise orgs
-    const orgsOut = {
-      all: {
-        tDel:    totalDel,
-        tRej:    totalRej,
-        val:     fmtVal(totalVal),
-        del:     allDel,
-        rej:     allRej,
-        reasons: top5(allReasons),
-        custs:   top5c(allCusts),
-        areas:   top6a(allAreas)
-      }
-    };
-    for (const [org, v] of Object.entries(orgMap)) {
-      orgsOut[org] = {
-        tDel:    v.tDel,
-        tRej:    v.tRej,
-        val:     fmtVal(v.val),
-        del:     v.del,
-        rej:     v.rej,
-        reasons: top5(v.reasons),
-        custs:   top5c(v.custs),
-        areas:   top6a(v.areas)
-      };
-    }
-
-    rejectionData = {
-      uploadedAt:  new Date().toISOString(),
-      uploadedBy:  req.body.uploadedBy || 'Admin',
-      fileName:    req.file.originalname,
-      totalOrders: totalRej + totalDel,
-      orgs:        orgsOut,
-      months:      monthsOut
-    };
-
-    saveJSON(REJECTION_FILE, rejectionData);
-    console.log(`Rejection saved: ${totalRej} rejections, ${totalDel} delivered`);
-
-    res.json({ success: true, summary: { totalRej, totalDel, fileName: req.file.originalname } });
-  } catch (e) {
-    console.error('Rejection upload error:', e.message, e.stack);
-    res.status(500).json({ error: e.message });
-  }
-});
-
-// CRITICAL: This must return JSON always — never HTML
-app.get('/api/rejection/status', (req, res) => {
-  res.setHeader('Content-Type', 'application/json');
-  if (!rejectionData) return res.json({ hasData: false });
-  res.json({
-    hasData:     true,
-    uploadedAt:  rejectionData.uploadedAt,
-    uploadedBy:  rejectionData.uploadedBy,
-    fileName:    rejectionData.fileName,
-    totalOrders: rejectionData.totalOrders,
-    orgs:        rejectionData.orgs,
-    months:      rejectionData.months
-  });
-});
-
-// ─── GENERAL CHAT ─────────────────────────────────────────────
-app.post('/api/chat', async (req, res) => {
-  try {
-    const { prompt, history } = req.body;
-    let messages = [];
-    if (history && history.length > 0) {
-      messages = history.slice(-10).map(h => ({
-        role: h.role === 'assistant' ? 'assistant' : 'user',
-        content: h.content
-      }));
-      if (!messages.length || messages[messages.length - 1].content !== prompt) {
-        messages.push({ role: 'user', content: prompt });
-      }
-    } else {
-      messages = [{ role: 'user', content: prompt }];
-    }
     const msg = await anthropic.messages.create({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 2000,
-      system: 'You are AZHAR-AI, a professional executive assistant for a UAE logistics company. Be concise and helpful.',
-      messages
+      messages: [{ role:'user', content:
+        `You are AZHAR-AI Operations Intelligence for UAE logistics company.
+Analyse this rejection/returns data. Analysis Type: ${analysisType}
+
+Provide a structured analysis with:
+1. OVERVIEW: Total rejections count, total value (AED), date range
+2. TOP 10 CUSTOMERS by rejection value with count and AED value
+3. TOP REJECTION REASONS with count and percentage
+4. TOP REJECTED PRODUCTS/ITEMS
+5. MONTHLY TREND if dates are available
+6. KEY RECOMMENDATIONS to reduce rejections
+
+Data (CSV format):
+${sample}`
+      }]
     });
     res.json({ result: msg.content[0].text });
-  } catch (e) {
-    console.error('Chat error:', e.message);
+  } catch(e) {
+    console.error('Rejection error:', e.message);
     res.status(500).json({ error: e.message });
   }
 });
 
-// ─── EXCEL ANALYSIS ───────────────────────────────────────────
+// ── OTHER ENDPOINTS ────────────────────────────────────────────
+app.post('/api/chat', async (req, res) => {
+  try {
+    const { prompt, history } = req.body;
+    const messages = history && history.length
+      ? [...history.slice(-10).map(h => ({ role: h.role==='assistant'?'assistant':'user', content:h.content })), { role:'user', content:prompt }]
+      : [{ role:'user', content:prompt }];
+    const msg = await anthropic.messages.create({
+      model:'claude-haiku-4-5-20251001', max_tokens:2000,
+      system:'You are AZHAR-AI, a professional executive assistant for a UAE logistics company.',
+      messages
+    });
+    res.json({ result: msg.content[0].text });
+  } catch(e) { res.status(500).json({ error:e.message }); }
+});
+
 app.post('/api/excel', upload.single('file'), async (req, res) => {
   try {
     let question = req.body.question || 'Analyse this data';
     let dataText = '';
     if (req.file) {
-      const ext = path.extname(req.file.originalname || '').toLowerCase();
-      if (ext === '.xlsx' || ext === '.xls') {
-        const wb = XLSX.read(req.file.buffer, { type: 'buffer' });
+      const ext = path.extname(req.file.originalname||'').toLowerCase();
+      if (ext==='.xlsx'||ext==='.xls') {
+        const wb = XLSX.read(req.file.buffer, { type:'buffer' });
         dataText = XLSX.utils.sheet_to_csv(wb.Sheets[wb.SheetNames[0]]);
-      } else {
-        dataText = req.file.buffer.toString('utf8');
-      }
+      } else { dataText = req.file.buffer.toString('utf8'); }
     }
     const msg = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 2000,
-      messages: [{
-        role: 'user',
-        content: `${question}\n\n${dataText ? 'Data:\n' + dataText.substring(0, 8000) : ''}`
-      }]
+      model:'claude-haiku-4-5-20251001', max_tokens:2000,
+      messages:[{ role:'user', content: question + (dataText ? '\n\nData:\n' + dataText.substring(0,8000) : '') }]
     });
     res.json({ result: msg.content[0].text });
-  } catch (e) {
-    console.error('Excel error:', e.message);
-    res.status(500).json({ error: e.message });
-  }
+  } catch(e) { res.status(500).json({ error:e.message }); }
 });
 
-// ─── POWERPOINT ───────────────────────────────────────────────
-app.post('/api/powerpoint', upload.single('file'), async (req, res) => {
-  try {
-    const { topic, slides, tone } = req.body;
-    let extra = '';
-    if (req.file) extra = '\n\nSource content:\n' + req.file.buffer.toString('utf8').substring(0, 3000);
-    const msg = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 3000,
-      messages: [{
-        role: 'user',
-        content: `Create a ${slides || 5}-slide ${tone || 'professional'} presentation about: ${topic}${extra}\n\nFormat each slide as:\nSlide 1: [Title]\n- Bullet point\n\nSpeaker Notes: [notes]`
-      }]
-    });
-    res.json({ result: msg.content[0].text });
-  } catch (e) {
-    console.error('Powerpoint error:', e.message);
-    res.status(500).json({ error: e.message });
-  }
-});
-
-// ─── START ────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`✦ AZHAR-AI server running on port ${PORT}`));
+app.listen(PORT, () => console.log(`AZHAR-AI server running on port ${PORT}`));
