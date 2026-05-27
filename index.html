@@ -15,8 +15,6 @@
   --sidebar:220px;
 }
 body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--text);min-height:100vh;display:flex;overflow:hidden;height:100vh;}
-
-/* ── SIDEBAR ── */
 .sidebar{width:var(--sidebar);min-height:100vh;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;position:fixed;left:0;top:0;bottom:0;z-index:100;}
 .sb-logo{padding:20px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;}
 .sb-logo-box{width:38px;height:38px;border:1px solid var(--gold);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
@@ -34,11 +32,7 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
 .sb-avatar{width:34px;height:34px;background:linear-gradient(135deg,var(--gold),var(--gold2));border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--black);flex-shrink:0;}
 .sb-user-name{font-size:12px;font-weight:600;color:var(--text);}
 .sb-user-role{font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;}
-
-/* ── MAIN ── */
 .main{margin-left:var(--sidebar);flex:1;display:flex;flex-direction:column;height:100vh;overflow:hidden;}
-
-/* ── TOPBAR ── */
 .topbar{height:64px;background:rgba(5,5,5,0.95);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 28px;flex-shrink:0;backdrop-filter:blur(10px);position:sticky;top:0;z-index:50;}
 .topbar-left h2{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;color:var(--white);}
 .topbar-left p{font-size:10px;color:var(--muted);letter-spacing:1px;margin-top:2px;}
@@ -48,18 +42,12 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
 .dot-live{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--green);letter-spacing:1px;}
 .dot-live::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 2s infinite;}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
-
-/* ── CONTENT ── */
 .content{flex:1;overflow-y:auto;padding:24px 28px;background:var(--black);min-height:0;}
 .content::-webkit-scrollbar{width:4px;}
 .content::-webkit-scrollbar-track{background:var(--surface);}
 .content::-webkit-scrollbar-thumb{background:var(--border);}
-
-/* ── PANELS ── */
 .panel{display:none;}
 .panel.on{display:block;}
-
-/* ── KPI ROW ── */
 .kpi-row{display:grid;grid-template-columns:1fr 1fr 2fr;gap:16px;margin-bottom:24px;}
 .kpi-card{background:var(--card);border:1px solid var(--border);padding:20px;position:relative;overflow:hidden;}
 .kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:0.4;}
@@ -69,34 +57,24 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
 .kpi-sub{font-size:10px;color:var(--muted);}
 .kpi-sub.up{color:var(--green);}
 .kpi-sub.dn{color:var(--red);}
-
-/* ── GRID LAYOUTS ── */
 .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
 .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px;}
 .grid-3-1{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:16px;}
 .grid-1-3{display:grid;grid-template-columns:1fr 2fr;gap:16px;margin-bottom:16px;}
-
-/* ── BOX ── */
 .box{background:var(--card);border:1px solid var(--border);padding:20px;position:relative;}
 .box::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:0.3;}
 .box-title{font-size:10px;letter-spacing:2px;color:var(--gold);text-transform:uppercase;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;}
 .box-title span{font-size:9px;color:var(--muted);letter-spacing:1px;}
-
-/* ── CHART BARS ── */
 .chart-bars{display:flex;align-items:flex-end;gap:4px;height:140px;margin-bottom:4px;justify-content:space-around;}
 .chart-bar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;}
 .chart-bar{width:100%;border-radius:2px 2px 0 0;transition:height 0.8s ease;}
 .chart-bar-lbl{font-size:9px;color:var(--muted);}
 .chart-bar-val{font-size:9px;font-weight:700;}
-
-/* ── DONUT ── */
 .donut-wrap{display:flex;align-items:center;gap:20px;}
 .donut-svg{flex-shrink:0;}
 .donut-legend{display:flex;flex-direction:column;gap:10px;}
 .donut-item{display:flex;align-items:center;gap:8px;font-size:11px;}
 .donut-dot{width:8px;height:8px;border-radius:50%;}
-
-/* ── TABLE ── */
 .data-table{width:100%;border-collapse:collapse;}
 .data-table th{padding:8px 12px;font-size:9px;letter-spacing:1.5px;color:var(--gold);text-transform:uppercase;text-align:left;border-bottom:1px solid var(--border);font-weight:500;}
 .data-table td{padding:10px 12px;font-size:12px;border-bottom:1px solid rgba(42,42,30,0.5);}
@@ -106,42 +84,30 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
 .badge.gold{background:rgba(201,168,76,0.15);color:var(--gold);}
 .badge.red{background:rgba(232,75,75,0.15);color:var(--red);}
 .badge.blue{background:rgba(91,141,238,0.15);color:var(--blue);}
-
-/* ── STATUS BAR ── */
 .d-status{display:flex;align-items:center;gap:12px;padding:12px 16px;border:1px solid var(--border);background:var(--surface);margin-bottom:16px;}
 .d-status.live{border-color:var(--green);background:rgba(78,203,141,0.05);}
 .d-status.live .d-status-txt{color:var(--green);}
 .d-status-txt{font-size:11px;color:var(--muted);}
-
-/* ── DATE PILLS ── */
 .date-pills{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;}
 .dpill{padding:5px 12px;background:var(--surface);border:1px solid var(--border);color:var(--muted);font-family:'Montserrat',sans-serif;font-size:10px;cursor:pointer;transition:all 0.2s;}
 .dpill:hover{border-color:var(--gold);color:var(--gold);}
 .dpill.on{background:var(--gold);color:var(--black);border-color:var(--gold);font-weight:700;}
 .dpill.today{border-color:var(--green);color:var(--green);}
 .dpill.today.on{background:var(--green);color:var(--black);}
-
-/* ── QUICK BTNS ── */
 .qbtns{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;}
 .qbtn{padding:6px 12px;background:var(--surface);border:1px solid var(--border);color:var(--muted);font-family:'Montserrat',sans-serif;font-size:9px;letter-spacing:1px;cursor:pointer;transition:all 0.2s;text-transform:uppercase;}
 .qbtn:hover{border-color:var(--gold);color:var(--gold);background:var(--glow);}
 .qbtn.cust{border-color:rgba(78,203,141,0.3);color:var(--green);}
 .qbtn.city{border-color:rgba(91,141,238,0.3);color:var(--blue);}
 .qbtn.stat{border-color:rgba(201,168,76,0.4);color:var(--gold);}
-
-/* ── FORM ELEMENTS ── */
 .lbl{font-size:9px;letter-spacing:2px;color:var(--gold);text-transform:uppercase;margin-bottom:6px;margin-top:14px;display:block;}
 input[type=text],textarea{width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:'Montserrat',sans-serif;font-size:13px;padding:11px 14px;outline:none;transition:border 0.2s;display:block;box-sizing:border-box;}
 input[type=text]:focus,textarea:focus{border-color:var(--gold);}
 input::placeholder,textarea::placeholder{color:var(--muted);}
 textarea{resize:vertical;min-height:100px;line-height:1.7;}
-
-/* ── PILLS ── */
 .pills{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
 .pill{padding:6px 14px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:'Montserrat',sans-serif;font-size:9px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all 0.2s;}
 .pill.on{border-color:var(--gold);color:var(--gold);background:var(--glow);}
-
-/* ── BUTTONS ── */
 .btn{width:100%;padding:13px;background:transparent;border:1px solid var(--gold);color:var(--gold);font-family:'Montserrat',sans-serif;font-size:10px;font-weight:600;letter-spacing:3px;text-transform:uppercase;cursor:pointer;transition:all 0.3s;position:relative;overflow:hidden;margin-bottom:8px;}
 .btn::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,var(--gold),var(--gold2));opacity:0;transition:opacity 0.3s;}
 .btn:hover::before{opacity:1;}
@@ -150,8 +116,6 @@ textarea{resize:vertical;min-height:100px;line-height:1.7;}
 .btn:disabled{opacity:0.3;cursor:not-allowed;}
 .btn:disabled::before{opacity:0!important;}
 .btn:disabled{color:var(--gold)!important;}
-
-/* ── OUTPUT ── */
 .out{background:var(--surface);border:1px solid var(--border);margin-top:14px;display:none;}
 .out.show{display:block;}
 .out-head{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-bottom:1px solid var(--border);}
@@ -159,19 +123,13 @@ textarea{resize:vertical;min-height:100px;line-height:1.7;}
 .copy{background:transparent;border:1px solid var(--border);color:var(--muted);font-size:9px;padding:4px 10px;cursor:pointer;font-family:'Montserrat',sans-serif;text-transform:uppercase;}
 .copy:hover{border-color:var(--gold);color:var(--gold);}
 .out-body{padding:20px;font-size:13px;line-height:1.9;white-space:pre-wrap;max-height:500px;overflow-y:auto;}
-
-/* ── LOADER ── */
 .loader{display:none;text-align:center;padding:28px;}
 .ring{width:30px;height:30px;margin:0 auto 12px;border:1px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin 1s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg)}}
 .ring-txt{font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;}
-
-/* ── UPLOAD ── */
 .upload{background:var(--surface);border:1px dashed var(--border);padding:20px;text-align:center;cursor:pointer;transition:all 0.3s;margin-bottom:8px;}
 .upload:hover{border-color:var(--gold);background:var(--glow);}
 .upload.done{border-color:var(--green);border-style:solid;}
-
-/* ── EMAIL DIFF ── */
 .etabs{display:flex;border-bottom:1px solid var(--border);}
 .etab{padding:10px 16px;border:none;background:transparent;color:var(--muted);font-family:'Montserrat',sans-serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:all 0.2s;border-right:1px solid var(--border);position:relative;}
 .etab::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:var(--gold);transform:scaleX(0);transition:transform 0.2s;}
@@ -182,8 +140,6 @@ textarea{resize:vertical;min-height:100px;line-height:1.7;}
 .ebody{padding:20px;font-size:13px;line-height:1.9;white-space:pre-wrap;max-height:440px;overflow-y:auto;}
 .ediff{background:var(--surface);border:1px solid var(--border);margin-top:14px;display:none;}
 .ediff.show{display:block;}
-
-/* ── INVOICE ── */
 .inv-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:14px;}
 .inv-inp{width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:'Montserrat',sans-serif;font-size:13px;padding:11px 14px;outline:none;transition:border 0.2s;display:block;box-sizing:border-box;}
 .inv-inp:focus{border-color:var(--gold);}
@@ -194,36 +150,28 @@ textarea{resize:vertical;min-height:100px;line-height:1.7;}
 .inv-btn{flex:1;padding:13px;background:transparent;border:1px solid var(--gold);color:var(--gold);font-family:'Montserrat',sans-serif;font-size:9px;font-weight:600;letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:all 0.2s;}
 .inv-btn:hover{background:var(--glow);}
 .inv-btn.blue{border-color:var(--blue);color:var(--blue);}
-
-/* ── QUICK ACTIONS ── */
-.qa-btn{display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--surface);border:1px solid var(--border);width:100%;margin-bottom:8px;cursor:pointer;transition:all 0.2s;font-family:'Montserrat',sans-serif;font-size:11px;color:var(--text);text-align:left;}
-.qa-btn:hover{border-color:var(--gold);background:var(--glow);}
-.qa-btn .qa-icon{font-size:16px;width:24px;text-align:center;}
-.qa-btn .qa-plus{margin-left:auto;color:var(--gold);font-size:16px;}
-
-/* ── ASK INPUT ── */
 .ask-row{display:flex;gap:8px;align-items:flex-end;}
 .ask-inp{flex:1;min-height:44px;max-height:100px;resize:none;padding:11px 14px;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:'Montserrat',sans-serif;font-size:13px;outline:none;}
 .ask-inp:focus{border-color:var(--gold);}
 .send-btn{width:44px;height:44px;flex-shrink:0;background:linear-gradient(135deg,var(--gold),var(--gold2));border:none;color:var(--black);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;transition:all 0.2s;}
 .send-btn:hover{transform:translateY(-2px);}
 .send-btn:disabled{opacity:0.4;cursor:not-allowed;transform:none;}
-
-/* ── ROUTE TABLE ── */
 .route-table{width:100%;border-collapse:collapse;}
 .route-table th{padding:8px 10px;font-size:9px;letter-spacing:1px;color:var(--gold);text-transform:uppercase;text-align:left;border-bottom:2px solid var(--gold);background:#1a1a2e;}
 .route-table td{padding:8px 10px;font-size:12px;border-bottom:1px solid rgba(42,42,30,0.5);}
 .route-table tr:hover td{background:var(--glow);}
 .progress-bar{height:3px;background:var(--border);border-radius:2px;margin-top:4px;}
 .progress-fill{height:3px;border-radius:2px;}
-
+/* ── REJECTION PIVOT PILLS ── */
+.rej-pill{padding:5px 14px;border-radius:20px;border:1px solid var(--border);background:transparent;font-size:10px;cursor:pointer;color:var(--muted);transition:all .2s;font-family:'Montserrat',sans-serif;letter-spacing:.5px;}
+.rej-pill.on{background:var(--gold);color:var(--black);border-color:var(--gold);font-weight:700;}
+.rej-pill:hover:not(.on){border-color:var(--gold);color:var(--gold);}
 footer{padding:16px 28px;border-top:1px solid var(--border);text-align:center;font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;flex-shrink:0;}
 footer span{color:var(--gold);}
 </style>
 </head>
 <body>
 
-<!-- ══════════════════════════════════════════════════ SIDEBAR -->
 <aside class="sidebar">
   <div class="sb-logo">
     <div class="sb-logo-box">
@@ -234,7 +182,6 @@ footer span{color:var(--gold);}
       <div class="sb-sub">Operations Intelligence</div>
     </div>
   </div>
-
   <div class="sb-section">AI Command Centre</div>
   <button class="sb-item on" onclick="goTab('dispatch',this)"><span class="icon">🚚</span> Daily Dispatch</button>
   <button class="sb-item" onclick="goTab('rejection',this)"><span class="icon">📊</span> Daily Rejection</button>
@@ -242,7 +189,6 @@ footer span{color:var(--gold);}
   <button class="sb-item" onclick="goTab('email',this)"><span class="icon">✉️</span> Email Writer</button>
   <button class="sb-item" onclick="goTab('invoice',this)"><span class="icon">💼</span> Proforma Invoice</button>
   <button class="sb-item" onclick="goTab('excel',this)"><span class="icon">📐</span> Excel Support</button>
-
   <div class="sb-footer">
     <div class="sb-user">
       <div class="sb-avatar">A</div>
@@ -254,10 +200,7 @@ footer span{color:var(--gold);}
   </div>
 </aside>
 
-<!-- ══════════════════════════════════════════════════ MAIN -->
 <div class="main">
-
-  <!-- TOPBAR -->
   <div class="topbar">
     <div class="topbar-left">
       <h2 id="topbar-title">Welcome back, Azhar</h2>
@@ -273,13 +216,10 @@ footer span{color:var(--gold);}
     </div>
   </div>
 
-  <!-- CONTENT -->
   <div class="content">
 
     <!-- ══ DAILY DISPATCH ══════════════════════════════════ -->
     <div class="panel on" id="dispatch">
-
-      <!-- Status + Date Slicer -->
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px;">
         <div class="d-status" id="ds-status" style="flex:1;min-width:260px;margin:0;">
           <span style="font-size:16px;">⏳</span>
@@ -289,15 +229,13 @@ footer span{color:var(--gold);}
           <div class="date-pills" id="ds-date-pills" style="margin:0;"></div>
         </div>
       </div>
-
-      <!-- KPI Cards -->
       <div class="kpi-row" id="ds-kpis" style="display:none;">
         <div class="kpi-card">
           <div class="kpi-icon" style="background:rgba(201,168,76,0.1);">📦</div>
           <div class="kpi-label">Total Orders</div>
           <div class="kpi-value" id="k-orders">—</div>
           <div class="kpi-sub" id="k-routes-sub">— routes · — drivers</div>
-          <div class="kpi-sub" style="color:var(--green);" id="k-drops" style="margin-top:4px;font-size:11px;">— total drops</div>
+          <div class="kpi-sub" style="color:var(--green);" id="k-drops">— total drops</div>
         </div>
         <div class="kpi-card">
           <div class="kpi-icon" style="background:rgba(201,168,76,0.1);">💰</div>
@@ -307,49 +245,34 @@ footer span{color:var(--gold);}
         </div>
         <div class="kpi-card">
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
-
-            <!-- FOOD -->
             <div style="background:rgba(78,203,141,0.05);border:1px solid rgba(78,203,141,0.2);padding:12px;">
               <div style="font-size:9px;color:var(--green);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;font-weight:700;">✦ FOOD</div>
               <div style="font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:700;color:var(--gold);" id="k-food">—</div>
               <div style="font-size:10px;color:var(--muted);margin-bottom:8px;" id="k-food-val">AED —</div>
-              <div style="border-top:1px solid rgba(78,203,141,0.15);padding-top:8px;" id="k-food-detail">
+              <div style="border-top:1px solid rgba(78,203,141,0.15);padding-top:8px;">
                 <div style="display:flex;justify-content:space-between;font-size:10px;padding:2px 0;"><span style="color:var(--muted);">DCV</span><span id="k-dcv-orders">—</span></div>
                 <div style="display:flex;justify-content:space-between;font-size:10px;padding:2px 0;"><span style="color:var(--muted);">DCF (FoodSvc)</span><span id="k-dcf-orders">—</span></div>
               </div>
             </div>
-
-            <!-- NON-FOOD -->
             <div style="background:rgba(91,141,238,0.05);border:1px solid rgba(91,141,238,0.2);padding:12px;">
               <div style="font-size:9px;color:var(--blue);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;font-weight:700;">🟠 NON FOOD</div>
               <div style="font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:700;color:var(--blue);" id="k-nonfood">—</div>
               <div style="font-size:10px;color:var(--muted);margin-bottom:8px;" id="k-nonfood-val">AED —</div>
               <div style="border-top:1px solid rgba(91,141,238,0.15);padding-top:8px;">
                 <div style="padding:4px 0;border-bottom:1px solid rgba(91,141,238,0.08);">
-                  <div style="display:flex;justify-content:space-between;align-items:center;">
-                    <span style="font-size:10px;color:var(--muted);font-weight:600;">DGC</span>
-                    <span id="k-dgc-orders" style="font-size:10px;color:var(--text);">—</span>
-                  </div>
+                  <div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:10px;color:var(--muted);font-weight:600;">DGC</span><span id="k-dgc-orders" style="font-size:10px;color:var(--text);">—</span></div>
                   <div style="font-size:11px;color:var(--blue);font-weight:600;text-align:right;margin-top:1px;" id="k-dgc-val">AED —</div>
                 </div>
                 <div style="padding:4px 0;border-bottom:1px solid rgba(91,141,238,0.08);">
-                  <div style="display:flex;justify-content:space-between;align-items:center;">
-                    <span style="font-size:10px;color:var(--muted);font-weight:600;">DGS</span>
-                    <span id="k-dgs-orders" style="font-size:10px;color:var(--text);">—</span>
-                  </div>
+                  <div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:10px;color:var(--muted);font-weight:600;">DGS</span><span id="k-dgs-orders" style="font-size:10px;color:var(--text);">—</span></div>
                   <div style="font-size:11px;color:var(--blue);font-weight:600;text-align:right;margin-top:1px;" id="k-dgs-val">AED —</div>
                 </div>
                 <div style="padding:4px 0;">
-                  <div style="display:flex;justify-content:space-between;align-items:center;">
-                    <span style="font-size:10px;color:var(--muted);font-weight:600;">DSN</span>
-                    <span id="k-dsn-orders" style="font-size:10px;color:var(--text);">—</span>
-                  </div>
+                  <div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:10px;color:var(--muted);font-weight:600;">DSN</span><span id="k-dsn-orders" style="font-size:10px;color:var(--text);">—</span></div>
                   <div style="font-size:11px;color:var(--blue);font-weight:600;text-align:right;margin-top:1px;" id="k-dsn-val">AED —</div>
                 </div>
               </div>
             </div>
-
-            <!-- 3PL -->
             <div style="background:rgba(91,141,238,0.05);border:1px solid rgba(91,141,238,0.2);padding:12px;">
               <div style="font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;font-weight:700;">✦ 3PL</div>
               <div style="font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:700;color:var(--gold);" id="k-pl">—</div>
@@ -359,12 +282,9 @@ footer span{color:var(--gold);}
                 <div style="font-size:10px;color:var(--muted);margin-top:6px;line-height:1.4;">Physical delivery only — no invoice value</div>
               </div>
             </div>
-
           </div>
         </div>
       </div>
-
-      <!-- Charts Row -->
       <div class="grid-3-1" id="ds-charts" style="display:none;">
         <div class="box">
           <div class="box-title">📊 Orders by City <span id="ds-city-total"></span></div>
@@ -374,7 +294,7 @@ footer span{color:var(--gold);}
         <div class="box">
           <div class="box-title">📈 Order Type Split</div>
           <div class="donut-wrap">
-            <svg class="donut-svg" width="100" height="100" viewBox="0 0 100 100" id="ds-donut-svg">
+            <svg class="donut-svg" width="100" height="100" viewBox="0 0 100 100">
               <circle cx="50" cy="50" r="35" fill="none" stroke="#2a2a1e" stroke-width="18"/>
               <circle cx="50" cy="50" r="35" fill="none" stroke="#4ecb8d" stroke-width="18" id="donut-food" stroke-dasharray="0 220" stroke-dashoffset="55" style="transition:stroke-dasharray 1s;"/>
               <circle cx="50" cy="50" r="35" fill="none" stroke="#5b8dee" stroke-width="18" id="donut-nonfood" stroke-dasharray="0 220" stroke-dashoffset="55" style="transition:stroke-dasharray 1s;"/>
@@ -386,34 +306,22 @@ footer span{color:var(--gold);}
           </div>
         </div>
       </div>
-
-      <!-- Tables Row -->
       <div class="grid-2" id="ds-tables" style="display:none;">
         <div class="box">
           <div class="box-title">💰 Top Customers by Value</div>
-          <table class="data-table" id="ds-cust-table">
-            <thead><tr><th>#</th><th>Customer</th><th>Orders</th><th>Value (AED)</th></tr></thead>
-            <tbody id="ds-cust-body"></tbody>
-          </table>
+          <table class="data-table"><thead><tr><th>#</th><th>Customer</th><th>Orders</th><th>Value (AED)</th></tr></thead><tbody id="ds-cust-body"></tbody></table>
         </div>
         <div class="box">
           <div class="box-title">🚚 Top 5 Drivers</div>
           <div id="ds-drivers-list"></div>
         </div>
       </div>
-
-      <!-- Route Summary -->
       <div class="box" id="ds-routes-box" style="display:none;margin-bottom:16px;">
         <div class="box-title">🗺️ Route Summary — Drops per Route</div>
         <div style="overflow-x:auto;max-height:300px;overflow-y:auto;">
-          <table class="route-table">
-            <thead><tr><th>Route</th><th>Driver</th><th>Drops</th><th>Value (AED)</th></tr></thead>
-            <tbody id="ds-route-body"></tbody>
-          </table>
+          <table class="route-table"><thead><tr><th>Route</th><th>Driver</th><th>Drops</th><th>Value (AED)</th></tr></thead><tbody id="ds-route-body"></tbody></table>
         </div>
       </div>
-
-      <!-- Ask AI -->
       <div class="box" id="ds-ask-box" style="display:none;margin-bottom:16px;">
         <div class="box-title">✦ Ask AI About Today's Dispatch</div>
         <div class="qbtns" style="margin-bottom:12px;">
@@ -441,14 +349,10 @@ footer span{color:var(--gold);}
           <div class="out-body" id="ds-answer"></div>
         </div>
       </div>
-
-      <!-- Admin Upload -->
       <div class="box">
         <div class="box-title">🔒 Admin — Upload Today's Dispatch File</div>
         <div id="admin-lock" style="display:flex;gap:8px;align-items:center;">
-          <input type="password" id="admin-pwd" placeholder="Enter admin password..."
-            style="flex:1;height:42px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:Montserrat,sans-serif;font-size:13px;outline:none;"
-            onkeydown="if(event.key==='Enter')checkPwd()"/>
+          <input type="password" id="admin-pwd" placeholder="Enter admin password..." style="flex:1;height:42px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:Montserrat,sans-serif;font-size:13px;outline:none;" onkeydown="if(event.key==='Enter')checkPwd()"/>
           <button onclick="checkPwd()" class="inv-btn" style="flex:0;white-space:nowrap;padding:10px 18px;margin:0;">Unlock</button>
         </div>
         <div id="admin-upload" style="display:none;margin-top:12px;">
@@ -466,30 +370,81 @@ footer span{color:var(--gold);}
 
     <!-- ══ DAILY REJECTION ══════════════════════════════ -->
     <div class="panel" id="rejection">
-      <div class="box">
-        <div class="box-title">📊 Daily Rejection Analysis</div>
-        <div class="upload" onclick="document.getElementById('rej-file').click()">
-          <div style="font-size:22px;margin-bottom:6px;">📋</div>
-          <div style="font-size:11px;color:var(--muted);">Upload rejection report (.xlsx or .csv)</div>
-          <div style="font-size:10px;color:var(--muted);margin-top:3px;" id="rej-file-name">Or paste data below</div>
+
+      <div class="box" style="margin-bottom:16px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+          <div>
+            <div style="font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;color:var(--white);">Rejection Dashboard</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:2px;letter-spacing:1px;">YTD JAN – MAY 2026 &nbsp;·&nbsp; <span id="rej-scope-label" style="color:var(--gold);">All Types · All Sources</span></div>
+          </div>
+          <div style="font-size:10px;color:var(--muted);background:var(--surface);padding:4px 12px;border:1px solid var(--border);">126,779 total orders</div>
         </div>
-        <input type="file" id="rej-file" accept=".csv,.xlsx,.xls,.txt" style="display:none" onchange="loadFile(this,'rej-data','rej-file-name')"/>
-        <label class="lbl">Rejection Data</label>
-        <textarea id="rej-data" placeholder="Paste your rejection/returns data here..."></textarea>
-        <label class="lbl">Analysis Type</label>
-        <div class="pills" id="rej-type">
-          <div class="pill on" onclick="setPill(this,'rej-type')">Full Analysis</div>
-          <div class="pill" onclick="setPill(this,'rej-type')">By Customer</div>
-          <div class="pill" onclick="setPill(this,'rej-type')">By Reason</div>
-          <div class="pill" onclick="setPill(this,'rej-type')">By Product</div>
-          <div class="pill" onclick="setPill(this,'rej-type')">Recommendations</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;align-items:center;">
+          <span style="font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;">TYPE</span>
+          <button class="rej-pill on" id="rt-all"  onclick="rejFilter('type','all')">All</button>
+          <button class="rej-pill"    id="rt-food" onclick="rejFilter('type','food')">Food</button>
+          <button class="rej-pill"    id="rt-nf"   onclick="rejFilter('type','nonfood')">Non-Food</button>
+          <span style="width:1px;height:18px;background:var(--border);margin:0 4px;"></span>
+          <span style="font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;">SOURCE</span>
+          <button class="rej-pill on" id="rs-all"  onclick="rejFilter('src','all')">All</button>
+          <button class="rej-pill"    id="rs-ext"  onclick="rejFilter('src','external')">External</button>
+          <button class="rej-pill"    id="rs-int"  onclick="rejFilter('src','internal')">Internal</button>
         </div>
-        <button class="btn" id="rej-btn" onclick="doRejection()"><span>Analyse Daily Rejections</span></button>
-        <div class="loader" id="rej-loader"><div class="ring"></div><div class="ring-txt">Analysing rejection data...</div></div>
-        <div class="out" id="rej-out">
-          <div class="out-head"><span class="out-lbl">✦ Rejection Analysis</span><button class="copy" onclick="doCopy('rej-answer')">Copy</button></div>
-          <div class="out-body" id="rej-answer"></div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;" id="rej-kpis"></div>
+
+      <div class="grid-2" style="margin-bottom:16px;">
+        <div class="box">
+          <div class="box-title">📈 Delivered vs Rejected — Monthly <span id="rej-chart-sub"></span></div>
+          <div style="display:flex;gap:14px;margin-bottom:8px;font-size:10px;color:var(--muted);">
+            <span style="display:flex;align-items:center;gap:5px;"><span style="width:10px;height:10px;border-radius:2px;background:var(--green);display:inline-block;"></span>Delivered</span>
+            <span style="display:flex;align-items:center;gap:5px;"><span style="width:10px;height:10px;border-radius:2px;background:var(--red);display:inline-block;"></span>Rejected</span>
+          </div>
+          <div style="position:relative;height:180px;"><canvas id="rejMonthChart" role="img" aria-label="Delivered vs rejected monthly"></canvas></div>
         </div>
+        <div class="box">
+          <div class="box-title">📍 Rejections by Area</div>
+          <div style="position:relative;height:210px;"><canvas id="rejAreaChart" role="img" aria-label="Rejections by emirate"></canvas></div>
+        </div>
+      </div>
+
+      <div class="grid-2" style="margin-bottom:16px;">
+        <div class="box">
+          <div class="box-title">⚠️ Top Rejection Reasons</div>
+          <div id="rej-reasons-panel"></div>
+        </div>
+        <div class="box">
+          <div class="box-title">👥 Top Customers by Rejections</div>
+          <div id="rej-cust-panel"></div>
+        </div>
+      </div>
+
+      <div class="box" style="margin-bottom:16px;">
+        <div class="box-title">📦 Order Type Split — Food vs Non-Food</div>
+        <div style="display:flex;align-items:center;gap:24px;flex-wrap:wrap;">
+          <div style="position:relative;width:110px;height:110px;flex-shrink:0;">
+            <canvas id="rejTypeDonut" role="img" aria-label="Food vs Non-Food rejection donut"></canvas>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span style="width:12px;height:12px;border-radius:2px;background:var(--green);display:inline-block;flex-shrink:0;"></span>
+              <div style="font-size:12px;color:var(--text);">Food &nbsp;<span style="color:var(--muted);">3,440 rejections (47%)</span></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span style="width:12px;height:12px;border-radius:2px;background:var(--blue);display:inline-block;flex-shrink:0;"></span>
+              <div style="font-size:12px;color:var(--text);">Non-Food &nbsp;<span style="color:var(--muted);">3,731 rejections (51%)</span></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span style="width:12px;height:12px;border-radius:2px;background:var(--muted);display:inline-block;flex-shrink:0;"></span>
+              <div style="font-size:12px;color:var(--text);">Medicine / Other &nbsp;<span style="color:var(--muted);">182 rejections (2%)</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="padding:10px 14px;background:var(--surface);border:1px solid var(--border);font-size:10px;color:var(--muted);letter-spacing:1px;">
+        Source: Delivery_Status-REJ_Report_JAN-May_2026_YTD.xlsx &nbsp;·&nbsp; Rejections = Status R/D or HOLD &nbsp;·&nbsp; 127,055 rows
       </div>
     </div>
 
@@ -618,11 +573,11 @@ footer span{color:var(--gold);}
       </div>
     </div>
 
-  </div><!-- /content -->
-
+  </div>
   <footer>Powered by <span>✦ AZHAR-AI</span> &nbsp;·&nbsp; Operations &amp; Customer Service Intelligence Platform &nbsp;·&nbsp; V 4.0</footer>
-</div><!-- /main -->
+</div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
 // ── CLOCK ──────────────────────────────────────────────────────
 function updateClock() {
@@ -638,7 +593,7 @@ setInterval(updateClock, 1000);
 // ── TAB NAVIGATION ─────────────────────────────────────────────
 const TITLES = {
   dispatch: ['Welcome back, Azhar', 'Operations & Customer Service AI Command Centre'],
-  rejection: ['Daily Rejection Analysis', 'Analyse rejections and returns'],
+  rejection: ['Daily Rejection Analysis', 'YTD Jan – May 2026 · Pivot Dashboard'],
   summary: ['Executive Summary Generator', 'Create professional summaries for leadership'],
   email: ['Professional Email Writer', 'Write and refine business correspondence'],
   invoice: ['Proforma Invoice Generator', 'Create professional invoices with letterhead'],
@@ -653,6 +608,7 @@ function goTab(id, btn) {
   const t = TITLES[id] || ['AZHAR-AI',''];
   document.getElementById('topbar-title').textContent = t[0];
   document.getElementById('topbar-sub').textContent = t[1];
+  if (id === 'rejection') setTimeout(rejRender, 100);
 }
 
 // ── UTILS ──────────────────────────────────────────────────────
@@ -749,27 +705,19 @@ function buildDashboard(d) {
   const today = new Date().toISOString().split('T')[0];
   const lbl = d.date === today ? 'Today' : d.date;
   const val = s.total_value ? (s.total_value >= 1000000 ? (s.total_value/1000000).toFixed(2)+'M' : Math.round(s.total_value).toLocaleString()) : '—';
-
-  // Status bar
   const el = document.getElementById('ds-status');
   el.className = 'd-status live';
   el.innerHTML = '<span style="font-size:16px;">✅</span><span class="d-status-txt"><strong>' + lbl + '</strong> &nbsp;|&nbsp; ' + (s.total_orders||0).toLocaleString() + ' Orders &nbsp;|&nbsp; AED ' + val + ' &nbsp;|&nbsp; By: ' + d.uploadedBy + '</span>';
-
-  // KPIs
   document.getElementById('k-orders').textContent = (s.total_orders||0).toLocaleString();
   document.getElementById('k-routes-sub').textContent = (s.total_routes||0) + ' routes · ' + (s.total_drivers||0) + ' drivers';
   const dropsEl = document.getElementById('k-drops');
   if (dropsEl) dropsEl.textContent = (s.total_drops||0).toLocaleString() + ' total drops';
   document.getElementById('k-value').textContent = 'AED ' + val;
-
-  // Type cards
   document.getElementById('k-food').textContent = (s.food_orders||0).toLocaleString();
   document.getElementById('k-food-val').textContent = 'AED ' + (s.food_value ? Math.round(s.food_value).toLocaleString() : '0');
   document.getElementById('k-nonfood').textContent = (s.non_food_orders||0).toLocaleString();
   document.getElementById('k-nonfood-val').textContent = 'AED ' + (s.non_food_value ? Math.round(s.non_food_value).toLocaleString() : '0');
   document.getElementById('k-pl').textContent = (s.pl_orders||0).toLocaleString();
-
-  // ORG sub-breakdown
   const tb = s.type_breakdown || {};
   document.getElementById('k-dcv-orders').textContent = (tb.DCV?.orders||0) + ' orders';
   document.getElementById('k-dcf-orders').textContent = (tb.DCF?.orders||0) + ' orders';
@@ -780,10 +728,7 @@ function buildDashboard(d) {
   document.getElementById('k-dsn-orders').textContent = (tb.DSN?.orders||0) + ' orders';
   document.getElementById('k-dsn-val').textContent = 'AED ' + Math.round(tb.DSN?.value||0).toLocaleString();
   document.getElementById('k-hcp').textContent = (tb.HCP?.orders||0) + ' orders';
-
   document.getElementById('ds-kpis').style.display = 'grid';
-
-  // City bar chart
   const colors = ['#c9a84c','#4ecb8d','#5b8dee','#e8c878','#7a9bd4','#a8d4a8','#d4c878','#78b4d4'];
   if (s.by_city && s.by_city.length) {
     const cities = s.by_city.slice(0,8);
@@ -800,8 +745,6 @@ function buildDashboard(d) {
     document.getElementById('ds-city-labels').innerHTML = '';
     document.getElementById('ds-charts').style.display = 'grid';
   }
-
-  // Donut chart
   const total = (s.food_orders||0) + (s.non_food_orders||0) + (s.pl_orders||0);
   if (total > 0) {
     const circ = 2 * Math.PI * 35;
@@ -818,15 +761,11 @@ function buildDashboard(d) {
       '<div class="donut-item"><div class="donut-dot" style="background:var(--blue)"></div><span>Non Food: <strong>' + (s.non_food_orders||0) + '</strong></span></div>' +
       '<div class="donut-item"><div class="donut-dot" style="background:var(--gold)"></div><span>3PL: <strong>' + (s.pl_orders||0) + '</strong></span></div>';
   }
-
-  // Top customers table
   if (s.top_customers && s.top_customers.length) {
     document.getElementById('ds-cust-body').innerHTML = s.top_customers.slice(0,6).map((c,i) =>
       '<tr><td style="color:var(--muted);">' + (i+1) + '</td><td>' + c.name + '</td><td style="color:var(--muted);">' + (c.orders||0) + '</td><td style="color:var(--gold);font-weight:600;">AED ' + Math.round(c.value||0).toLocaleString() + '</td></tr>'
     ).join('');
   }
-
-  // Top drivers
   if (s.top_drivers && s.top_drivers.length) {
     const maxD = s.top_drivers[0].orders || 1;
     document.getElementById('ds-drivers-list').innerHTML = s.top_drivers.slice(0,5).map((dr,i) => {
@@ -835,15 +774,12 @@ function buildDashboard(d) {
       return '<div style="margin-bottom:12px;"><div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span style="font-size:12px;color:' + col + ';font-weight:' + (i<3?'600':'400') + '">' + (i+1) + '. ' + dr.name + '</span><span style="font-size:12px;color:' + col + ';font-weight:700">' + dr.orders + ' drops</span></div><div class="progress-bar"><div class="progress-fill" style="width:' + pct + '%;background:' + col + '"></div></div></div>';
     }).join('');
   }
-
-  // Route table
   if (s.top_routes && s.top_routes.length) {
-    document.getElementById('ds-route-body').innerHTML = s.top_routes.map((r,i) =>
+    document.getElementById('ds-route-body').innerHTML = s.top_routes.map(r =>
       '<tr><td style="color:var(--gold);font-weight:600;">' + r.route + '</td><td>' + (r.driver||'—') + '</td><td style="text-align:center;font-weight:700;color:var(--gold);">' + r.drops + '</td><td style="text-align:right;">AED ' + (r.value||0).toLocaleString() + '</td></tr>'
     ).join('');
     document.getElementById('ds-routes-box').style.display = 'block';
   }
-
   document.getElementById('ds-tables').style.display = 'grid';
   document.getElementById('ds-ask-box').style.display = 'block';
 }
@@ -861,8 +797,7 @@ async function doUpload(input) {
     if (d.success) {
       nameEl.textContent = '✓ ' + file.name + ' — ' + (d.summary?.total_orders||0).toLocaleString() + ' orders loaded';
       nameEl.style.color = 'var(--green)';
-      buildDashboard(d);
-      loadStatus();
+      buildDashboard(d); loadStatus();
     } else {
       nameEl.textContent = '❌ ' + (d.error || 'Upload failed'); nameEl.style.color = 'var(--red)';
       alert('Upload failed: ' + (d.error || 'Unknown error'));
@@ -888,7 +823,6 @@ async function doAsk(q) {
   document.getElementById('ds-send').disabled = false;
 }
 
-// Admin password
 const ADMIN_PWD = 'azhar2026';
 function checkPwd() {
   const pwd = document.getElementById('admin-pwd').value;
@@ -908,17 +842,141 @@ function lockAdmin() {
   document.getElementById('admin-upload').style.display = 'none';
 }
 
-// ── REJECTION ──────────────────────────────────────────────────
-async function doRejection() {
-  const data = document.getElementById('rej-data').value.trim();
-  if (!data) { alert('Please paste rejection data or upload a file.'); return; }
-  document.getElementById('rej-out').classList.remove('show');
-  setLoad('rej-loader','rej-btn',true);
-  try {
-    const r = await api('You are AZHAR-AI Operations Intelligence for UAE logistics.\nAnalyse this rejection data. Type: ' + getPill('rej-type') + '\nProvide: total rejections, top reasons, top customers, recommendations.\n\nData:\n' + data);
-    showOut('rej-out','rej-answer',r);
-  } catch(e) { alert('Error: ' + e.message); }
-  setLoad('rej-loader','rej-btn',false);
+// ── REJECTION PIVOT DASHBOARD ──────────────────────────────────
+const REJ_MONTHS = ['Jan','Feb','Mar','Apr','May'];
+const REJ_DATA = {
+  all:{
+    all:{del:[24915,25597,24655,25156,19104],rej:[1809,1792,2110,913,729],totalDel:119427,totalRej:7353,value:'AED 27.3M',
+      reasons:[{l:'Sales / customer instruction',n:2956},{l:'Time out at prev customer',n:1318},{l:'Merchandiser unavailable',n:679},{l:'Customer system issue',n:634},{l:'GRV / stock collection',n:582}],
+      custs:[{n:'Union Co-Op (Dxb)',c:617,v:'AED 1.61M'},{n:'Nesto Hypermarket',c:358,v:'AED 684K'},{n:'Abu Dhabi Co-Op',c:261,v:'AED 1.12M'},{n:'GMG Consumer LLC',c:198,v:'AED 247K'},{n:'Spinneys Dubai',c:183,v:'AED 348K'}],
+      areas:[{a:'Dubai',n:3554},{a:'Abu Dhabi',n:1387},{a:'Sharjah',n:930},{a:'Al Ain',n:437},{a:'Ajman',n:383},{a:'Fujairah',n:208}]},
+    external:{del:[23455,24000,23379,24018,18399],rej:[1760,1703,2017,910,728],totalDel:113251,totalRej:7118,value:'AED 26.1M',
+      reasons:[{l:'Sales / customer instruction',n:2956},{l:'Time out at prev customer',n:1312},{l:'Merchandiser unavailable',n:679},{l:'Customer system issue',n:634},{l:'GRV / stock collection',n:582}],
+      custs:[{n:'Union Co-Op (Dxb)',c:596,v:'AED 1.52M'},{n:'Nesto Hypermarket',c:357,v:'AED 679K'},{n:'Abu Dhabi Co-Op',c:241,v:'AED 1.02M'},{n:'GMG Consumer',c:195,v:'AED 242K'},{n:'Spinneys Dubai',c:177,v:'AED 334K'}],
+      areas:[{a:'Dubai',n:3430},{a:'Abu Dhabi',n:1340},{a:'Sharjah',n:900},{a:'Al Ain',n:420},{a:'Ajman',n:370},{a:'Fujairah',n:200}]},
+    internal:{del:[1460,1597,1276,1138,705],rej:[49,89,93,3,1],totalDel:6176,totalRej:235,value:'AED 380K',
+      reasons:[{l:'AKI staff issue',n:211},{l:'AKI staff related reason',n:18},{l:'Time out at prev customer',n:6}],
+      custs:[{n:'Union Co-Op (Dxb)',c:21,v:'AED 94K'},{n:'Abu Dhabi Co-Op',c:20,v:'AED 97K'},{n:'Sharjah Co-Op',c:18,v:'AED 35K'},{n:'Ace Al Futtaim',c:6,v:'AED 76K'},{n:'Spinneys Dubai',c:6,v:'AED 14K'}],
+      areas:[{a:'Dubai',n:80},{a:'Abu Dhabi',n:70},{a:'Sharjah',n:50},{a:'Al Ain',n:20},{a:'Ajman',n:12},{a:'Fujairah',n:3}]}
+  },
+  food:{
+    all:{del:[11921,11755,10445,12111,8385],rej:[931,943,890,378,300],totalDel:54617,totalRej:3442,value:'AED 13.2M',
+      reasons:[{l:'Sales / customer instruction',n:1313},{l:'Time out at prev customer',n:853},{l:'Customer system issue',n:296},{l:'Merchandiser unavailable',n:283},{l:'GRV / stock collection',n:161}],
+      custs:[{n:'Nesto Hypermarket',c:215,v:'AED 376K'},{n:'Union Co-Op (Dxb)',c:185,v:'AED 489K'},{n:'Abu Dhabi Co-Op',c:142,v:'AED 409K'},{n:'Aswaaq Retail',c:106,v:'AED 110K'},{n:'GMG Consumer',c:101,v:'AED 107K'}],
+      areas:[{a:'Dubai',n:1657},{a:'Abu Dhabi',n:739},{a:'Sharjah',n:455},{a:'Ajman',n:220},{a:'Al Ain',n:146},{a:'Fujairah',n:89}]},
+    external:{del:[11500,11300,10000,11800,8100],rej:[900,910,860,365,292],totalDel:52700,totalRej:3327,value:'AED 12.9M',
+      reasons:[{l:'Sales / customer instruction',n:1290},{l:'Time out at prev customer',n:840},{l:'Customer system issue',n:290},{l:'Merchandiser unavailable',n:275},{l:'GRV / stock collection',n:155}],
+      custs:[{n:'Nesto Hypermarket',c:210,v:'AED 370K'},{n:'Union Co-Op (Dxb)',c:178,v:'AED 480K'},{n:'Abu Dhabi Co-Op',c:135,v:'AED 400K'},{n:'Aswaaq Retail',c:100,v:'AED 105K'},{n:'GMG Consumer',c:96,v:'AED 100K'}],
+      areas:[{a:'Dubai',n:1590},{a:'Abu Dhabi',n:710},{a:'Sharjah',n:440},{a:'Ajman',n:212},{a:'Al Ain',n:140},{a:'Fujairah',n:86}]},
+    internal:{del:[421,455,445,311,285],rej:[31,33,30,13,8],totalDel:1917,totalRej:115,value:'AED 300K',
+      reasons:[{l:'AKI staff issue',n:90},{l:'AKI staff related reason',n:12},{l:'Time out at prev customer',n:3}],
+      custs:[{n:'Union Co-Op (Dxb)',c:10,v:'AED 40K'},{n:'Abu Dhabi Co-Op',c:9,v:'AED 45K'},{n:'Sharjah Co-Op',c:8,v:'AED 18K'},{n:'Spinneys Dubai',c:3,v:'AED 7K'}],
+      areas:[{a:'Dubai',n:38},{a:'Abu Dhabi',n:32},{a:'Sharjah',n:25},{a:'Al Ain',n:10},{a:'Ajman',n:6},{a:'Fujairah',n:2}]}
+  },
+  nonfood:{
+    all:{del:[12962,13799,14124,12930,10644],rej:[877,847,1218,532,427],totalDel:64459,totalRej:3901,value:'AED 14.1M',
+      reasons:[{l:'Sales / customer instruction',n:1640},{l:'Time out at prev customer',n:464},{l:'GRV / stock collection',n:420},{l:'Merchandiser unavailable',n:396},{l:'Customer system issue',n:338}],
+      custs:[{n:'Union Co-Op (Dxb)',c:431,v:'AED 1.12M'},{n:'Nesto Hypermarket',c:143,v:'AED 308K'},{n:'Abu Dhabi Co-Op',c:118,v:'AED 711K'},{n:'AL SAFEER INT.',c:101,v:'AED 279K'},{n:'GMG Consumer',c:97,v:'AED 140K'}],
+      areas:[{a:'Dubai',n:1951},{a:'Abu Dhabi',n:700},{a:'Sharjah',n:479},{a:'Al Ain',n:295},{a:'Ajman',n:165},{a:'Fujairah',n:119}]},
+    external:{del:[12500,13300,13600,12600,10300],rej:[848,790,1150,542,434],totalDel:62300,totalRej:3764,value:'AED 13.8M',
+      reasons:[{l:'Sales / customer instruction',n:1610},{l:'Time out at prev customer',n:455},{l:'GRV / stock collection',n:415},{l:'Merchandiser unavailable',n:390},{l:'Customer system issue',n:330}],
+      custs:[{n:'Union Co-Op (Dxb)',c:415,v:'AED 1.10M'},{n:'Nesto Hypermarket',c:140,v:'AED 300K'},{n:'Abu Dhabi Co-Op',c:112,v:'AED 695K'},{n:'AL SAFEER INT.',c:98,v:'AED 270K'},{n:'GMG Consumer',c:94,v:'AED 135K'}],
+      areas:[{a:'Dubai',n:1885},{a:'Abu Dhabi',n:680},{a:'Sharjah',n:462},{a:'Al Ain',n:285},{a:'Ajman',n:160},{a:'Fujairah',n:115}]},
+    internal:{del:[462,499,524,330,344],rej:[29,57,68,0,0],totalDel:2159,totalRej:154,value:'AED 190K',
+      reasons:[{l:'AKI staff issue',n:121},{l:'AKI staff related reason',n:10},{l:'Time out at prev customer',n:3}],
+      custs:[{n:'Abu Dhabi Co-Op',c:11,v:'AED 52K'},{n:'Union Co-Op (Dxb)',c:9,v:'AED 50K'},{n:'Sharjah Co-Op',c:8,v:'AED 17K'},{n:'Ace Al Futtaim',c:6,v:'AED 76K'}],
+      areas:[{a:'Dubai',n:42},{a:'Abu Dhabi',n:38},{a:'Sharjah',n:25},{a:'Al Ain',n:10},{a:'Ajman',n:6},{a:'Fujairah',n:1}]}
+  }
+};
+
+let rejType='all', rejSrc='all', rejMChart=null, rejAChart=null, rejDChart=null;
+
+function rejFilter(dim, val) {
+  if (dim==='type') {
+    rejType=val;
+    ['rt-all','rt-food','rt-nf'].forEach(id=>{const e=document.getElementById(id);if(e)e.classList.remove('on');});
+    const m={all:'rt-all',food:'rt-food',nonfood:'rt-nf'};
+    const e=document.getElementById(m[val]);if(e)e.classList.add('on');
+  } else {
+    rejSrc=val;
+    ['rs-all','rs-ext','rs-int'].forEach(id=>{const e=document.getElementById(id);if(e)e.classList.remove('on');});
+    const m={all:'rs-all',external:'rs-ext',internal:'rs-int'};
+    const e=document.getElementById(m[val]);if(e)e.classList.add('on');
+  }
+  rejRender();
+}
+
+function rejRender() {
+  const d = REJ_DATA[rejType][rejSrc];
+  if (!d) return;
+  const tLabel = rejType==='all'?'All Types':rejType==='food'?'Food Only':'Non-Food Only';
+  const sLabel = rejSrc==='all'?'All Sources':rejSrc==='external'?'External':'Internal';
+  const scopeTxt = tLabel+' · '+sLabel;
+  const se = document.getElementById('rej-scope-label'); if(se) se.textContent=scopeTxt;
+  const cse = document.getElementById('rej-chart-sub'); if(cse) cse.textContent=scopeTxt;
+  const totalOrders = d.totalDel+d.totalRej;
+  const rejRate = (d.totalRej/totalOrders*100).toFixed(2)+'%';
+  const kEl = document.getElementById('rej-kpis');
+  if(kEl) kEl.innerHTML=`
+    <div style="background:var(--card);border:1px solid var(--border);padding:16px;position:relative;">
+      <div style="font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">Total Rejections</div>
+      <div style="font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:700;color:var(--gold);">${d.totalRej.toLocaleString()}</div>
+    </div>
+    <div style="background:rgba(232,75,75,0.1);border:1px solid rgba(232,75,75,0.3);padding:16px;">
+      <div style="font-size:9px;letter-spacing:2px;color:var(--red);text-transform:uppercase;margin-bottom:6px;">Rejection Rate</div>
+      <div style="font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:700;color:var(--red);">${rejRate}</div>
+    </div>
+    <div style="background:var(--card);border:1px solid var(--border);padding:16px;">
+      <div style="font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">Delivered</div>
+      <div style="font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:700;color:var(--green);">${d.totalDel.toLocaleString()}</div>
+    </div>
+    <div style="background:var(--card);border:1px solid var(--border);padding:16px;">
+      <div style="font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">Value at Risk</div>
+      <div style="font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:700;color:var(--gold);">${d.value}</div>
+    </div>`;
+  const gridC='rgba(255,255,255,0.06)', tickC='#7a7660';
+  const mc=document.getElementById('rejMonthChart');
+  if(mc){if(rejMChart)rejMChart.destroy();
+    rejMChart=new Chart(mc,{type:'bar',data:{labels:REJ_MONTHS,datasets:[
+      {label:'Delivered',data:d.del,backgroundColor:'#4ecb8d',borderRadius:3,borderSkipped:false},
+      {label:'Rejected',data:d.rej,backgroundColor:'#e84b4b',borderRadius:3,borderSkipped:false}
+    ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{x:{grid:{color:gridC},ticks:{color:tickC,font:{size:10}}},y:{grid:{color:gridC},ticks:{color:tickC,font:{size:10}},beginAtZero:true}}}});}
+  const ac=document.getElementById('rejAreaChart');
+  if(ac){if(rejAChart)rejAChart.destroy();
+    rejAChart=new Chart(ac,{type:'bar',data:{labels:d.areas.map(a=>a.a),datasets:[{label:'Rejections',data:d.areas.map(a=>a.n),backgroundColor:'#5b8dee',borderRadius:3,borderSkipped:false}]},
+      options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+        scales:{x:{grid:{color:gridC},ticks:{color:tickC,font:{size:10}},beginAtZero:true},y:{grid:{display:false},ticks:{color:tickC,font:{size:10}}}}}});}
+  const maxR=Math.max(...d.reasons.map(r=>r.n));
+  const rp=document.getElementById('rej-reasons-panel');
+  if(rp) rp.innerHTML=d.reasons.map(r=>`
+    <div style="margin-bottom:12px;">
+      <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px;">
+        <span style="color:var(--text);">${r.l}</span>
+        <span style="color:var(--muted);font-weight:600;margin-left:8px;white-space:nowrap;">${r.n.toLocaleString()}</span>
+      </div>
+      <div style="height:3px;background:var(--border);border-radius:2px;">
+        <div style="height:3px;width:${Math.round(r.n/maxR*100)}%;background:var(--red);border-radius:2px;"></div>
+      </div>
+    </div>`).join('');
+  const cp=document.getElementById('rej-cust-panel');
+  if(cp) cp.innerHTML=d.custs.map((c,i)=>{
+    const cols=['var(--red)','var(--red)','var(--gold)','var(--gold)','var(--blue)'];
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(42,42,30,0.5);">
+      <div style="display:flex;align-items:center;gap:8px;min-width:0;">
+        <span style="font-size:11px;font-weight:700;color:${cols[i]||'var(--muted)'};width:16px;flex-shrink:0;">${i+1}</span>
+        <span style="font-size:12px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${c.n}</span>
+      </div>
+      <div style="text-align:right;flex-shrink:0;margin-left:8px;">
+        <div style="font-size:12px;font-weight:700;color:var(--text);">${c.c}</div>
+        <div style="font-size:10px;color:var(--muted);">${c.v}</div>
+      </div>
+    </div>`;
+  }).join('');
+  const dc=document.getElementById('rejTypeDonut');
+  if(dc){if(rejDChart)rejDChart.destroy();
+    rejDChart=new Chart(dc,{type:'doughnut',data:{labels:['Food','Non-Food','Other'],datasets:[{data:[3440,3731,182],backgroundColor:['#4ecb8d','#5b8dee','#7a7660'],borderWidth:0}]},
+      options:{responsive:true,maintainAspectRatio:false,cutout:'65%',plugins:{legend:{display:false}}}});}
 }
 
 // ── SUMMARY ────────────────────────────────────────────────────
@@ -980,113 +1038,87 @@ const COS = {
   alphamed: { name:'Alphamed General Trading LLC', addr:'P.O Box 11245, Dubai, UAE', contact:'Tel: 04 810 5555 | alphamed@emirates.net', color:'#cc0000' }
 };
 let selCo = 'aki', invCount = 0;
-
 function setCompany(k) {
   selCo = k; const co = COS[k];
   document.getElementById('inv-from').value = co.name;
   document.getElementById('inv-addr').value = co.addr;
   document.getElementById('inv-contact').value = co.contact;
 }
-
 function addInvItem() {
   invCount++;
   const row = document.createElement('div');
   row.className = 'item-row';
   row.style.cssText = 'border:1px solid #2a2a1e;margin-bottom:10px;background:#161612;';
-  row.innerHTML =
-    '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-bottom:1px solid #2a2a1e;background:rgba(201,168,76,0.06);">'
-    + '<span style="font-size:11px;color:#c9a84c;font-weight:700;letter-spacing:2px;">ITEM ' + invCount + '</span>'
-    + '<button type="button" onclick="this.closest(\'.item-row\').remove();calcInv()" style="background:transparent;border:1px solid rgba(232,75,75,0.4);color:#e84b4b;cursor:pointer;font-size:10px;padding:5px 14px;font-family:Montserrat,sans-serif;letter-spacing:1px;">DELETE</button>'
-    + '</div>'
-    + '<div style="padding:10px 16px 0;">'
-    + '<div style="font-size:9px;color:#7a7660;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">Description</div>'
-    + '<input type="text" placeholder="Enter full item description here..." oninput="calcInv()" style="width:100%;height:44px;padding:10px 12px;background:#111109;border:1px solid #2a2a1e;color:#f0ece0;font-family:Montserrat,sans-serif;font-size:13px;outline:none;box-sizing:border-box;"/>'
-    + '</div>'
-    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:10px 16px 0;">'
-    + '<div><div style="font-size:9px;color:#7a7660;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">Barcode</div><input type="text" placeholder="Barcode number" style="width:100%;height:44px;padding:10px 12px;background:#111109;border:1px solid #2a2a1e;color:#f0ece0;font-family:Montserrat,sans-serif;font-size:13px;outline:none;box-sizing:border-box;"/></div>'
-    + '<div><div style="font-size:9px;color:#7a7660;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">Quantity</div><input type="text" placeholder="0" oninput="calcInv()" style="width:100%;height:44px;padding:10px 12px;background:#111109;border:1px solid #2a2a1e;color:#f0ece0;font-family:Montserrat,sans-serif;font-size:13px;outline:none;box-sizing:border-box;text-align:center;"/></div>'
-    + '</div>'
-    + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;padding:10px 16px 14px;">'
-    + '<div><div style="font-size:9px;color:#7a7660;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">Unit Price (AED)</div><input type="text" placeholder="0.00" oninput="calcInv()" style="width:100%;height:44px;padding:10px 12px;background:#111109;border:1px solid #2a2a1e;color:#f0ece0;font-family:Montserrat,sans-serif;font-size:13px;outline:none;box-sizing:border-box;text-align:right;"/></div>'
-    + '<div><div style="font-size:9px;color:#7a7660;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">VAT</div><label style="display:flex;align-items:center;gap:8px;height:44px;padding:0 12px;background:#111109;border:1px solid #2a2a1e;cursor:pointer;box-sizing:border-box;"><input type="checkbox" checked class="vat-chk" onchange="calcInv()" style="width:16px;height:16px;accent-color:#c9a84c;flex-shrink:0;"/><span style="font-size:11px;color:#7a7660;white-space:nowrap;">5% VAT</span></label></div>'
-    + '<div><div style="font-size:9px;color:#4ecb8d;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">VAT Amt (AED)</div><input type="text" readonly class="vat-amt" placeholder="Auto" style="width:100%;height:44px;padding:10px 12px;background:rgba(78,203,141,0.05);border:1px solid rgba(78,203,141,0.2);color:#4ecb8d;font-family:Montserrat,sans-serif;font-size:13px;font-weight:600;outline:none;box-sizing:border-box;text-align:right;cursor:default;"/></div>'
-    + '<div><div style="font-size:9px;color:#c9a84c;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">Net Amt (AED)</div><input type="text" readonly class="net-amt" placeholder="Auto" style="width:100%;height:44px;padding:10px 12px;background:rgba(201,168,76,0.05);border:1px solid rgba(201,168,76,0.2);color:#c9a84c;font-family:Montserrat,sans-serif;font-size:15px;font-weight:700;outline:none;box-sizing:border-box;text-align:right;cursor:default;"/></div>'
-    + '</div>';
+  row.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-bottom:1px solid #2a2a1e;background:rgba(201,168,76,0.06);"><span style="font-size:11px;color:#c9a84c;font-weight:700;letter-spacing:2px;">ITEM '+invCount+'</span><button type="button" onclick="this.closest(\'.item-row\').remove();calcInv()" style="background:transparent;border:1px solid rgba(232,75,75,0.4);color:#e84b4b;cursor:pointer;font-size:10px;padding:5px 14px;font-family:Montserrat,sans-serif;letter-spacing:1px;">DELETE</button></div>'
+    +'<div style="padding:10px 16px 0;"><div style="font-size:9px;color:#7a7660;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">Description</div><input type="text" placeholder="Enter full item description here..." oninput="calcInv()" style="width:100%;height:44px;padding:10px 12px;background:#111109;border:1px solid #2a2a1e;color:#f0ece0;font-family:Montserrat,sans-serif;font-size:13px;outline:none;box-sizing:border-box;"/></div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:10px 16px 0;"><div><div style="font-size:9px;color:#7a7660;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">Barcode</div><input type="text" placeholder="Barcode number" style="width:100%;height:44px;padding:10px 12px;background:#111109;border:1px solid #2a2a1e;color:#f0ece0;font-family:Montserrat,sans-serif;font-size:13px;outline:none;box-sizing:border-box;"/></div><div><div style="font-size:9px;color:#7a7660;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">Quantity</div><input type="text" placeholder="0" oninput="calcInv()" style="width:100%;height:44px;padding:10px 12px;background:#111109;border:1px solid #2a2a1e;color:#f0ece0;font-family:Montserrat,sans-serif;font-size:13px;outline:none;box-sizing:border-box;text-align:center;"/></div></div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;padding:10px 16px 14px;"><div><div style="font-size:9px;color:#7a7660;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">Unit Price (AED)</div><input type="text" placeholder="0.00" oninput="calcInv()" style="width:100%;height:44px;padding:10px 12px;background:#111109;border:1px solid #2a2a1e;color:#f0ece0;font-family:Montserrat,sans-serif;font-size:13px;outline:none;box-sizing:border-box;text-align:right;"/></div><div><div style="font-size:9px;color:#7a7660;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">VAT</div><label style="display:flex;align-items:center;gap:8px;height:44px;padding:0 12px;background:#111109;border:1px solid #2a2a1e;cursor:pointer;box-sizing:border-box;"><input type="checkbox" checked class="vat-chk" onchange="calcInv()" style="width:16px;height:16px;accent-color:#c9a84c;flex-shrink:0;"/><span style="font-size:11px;color:#7a7660;white-space:nowrap;">5% VAT</span></label></div><div><div style="font-size:9px;color:#4ecb8d;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">VAT Amt (AED)</div><input type="text" readonly class="vat-amt" placeholder="Auto" style="width:100%;height:44px;padding:10px 12px;background:rgba(78,203,141,0.05);border:1px solid rgba(78,203,141,0.2);color:#4ecb8d;font-family:Montserrat,sans-serif;font-size:13px;font-weight:600;outline:none;box-sizing:border-box;text-align:right;cursor:default;"/></div><div><div style="font-size:9px;color:#c9a84c;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">Net Amt (AED)</div><input type="text" readonly class="net-amt" placeholder="Auto" style="width:100%;height:44px;padding:10px 12px;background:rgba(201,168,76,0.05);border:1px solid rgba(201,168,76,0.2);color:#c9a84c;font-family:Montserrat,sans-serif;font-size:15px;font-weight:700;outline:none;box-sizing:border-box;text-align:right;cursor:default;"/></div></div>';
   document.getElementById('inv-items').appendChild(row);
   row.querySelector('input').focus();
 }
-
 function calcInv() {
-  let sub = 0, totalVat = 0;
-  document.querySelectorAll('.item-row').forEach(row => {
-    const inputs = row.querySelectorAll('input[type=text]');
-    const chk = row.querySelector('.vat-chk');
-    const qty = parseFloat(inputs[2]?.value) || 0;
-    const price = parseFloat(inputs[3]?.value) || 0;
-    const amt = qty * price;
-    const vat = chk && chk.checked ? amt * 0.05 : 0;
-    const net = amt + vat;
-    const vatEl = row.querySelector('.vat-amt');
-    const netEl = row.querySelector('.net-amt');
-    if (vatEl) vatEl.value = vat > 0 ? vat.toFixed(2) : '';
-    if (netEl) netEl.value = net > 0 ? net.toFixed(2) : '';
-    sub += amt; totalVat += vat;
+  let sub=0,totalVat=0;
+  document.querySelectorAll('.item-row').forEach(row=>{
+    const inputs=row.querySelectorAll('input[type=text]');
+    const chk=row.querySelector('.vat-chk');
+    const qty=parseFloat(inputs[2]?.value)||0, price=parseFloat(inputs[3]?.value)||0;
+    const amt=qty*price, vat=chk&&chk.checked?amt*0.05:0, net=amt+vat;
+    const vatEl=row.querySelector('.vat-amt'), netEl=row.querySelector('.net-amt');
+    if(vatEl)vatEl.value=vat>0?vat.toFixed(2):'';
+    if(netEl)netEl.value=net>0?net.toFixed(2):'';
+    sub+=amt;totalVat+=vat;
   });
-  document.getElementById('inv-subtotal').textContent = 'AED ' + sub.toFixed(2);
-  document.getElementById('inv-vat').textContent = 'AED ' + totalVat.toFixed(2);
-  document.getElementById('inv-total').textContent = 'AED ' + (sub+totalVat).toFixed(2);
+  document.getElementById('inv-subtotal').textContent='AED '+sub.toFixed(2);
+  document.getElementById('inv-vat').textContent='AED '+totalVat.toFixed(2);
+  document.getElementById('inv-total').textContent='AED '+(sub+totalVat).toFixed(2);
 }
-
 function getInvRows() {
-  let rows = ''; let i = 0;
-  document.querySelectorAll('.item-row').forEach(row => {
-    const inputs = row.querySelectorAll('input[type=text]');
-    const chk = row.querySelector('.vat-chk');
-    const desc = inputs[0]?.value || ''; if (!desc) return;
+  let rows='',i=0;
+  document.querySelectorAll('.item-row').forEach(row=>{
+    const inputs=row.querySelectorAll('input[type=text]');
+    const chk=row.querySelector('.vat-chk');
+    const desc=inputs[0]?.value||'';if(!desc)return;
     i++;
-    const bc = inputs[1]?.value||'', qty = inputs[2]?.value||'', price = inputs[3]?.value||'';
-    const vat = row.querySelector('.vat-amt')?.value||'';
-    const net = row.querySelector('.net-amt')?.value||'';
-    const td = 'padding:8px;border:1px solid #e0e0e0;font-size:10pt;';
-    rows += '<tr><td style="' + td + 'text-align:center;">' + i + '</td><td style="' + td + '">' + desc + '</td><td style="' + td + 'text-align:center;">' + bc + '</td><td style="' + td + 'text-align:center;">' + qty + '</td><td style="' + td + 'text-align:right;">' + price + '</td><td style="' + td + 'text-align:right;color:green;">' + (chk&&chk.checked?vat:'No VAT') + '</td><td style="' + td + 'text-align:right;font-weight:700;">' + net + '</td></tr>';
+    const bc=inputs[1]?.value||'',qty=inputs[2]?.value||'',price=inputs[3]?.value||'';
+    const vat=row.querySelector('.vat-amt')?.value||'',net=row.querySelector('.net-amt')?.value||'';
+    const td='padding:8px;border:1px solid #e0e0e0;font-size:10pt;';
+    rows+='<tr><td style="'+td+'text-align:center;">'+i+'</td><td style="'+td+'">'+desc+'</td><td style="'+td+'text-align:center;">'+bc+'</td><td style="'+td+'text-align:center;">'+qty+'</td><td style="'+td+'text-align:right;">'+price+'</td><td style="'+td+'text-align:right;color:green;">'+(chk&&chk.checked?vat:'No VAT')+'</td><td style="'+td+'text-align:right;font-weight:700;">'+net+'</td></tr>';
   });
-  return rows || '<tr><td colspan="7" style="padding:10px;text-align:center;color:#aaa;">No items</td></tr>';
+  return rows||'<tr><td colspan="7" style="padding:10px;text-align:center;color:#aaa;">No items</td></tr>';
 }
-
 function previewInv() {
-  const co = COS[selCo];
-  const ref = document.getElementById('inv-ref').value || ('PRO-INV-' + Date.now().toString().slice(-8));
-  const css = 'body{font-family:Calibri,Arial,sans-serif;font-size:11pt;color:#1a1a1a;padding:30px 40px;background:#fff;}.hdr{background:' + co.color + ';padding:20px 30px;margin:-30px -40px 24px;color:#fff;display:flex;justify-content:space-between;align-items:center;}.hdr-co{font-size:20pt;font-weight:800;letter-spacing:2px;}.hdr-info{text-align:right;font-size:9pt;opacity:0.9;line-height:1.6;}h1{font-size:17pt;text-align:center;color:' + co.color + ';letter-spacing:4px;margin:0 0 20px;}.meta{display:flex;justify-content:space-between;margin-bottom:18px;}.lbl{font-size:8pt;color:#999;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;}.val{font-size:11pt;font-weight:700;}.bill{background:#f8f8f8;padding:12px;border-left:4px solid ' + co.color + ';margin-bottom:18px;}table{width:100%;border-collapse:collapse;margin-bottom:14px;}th{background:#1a1a2e;color:#c9a84c;padding:9px 8px;font-size:9pt;text-transform:uppercase;letter-spacing:1px;border:1px solid #ccc;}td{padding:8px;border:1px solid #e0e0e0;font-size:10pt;}tr:nth-child(even) td{background:#fafafa;}.tots{margin-left:auto;width:44%;}.tots table{width:100%;}.tots td{border:none;padding:5px 8px;font-size:11pt;}.gt td{font-weight:700;font-size:13pt;color:' + co.color + ';border-top:2px solid ' + co.color + ';padding-top:8px;}.sigs{display:flex;justify-content:space-between;margin-top:50px;}.sig{text-align:center;width:28%;border-top:1px solid #333;padding-top:8px;font-size:10pt;color:#555;}.footer{margin-top:24px;text-align:center;font-size:9pt;color:#aaa;border-top:1px solid #eee;padding-top:8px;}.pbtn{position:fixed;top:16px;right:16px;padding:12px 28px;background:' + co.color + ';color:#fff;border:none;font-size:11pt;cursor:pointer;font-weight:700;border-radius:4px;}@media print{.pbtn{display:none;}}';
-  const body = '<button class="pbtn" onclick="window.print()">🖨 Print / Save PDF</button>'
-    + '<div class="hdr"><div class="hdr-co">' + co.name + '</div><div class="hdr-info"><div>' + document.getElementById('inv-addr').value.split('\n').join(' | ') + '</div><div>' + document.getElementById('inv-contact').value + '</div></div></div>'
-    + '<h1>PROFORMA INVOICE</h1>'
-    + '<div class="meta"><div><div class="lbl">Bill To</div><div class="val">' + document.getElementById('inv-client').value + '</div><div style="font-size:10pt;color:#444;margin-top:3px;">' + document.getElementById('inv-client-addr').value + '</div></div><div style="text-align:right;"><div class="lbl">Reference No</div><div class="val" style="color:' + co.color + '">' + ref + '</div><div style="margin-top:5px;"><span class="lbl">Date: </span>' + document.getElementById('inv-date').value + '</div><div><span class="lbl">Valid: </span>' + document.getElementById('inv-valid').value + '</div><div><span class="lbl">Terms: </span>' + document.getElementById('inv-terms').value + '</div></div></div>'
-    + '<table><thead><tr><th style="width:4%;text-align:center;">Sr.</th><th style="width:30%">Description</th><th style="width:14%;text-align:center;">Barcode</th><th style="width:7%;text-align:center;">Qty</th><th style="width:14%;text-align:right;">Unit Price</th><th style="width:13%;text-align:right;">VAT 5%</th><th style="width:18%;text-align:right;">Net Amount</th></tr></thead><tbody>' + getInvRows() + '</tbody></table>'
-    + '<div class="tots"><table><tr><td>Subtotal (excl. VAT):</td><td style="text-align:right">' + document.getElementById('inv-subtotal').textContent + '</td></tr><tr><td>VAT (5%):</td><td style="text-align:right;color:green">' + document.getElementById('inv-vat').textContent + '</td></tr><tr class="gt"><td>Net Total:</td><td style="text-align:right">' + document.getElementById('inv-total').textContent + '</td></tr></table></div>'
-    + (document.getElementById('inv-notes').value ? '<div style="padding:10px;background:#f9f9f9;border-left:3px solid ' + co.color + ';margin-bottom:16px;"><strong>Notes:</strong> ' + document.getElementById('inv-notes').value + '</div>' : '')
-    + '<div class="sigs"><div class="sig">Prepared By</div><div class="sig">Authorized Signatory</div><div class="sig">Client Acknowledgement</div></div>'
-    + '<div class="footer">Powered by AZHAR-AI ✦ ' + co.name + '</div>';
-  const html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>' + ref + '</title><style>' + css + '</style></head><body>' + body + '</body></html>';
-  const blob = new Blob([html], {type:'text/html;charset=utf-8'});
-  const url = URL.createObjectURL(blob);
-  const win = window.open(url, '_blank');
-  if (!win) alert('Please allow popups for this site.');
-  setTimeout(() => URL.revokeObjectURL(url), 60000);
+  const co=COS[selCo];
+  const ref=document.getElementById('inv-ref').value||('PRO-INV-'+Date.now().toString().slice(-8));
+  const css='body{font-family:Calibri,Arial,sans-serif;font-size:11pt;color:#1a1a1a;padding:30px 40px;background:#fff;}.hdr{background:'+co.color+';padding:20px 30px;margin:-30px -40px 24px;color:#fff;display:flex;justify-content:space-between;align-items:center;}.hdr-co{font-size:20pt;font-weight:800;letter-spacing:2px;}.hdr-info{text-align:right;font-size:9pt;opacity:0.9;line-height:1.6;}h1{font-size:17pt;text-align:center;color:'+co.color+';letter-spacing:4px;margin:0 0 20px;}.meta{display:flex;justify-content:space-between;margin-bottom:18px;}.lbl{font-size:8pt;color:#999;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;}.val{font-size:11pt;font-weight:700;}table{width:100%;border-collapse:collapse;margin-bottom:14px;}th{background:#1a1a2e;color:#c9a84c;padding:9px 8px;font-size:9pt;text-transform:uppercase;letter-spacing:1px;border:1px solid #ccc;}td{padding:8px;border:1px solid #e0e0e0;font-size:10pt;}tr:nth-child(even) td{background:#fafafa;}.tots{margin-left:auto;width:44%;}.tots table{width:100%;}.tots td{border:none;padding:5px 8px;font-size:11pt;}.gt td{font-weight:700;font-size:13pt;color:'+co.color+';border-top:2px solid '+co.color+';padding-top:8px;}.sigs{display:flex;justify-content:space-between;margin-top:50px;}.sig{text-align:center;width:28%;border-top:1px solid #333;padding-top:8px;font-size:10pt;color:#555;}.footer{margin-top:24px;text-align:center;font-size:9pt;color:#aaa;border-top:1px solid #eee;padding-top:8px;}.pbtn{position:fixed;top:16px;right:16px;padding:12px 28px;background:'+co.color+';color:#fff;border:none;font-size:11pt;cursor:pointer;font-weight:700;border-radius:4px;}@media print{.pbtn{display:none;}}';
+  const body='<button class="pbtn" onclick="window.print()">🖨 Print / Save PDF</button>'
+    +'<div class="hdr"><div class="hdr-co">'+co.name+'</div><div class="hdr-info"><div>'+document.getElementById('inv-addr').value.split('\n').join(' | ')+'</div><div>'+document.getElementById('inv-contact').value+'</div></div></div>'
+    +'<h1>PROFORMA INVOICE</h1>'
+    +'<div class="meta"><div><div class="lbl">Bill To</div><div class="val">'+document.getElementById('inv-client').value+'</div><div style="font-size:10pt;color:#444;margin-top:3px;">'+document.getElementById('inv-client-addr').value+'</div></div><div style="text-align:right;"><div class="lbl">Reference No</div><div class="val" style="color:'+co.color+'">'+ref+'</div><div style="margin-top:5px;"><span class="lbl">Date: </span>'+document.getElementById('inv-date').value+'</div><div><span class="lbl">Valid: </span>'+document.getElementById('inv-valid').value+'</div><div><span class="lbl">Terms: </span>'+document.getElementById('inv-terms').value+'</div></div></div>'
+    +'<table><thead><tr><th style="width:4%;text-align:center;">Sr.</th><th style="width:30%">Description</th><th style="width:14%;text-align:center;">Barcode</th><th style="width:7%;text-align:center;">Qty</th><th style="width:14%;text-align:right;">Unit Price</th><th style="width:13%;text-align:right;">VAT 5%</th><th style="width:18%;text-align:right;">Net Amount</th></tr></thead><tbody>'+getInvRows()+'</tbody></table>'
+    +'<div class="tots"><table><tr><td>Subtotal (excl. VAT):</td><td style="text-align:right">'+document.getElementById('inv-subtotal').textContent+'</td></tr><tr><td>VAT (5%):</td><td style="text-align:right;color:green">'+document.getElementById('inv-vat').textContent+'</td></tr><tr class="gt"><td>Net Total:</td><td style="text-align:right">'+document.getElementById('inv-total').textContent+'</td></tr></table></div>'
+    +(document.getElementById('inv-notes').value?'<div style="padding:10px;background:#f9f9f9;border-left:3px solid '+co.color+';margin-bottom:16px;"><strong>Notes:</strong> '+document.getElementById('inv-notes').value+'</div>':'')
+    +'<div class="sigs"><div class="sig">Prepared By</div><div class="sig">Authorized Signatory</div><div class="sig">Client Acknowledgement</div></div>'
+    +'<div class="footer">Powered by AZHAR-AI ✦ '+co.name+'</div>';
+  const html='<!DOCTYPE html><html><head><meta charset="utf-8"><title>'+ref+'</title><style>'+css+'</style></head><body>'+body+'</body></html>';
+  const blob=new Blob([html],{type:'text/html;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const win=window.open(url,'_blank');
+  if(!win)alert('Please allow popups for this site.');
+  setTimeout(()=>URL.revokeObjectURL(url),60000);
 }
-
 function downloadInvWord() {
-  const co = COS[selCo];
-  const ref = document.getElementById('inv-ref').value || ('PRO-INV-' + Date.now().toString().slice(-8));
-  const html = '<html><head><meta charset="utf-8"><title>' + ref + '</title><style>body{font-family:Calibri;font-size:11pt;margin:2cm;}h1{font-size:15pt;text-align:center;color:' + co.color + ';border-bottom:2px solid ' + co.color + ';padding-bottom:8px;margin-bottom:16px;}table{width:100%;border-collapse:collapse;margin:14px 0;}th{background:#1a1a2e;color:#c9a84c;padding:8px;font-size:9pt;border:1px solid #ddd;}td{padding:7px;border:1px solid #ddd;}</style></head><body>'
-    + '<h1>PROFORMA INVOICE</h1>'
-    + '<table><tr><td style="width:50%;border:none;vertical-align:top;"><strong>From:</strong><br>' + document.getElementById('inv-from').value + '<br>' + document.getElementById('inv-addr').value + '<br>' + document.getElementById('inv-contact').value + '</td><td style="width:50%;border:none;text-align:right;vertical-align:top;"><strong>Ref:</strong> ' + ref + '<br><strong>Date:</strong> ' + document.getElementById('inv-date').value + '<br><strong>Valid:</strong> ' + document.getElementById('inv-valid').value + '</td></tr></table>'
-    + '<div style="background:#f0f0f0;padding:10px;margin-bottom:14px;"><strong>Bill To:</strong> ' + document.getElementById('inv-client').value + '<br>' + document.getElementById('inv-client-addr').value + '</div>'
-    + '<table><thead><tr><th>Sr.</th><th>Description</th><th>Barcode</th><th>Qty</th><th>Unit Price</th><th>VAT 5%</th><th>Net Amount</th></tr></thead><tbody>' + getInvRows() + '</tbody></table>'
-    + '<table style="margin-left:auto;width:40%;"><tr><td>Subtotal:</td><td style="text-align:right">' + document.getElementById('inv-subtotal').textContent + '</td></tr><tr><td>VAT:</td><td style="text-align:right;color:green">' + document.getElementById('inv-vat').textContent + '</td></tr><tr style="font-weight:700;color:' + co.color + '"><td>Net Total:</td><td style="text-align:right">' + document.getElementById('inv-total').textContent + '</td></tr></table>'
-    + '<p style="text-align:center;margin-top:40px;color:#aaa;font-size:9pt;">Powered by AZHAR-AI ✦ ' + co.name + '</p></body></html>';
-  const blob = new Blob([html], {type:'application/msword'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a'); a.href=url; a.download=ref+'.doc'; a.click();
+  const co=COS[selCo];
+  const ref=document.getElementById('inv-ref').value||('PRO-INV-'+Date.now().toString().slice(-8));
+  const html='<html><head><meta charset="utf-8"><title>'+ref+'</title><style>body{font-family:Calibri;font-size:11pt;margin:2cm;}h1{font-size:15pt;text-align:center;color:'+co.color+';border-bottom:2px solid '+co.color+';padding-bottom:8px;margin-bottom:16px;}table{width:100%;border-collapse:collapse;margin:14px 0;}th{background:#1a1a2e;color:#c9a84c;padding:8px;font-size:9pt;border:1px solid #ddd;}td{padding:7px;border:1px solid #ddd;}</style></head><body>'
+    +'<h1>PROFORMA INVOICE</h1>'
+    +'<table><tr><td style="width:50%;border:none;vertical-align:top;"><strong>From:</strong><br>'+document.getElementById('inv-from').value+'<br>'+document.getElementById('inv-addr').value+'<br>'+document.getElementById('inv-contact').value+'</td><td style="width:50%;border:none;text-align:right;vertical-align:top;"><strong>Ref:</strong> '+ref+'<br><strong>Date:</strong> '+document.getElementById('inv-date').value+'<br><strong>Valid:</strong> '+document.getElementById('inv-valid').value+'</td></tr></table>'
+    +'<div style="background:#f0f0f0;padding:10px;margin-bottom:14px;"><strong>Bill To:</strong> '+document.getElementById('inv-client').value+'<br>'+document.getElementById('inv-client-addr').value+'</div>'
+    +'<table><thead><tr><th>Sr.</th><th>Description</th><th>Barcode</th><th>Qty</th><th>Unit Price</th><th>VAT 5%</th><th>Net Amount</th></tr></thead><tbody>'+getInvRows()+'</tbody></table>'
+    +'<table style="margin-left:auto;width:40%;"><tr><td>Subtotal:</td><td style="text-align:right">'+document.getElementById('inv-subtotal').textContent+'</td></tr><tr><td>VAT:</td><td style="text-align:right;color:green">'+document.getElementById('inv-vat').textContent+'</td></tr><tr style="font-weight:700;color:'+co.color+'"><td>Net Total:</td><td style="text-align:right">'+document.getElementById('inv-total').textContent+'</td></tr></table>'
+    +'<p style="text-align:center;margin-top:40px;color:#aaa;font-size:9pt;">Powered by AZHAR-AI ✦ '+co.name+'</p></body></html>';
+  const blob=new Blob([html],{type:'application/msword'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=ref+'.doc';a.click();
   URL.revokeObjectURL(url);
 }
 
