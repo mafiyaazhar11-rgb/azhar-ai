@@ -548,18 +548,24 @@ function rejFilter(dim, val) {
   else if(dim==='month') {
     rejMonth=val==='all'?'all':parseInt(val);
     rejDay='all';
-    // Build day pills for selected month
     const dayRow=document.getElementById('rej-day-row');
     const dayPills=document.getElementById('rej-day-pills');
     const allDayBtn=document.getElementById('rd-all');
     if(val==='all') {
       dayRow.style.display='none';
+      if(allDayBtn)allDayBtn.classList.add('on');
     } else {
       const mo=parseInt(val);
-      const days=(DAY_DATA[mo]||{}).days||[];
-      dayPills.innerHTML=days.map(d=>`<button class="rej-pill" id="rd-${d}" onclick="rejFilter('day',${d})">${d}</button>`).join('');
-      dayRow.style.display='flex';
-      if(allDayBtn)allDayBtn.classList.add('on');
+      // DAY_DATA keys can be int or string — check both
+      const moData=DAY_DATA[mo]||DAY_DATA[String(mo)]||{};
+      const days=(moData.days||[]).sort((a,b)=>a-b);
+      if(days.length>0){
+        // Get month name for display
+        const moNames=['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        dayPills.innerHTML=days.map(d=>`<button class="rej-pill" id="rd-${d}" onclick="rejFilter('day',${d})" title="${moNames[mo]} ${d}">${d}</button>`).join('');
+        dayRow.style.display='flex';
+        if(allDayBtn){allDayBtn.classList.add('on');}
+      }
     }
   }
   else if(dim==='type') rejType=val;
@@ -599,7 +605,8 @@ function getFilteredData() {
 
   // Apply day filter (takes priority over month)
   if(rejMonth !== 'all' && rejDay !== 'all') {
-    const dayInfo = (DAY_DATA[rejMonth]||{}).data?.[rejDay];
+    const moKey=DAY_DATA[rejMonth]?rejMonth:String(rejMonth);
+    const dayInfo = (DAY_DATA[moKey]||{}).data?.[rejDay]||(DAY_DATA[moKey]||{}).data?.[String(rejDay)];
     if(dayInfo) {
       const tMul2 = rejType==='all'?1:rejType==='food'?0.47:0.51;
       const sMul2 = rejSrc==='all'?1:rejSrc==='external'?0.97:0.03;
@@ -693,9 +700,10 @@ function rejRender() {
     rejAChart=new Chart(ac,{type:'bar',data:{labels:d.areas.map(a=>a.a),datasets:[{label:'Rejections',data:d.areas.map(a=>a.n),backgroundColor:'#5b8dee',borderRadius:3,borderSkipped:false}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:gridC},ticks:{color:tickC,font:{size:10}},beginAtZero:true},y:{grid:{display:false},ticks:{color:tickC,font:{size:10}}}}}});}
 
   // Reasons
-  const maxR=Math.max(...d.reasons.map(r=>r.n),1);
+  const topReasons=(d.reasons||[]).slice(0,12);
+  const maxR=Math.max(...topReasons.map(r=>r.n),1);
   const rp=document.getElementById('rej-reasons-panel');
-  if(rp)rp.innerHTML=d.reasons.map(r=>`<div style="margin-bottom:12px;"><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px;"><span style="color:#ffffff;font-weight:500;">${r.l}</span><span style="color:var(--gold);font-weight:700;margin-left:8px;white-space:nowrap;">${r.n.toLocaleString()}</span></div><div style="height:4px;background:var(--border);border-radius:2px;"><div style="height:4px;width:${Math.round(r.n/maxR*100)}%;background:var(--red);border-radius:2px;transition:width 0.5s;"></div></div></div>`).join('');
+  if(rp)rp.innerHTML=topReasons.map((r,i)=>`<div style="margin-bottom:10px;"><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px;gap:8px;"><span style="color:#ffffff;font-weight:500;flex:1;">${r.l}</span><span style="color:var(--gold);font-weight:700;white-space:nowrap;flex-shrink:0;">${r.n.toLocaleString()}</span></div><div style="height:4px;background:var(--border);border-radius:2px;"><div style="height:4px;width:${Math.round(r.n/maxR*100)}%;background:${i<3?'var(--red)':i<6?'#e8854b':'#5b8dee'};border-radius:2px;transition:width 0.5s;"></div></div></div>`).join('');
 
   // Customers
   const cp=document.getElementById('rej-cust-panel');
@@ -730,9 +738,11 @@ async function rejLoadFromServer(){
     const r=await fetch('/api/rejection/status');
     const d=await r.json();
     if(d.hasData && d.orgs && d.months){
-      // Update ORG_DATA live from server
+      // WIPE embedded data and replace with server data entirely
+      Object.keys(ORG_DATA).forEach(k=>delete ORG_DATA[k]);
       Object.assign(ORG_DATA, d.orgs);
-      // Update DAY_DATA live from server
+      // WIPE DAY_DATA and replace with server data
+      Object.keys(DAY_DATA).forEach(k=>delete DAY_DATA[k]);
       Object.keys(d.months).forEach(mo=>{
         const moInt=parseInt(mo);
         DAY_DATA[moInt]=d.months[mo];
