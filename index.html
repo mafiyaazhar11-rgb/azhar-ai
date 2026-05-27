@@ -604,6 +604,7 @@ async function rejUploadFile(input){
 async function rejLoadFromServer(){
   try{
     const r=await fetch('/api/rejection/status');
+    if(!r.ok){const sl=document.getElementById('rej-scope-label');if(sl)sl.textContent='Upload your Excel file to load data';return;}
     const d=await r.json();
     if(d.hasData && d.orgs && d.months){
       // WIPE embedded data and replace with server data entirely
@@ -635,7 +636,12 @@ async function rejLoadFromServer(){
       if(sl)sl.textContent='All BU · All ORG · All Months · All Types · All Sources';
       rejRender();
     }
-  }catch(e){ console.log('Rejection server:', e.message); }
+  } catch(e) {
+    const st=document.getElementById('rej-upload-status');
+    const sl=document.getElementById('rej-scope-label');
+    if(sl) sl.textContent='Upload your Excel file to load data';
+    if(st) { st.textContent=''; }
+  }
 }
 
 // ── SUMMARY ──
