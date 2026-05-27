@@ -3,1305 +3,837 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AZHAR-AI | Operations Intelligence Platform</title>
+<title>AZHAR-AI | Executive Intelligence Platform</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600;700&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+<script>
+
+// DISPATCH COPILOT
+async function loadDispatchStatus(){
+  try{
+    const r=await fetch('/api/dispatch/status');
+    const d=await r.json();
+    const statusEl=document.getElementById('dispatch-status');
+    if(d.hasData && d.summary){
+      const s=d.summary;
+      const uploadTime=new Date(d.uploadedAt).toLocaleString('en-AE');
+      statusEl.className='dispatch-status live';
+      statusEl.innerHTML='<div class="dispatch-status-icon">✅</div><div class="dispatch-status-text">Live data loaded by '+d.uploadedBy+' at '+uploadTime+'</div>';
+      // Fill summary cards
+      document.getElementById('ds-orders-val').textContent=s.total_orders?.toLocaleString()||'—';
+      document.getElementById('ds-value-val').textContent=s.total_value?Math.round(s.total_value).toLocaleString():'—';
+      document.getElementById('ds-lulu-val').textContent=s.lulu_orders?.toLocaleString()||'—';
+      document.getElementById('ds-routes-val').textContent=s.total_routes?.toLocaleString()||'—';
+      document.getElementById('ds-drivers-val').textContent=s.total_drivers?.toLocaleString()||'—';
+      document.getElementById('ds-luluval-val').textContent=s.lulu_value?Math.round(s.lulu_value).toLocaleString():'—';
+      document.getElementById('dispatch-summary').style.display='grid';
+      document.getElementById('quick-q-label').style.display='block';
+      document.getElementById('quick-questions').style.display='flex';
+      document.getElementById('dispatch-ask-label').style.display='block';
+      document.getElementById('dispatch-input-row').style.display='flex';
+    } else {
+      statusEl.className='dispatch-status';
+      statusEl.innerHTML='<div class="dispatch-status-icon">⚠️</div><div class="dispatch-status-text">No dispatch data loaded today. Ask admin to upload the daily report.</div>';
+    }
+  }catch(e){
+    document.getElementById('dispatch-status').innerHTML='<div class="dispatch-status-icon">⚠️</div><div class="dispatch-status-text">Could not connect to server.</div>';
+  }
+}
+
+function dispatchKeydown(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();askDispatch();}}
+
+function askQuick(q){
+  document.getElementById('dispatch-input').value=q;
+  askDispatch();
+}
+
+async function askDispatch(){
+  const q=document.getElementById('dispatch-input').value.trim();
+  if(!q){alert('Please enter a question.');return;}
+  document.getElementById('dispatch-send').disabled=true;
+  document.getElementById('dispatch-out').classList.add('show');
+  document.getElementById('dispatch-out-text').textContent='Analysing your dispatch data...';
+  try{
+    const r=await fetch('/api/dispatch/ask',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:q})});
+    const d=await r.json();
+    document.getElementById('dispatch-out-text').textContent=d.result||'No answer.';
+  }catch(e){
+    document.getElementById('dispatch-out-text').textContent='Error: '+e.message;
+  }
+  document.getElementById('dispatch-send').disabled=false;
+}
+
+async function handleDispatchFile(input){
+  const file=input.files[0];if(!file)return;
+  const nameEl=document.getElementById('dispatch-file-name');
+  const box=document.getElementById('dispatch-upload-box');
+  nameEl.textContent='✓ '+file.name+' uploading...';
+  box.classList.add('has-file');
+  document.getElementById('dispatch-upload-loader').style.display='block';
+  try{
+    const fd=new FormData();
+    fd.append('file',file);
+    fd.append('uploadedBy','Azhar');
+    const r=await fetch('/api/dispatch/upload',{method:'POST',body:fd});
+    const d=await r.json();
+    document.getElementById('dispatch-upload-loader').style.display='none';
+    if(d.success){
+      nameEl.textContent='✓ '+file.name+' uploaded! '+( d.summary?.total_orders||'')+ ' orders loaded.';
+      nameEl.classList.add('loaded');
+      loadDispatchStatus();
+      alert('✅ Dispatch data uploaded successfully!
+
+Your team can now ask questions about today's dispatch.');
+    } else {
+      nameEl.textContent='Upload failed: '+(d.error||'Unknown error');
+      alert('Upload failed: '+(d.error||'Unknown error'));
+    }
+  }catch(err){
+    document.getElementById('dispatch-upload-loader').style.display='none';
+    nameEl.textContent='Upload error: '+err.message;
+    alert('Error: '+err.message);
+  }
+}
+
+</script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
-:root{
-  --black:#050505;--surface:#0f0f0d;--card:#161612;--card2:#1a1a16;
-  --border:#2a2a1e;--gold:#c9a84c;--gold2:#e8c878;--gold3:#f5e0a0;
-  --glow:rgba(201,168,76,0.1);--text:#f0ece0;--muted:#7a7660;
-  --white:#faf8f0;--green:#4ecb8d;--red:#e84b4b;--blue:#5b8dee;--orange:#e8854b;
-  --sidebar:220px;
-}
-body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--text);min-height:100vh;display:flex;overflow:hidden;height:100vh;}
-
-/* ── SIDEBAR ── */
-.sidebar{width:var(--sidebar);min-height:100vh;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;position:fixed;left:0;top:0;bottom:0;z-index:100;}
-.sb-logo{padding:20px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;}
-.sb-logo-box{width:38px;height:38px;border:1px solid var(--gold);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
-.sb-logo-box svg{width:18px;height:18px;}
-.sb-brand{display:flex;flex-direction:column;}
-.sb-name{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:700;letter-spacing:3px;background:linear-gradient(135deg,var(--gold),var(--gold3));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
-.sb-sub{font-size:8px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;}
-.sb-section{padding:16px 12px 6px;font-size:8px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;}
-.sb-item{display:flex;align-items:center;gap:10px;padding:10px 14px;margin:2px 8px;border-radius:0;cursor:pointer;transition:all 0.2s;color:var(--muted);font-size:11px;font-weight:500;letter-spacing:0.5px;border:none;background:transparent;width:calc(100% - 16px);text-align:left;}
-.sb-item:hover{background:var(--glow);color:var(--text);}
-.sb-item.on{background:var(--glow);color:var(--gold);border-left:2px solid var(--gold);}
-.sb-item .icon{font-size:15px;width:20px;text-align:center;flex-shrink:0;}
-.sb-footer{margin-top:auto;padding:16px;border-top:1px solid var(--border);}
-.sb-user{display:flex;align-items:center;gap:10px;}
-.sb-avatar{width:34px;height:34px;background:linear-gradient(135deg,var(--gold),var(--gold2));border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--black);flex-shrink:0;}
-.sb-user-name{font-size:12px;font-weight:600;color:var(--text);}
-.sb-user-role{font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;}
-
-/* ── MAIN ── */
-.main{margin-left:var(--sidebar);flex:1;display:flex;flex-direction:column;height:100vh;overflow:hidden;}
-
-/* ── TOPBAR ── */
-.topbar{height:64px;background:rgba(5,5,5,0.95);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 28px;flex-shrink:0;backdrop-filter:blur(10px);position:sticky;top:0;z-index:50;}
-.topbar-left h2{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;color:var(--white);}
-.topbar-left p{font-size:10px;color:var(--muted);letter-spacing:1px;margin-top:2px;}
-.topbar-right{display:flex;align-items:center;gap:20px;}
-.topbar-date{font-size:11px;color:var(--muted);text-align:right;}
-.topbar-date strong{display:block;color:var(--text);font-size:12px;}
-.dot-live{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--green);letter-spacing:1px;}
-.dot-live::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 2s infinite;}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
-
-/* ── CONTENT ── */
-.content{flex:1;overflow-y:auto;padding:24px 28px;background:var(--black);min-height:0;}
-.content::-webkit-scrollbar{width:4px;}
-.content::-webkit-scrollbar-track{background:var(--surface);}
-.content::-webkit-scrollbar-thumb{background:var(--border);}
-
-/* ── PANELS ── */
-.panel{display:none;}
-.panel.on{display:block;}
-
-/* ── KPI ROW ── */
-.kpi-row{display:grid;grid-template-columns:1fr 1fr 2fr;gap:16px;margin-bottom:24px;}
-.kpi-card{background:var(--card);border:1px solid var(--border);padding:20px;position:relative;overflow:hidden;}
-.kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:0.4;}
-.kpi-icon{width:44px;height:44px;border-radius:0;display:flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:12px;}
-.kpi-label{font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;}
-.kpi-value{font-family:'Cormorant Garamond',serif;font-size:32px;font-weight:700;color:var(--gold);margin-bottom:6px;}
-.kpi-sub{font-size:10px;color:var(--muted);}
-.kpi-sub.up{color:var(--green);}
-.kpi-sub.dn{color:var(--red);}
-
-/* ── GRID LAYOUTS ── */
-.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
-.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px;}
-.grid-3-1{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:16px;}
-.grid-1-3{display:grid;grid-template-columns:1fr 2fr;gap:16px;margin-bottom:16px;}
-
-/* ── BOX ── */
-.box{background:var(--card);border:1px solid var(--border);padding:20px;position:relative;}
-.box::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:0.3;}
-.box-title{font-size:10px;letter-spacing:2px;color:var(--gold);text-transform:uppercase;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;}
-.box-title span{font-size:9px;color:var(--muted);letter-spacing:1px;}
-
-/* ── CHART BARS ── */
-.chart-bars{display:flex;align-items:flex-end;gap:4px;height:140px;margin-bottom:4px;justify-content:space-around;}
-.chart-bar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;}
-.chart-bar{width:100%;border-radius:2px 2px 0 0;transition:height 0.8s ease;}
-.chart-bar-lbl{font-size:9px;color:var(--muted);}
-.chart-bar-val{font-size:9px;font-weight:700;}
-
-/* ── DONUT ── */
-.donut-wrap{display:flex;align-items:center;gap:20px;}
-.donut-svg{flex-shrink:0;}
-.donut-legend{display:flex;flex-direction:column;gap:10px;}
-.donut-item{display:flex;align-items:center;gap:8px;font-size:11px;}
-.donut-dot{width:8px;height:8px;border-radius:50%;}
-
-/* ── TABLE ── */
-.data-table{width:100%;border-collapse:collapse;}
-.data-table th{padding:8px 12px;font-size:9px;letter-spacing:1.5px;color:var(--gold);text-transform:uppercase;text-align:left;border-bottom:1px solid var(--border);font-weight:500;}
-.data-table td{padding:10px 12px;font-size:12px;border-bottom:1px solid rgba(42,42,30,0.5);}
-.data-table tr:hover td{background:var(--glow);}
-.badge{display:inline-block;padding:3px 10px;font-size:9px;letter-spacing:1px;text-transform:uppercase;font-weight:600;}
-.badge.green{background:rgba(78,203,141,0.15);color:var(--green);}
-.badge.gold{background:rgba(201,168,76,0.15);color:var(--gold);}
-.badge.red{background:rgba(232,75,75,0.15);color:var(--red);}
-.badge.blue{background:rgba(91,141,238,0.15);color:var(--blue);}
-
-/* ── STATUS BAR ── */
-.d-status{display:flex;align-items:center;gap:12px;padding:12px 16px;border:1px solid var(--border);background:var(--surface);margin-bottom:16px;}
-.d-status.live{border-color:var(--green);background:rgba(78,203,141,0.05);}
-.d-status.live .d-status-txt{color:var(--green);}
-.d-status-txt{font-size:11px;color:var(--muted);}
-
-/* ── DATE PILLS ── */
-.date-pills{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;}
-.dpill{padding:5px 12px;background:var(--surface);border:1px solid var(--border);color:var(--muted);font-family:'Montserrat',sans-serif;font-size:10px;cursor:pointer;transition:all 0.2s;}
-.dpill:hover{border-color:var(--gold);color:var(--gold);}
-.dpill.on{background:var(--gold);color:var(--black);border-color:var(--gold);font-weight:700;}
-.dpill.today{border-color:var(--green);color:var(--green);}
-.dpill.today.on{background:var(--green);color:var(--black);}
-
-/* ── QUICK BTNS ── */
-.qbtns{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;}
-.qbtn{padding:6px 12px;background:var(--surface);border:1px solid var(--border);color:var(--muted);font-family:'Montserrat',sans-serif;font-size:9px;letter-spacing:1px;cursor:pointer;transition:all 0.2s;text-transform:uppercase;}
-.qbtn:hover{border-color:var(--gold);color:var(--gold);background:var(--glow);}
-.qbtn.cust{border-color:rgba(78,203,141,0.3);color:var(--green);}
-.qbtn.city{border-color:rgba(91,141,238,0.3);color:var(--blue);}
-.qbtn.stat{border-color:rgba(201,168,76,0.4);color:var(--gold);}
-
-/* ── FORM ELEMENTS ── */
-.lbl{font-size:9px;letter-spacing:2px;color:var(--gold);text-transform:uppercase;margin-bottom:6px;margin-top:14px;display:block;}
-input[type=text],textarea{width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:'Montserrat',sans-serif;font-size:13px;padding:11px 14px;outline:none;transition:border 0.2s;display:block;box-sizing:border-box;}
-input[type=text]:focus,textarea:focus{border-color:var(--gold);}
-input::placeholder,textarea::placeholder{color:var(--muted);}
-textarea{resize:vertical;min-height:100px;line-height:1.7;}
-
-/* ── PILLS ── */
-.pills{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
-.pill{padding:6px 14px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:'Montserrat',sans-serif;font-size:9px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all 0.2s;}
-.pill.on{border-color:var(--gold);color:var(--gold);background:var(--glow);}
-
-/* ── BUTTONS ── */
-.btn{width:100%;padding:13px;background:transparent;border:1px solid var(--gold);color:var(--gold);font-family:'Montserrat',sans-serif;font-size:10px;font-weight:600;letter-spacing:3px;text-transform:uppercase;cursor:pointer;transition:all 0.3s;position:relative;overflow:hidden;margin-bottom:8px;}
-.btn::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,var(--gold),var(--gold2));opacity:0;transition:opacity 0.3s;}
-.btn:hover::before{opacity:1;}
-.btn:hover{color:var(--black);}
-.btn span{position:relative;z-index:1;}
-.btn:disabled{opacity:0.3;cursor:not-allowed;}
-.btn:disabled::before{opacity:0!important;}
-.btn:disabled{color:var(--gold)!important;}
-
-/* ── OUTPUT ── */
-.out{background:var(--surface);border:1px solid var(--border);margin-top:14px;display:none;}
-.out.show{display:block;}
-.out-head{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-bottom:1px solid var(--border);}
-.out-lbl{font-size:9px;letter-spacing:2px;color:var(--gold);text-transform:uppercase;}
-.copy{background:transparent;border:1px solid var(--border);color:var(--muted);font-size:9px;padding:4px 10px;cursor:pointer;font-family:'Montserrat',sans-serif;text-transform:uppercase;}
-.copy:hover{border-color:var(--gold);color:var(--gold);}
-.out-body{padding:20px;font-size:13px;line-height:1.9;white-space:pre-wrap;max-height:500px;overflow-y:auto;}
-
-/* ── LOADER ── */
-.loader{display:none;text-align:center;padding:28px;}
-.ring{width:30px;height:30px;margin:0 auto 12px;border:1px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin 1s linear infinite;}
+:root{--black:#050505;--dark:#0a0a08;--surface:#111109;--card:#161612;--border:#2a2a1e;--gold:#c9a84c;--gold2:#e8c878;--gold3:#f5e0a0;--goldglow:rgba(201,168,76,0.15);--text:#f0ece0;--muted:#7a7660;--white:#faf8f0;--green:#4ecb8d;}
+body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--text);min-height:100vh;overflow-x:hidden;}
+.bg-luxury{position:fixed;inset:0;z-index:0;background:radial-gradient(ellipse at 20% 20%,rgba(201,168,76,0.04) 0%,transparent 50%),radial-gradient(ellipse at 80% 80%,rgba(201,168,76,0.03) 0%,transparent 50%),var(--black);}
+.bg-lines{position:fixed;inset:0;z-index:0;background-image:linear-gradient(rgba(201,168,76,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(201,168,76,0.04) 1px,transparent 1px);background-size:60px 60px;}
+.bg-vignette{position:fixed;inset:0;z-index:0;background:radial-gradient(ellipse at center,transparent 40%,rgba(0,0,0,0.7) 100%);}
+header{position:relative;z-index:10;display:flex;align-items:center;justify-content:space-between;padding:0 48px;height:80px;border-bottom:1px solid var(--border);background:rgba(5,5,5,0.95);backdrop-filter:blur(20px);}
+.header-left{display:flex;align-items:center;gap:20px;}
+.logo-mark{width:44px;height:44px;border:1px solid var(--gold);display:flex;align-items:center;justify-content:center;position:relative;}
+.logo-mark::before{content:'';position:absolute;inset:3px;border:1px solid rgba(201,168,76,0.3);}
+.logo-mark svg{width:22px;height:22px;}
+.brand{display:flex;flex-direction:column;gap:2px;}
+.brand-name{font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:700;letter-spacing:6px;background:linear-gradient(135deg,#fff5cc,var(--gold),var(--gold3),#fff0a0,var(--gold));background-size:200% auto;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:shine 3s linear infinite;text-shadow:none;filter:drop-shadow(0 0 8px rgba(201,168,76,0.6));}
+@keyframes shine{0%{background-position:0% center}100%{background-position:200% center}}
+.brand-sub{font-size:9px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;font-weight:500;}
+.header-right{display:flex;align-items:center;gap:24px;}
+.status-indicator{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;}
+.status-dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:glow 2s infinite;}
+@keyframes glow{0%,100%{opacity:1}50%{opacity:0.5}}
+.version{font-size:10px;letter-spacing:2px;color:var(--muted);border:1px solid var(--border);padding:3px 10px;text-transform:uppercase;}
+main{position:relative;z-index:5;max-width:1000px;margin:0 auto;padding:60px 24px 80px;}
+.hero{text-align:center;margin-bottom:60px;animation:fadeUp 0.8s ease both;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+.hero-eyebrow{font-size:10px;letter-spacing:4px;color:var(--gold);text-transform:uppercase;margin-bottom:20px;display:flex;align-items:center;justify-content:center;gap:12px;}
+.hero-eyebrow::before,.hero-eyebrow::after{content:'';width:40px;height:1px;background:var(--gold);opacity:0.4;}
+.hero-title{font-family:'Cormorant Garamond',serif;font-size:64px;font-weight:300;letter-spacing:-1px;line-height:1.05;margin-bottom:16px;color:var(--white);}
+.hero-title strong{font-weight:700;background:linear-gradient(135deg,var(--gold),var(--gold3));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.hero-desc{font-size:13px;color:var(--muted);letter-spacing:1px;line-height:1.8;max-width:500px;margin:0 auto;}
+.divider{display:flex;align-items:center;gap:16px;margin-bottom:40px;}
+.divider-line{flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--border),transparent);}
+.divider-diamond{width:8px;height:8px;background:var(--gold);transform:rotate(45deg);flex-shrink:0;}
+.nav-tabs{display:grid;grid-template-columns:repeat(6,1fr);gap:0;border:1px solid var(--border);margin-bottom:48px;}
+.nav-tab{padding:16px 8px;border:none;background:transparent;color:var(--muted);font-family:'Montserrat',sans-serif;font-size:10px;font-weight:600;letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:all 0.3s;display:flex;flex-direction:column;align-items:center;gap:8px;border-right:1px solid var(--border);position:relative;}
+.nav-tab:last-child{border-right:none;}
+.nav-tab::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:var(--gold);transform:scaleX(0);transition:transform 0.3s;}
+.nav-tab.active{color:var(--gold);background:var(--goldglow);}
+.nav-tab.active::after{transform:scaleX(1);}
+.nav-tab:hover:not(.active){color:var(--text);}
+.nav-icon{font-size:18px;}
+.panel{display:none;animation:fadeUp 0.4s ease both;}
+.panel.active{display:block;}
+.card{background:var(--card);border:1px solid var(--border);padding:40px;margin-bottom:20px;position:relative;overflow:hidden;}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:0.5;}
+.card-eyebrow{font-size:9px;letter-spacing:3px;color:var(--gold);text-transform:uppercase;margin-bottom:16px;display:flex;align-items:center;gap:10px;}
+.card-eyebrow::after{content:'';flex:1;height:1px;background:var(--border);}
+.card h3{font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:600;color:var(--white);margin-bottom:8px;letter-spacing:0.5px;}
+.card p{color:var(--muted);font-size:12px;line-height:1.8;margin-bottom:24px;letter-spacing:0.5px;}
+.field-label{font-size:9px;letter-spacing:2px;color:var(--gold);text-transform:uppercase;margin-bottom:8px;margin-top:20px;}
+textarea{width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:'Montserrat',sans-serif;font-size:13px;padding:16px 18px;resize:vertical;outline:none;transition:border 0.3s;min-height:110px;line-height:1.7;}
+textarea:focus{border-color:var(--gold);}
+textarea::placeholder{color:var(--muted);}
+.upload-box{background:var(--surface);border:1px dashed var(--border);padding:24px;text-align:center;cursor:pointer;transition:all 0.3s;margin-bottom:6px;}
+.upload-box:hover{border-color:var(--gold);background:var(--goldglow);}
+.upload-box.has-file{border-color:var(--green);border-style:solid;}
+.upload-icon{font-size:24px;margin-bottom:8px;}
+.upload-text{font-size:11px;color:var(--muted);letter-spacing:1px;}
+.upload-sub{font-size:10px;color:var(--muted);margin-top:4px;}
+.upload-sub.loaded{color:var(--green);}
+.options-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;}
+.option-pill{padding:7px 16px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:'Montserrat',sans-serif;font-size:10px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all 0.2s;}
+.option-pill.sel{border-color:var(--gold);color:var(--gold);background:var(--goldglow);}
+.btn-primary{width:100%;padding:16px;background:transparent;border:1px solid var(--gold);color:var(--gold);font-family:'Montserrat',sans-serif;font-size:10px;font-weight:600;letter-spacing:3px;text-transform:uppercase;cursor:pointer;transition:all 0.3s;position:relative;overflow:hidden;margin-bottom:10px;}
+.btn-primary::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,var(--gold),var(--gold2));opacity:0;transition:opacity 0.3s;}
+.btn-primary:hover::before{opacity:1;}
+.btn-primary:hover{color:var(--black);}
+.btn-primary span{position:relative;z-index:1;}
+.btn-primary:disabled{opacity:0.3;cursor:not-allowed;}
+.btn-download{width:100%;padding:16px;background:linear-gradient(135deg,var(--gold),var(--gold2));border:none;color:var(--black);font-family:'Montserrat',sans-serif;font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;cursor:pointer;transition:all 0.3s;display:none;margin-bottom:10px;}
+.btn-download:hover{transform:translateY(-1px);}
+.output-wrap{background:var(--surface);border:1px solid var(--border);margin-top:20px;display:none;}
+.output-wrap.show{display:block;}
+.output-header{display:flex;justify-content:space-between;align-items:center;padding:12px 20px;border-bottom:1px solid var(--border);}
+.output-label{font-size:9px;letter-spacing:2px;color:var(--gold);text-transform:uppercase;}
+.copy-btn{background:transparent;border:1px solid var(--border);color:var(--muted);font-size:9px;padding:4px 12px;cursor:pointer;font-family:'Montserrat',sans-serif;text-transform:uppercase;transition:all 0.2s;}
+.copy-btn:hover{border-color:var(--gold);color:var(--gold);}
+.output-body{padding:24px;font-size:13px;line-height:1.9;white-space:pre-wrap;max-height:440px;overflow-y:auto;}
+.loader{display:none;text-align:center;padding:40px;}
+.loader-ring{width:36px;height:36px;margin:0 auto 16px;border:1px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin 1s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg)}}
-.ring-txt{font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;}
+.loader-text{font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;}
+.success-note{display:none;margin-top:12px;padding:12px 20px;border:1px solid rgba(78,203,141,0.3);background:rgba(78,203,141,0.05);font-size:10px;letter-spacing:1px;color:var(--green);text-transform:uppercase;}
+.success-note.show{display:block;}
+.diff-wrap{background:var(--surface);border:1px solid var(--border);margin-top:20px;display:none;}
+.diff-wrap.show{display:block;}
+.diff-nav{display:flex;border-bottom:1px solid var(--border);}
+.diff-btn{padding:12px 20px;border:none;background:transparent;color:var(--muted);font-family:'Montserrat',sans-serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:all 0.2s;border-right:1px solid var(--border);position:relative;}
+.diff-btn::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:var(--gold);transform:scaleX(0);transition:transform 0.2s;}
+.diff-btn.on{color:var(--gold);}
+.diff-btn.on::after{transform:scaleX(1);}
+.diff-copy{margin-left:auto;padding:12px 20px;border:none;background:transparent;color:var(--muted);font-family:'Montserrat',sans-serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:all 0.2s;}
+.diff-copy:hover{color:var(--gold);}
+.diff-body{padding:24px;font-size:13px;line-height:1.9;white-space:pre-wrap;max-height:440px;overflow-y:auto;}
+/* CHAT */
+.chat-window{background:var(--surface);border:1px solid var(--border);min-height:380px;max-height:480px;overflow-y:auto;padding:24px;margin-bottom:16px;display:flex;flex-direction:column;gap:16px;}
+.chat-welcome{text-align:center;margin:auto;padding:40px 20px;}
+.chat-welcome-icon{font-size:32px;color:var(--gold);margin-bottom:12px;}
+.chat-welcome-title{font-family:'Cormorant Garamond',serif;font-size:24px;color:var(--white);margin-bottom:8px;}
+.chat-welcome-sub{font-size:11px;color:var(--muted);letter-spacing:1px;}
+.chat-msg{display:flex;gap:12px;animation:fadeUp 0.3s ease;}
+.chat-msg.user{flex-direction:row-reverse;}
+.chat-bubble{max-width:75%;padding:14px 18px;font-size:13px;line-height:1.7;}
+.chat-msg.user .chat-bubble{background:var(--goldglow);border:1px solid rgba(201,168,76,0.3);color:var(--text);}
+.chat-msg.ai .chat-bubble{background:var(--card);border:1px solid var(--border);color:var(--text);}
+.chat-avatar{width:32px;height:32px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;border:1px solid var(--border);background:var(--surface);color:var(--gold);font-family:'Cormorant Garamond',serif;font-weight:700;}
+.chat-typing{display:flex;gap:4px;align-items:center;padding:14px 18px;}
+.chat-typing span{width:6px;height:6px;background:var(--gold);border-radius:50%;animation:typing 1.2s infinite;}
+.chat-typing span:nth-child(2){animation-delay:0.2s;}
+.chat-typing span:nth-child(3){animation-delay:0.4s;}
+@keyframes typing{0%,100%{opacity:0.3;transform:translateY(0)}50%{opacity:1;transform:translateY(-4px)}}
+.chat-input-row{display:flex;gap:10px;align-items:flex-end;}
+.chat-textarea{flex:1;min-height:52px;max-height:120px;resize:none;padding:14px 18px;}
+.chat-send-btn{width:52px;height:52px;flex-shrink:0;background:linear-gradient(135deg,var(--gold),var(--gold2));border:none;color:var(--black);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;}
+.chat-send-btn:hover{transform:translateY(-2px);box-shadow:0 4px 16px rgba(201,168,76,0.3);}
+.chat-send-btn:disabled{opacity:0.4;transform:none;cursor:not-allowed;}
+footer{position:relative;z-index:5;text-align:center;padding:32px;border-top:1px solid var(--border);}
+.footer-text{font-size:10px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;display:flex;align-items:center;justify-content:center;gap:16px;}
+.footer-text::before,.footer-text::after{content:'';width:30px;height:1px;background:var(--gold);opacity:0.3;}
+.footer-gold{color:var(--gold);}
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-track{background:var(--surface);}
+::-webkit-scrollbar-thumb{background:var(--border);}
+::-webkit-scrollbar-thumb:hover{background:var(--gold);}
 
-/* ── UPLOAD ── */
-.upload{background:var(--surface);border:1px dashed var(--border);padding:20px;text-align:center;cursor:pointer;transition:all 0.3s;margin-bottom:8px;}
-.upload:hover{border-color:var(--gold);background:var(--glow);}
-.upload.done{border-color:var(--green);border-style:solid;}
-
-/* ── EMAIL DIFF ── */
-.etabs{display:flex;border-bottom:1px solid var(--border);}
-.etab{padding:10px 16px;border:none;background:transparent;color:var(--muted);font-family:'Montserrat',sans-serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:all 0.2s;border-right:1px solid var(--border);position:relative;}
-.etab::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:var(--gold);transform:scaleX(0);transition:transform 0.2s;}
-.etab.on{color:var(--gold);}
-.etab.on::after{transform:scaleX(1);}
-.ecopy{margin-left:auto;padding:10px 16px;border:none;background:transparent;color:var(--muted);font-family:'Montserrat',sans-serif;font-size:9px;cursor:pointer;}
-.ecopy:hover{color:var(--gold);}
-.ebody{padding:20px;font-size:13px;line-height:1.9;white-space:pre-wrap;max-height:440px;overflow-y:auto;}
-.ediff{background:var(--surface);border:1px solid var(--border);margin-top:14px;display:none;}
-.ediff.show{display:block;}
-
-/* ── INVOICE ── */
-.inv-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:14px;}
-.inv-inp{width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:'Montserrat',sans-serif;font-size:13px;padding:11px 14px;outline:none;transition:border 0.2s;display:block;box-sizing:border-box;}
-.inv-inp:focus{border-color:var(--gold);}
-.inv-inp::placeholder{color:var(--muted);}
-.inv-totals{padding:16px;background:var(--surface);border:1px solid var(--border);margin-bottom:14px;}
-.inv-total-row{display:flex;justify-content:space-between;padding:6px 0;}
-.inv-btns{display:flex;gap:10px;margin-top:14px;}
-.inv-btn{flex:1;padding:13px;background:transparent;border:1px solid var(--gold);color:var(--gold);font-family:'Montserrat',sans-serif;font-size:9px;font-weight:600;letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:all 0.2s;}
-.inv-btn:hover{background:var(--glow);}
-.inv-btn.blue{border-color:var(--blue);color:var(--blue);}
-
-/* ── QUICK ACTIONS ── */
-.qa-btn{display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--surface);border:1px solid var(--border);width:100%;margin-bottom:8px;cursor:pointer;transition:all 0.2s;font-family:'Montserrat',sans-serif;font-size:11px;color:var(--text);text-align:left;}
-.qa-btn:hover{border-color:var(--gold);background:var(--glow);}
-.qa-btn .qa-icon{font-size:16px;width:24px;text-align:center;}
-.qa-btn .qa-plus{margin-left:auto;color:var(--gold);font-size:16px;}
-
-/* ── ASK INPUT ── */
-.ask-row{display:flex;gap:8px;align-items:flex-end;}
-.ask-inp{flex:1;min-height:44px;max-height:100px;resize:none;padding:11px 14px;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:'Montserrat',sans-serif;font-size:13px;outline:none;}
-.ask-inp:focus{border-color:var(--gold);}
-.send-btn{width:44px;height:44px;flex-shrink:0;background:linear-gradient(135deg,var(--gold),var(--gold2));border:none;color:var(--black);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;transition:all 0.2s;}
-.send-btn:hover{transform:translateY(-2px);}
-.send-btn:disabled{opacity:0.4;cursor:not-allowed;transform:none;}
-
-/* ── ROUTE TABLE ── */
-.route-table{width:100%;border-collapse:collapse;}
-.route-table th{padding:8px 10px;font-size:9px;letter-spacing:1px;color:var(--gold);text-transform:uppercase;text-align:left;border-bottom:2px solid var(--gold);background:#1a1a2e;}
-.route-table td{padding:8px 10px;font-size:12px;border-bottom:1px solid rgba(42,42,30,0.5);}
-.route-table tr:hover td{background:var(--glow);}
-.progress-bar{height:3px;background:var(--border);border-radius:2px;margin-top:4px;}
-.progress-fill{height:3px;border-radius:2px;}
-
-.view-btn{padding:8px 18px;background:var(--surface);border:1px solid var(--border);color:var(--muted);font-family:'Montserrat',sans-serif;font-size:10px;font-weight:600;letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:all 0.2s;}
-.view-btn:hover{border-color:var(--gold);color:var(--gold);}
-.view-btn.on{background:var(--gold);color:var(--black);border-color:var(--gold);}
-footer{padding:16px 28px;border-top:1px solid var(--border);text-align:center;font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;flex-shrink:0;}
-footer span{color:var(--gold);}
+/* Dispatch styles */
+.dispatch-status{display:flex;align-items:center;gap:12px;padding:16px 20px;border:1px solid var(--border);background:var(--surface);margin-bottom:20px;}
+.dispatch-status-icon{font-size:20px;}
+.dispatch-status-text{font-size:12px;color:var(--muted);letter-spacing:0.5px;}
+.dispatch-status.live{border-color:var(--green);background:rgba(78,203,141,0.05);}
+.dispatch-status.live .dispatch-status-text{color:var(--green);}
+.dispatch-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px;}
+.dscard{background:var(--surface);border:1px solid var(--border);padding:20px;text-align:center;position:relative;overflow:hidden;}
+.dscard::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:0.4;}
+.dscard-val{font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:700;color:var(--gold);margin-bottom:4px;}
+.dscard-label{font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;}
+.quick-questions{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px;}
+.quick-btn{padding:8px 16px;background:var(--surface);border:1px solid var(--border);color:var(--muted);font-family:'Montserrat',sans-serif;font-size:10px;letter-spacing:1px;cursor:pointer;transition:all 0.2s;text-transform:uppercase;}
+.quick-btn:hover{border-color:var(--gold);color:var(--gold);background:var(--goldglow);}
 </style>
 </head>
 <body>
+<div class="bg-luxury"></div>
+<div class="bg-lines"></div>
+<div class="bg-vignette"></div>
 
-<!-- ══════════════════════════════════════════════════ SIDEBAR -->
-<aside class="sidebar">
-  <div class="sb-logo">
-    <div class="sb-logo-box">
-      <svg viewBox="0 0 22 22" fill="none"><path d="M11 2L13.5 8.5H20L14.5 12.5L16.5 19L11 15L5.5 19L7.5 12.5L2 8.5H8.5L11 2Z" stroke="#c9a84c" stroke-width="1"/><circle cx="11" cy="11" r="3" stroke="#c9a84c" stroke-width="0.5" fill="rgba(201,168,76,0.1)"/></svg>
+<header>
+  <div class="header-left">
+    <div class="logo-mark">
+      <svg viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M11 2L13.5 8.5H20L14.5 12.5L16.5 19L11 15L5.5 19L7.5 12.5L2 8.5H8.5L11 2Z" stroke="#c9a84c" stroke-width="1" fill="none"/>
+        <circle cx="11" cy="11" r="3" stroke="#c9a84c" stroke-width="0.5" fill="rgba(201,168,76,0.1)"/>
+      </svg>
     </div>
-    <div class="sb-brand">
-      <div class="sb-name">AZHAR-AI</div>
-      <div class="sb-sub">Operations Intelligence</div>
+    <div class="brand">
+      <div class="brand-name">AZHAR — AI</div>
+      <div class="brand-sub">Executive Intelligence Platform</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="status-indicator"><div class="status-dot"></div>System Active</div>
+    <div class="version">V 2.0</div>
+  </div>
+</header>
+
+<main>
+  <div class="hero">
+    <div class="hero-eyebrow">Intelligence Redefined</div>
+    <h1 class="hero-title">Your Personal<br><strong>AI Assistant</strong></h1>
+    <p class="hero-desc">Precision-engineered for executive productivity. PowerPoint · Excel · Summaries · Email · Chat</p>
+  </div>
+  <div class="divider"><div class="divider-line"></div><div class="divider-diamond"></div><div class="divider-line"></div></div>
+
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="switchTab('ppt',this)"><span class="nav-icon">📊</span>PowerPoint</button>
+    <button class="nav-tab" onclick="switchTab('excel',this)"><span class="nav-icon">📐</span>Excel</button>
+    <button class="nav-tab" onclick="switchTab('summary',this)"><span class="nav-icon">📋</span>Summaries</button>
+    <button class="nav-tab" onclick="switchTab('email',this)"><span class="nav-icon">✉️</span>Email</button>
+    <button class="nav-tab" onclick="switchTab('chat',this)"><span class="nav-icon">💬</span>Chat</button>
+    <button class="nav-tab" onclick="switchTab('dispatch',this);loadDispatchStatus()"><span class="nav-icon">🚚</span>Dispatch</button>
+  </div>
+
+  <!-- POWERPOINT -->
+  <div class="panel active" id="ppt">
+    <div class="card">
+      <div class="card-eyebrow">Slide Builder</div>
+      <h3>Generate & Download Presentations</h3>
+      <p>Describe your topic or upload notes — receive a complete slide deck with a downloadable PowerPoint file.</p>
+      <div class="field-label">Upload Notes File (Optional)</div>
+      <div class="upload-box" id="ppt-upload-box" onclick="document.getElementById('ppt-file').click()">
+        <div class="upload-icon">📄</div>
+        <div class="upload-text">Attach .txt or .csv document</div>
+        <div class="upload-sub" id="ppt-file-name">AI will construct slides from your content</div>
+      </div>
+      <input type="file" id="ppt-file" accept=".txt,.csv" style="display:none" onchange="handlePPTFile(this)"/>
+      <div class="field-label">Presentation Topic</div>
+      <textarea id="ppt-topic" placeholder="e.g. Q2 Performance Review — Leadership Briefing"></textarea>
+      <div class="field-label">Slides</div>
+      <div class="options-row" id="slide-opts">
+        <div class="option-pill sel" onclick="selOpt(this,'slide-opts')">5</div>
+        <div class="option-pill" onclick="selOpt(this,'slide-opts')">8</div>
+        <div class="option-pill" onclick="selOpt(this,'slide-opts')">10</div>
+        <div class="option-pill" onclick="selOpt(this,'slide-opts')">12</div>
+        <div class="option-pill" onclick="selOpt(this,'slide-opts')">15</div>
+      </div>
+      <div class="field-label">Tone</div>
+      <div class="options-row" id="ppt-tone">
+        <div class="option-pill sel" onclick="selOpt(this,'ppt-tone')">Executive</div>
+        <div class="option-pill" onclick="selOpt(this,'ppt-tone')">Professional</div>
+        <div class="option-pill" onclick="selOpt(this,'ppt-tone')">Persuasive</div>
+        <div class="option-pill" onclick="selOpt(this,'ppt-tone')">Strategic</div>
+      </div>
+      <button class="btn-primary" id="ppt-btn" onclick="runPPT()"><span>Generate Presentation</span></button>
+      <button class="btn-download" id="ppt-dl" onclick="downloadPPTX()">⬇ Download as PowerPoint (.pptx)</button>
+      <div class="loader" id="ppt-loader"><div class="loader-ring"></div><div class="loader-text">Constructing your presentation</div></div>
+      <div class="success-note" id="ppt-success">✓ Presentation ready — download your .pptx file above</div>
+      <div class="output-wrap" id="ppt-out">
+        <div class="output-header"><span class="output-label">Slide Outline</span><button class="copy-btn" onclick="copyEl('ppt-out-text')">Copy</button></div>
+        <div class="output-body" id="ppt-out-text"></div>
+      </div>
     </div>
   </div>
 
-  <div class="sb-section">AI Command Centre</div>
-  <button class="sb-item on" onclick="goTab('dispatch',this)"><span class="icon">🚚</span> Daily Dispatch</button>
-  <button class="sb-item" onclick="goTab('rejection',this)"><span class="icon">📊</span> Daily Rejection</button>
-  <button class="sb-item" onclick="goTab('summary',this)"><span class="icon">📋</span> Executive Summary</button>
-  <button class="sb-item" onclick="goTab('email',this)"><span class="icon">✉️</span> Email Writer</button>
-  <button class="sb-item" onclick="goTab('invoice',this)"><span class="icon">💼</span> Proforma Invoice</button>
-  <button class="sb-item" onclick="goTab('excel',this)"><span class="icon">📐</span> Excel Support</button>
-
-  <div class="sb-footer">
-    <div class="sb-user">
-      <div class="sb-avatar">A</div>
-      <div>
-        <div class="sb-user-name">Azhar</div>
-        <div class="sb-user-role">Administrator</div>
+  <!-- EXCEL -->
+  <div class="panel" id="excel">
+    <div class="card">
+      <div class="card-eyebrow">Data Intelligence</div>
+      <h3>Excel Analysis & Formula Correction</h3>
+      <p>Upload your spreadsheet as CSV or describe your formula — receive precise corrections and data insights.</p>
+      <div class="field-label">Upload Excel File (Save as CSV First)</div>
+      <div class="upload-box" id="excel-upload-box" onclick="document.getElementById('excel-file').click()">
+        <div class="upload-icon">📊</div>
+        <div class="upload-text">Attach .csv or .txt spreadsheet</div>
+        <div class="upload-sub" id="excel-file-name">File → Save As → CSV in Excel</div>
+      </div>
+      <input type="file" id="excel-file" accept=".csv,.txt" style="display:none" onchange="handleExcelFile(this)"/>
+      <div class="field-label">Formula or Request</div>
+      <textarea id="excel-formula" placeholder="e.g. Fix my VLOOKUP returning #N/A&#10;e.g. Analyse this data and identify key trends"></textarea>
+      <div class="field-label">Context (Optional)</div>
+      <textarea id="excel-context" style="min-height:60px" placeholder="e.g. Column A = Date, Column B = Region, Column C = Revenue..."></textarea>
+      <button class="btn-primary" id="excel-btn" onclick="runExcel()"><span>Analyse Data</span></button>
+      <div class="loader" id="excel-loader"><div class="loader-ring"></div><div class="loader-text">Analysing your data</div></div>
+      <div class="output-wrap" id="excel-out">
+        <div class="output-header"><span class="output-label">Analysis Complete</span><button class="copy-btn" onclick="copyEl('excel-out-text')">Copy</button></div>
+        <div class="output-body" id="excel-out-text"></div>
       </div>
     </div>
   </div>
-</aside>
 
-<!-- ══════════════════════════════════════════════════ MAIN -->
-<div class="main">
-
-  <!-- TOPBAR -->
-  <div class="topbar">
-    <div class="topbar-left">
-      <h2 id="topbar-title">Welcome back, Azhar</h2>
-      <p id="topbar-sub">Operations & Customer Service AI Command Centre</p>
-    </div>
-    <div class="topbar-right">
-      <div class="dot-live">System Active</div>
-      <div class="topbar-date">
-        <strong id="tb-date">—</strong>
-        <span id="tb-time">—</span>
+  <!-- SUMMARY -->
+  <div class="panel" id="summary">
+    <div class="card">
+      <div class="card-eyebrow">Document Intelligence</div>
+      <h3>Executive Summary Generator</h3>
+      <p>Paste any document, report or correspondence — receive a precise executive summary in your preferred format.</p>
+      <div class="field-label">Source Document</div>
+      <textarea id="summary-text" style="min-height:160px" placeholder="Paste your document, report, email thread or meeting notes here..."></textarea>
+      <div class="field-label">Output Format</div>
+      <div class="options-row" id="sum-tone">
+        <div class="option-pill sel" onclick="selOpt(this,'sum-tone')">Executive Brief</div>
+        <div class="option-pill" onclick="selOpt(this,'sum-tone')">Bullet Points</div>
+        <div class="option-pill" onclick="selOpt(this,'sum-tone')">Action Items</div>
+        <div class="option-pill" onclick="selOpt(this,'sum-tone')">Key Decisions</div>
       </div>
-      <div class="sb-avatar" style="width:36px;height:36px;font-size:12px;">A</div>
+      <button class="btn-primary" id="sum-btn" onclick="runSummary()"><span>Generate Summary</span></button>
+      <div class="loader" id="sum-loader"><div class="loader-ring"></div><div class="loader-text">Processing document</div></div>
+      <div class="output-wrap" id="sum-out">
+        <div class="output-header"><span class="output-label">Summary</span><button class="copy-btn" onclick="copyEl('sum-out-text')">Copy</button></div>
+        <div class="output-body" id="sum-out-text"></div>
+      </div>
     </div>
   </div>
 
-  <!-- CONTENT -->
-  <div class="content">
+  <!-- EMAIL -->
+  <div class="panel" id="email">
+    <div class="card">
+      <div class="card-eyebrow">Communication Excellence</div>
+      <h3>Email Refinement & Composition</h3>
+      <p>Submit your draft correspondence — receive a professionally refined version with subject line options.</p>
+      <div class="field-label">Your Draft or Request</div>
+      <textarea id="email-body" style="min-height:140px" placeholder="Paste your email draft here, or describe what you need to communicate..."></textarea>
+      <div class="field-label">Refinement Type</div>
+      <div class="options-row" id="email-action">
+        <div class="option-pill sel" onclick="selOpt(this,'email-action')">Fix Grammar</div>
+        <div class="option-pill" onclick="selOpt(this,'email-action')">Make Professional</div>
+        <div class="option-pill" onclick="selOpt(this,'email-action')">Make Friendly</div>
+        <div class="option-pill" onclick="selOpt(this,'email-action')">Shorten</div>
+        <div class="option-pill" onclick="selOpt(this,'email-action')">Full Rewrite</div>
+        <div class="option-pill" onclick="selOpt(this,'email-action')">Write from Scratch</div>
+      </div>
+      <div class="field-label">Recipient (Optional)</div>
+      <textarea id="email-recipient" style="min-height:50px" placeholder="e.g. Senior management, client, HR department..."></textarea>
+      <button class="btn-primary" id="email-btn" onclick="runEmail()"><span>Refine Email</span></button>
+      <div class="loader" id="email-loader"><div class="loader-ring"></div><div class="loader-text">Refining your correspondence</div></div>
+      <div class="diff-wrap" id="email-out">
+        <div class="diff-nav">
+          <button class="diff-btn on" onclick="switchDiff('corrected',this)">Refined Email</button>
+          <button class="diff-btn" onclick="switchDiff('subject',this)">Subject Lines</button>
+          <button class="diff-btn" onclick="switchDiff('changes',this)">Changes Made</button>
+          <button class="diff-copy" onclick="copyDiff()">Copy</button>
+        </div>
+        <div class="diff-body" id="diff-corrected"></div>
+        <div class="diff-body" id="diff-subject" style="display:none"></div>
+        <div class="diff-body" id="diff-changes" style="display:none"></div>
+      </div>
+    </div>
+  </div>
 
-    <!-- ══ DAILY DISPATCH ══════════════════════════════════ -->
-    <div class="panel on" id="dispatch">
-
-      <!-- View Selector: Today / MTD / YTD -->
-      <div style="display:flex;gap:8px;margin-bottom:14px;align-items:center;flex-wrap:wrap;">
-        <button class="view-btn on" id="vbtn-today" onclick="setView('today')">📅 Today</button>
-        <button class="view-btn" id="vbtn-mtd" onclick="setView('mtd')">📆 MTD</button>
-        <button class="view-btn" id="vbtn-ytd" onclick="setView('ytd')">📊 YTD</button>
-        <div style="margin-left:auto;display:flex;gap:6px;align-items:center;" id="ds-date-wrap">
-          <div class="date-pills" id="ds-date-pills" style="margin:0;"></div>
+  <!-- CHAT -->
+  <div class="panel" id="chat">
+    <div class="card">
+      <div class="card-eyebrow">General Intelligence</div>
+      <h3>Ask Me Anything</h3>
+      <p>Your personal AI assistant. Ask any question, get advice, draft content, solve problems — anything at all.</p>
+      <div class="chat-window" id="chat-window">
+        <div class="chat-welcome">
+          <div class="chat-welcome-icon">✦</div>
+          <div class="chat-welcome-title">How can I assist you today?</div>
+          <div class="chat-welcome-sub">Ask me anything — I am here to help</div>
         </div>
       </div>
+      <div class="chat-input-row">
+        <textarea id="chat-input" class="chat-textarea" placeholder="Ask anything..." onkeydown="chatKeydown(event)" rows="2"></textarea>
+        <button class="chat-send-btn" id="chat-send" onclick="sendChat()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="22" y1="2" x2="11" y2="13"></line>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+          </svg>
+        </button>
+      </div>
+      <div style="text-align:right;margin-top:8px;">
+        <button onclick="clearChat()" style="background:transparent;border:1px solid var(--border);color:var(--muted);font-family:Montserrat,sans-serif;font-size:9px;letter-spacing:2px;padding:6px 14px;cursor:pointer;text-transform:uppercase;">Clear Chat</button>
+      </div>
+    </div>
+  </div>
+  <!-- DISPATCH COPILOT -->
+  <div class="panel" id="dispatch">
+    <div class="card">
+      <div class="card-eyebrow">Dispatch Intelligence</div>
+      <h3>Daily Dispatch Copilot</h3>
+      <p>Upload today's dispatch report once — your entire team can ask questions instantly. No more digging through Excel.</p>
 
-      <!-- Status Bar -->
-      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px;">
-        <div class="d-status" id="ds-status" style="flex:1;min-width:260px;margin:0;">
-          <span style="font-size:16px;">⏳</span>
-          <span class="d-status-txt">Checking for today's dispatch data...</span>
-        </div>
-        <div id="ds-period-label" style="display:none;font-size:11px;color:var(--gold);letter-spacing:1px;padding:6px 14px;border:1px solid var(--gold);background:var(--glow);">TODAY</div>
+      <!-- Status bar -->
+      <div class="dispatch-status" id="dispatch-status">
+        <div class="dispatch-status-icon">⏳</div>
+        <div class="dispatch-status-text">Checking for today's data...</div>
       </div>
 
-      <!-- KPI Cards -->
-      <div class="kpi-row" id="ds-kpis" style="display:none;">
-        <div class="kpi-card">
-          <div class="kpi-icon" style="background:rgba(201,168,76,0.1);">📦</div>
-          <div class="kpi-label">Total Orders</div>
-          <div class="kpi-value" id="k-orders">—</div>
-          <div class="kpi-sub" id="k-routes-sub">— routes · — drivers</div>
-          <div class="kpi-sub" style="color:var(--green);" id="k-drops" style="margin-top:4px;font-size:11px;">— total drops</div>
-        </div>
-        <div class="kpi-card">
-          <div class="kpi-icon" style="background:rgba(201,168,76,0.1);">💰</div>
-          <div class="kpi-label">Total Value (AED)</div>
-          <div class="kpi-value" id="k-value">—</div>
-          <div class="kpi-sub" style="color:var(--green);" id="k-value-sub">Today's dispatch</div>
-        </div>
-        <div class="kpi-card">
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
-
-            <!-- FOOD -->
-            <div style="background:rgba(78,203,141,0.05);border:1px solid rgba(78,203,141,0.2);padding:12px;">
-              <div style="font-size:9px;color:var(--green);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;font-weight:700;">✦ FOOD</div>
-              <div style="font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:700;color:var(--gold);" id="k-food">—</div>
-              <div style="font-size:10px;color:var(--muted);margin-bottom:8px;" id="k-food-val" style="color:var(--green);font-weight:700;">AED —</div>
-              <div style="border-top:1px solid rgba(78,203,141,0.15);padding-top:8px;" id="k-food-detail">
-                <div style="display:flex;justify-content:space-between;font-size:10px;padding:2px 0;"><span style="color:var(--muted);">DCV</span><span id="k-dcv-orders">—</span></div>
-                <div style="display:flex;justify-content:space-between;font-size:10px;padding:2px 0;"><span style="color:var(--muted);">DCF (FoodSvc)</span><span id="k-dcf-orders">—</span></div>
-              </div>
-            </div>
-
-            <!-- NON-FOOD -->
-            <div style="background:rgba(91,141,238,0.05);border:1px solid rgba(91,141,238,0.2);padding:12px;">
-              <div style="font-size:9px;color:var(--blue);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;font-weight:700;">🟠 NON-FOOD</div>
-              <div style="font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:700;color:var(--blue);" id="k-nonfood">—</div>
-              <div style="font-size:10px;color:var(--muted);margin-bottom:8px;" id="k-nonfood-val" style="color:var(--blue);font-weight:700;">AED —</div>
-              <div style="border-top:1px solid rgba(91,141,238,0.15);padding-top:8px;">
-                <div style="padding:4px 0;border-bottom:1px solid rgba(91,141,238,0.08);">
-                  <div style="display:flex;justify-content:space-between;align-items:center;">
-                    <span style="font-size:10px;color:var(--muted);font-weight:600;">DGC</span>
-                    <span id="k-dgc-orders" style="font-size:10px;color:var(--text);">—</span>
-                  </div>
-                  <div style="font-size:11px;color:var(--blue);font-weight:600;text-align:right;margin-top:1px;" id="k-dgc-val">AED —</div>
-                </div>
-                <div style="padding:4px 0;border-bottom:1px solid rgba(91,141,238,0.08);">
-                  <div style="display:flex;justify-content:space-between;align-items:center;">
-                    <span style="font-size:10px;color:var(--muted);font-weight:600;">DGS</span>
-                    <span id="k-dgs-orders" style="font-size:10px;color:var(--text);">—</span>
-                  </div>
-                  <div style="font-size:11px;color:var(--blue);font-weight:600;text-align:right;margin-top:1px;" id="k-dgs-val">AED —</div>
-                </div>
-                <div style="padding:4px 0;">
-                  <div style="display:flex;justify-content:space-between;align-items:center;">
-                    <span style="font-size:10px;color:var(--muted);font-weight:600;">DSN</span>
-                    <span id="k-dsn-orders" style="font-size:10px;color:var(--text);">—</span>
-                  </div>
-                  <div style="font-size:11px;color:var(--blue);font-weight:600;text-align:right;margin-top:1px;" id="k-dsn-val">AED —</div>
-                </div>
-              </div>
-            </div>
-
-            <!-- 3PL -->
-            <div style="background:rgba(91,141,238,0.05);border:1px solid rgba(91,141,238,0.2);padding:12px;">
-              <div style="font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;font-weight:700;">✦ 3PL</div>
-              <div style="font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:700;color:var(--gold);" id="k-pl">—</div>
-              <div style="font-size:10px;color:var(--muted);margin-bottom:8px;">AED 0</div>
-              <div style="border-top:1px solid rgba(91,141,238,0.15);padding-top:8px;">
-                <div style="display:flex;justify-content:space-between;font-size:10px;padding:2px 0;"><span style="color:var(--muted);">HCP</span><span id="k-hcp">—</span></div>
-                <div style="font-size:10px;color:var(--muted);margin-top:6px;line-height:1.4;">Physical delivery only — no invoice value</div>
-              </div>
-            </div>
-
-          </div>
-        </div>
-
+      <!-- Summary cards -->
+      <div class="dispatch-summary" id="dispatch-summary" style="display:none">
+        <div class="dscard" id="ds-orders"><div class="dscard-val" id="ds-orders-val">—</div><div class="dscard-label">Total Orders</div></div>
+        <div class="dscard" id="ds-value"><div class="dscard-val" id="ds-value-val">—</div><div class="dscard-label">Total Value (AED)</div></div>
+        <div class="dscard" id="ds-lulu"><div class="dscard-val" id="ds-lulu-val">—</div><div class="dscard-label">Lulu Orders</div></div>
+        <div class="dscard" id="ds-routes"><div class="dscard-val" id="ds-routes-val">—</div><div class="dscard-label">Routes</div></div>
+        <div class="dscard" id="ds-drivers"><div class="dscard-val" id="ds-drivers-val">—</div><div class="dscard-label">Drivers</div></div>
+        <div class="dscard" id="ds-luluval"><div class="dscard-val" id="ds-luluval-val">—</div><div class="dscard-label">Lulu Value (AED)</div></div>
       </div>
 
-      <!-- Charts Row -->
-      <div class="grid-3-1" id="ds-charts" style="display:none;">
-        <!-- Orders by City Bar Chart -->
-        <div class="box">
-          <div class="box-title">📊 Orders by City <span id="ds-city-total"></span></div>
-          <div class="chart-bars" id="ds-city-bars" style="height:120px;"></div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;" id="ds-city-labels"></div>
-        </div>
-        <!-- Dispatch Status Donut -->
-        <div class="box">
-          <div class="box-title">📈 Order Type Split</div>
-          <div class="donut-wrap">
-            <svg class="donut-svg" width="100" height="100" viewBox="0 0 100 100" id="ds-donut-svg">
-              <circle cx="50" cy="50" r="35" fill="none" stroke="#2a2a1e" stroke-width="18"/>
-              <circle cx="50" cy="50" r="35" fill="none" stroke="#4ecb8d" stroke-width="18" id="donut-food" stroke-dasharray="0 220" stroke-dashoffset="55" style="transition:stroke-dasharray 1s;"/>
-              <circle cx="50" cy="50" r="35" fill="none" stroke="#5b8dee" stroke-width="18" id="donut-nonfood" stroke-dasharray="0 220" stroke-dashoffset="55" style="transition:stroke-dasharray 1s;"/>
-              <circle cx="50" cy="50" r="35" fill="none" stroke="#5b8dee" stroke-width="18" id="donut-pl" stroke-dasharray="0 220" stroke-dashoffset="55" style="transition:stroke-dasharray 1s;"/>
-              <text x="50" y="46" text-anchor="middle" font-size="11" fill="#c9a84c" font-weight="700" id="donut-center">—</text>
-              <text x="50" y="58" text-anchor="middle" font-size="7" fill="#7a7660">ORDERS</text>
-            </svg>
-            <div class="donut-legend" id="ds-donut-legend"></div>
-          </div>
-        </div>
+      <!-- Quick questions -->
+      <div class="field-label" id="quick-q-label" style="display:none">Quick Questions</div>
+      <div class="quick-questions" id="quick-questions" style="display:none">
+        <button class="quick-btn" onclick="askQuick('How many Lulu orders do we have today and what is total value?')">🛒 Lulu Orders</button>
+        <button class="quick-btn" onclick="askQuick('Break down orders and values by city')">🏙️ By City</button>
+        <button class="quick-btn" onclick="askQuick('Who are the top 5 drivers by number of deliveries today?')">🚚 Top Drivers</button>
+        <button class="quick-btn" onclick="askQuick('What are the top 10 customers by order value today?')">💰 Top Customers</button>
+        <button class="quick-btn" onclick="askQuick('Show me all Lulu Food orders and their values')">🍎 Lulu Food</button>
+        <button class="quick-btn" onclick="askQuick('What is the total dispatch value for Dubai today?')">📍 Dubai Orders</button>
+        <button class="quick-btn" onclick="askQuick('What is the total dispatch value for Abu Dhabi today?')">📍 Abu Dhabi</button>
+        <button class="quick-btn" onclick="askQuick('How many orders does each route have today?')">🗺️ Routes</button>
       </div>
 
-      <!-- Tables Row -->
-      <div class="grid-2" id="ds-tables" style="display:none;">
-        <!-- Top Customers -->
-        <div class="box">
-          <div class="box-title">💰 Top Customers by Value</div>
-          <table class="data-table" id="ds-cust-table">
-            <thead><tr><th>#</th><th>Customer</th><th>Orders</th><th>Value (AED)</th></tr></thead>
-            <tbody id="ds-cust-body"></tbody>
-          </table>
-        </div>
-        <!-- Top Drivers -->
-        <div class="box">
-          <div class="box-title">🚚 Top 5 Drivers</div>
-          <div id="ds-drivers-list"></div>
-        </div>
+      <!-- Ask anything -->
+      <div class="field-label" id="dispatch-ask-label" style="display:none">Ask Anything About Today's Dispatch</div>
+      <div class="chat-input-row" id="dispatch-input-row" style="display:none">
+        <textarea id="dispatch-input" class="chat-textarea" placeholder="e.g. How many Lulu orders? What is total value? Which driver has most deliveries?" onkeydown="dispatchKeydown(event)" rows="2"></textarea>
+        <button class="chat-send-btn" id="dispatch-send" onclick="askDispatch()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="22" y1="2" x2="11" y2="13"></line>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+          </svg>
+        </button>
       </div>
 
-      <!-- Route Summary -->
-      <div class="box" id="ds-routes-box" style="display:none;margin-bottom:16px;">
-        <div class="box-title">🗺️ Route Summary — Drops per Route</div>
-        <div style="overflow-x:auto;max-height:300px;overflow-y:auto;">
-          <table class="route-table">
-            <thead><tr><th>Route</th><th>Driver</th><th>Drops</th><th>Value (AED)</th></tr></thead>
-            <tbody id="ds-route-body"></tbody>
-          </table>
-        </div>
+      <!-- Answer -->
+      <div class="output-wrap" id="dispatch-out" style="margin-top:14px;">
+        <div class="output-header"><span class="output-label">✦ Dispatch Answer</span><button class="copy-btn" onclick="copyEl('dispatch-out-text')">Copy</button></div>
+        <div class="output-body" id="dispatch-out-text"></div>
       </div>
 
-      <!-- Ask AI -->
-      <div class="box" id="ds-ask-box" style="display:none;margin-bottom:16px;">
-        <div class="box-title">✦ Ask AI About Today's Dispatch</div>
-        <div class="qbtns" style="margin-bottom:12px;">
-          <button class="qbtn cust" onclick="doAsk('All LULU orders today — total count, value, branches')">🟡 Lulu</button>
-          <button class="qbtn cust" onclick="doAsk('All CARREFOUR orders — count and value')">🔵 Carrefour</button>
-          <button class="qbtn cust" onclick="doAsk('All UNION COOP orders — count and value')">🟢 Union Coop</button>
-          <button class="qbtn cust" onclick="doAsk('All SPINNEYS orders — count and value')">🟣 Spinneys</button>
-          <button class="qbtn cust" onclick="doAsk('All WAITROSE orders — count and value')">⚪ Waitrose</button>
-          <button class="qbtn cust" onclick="doAsk('All CHOITHRAMS orders — count and value')">🟠 Choithrams</button>
-          <button class="qbtn city" onclick="doAsk('Total orders and value for DUBAI today')">📍 Dubai</button>
-          <button class="qbtn city" onclick="doAsk('Total orders and value for ABU DHABI today')">📍 Abu Dhabi</button>
-          <button class="qbtn city" onclick="doAsk('Total orders and value for SHARJAH today')">📍 Sharjah</button>
-          <button class="qbtn city" onclick="doAsk('Total orders and value for FUJAIRAH today')">📍 Fujairah</button>
-          <button class="qbtn city" onclick="doAsk('Total orders and value for AL AIN today')">📍 Al Ain</button>
-          <button class="qbtn stat" onclick="doAsk('Top 5 drivers by deliveries today')">🚚 Top Drivers</button>
-          <button class="qbtn stat" onclick="doAsk('Total food orders value and non-food orders value')">📊 Food vs Non-Food</button>
-          <button class="qbtn stat" onclick="doAsk('Summary of all routes with drops and values')">🗺️ All Routes</button>
+      <!-- Admin upload section -->
+      <div style="margin-top:32px;padding-top:24px;border-top:1px solid var(--border);">
+        <div class="card-eyebrow">Admin Only — Upload Today's Data</div>
+        <div class="upload-box" id="dispatch-upload-box" onclick="document.getElementById('dispatch-file').click()">
+          <div class="upload-icon">📊</div>
+          <div class="upload-text">Upload today's dispatch report (.csv or .xlsx)</div>
+          <div class="upload-sub" id="dispatch-file-name">Export from your system as CSV then upload here</div>
         </div>
-        <div class="ask-row">
-          <textarea id="ds-ask" class="ask-inp" placeholder="Ask anything about today's dispatch..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();doAsk(this.value);this.value=''}" rows="2"></textarea>
-          <button class="send-btn" id="ds-send" onclick="doAsk(document.getElementById('ds-ask').value);document.getElementById('ds-ask').value=''">→</button>
-        </div>
-        <div class="out" id="ds-out" style="margin-top:12px;">
-          <div class="out-head"><span class="out-lbl">✦ Dispatch Intelligence</span><button class="copy" onclick="doCopy('ds-answer')">Copy</button></div>
-          <div class="out-body" id="ds-answer"></div>
-        </div>
-      </div>
-
-      <!-- Admin Upload -->
-      <div class="box">
-        <div class="box-title">🔒 Admin — Upload Today's Dispatch File</div>
-        <div id="admin-lock" style="display:flex;gap:8px;align-items:center;">
-          <input type="password" id="admin-pwd" placeholder="Enter admin password..."
-            style="flex:1;height:42px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:Montserrat,sans-serif;font-size:13px;outline:none;"
-            onkeydown="if(event.key==='Enter')checkPwd()"/>
-          <button onclick="checkPwd()" class="inv-btn" style="flex:0;white-space:nowrap;padding:10px 18px;margin:0;">Unlock</button>
-        </div>
-        <div id="admin-upload" style="display:none;margin-top:12px;">
-          <div class="upload" onclick="document.getElementById('ds-file').click()">
-            <div style="font-size:22px;margin-bottom:6px;">📊</div>
-            <div style="font-size:11px;color:var(--muted);letter-spacing:1px;">Click to Upload Dispatch Report (.xlsx or .csv)</div>
-            <div style="font-size:10px;color:var(--muted);margin-top:3px;" id="ds-file-name">Admin uploads once — team sees live data automatically</div>
-          </div>
-          <input type="file" id="ds-file" accept=".xlsx,.xls,.csv,.txt" style="display:none" onchange="doUpload(this)"/>
-          <div class="loader" id="ds-loader"><div class="ring"></div><div class="ring-txt">Processing your Excel file...</div></div>
-          <button onclick="lockAdmin()" style="margin-top:8px;padding:6px 14px;background:transparent;border:1px solid var(--border);color:var(--muted);font-family:Montserrat,sans-serif;font-size:9px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;">🔒 Lock Admin</button>
+        <input type="file" id="dispatch-file" accept=".csv,.txt,.xlsx,.xls" style="display:none" onchange="handleDispatchFile(this)"/>
+        <div class="loader" id="dispatch-upload-loader" style="display:none;text-align:center;padding:20px;">
+          <div class="loader-ring"></div>
+          <div class="loader-text">Processing dispatch data...</div>
         </div>
       </div>
     </div>
+  </div>
 
-    <!-- ══ DAILY REJECTION ══════════════════════════════ -->
-    <div class="panel" id="rejection">
-      <div class="box">
-        <div class="box-title">📊 Daily Rejection Analysis</div>
-        <div class="upload" onclick="document.getElementById('rej-file').click()">
-          <div style="font-size:22px;margin-bottom:6px;">📋</div>
-          <div style="font-size:11px;color:var(--muted);">Upload rejection report (.xlsx or .csv)</div>
-          <div style="font-size:10px;color:var(--muted);margin-top:3px;" id="rej-file-name">Or paste data below</div>
-        </div>
-        <input type="file" id="rej-file" accept=".csv,.xlsx,.xls,.txt" style="display:none" onchange="loadFile(this,'rej-data','rej-file-name')"/>
-        <label class="lbl">Rejection Data</label>
-        <textarea id="rej-data" placeholder="Paste your rejection/returns data here..."></textarea>
-        <label class="lbl">Analysis Type</label>
-        <div class="pills" id="rej-type">
-          <div class="pill on" onclick="setPill(this,'rej-type')">Full Analysis</div>
-          <div class="pill" onclick="setPill(this,'rej-type')">By Customer</div>
-          <div class="pill" onclick="setPill(this,'rej-type')">By Reason</div>
-          <div class="pill" onclick="setPill(this,'rej-type')">By Product</div>
-          <div class="pill" onclick="setPill(this,'rej-type')">Recommendations</div>
-        </div>
-        <button class="btn" id="rej-btn" onclick="doRejection()"><span>Analyse Daily Rejections</span></button>
-        <div class="loader" id="rej-loader"><div class="ring"></div><div class="ring-txt">Analysing rejection data...</div></div>
-        <div class="out" id="rej-out">
-          <div class="out-head"><span class="out-lbl">✦ Rejection Analysis</span><button class="copy" onclick="doCopy('rej-answer')">Copy</button></div>
-          <div class="out-body" id="rej-answer"></div>
-        </div>
-      </div>
-    </div>
+</main>
 
-    <!-- ══ EXECUTIVE SUMMARY ════════════════════════════ -->
-    <div class="panel" id="summary">
-      <div class="box">
-        <div class="box-title">📋 Executive Summary Generator</div>
-        <label class="lbl">Source Document</label>
-        <textarea id="sum-text" style="min-height:160px;" placeholder="Paste your document, report, email or meeting notes here..."></textarea>
-        <label class="lbl">Output Format</label>
-        <div class="pills" id="sum-type">
-          <div class="pill on" onclick="setPill(this,'sum-type')">Executive Brief</div>
-          <div class="pill" onclick="setPill(this,'sum-type')">Bullet Points</div>
-          <div class="pill" onclick="setPill(this,'sum-type')">Action Items</div>
-          <div class="pill" onclick="setPill(this,'sum-type')">Key Decisions</div>
-          <div class="pill" onclick="setPill(this,'sum-type')">Operations Report</div>
-        </div>
-        <button class="btn" id="sum-btn" onclick="doSummary()"><span>Generate Executive Summary</span></button>
-        <div class="loader" id="sum-loader"><div class="ring"></div><div class="ring-txt">Processing document...</div></div>
-        <div class="out" id="sum-out">
-          <div class="out-head"><span class="out-lbl">✦ Executive Summary</span><button class="copy" onclick="doCopy('sum-answer')">Copy</button></div>
-          <div class="out-body" id="sum-answer"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ══ EMAIL WRITER ═════════════════════════════════ -->
-    <div class="panel" id="email">
-      <div class="box">
-        <div class="box-title">✉️ Professional Email Writer</div>
-        <label class="lbl">Your Draft or Description</label>
-        <textarea id="em-body" style="min-height:120px;" placeholder="Paste your email draft, or describe what you need to communicate..."></textarea>
-        <label class="lbl">Email Type</label>
-        <div class="pills" id="em-type">
-          <div class="pill on" onclick="setPill(this,'em-type')">Fix &amp; Polish</div>
-          <div class="pill" onclick="setPill(this,'em-type')">Customer Complaint</div>
-          <div class="pill" onclick="setPill(this,'em-type')">Supplier</div>
-          <div class="pill" onclick="setPill(this,'em-type')">Management Update</div>
-          <div class="pill" onclick="setPill(this,'em-type')">Apology</div>
-          <div class="pill" onclick="setPill(this,'em-type')">Follow Up</div>
-        </div>
-        <label class="lbl">Recipient (Optional)</label>
-        <textarea id="em-to" style="min-height:44px;" placeholder="e.g. Lulu procurement manager, CEO, Supplier..."></textarea>
-        <button class="btn" id="em-btn" onclick="doEmail()"><span>Write Professional Email</span></button>
-        <div class="loader" id="em-loader"><div class="ring"></div><div class="ring-txt">Writing your email...</div></div>
-        <div class="ediff" id="em-diff">
-          <div class="etabs">
-            <button class="etab on" onclick="setETab('em-final',this)">Final Email</button>
-            <button class="etab" onclick="setETab('em-subject',this)">Subject Lines</button>
-            <button class="etab" onclick="setETab('em-notes',this)">Notes</button>
-            <button class="ecopy" onclick="doCopyActive()">Copy</button>
-          </div>
-          <div class="ebody" id="em-final"></div>
-          <div class="ebody" id="em-subject" style="display:none;"></div>
-          <div class="ebody" id="em-notes" style="display:none;"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ══ PROFORMA INVOICE ═════════════════════════════ -->
-    <div class="panel" id="invoice">
-      <div class="box">
-        <div class="box-title">💼 Proforma Invoice Generator</div>
-        <label class="lbl">Select Company Letterhead</label>
-        <div class="pills" id="inv-co" style="margin-bottom:18px;">
-          <div class="pill on" onclick="setPill(this,'inv-co');setCompany('aki')" style="padding:10px 18px;">🏢 AKI — Al Khayyat Investments</div>
-          <div class="pill" onclick="setPill(this,'inv-co');setCompany('alphamed')" style="padding:10px 18px;">🏥 Alphamed General Trading</div>
-        </div>
-        <div class="inv-grid">
-          <div>
-            <div style="font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">From (Your Company)</div>
-            <input type="text" id="inv-from" class="inv-inp" placeholder="Company name" style="margin-bottom:6px;"/>
-            <textarea id="inv-addr" class="inv-inp" style="height:64px;margin-bottom:6px;resize:none;" placeholder="Address"></textarea>
-            <input type="text" id="inv-contact" class="inv-inp" placeholder="Tel / Email"/>
-          </div>
-          <div>
-            <div style="font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">Bill To (Client)</div>
-            <input type="text" id="inv-client" class="inv-inp" placeholder="Client name" style="margin-bottom:6px;"/>
-            <textarea id="inv-client-addr" class="inv-inp" style="height:64px;resize:none;" placeholder="Client address"></textarea>
-          </div>
-          <div>
-            <div style="font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">Invoice Details</div>
-            <input type="text" id="inv-ref" class="inv-inp" placeholder="Reference No" style="margin-bottom:6px;"/>
-            <input type="text" id="inv-date" class="inv-inp" placeholder="Date" style="margin-bottom:6px;"/>
-            <input type="text" id="inv-valid" class="inv-inp" placeholder="Valid Until" style="margin-bottom:6px;"/>
-            <input type="text" id="inv-terms" class="inv-inp" placeholder="Payment Terms"/>
-          </div>
-        </div>
-        <label class="lbl" style="margin-top:18px;">Line Items</label>
-        <div id="inv-items" style="margin-bottom:10px;width:100%;"></div>
-        <button type="button" onclick="addInvItem()" style="padding:9px 18px;background:transparent;border:1px solid var(--border);color:var(--muted);font-family:'Montserrat',sans-serif;font-size:9px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all 0.2s;margin-bottom:16px;" onmouseover="this.style.borderColor='var(--gold)';this.style.color='var(--gold)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">+ Add Line Item</button>
-        <div class="inv-totals">
-          <div class="inv-total-row"><span style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Subtotal (excl. VAT)</span><span style="font-size:13px;color:var(--text);" id="inv-subtotal">AED 0.00</span></div>
-          <div class="inv-total-row"><span style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">VAT (5%)</span><span style="font-size:13px;color:var(--green);" id="inv-vat">AED 0.00</span></div>
-          <div class="inv-total-row" style="border-top:1px solid var(--border);padding-top:10px;margin-top:4px;"><span style="font-size:12px;color:var(--gold);font-weight:700;text-transform:uppercase;letter-spacing:1px;">Net Total (incl. VAT)</span><span style="font-size:20px;color:var(--gold);font-weight:700;font-family:'Cormorant Garamond',serif;" id="inv-total">AED 0.00</span></div>
-        </div>
-        <label class="lbl">Special Notes / Terms &amp; Conditions</label>
-        <textarea id="inv-notes" class="inv-inp" style="height:60px;margin-bottom:14px;" placeholder="e.g. All prices in AED. VAT 5% applicable."></textarea>
-        <div class="inv-btns">
-          <button class="inv-btn" onclick="previewInv()">👁 Preview &amp; Print PDF</button>
-          <button class="inv-btn blue" onclick="downloadInvWord()">⬇ Download Word</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- ══ EXCEL SUPPORT ════════════════════════════════ -->
-    <div class="panel" id="excel">
-      <div class="box">
-        <div class="box-title">📐 Excel Support &amp; Data Analysis</div>
-        <div class="upload" onclick="document.getElementById('xl-file').click()">
-          <div style="font-size:22px;margin-bottom:6px;">📊</div>
-          <div style="font-size:11px;color:var(--muted);">Upload .csv or .xlsx file</div>
-          <div style="font-size:10px;color:var(--muted);margin-top:3px;" id="xl-file-name">File → Save As → CSV first</div>
-        </div>
-        <input type="file" id="xl-file" accept=".csv,.txt,.xlsx" style="display:none" onchange="loadFileExcel(this)"/>
-        <label class="lbl">Your Formula or Question</label>
-        <textarea id="xl-q" placeholder="e.g. Fix my VLOOKUP returning #N/A&#10;e.g. Analyse this data and give key insights"></textarea>
-        <label class="lbl">Context (Optional)</label>
-        <textarea id="xl-ctx" style="min-height:55px;" placeholder="e.g. Column A = Date, Column B = Customer, Column C = Amount..."></textarea>
-        <button class="btn" id="xl-btn" onclick="doExcel()"><span>Analyse &amp; Fix Excel</span></button>
-        <div class="loader" id="xl-loader"><div class="ring"></div><div class="ring-txt">Analysing your data...</div></div>
-        <div class="out" id="xl-out">
-          <div class="out-head"><span class="out-lbl">✦ Excel Analysis</span><button class="copy" onclick="doCopy('xl-answer')">Copy</button></div>
-          <div class="out-body" id="xl-answer"></div>
-        </div>
-      </div>
-    </div>
-
-  </div><!-- /content -->
-
-  <footer>Powered by <span>✦ AZHAR-AI</span> &nbsp;·&nbsp; Operations &amp; Customer Service Intelligence Platform &nbsp;·&nbsp; V 4.0</footer>
-</div><!-- /main -->
+<footer>
+  <div class="footer-text">
+    <span class="footer-gold">✦</span> Powered by Azhar <span class="footer-gold">✦</span>
+  </div>
+</footer>
 
 <script>
-// ── CLOCK ──────────────────────────────────────────────────────
-function updateClock() {
-  const now = new Date();
-  const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  document.getElementById('tb-date').textContent = days[now.getDay()] + ', ' + now.getDate() + ' ' + months[now.getMonth()] + ' ' + now.getFullYear();
-  document.getElementById('tb-time').textContent = now.toLocaleTimeString('en-AE', {hour:'2-digit',minute:'2-digit'});
-}
-updateClock();
-setInterval(updateClock, 1000);
+let activeDiff='corrected';
+let lastPPTSlides=[];
+let chatHistory=[];
 
-// ── TAB NAVIGATION ─────────────────────────────────────────────
-const TITLES = {
-  dispatch: ['Welcome back, Azhar', 'Operations & Customer Service AI Command Centre'],
-  rejection: ['Daily Rejection Analysis', 'Analyse rejections and returns'],
-  summary: ['Executive Summary Generator', 'Create professional summaries for leadership'],
-  email: ['Professional Email Writer', 'Write and refine business correspondence'],
-  invoice: ['Proforma Invoice Generator', 'Create professional invoices with letterhead'],
-  excel: ['Excel Support & Data Analysis', 'Fix formulas and analyse spreadsheet data']
-};
+function switchTab(id,btn){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');btn.classList.add('active');
+}
+function selOpt(el,g){document.querySelectorAll('#'+g+' .option-pill').forEach(e=>e.classList.remove('sel'));el.classList.add('sel');}
+function getOpt(g){return document.querySelector('#'+g+' .option-pill.sel')?.textContent.trim()||'';}
+function switchDiff(tab,btn){
+  activeDiff=tab;
+  document.querySelectorAll('.diff-btn').forEach(t=>t.classList.remove('on'));btn.classList.add('on');
+  document.querySelectorAll('.diff-body').forEach(c=>c.style.display='none');
+  document.getElementById('diff-'+tab).style.display='block';
+}
+function copyDiff(){navigator.clipboard.writeText(document.getElementById('diff-'+activeDiff).textContent).then(()=>{const btn=event.target;btn.textContent='Copied';setTimeout(()=>btn.textContent='Copy',2000);});}
+function copyEl(id){navigator.clipboard.writeText(document.getElementById(id).textContent).then(()=>{const btn=event.target;btn.textContent='Copied';setTimeout(()=>btn.textContent='Copy',2000);});}
 
-function goTab(id, btn) {
-  document.querySelectorAll('.panel').forEach(p => p.classList.remove('on'));
-  document.querySelectorAll('.sb-item').forEach(b => b.classList.remove('on'));
-  document.getElementById(id).classList.add('on');
-  btn.classList.add('on');
-  const t = TITLES[id] || ['AZHAR-AI',''];
-  document.getElementById('topbar-title').textContent = t[0];
-  document.getElementById('topbar-sub').textContent = t[1];
-}
-
-// ── UTILS ──────────────────────────────────────────────────────
-function setPill(el, g) {
-  document.querySelectorAll('#' + g + ' .pill').forEach(p => p.classList.remove('on'));
-  el.classList.add('on');
-}
-function getPill(g) { return document.querySelector('#' + g + ' .pill.on')?.textContent.trim() || ''; }
-function doCopy(id) {
-  navigator.clipboard.writeText(document.getElementById(id).textContent).then(() => {
-    const btn = event.target; btn.textContent = 'Copied!'; setTimeout(() => btn.textContent = 'Copy', 2000);
-  });
-}
-function showOut(outId, answerId, text) {
-  document.getElementById(answerId).textContent = text;
-  document.getElementById(outId).classList.add('show');
-}
-function setLoad(lid, bid, on) {
-  document.getElementById(lid).style.display = on ? 'block' : 'none';
-  if (bid) document.getElementById(bid).disabled = on;
-}
-async function api(prompt) {
-  const r = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt }) });
-  const d = await r.json();
-  if (d.error) throw new Error(d.error);
-  return d.result || 'No response.';
-}
-function loadFile(input, targetId, nameId) {
-  const file = input.files[0]; if (!file) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    if (targetId) document.getElementById(targetId).value = 'FILE: ' + file.name + '\n\n' + e.target.result.substring(0, 5000);
-    const el = document.getElementById(nameId); el.textContent = '✓ ' + file.name; el.style.color = 'var(--green)';
+function handleExcelFile(input){
+  const file=input.files[0];if(!file)return;
+  const nameEl=document.getElementById('excel-file-name');
+  const box=document.getElementById('excel-upload-box');
+  const reader=new FileReader();
+  reader.onload=function(e){
+    const text=e.target.result;
+    document.getElementById('excel-context').value='FILE: '+file.name+'\n\nDATA:\n'+text.substring(0,4000);
+    nameEl.textContent='✓ '+file.name+' — '+text.split('\n').length+' rows loaded';
+    nameEl.classList.add('loaded');box.classList.add('has-file');
+    if(!document.getElementById('excel-formula').value.trim())
+      document.getElementById('excel-formula').value='Analyse this data. Identify key findings, fix any formula errors, and provide a concise executive summary.';
   };
   reader.readAsText(file);
 }
-function loadFileExcel(input) {
-  const file = input.files[0]; if (!file) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    document.getElementById('xl-ctx').value = 'FILE: ' + file.name + '\nDATA:\n' + e.target.result.substring(0, 4000);
-    const el = document.getElementById('xl-file-name'); el.textContent = '✓ ' + file.name; el.style.color = 'var(--green)';
-    if (!document.getElementById('xl-q').value.trim()) document.getElementById('xl-q').value = 'Analyse this data. Find key insights and give a summary.';
+function handlePPTFile(input){
+  const file=input.files[0];if(!file)return;
+  const nameEl=document.getElementById('ppt-file-name');
+  const box=document.getElementById('ppt-upload-box');
+  const reader=new FileReader();
+  reader.onload=function(e){
+    const text=e.target.result;
+    const topic=document.getElementById('ppt-topic');
+    if(!topic.value.trim())topic.value='Create a professional presentation based on:\n\n'+text.substring(0,3000);
+    nameEl.textContent='✓ '+file.name+' loaded';
+    nameEl.classList.add('loaded');box.classList.add('has-file');
   };
   reader.readAsText(file);
 }
 
-// ── DISPATCH ───────────────────────────────────────────────────
-async function loadStatus() {
-  try {
-    const r = await fetch('/api/dispatch/status');
-    const d = await r.json();
-    if (d.availableDates && d.availableDates.length > 0) buildDatePills(d.availableDates, d.date);
-    if (d.hasData && d.summary) buildDashboard(d);
-    else {
-      const el = document.getElementById('ds-status');
-      el.className = 'd-status';
-      el.innerHTML = '<span style="font-size:16px;">⚠️</span><span class="d-status-txt">No dispatch data yet. Upload your Excel file below.</span>';
-    }
-  } catch(e) {
-    const el = document.getElementById('ds-status');
-    el.className = 'd-status';
-    el.innerHTML = '<span style="font-size:16px;">⚠️</span><span class="d-status-txt">Server starting... please refresh in 30 seconds.</span>';
-  }
+async function callAPI(endpoint,data){
+  const r=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+  const d=await r.json();if(d.error)throw new Error(d.error);return d.result||'No response.';
 }
+async function callExcelAPI(fd){
+  const r=await fetch('/api/excel',{method:'POST',body:fd});
+  const d=await r.json();if(d.error)throw new Error(d.error);return d.result||'No response.';
+}
+async function callPPTAPI(fd){
+  const r=await fetch('/api/powerpoint',{method:'POST',body:fd});
+  const d=await r.json();if(d.error)throw new Error(d.error);return d.result||'No response.';
+}
+function setLoading(lid,bid,on){document.getElementById(lid).style.display=on?'block':'none';document.getElementById(bid).disabled=on;}
+function showOut(outId,textId,text){document.getElementById(textId).textContent=text;document.getElementById(outId).classList.add('show');}
 
-function buildDatePills(dates, current) {
-  const wrap = document.getElementById('ds-date-wrap');
-  const pills = document.getElementById('ds-date-pills');
-  wrap.style.display = 'block';
-  pills.innerHTML = '';
-  const today = new Date().toISOString().split('T')[0];
-  dates.slice(0,30).forEach(dk => {
-    const btn = document.createElement('button');
-    const d = new Date(dk);
-    btn.className = 'dpill' + (dk===today?' today':'') + (dk===current?' on':'');
-    btn.textContent = dk===today ? 'Today' : d.toLocaleDateString('en-AE',{day:'numeric',month:'short'});
-    btn.onclick = () => loadDate(dk);
-    pills.appendChild(btn);
+function parseSlides(text){
+  const slides=[];
+  const blocks=text.split(/Slide\s+\d+[:\-]/i).filter(b=>b.trim());
+  blocks.forEach(block=>{
+    const lines=block.trim().split('\n').filter(l=>l.trim());
+    if(!lines.length)return;
+    const title=lines[0].replace(/^[*#\-\s]+/,'').trim();
+    const bullets=[];let note='';
+    lines.slice(1).forEach(l=>{
+      const clean=l.replace(/^[\-\*\u2022]\s*/,'').trim();
+      if(!clean)return;
+      if(l.toLowerCase().includes('speaker note')||l.toLowerCase().includes('note:')){note=clean.replace(/speaker notes?:?/i,'').trim();}
+      else if(bullets.length<5)bullets.push(clean);
+    });
+    if(title)slides.push({title,bullets,note});
   });
+  return slides;
 }
 
-async function loadDate(dk) {
-  try {
-    const r = await fetch('/api/dispatch/date/' + dk);
-    const d = await r.json();
-    if (d.hasData) { buildDashboard(d); loadStatus(); }
-    else alert('No data for ' + dk);
-  } catch(e) { alert('Error: ' + e.message); }
-}
-
-function buildDashboard(d) {
-  const s = d.summary;
-  const today = new Date().toISOString().split('T')[0];
-  const lbl = d.date === today ? 'Today' : d.date;
-  const val = s.total_value ? (s.total_value >= 1000000 ? (s.total_value/1000000).toFixed(2)+'M' : Math.round(s.total_value).toLocaleString()) : '—';
-
-  // Status
-  const el = document.getElementById('ds-status');
-  el.className = 'd-status live';
-  el.innerHTML = '<span style="font-size:16px;">✅</span><span class="d-status-txt"><strong>' + lbl + '</strong> &nbsp;|&nbsp; ' + (s.total_orders||0).toLocaleString() + ' Orders &nbsp;|&nbsp; AED ' + val + ' &nbsp;|&nbsp; By: ' + d.uploadedBy + '</span>';
-
-  // KPIs
-  document.getElementById('k-orders').textContent = (s.total_orders||0).toLocaleString();
-  document.getElementById('k-routes-sub').textContent = (s.total_routes||0) + ' routes · ' + (s.total_drivers||0) + ' drivers';
-  // Show total drops in routes KPI
-  const dropsEl = document.getElementById('k-drops');
-  if (dropsEl) dropsEl.textContent = (s.total_drops||0).toLocaleString() + ' total drops';
-  document.getElementById('k-value').textContent = 'AED ' + val;
-  document.getElementById('k-food').textContent = (s.food_orders||0).toLocaleString();
-  document.getElementById('k-food-val').textContent = 'AED ' + (s.food_value ? Math.round(s.food_value).toLocaleString() : '0');
-  document.getElementById('k-nonfood').textContent = (s.non_food_orders||0).toLocaleString();
-  document.getElementById('k-nonfood-val').textContent = 'AED ' + (s.non_food_value ? Math.round(s.non_food_value).toLocaleString() : '0');
-  document.getElementById('k-pl').textContent = (s.pl_orders||0).toLocaleString();
-
-  document.getElementById('ds-kpis').style.display = 'grid';
-
-  // City bar chart
-  const colors = ['#c9a84c','#4ecb8d','#5b8dee','#e8c878','#7a9bd4','#a8d4a8','#d4c878','#78b4d4'];
-  if (s.by_city && s.by_city.length) {
-    const cities = s.by_city.slice(0,8);
-    const max = Math.max(...cities.map(c => c.orders||0));
-    document.getElementById('ds-city-bars').innerHTML = cities.map((c,i) => {
-      const h = max>0 ? Math.max(14,Math.round(((c.orders||0)/max)*100)) : 14;
-      const cityShort = (c.city||'').replace('Abu Dhabi','AbuDhabi').replace('Ras Al Khaimah','RAK').replace('Umm Al Quwain','UAQ');
-      return '<div class="chart-bar-wrap" style="display:flex;flex-direction:column;align-items:center;flex:1;">'
-        + '<div style="font-size:11px;color:' + colors[i] + ';font-weight:700;text-align:center;margin-bottom:4px;width:100%;">' + (c.orders||0) + '</div>'
-        + '<div style="width:36px;height:' + h + 'px;background:' + colors[i] + ';border-radius:3px 3px 0 0;"></div>'
-        + '<div style="font-size:10px;color:' + colors[i] + ';font-weight:600;text-align:center;margin-top:6px;white-space:nowrap;">' + cityShort + '</div>'
-        + '</div>';
-    }).join('');
-    document.getElementById('ds-city-labels').innerHTML = '';
-    document.getElementById('ds-charts').style.display = 'grid';
-  }
-
-  // Donut chart
-  const total = (s.food_orders||0) + (s.non_food_orders||0) + (s.pl_orders||0);
-  if (total > 0) {
-    const circ = 2 * Math.PI * 35;
-    const fp = (s.food_orders||0)/total, np = (s.non_food_orders||0)/total, pp = (s.pl_orders||0)/total;
-    const fd = fp*circ, nd = np*circ, pd = pp*circ;
-    document.getElementById('donut-food').setAttribute('stroke-dasharray', fd + ' ' + (circ-fd));
-    document.getElementById('donut-nonfood').setAttribute('stroke-dasharray', nd + ' ' + (circ-nd));
-    document.getElementById('donut-nonfood').setAttribute('stroke-dashoffset', 55 - fd);
-    document.getElementById('donut-pl').setAttribute('stroke-dasharray', pd + ' ' + (circ-pd));
-    document.getElementById('donut-pl').setAttribute('stroke-dashoffset', 55 - fd - nd);
-    document.getElementById('donut-center').textContent = (s.total_orders||0).toLocaleString();
-    document.getElementById('ds-donut-legend').innerHTML =
-      '<div class="donut-item"><div class="donut-dot" style="background:var(--green)"></div><span>Food: <strong>' + (s.food_orders||0) + '</strong></span></div>' +
-      '<div class="donut-item"><div class="donut-dot" style="background:var(--blue)"></div><span>Non-Food: <strong>' + (s.non_food_orders||0) + '</strong></span></div>' +
-      '<div class="donut-item"><div class="donut-dot" style="background:var(--blue)"></div><span>3PL: <strong>' + (s.pl_orders||0) + '</strong></span></div>';
-  }
-
-  // Top customers table
-  if (s.top_customers && s.top_customers.length) {
-    document.getElementById('ds-cust-body').innerHTML = s.top_customers.slice(0,6).map((c,i) =>
-      '<tr><td style="color:var(--muted);">' + (i+1) + '</td><td>' + c.name + '</td><td style="color:var(--muted);">' + (c.orders||0) + '</td><td style="color:var(--gold);font-weight:600;">AED ' + Math.round(c.value||0).toLocaleString() + '</td></tr>'
-    ).join('');
-  }
-
-  // Top drivers
-  if (s.top_drivers && s.top_drivers.length) {
-    const maxD = s.top_drivers[0].orders || 1;
-    document.getElementById('ds-drivers-list').innerHTML = s.top_drivers.slice(0,5).map((dr,i) => {
-      const pct = Math.round((dr.orders/maxD)*100);
-      const col = i<3 ? 'var(--gold)' : 'var(--muted)';
-      return '<div style="margin-bottom:12px;"><div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span style="font-size:12px;color:' + col + ';font-weight:' + (i<3?'600':'400') + '">' + (i+1) + '. ' + dr.name + '</span><span style="font-size:12px;color:' + col + ';font-weight:700">' + dr.orders + ' drops</span></div><div class="progress-bar"><div class="progress-fill" style="width:' + pct + '%;background:' + col + '"></div></div></div>';
-    }).join('');
-  }
-
-  // Route table
-  if (s.top_routes && s.top_routes.length) {
-    document.getElementById('ds-route-body').innerHTML = s.top_routes.map((r,i) =>
-      '<tr><td style="color:var(--gold);font-weight:600;">' + r.route + '</td><td>' + (r.driver||'—') + '</td><td style="text-align:center;font-weight:700;color:var(--gold);">' + r.drops + '</td><td style="text-align:right;">AED ' + (r.value||0).toLocaleString() + '</td></tr>'
-    ).join('');
-    document.getElementById('ds-routes-box').style.display = 'block';
-  }
-
-  document.getElementById('ds-tables').style.display = 'grid';
-  document.getElementById('ds-ask-box').style.display = 'block';
-}
-
-async function doUpload(input) {
-  const file = input.files[0]; if (!file) return;
-  const nameEl = document.getElementById('ds-file-name');
-  nameEl.textContent = '⏳ Uploading ' + file.name + '...'; nameEl.style.color = 'var(--muted)';
-  setLoad('ds-loader', null, true);
-  try {
-    const fd = new FormData(); fd.append('file', file); fd.append('uploadedBy', 'Azhar');
-    const r = await fetch('/api/dispatch/upload', { method: 'POST', body: fd });
-    const d = await r.json();
-    setLoad('ds-loader', null, false);
-    if (d.success) {
-      nameEl.textContent = '✓ ' + file.name + ' — ' + (d.summary?.total_orders||0).toLocaleString() + ' orders loaded';
-      nameEl.style.color = 'var(--green)';
-      document.getElementById('ds-upload-box')?.classList.add('done');
-      buildDashboard(d);
-      loadStatus();
-    } else {
-      nameEl.textContent = '❌ ' + (d.error || 'Upload failed'); nameEl.style.color = 'var(--red)';
-      alert('Upload failed: ' + (d.error || 'Unknown error'));
+function downloadPPTX(){
+  if(!lastPPTSlides.length){alert('Please generate slides first.');return;}
+  const topic=document.getElementById('ppt-topic').value.trim()||'Presentation';
+  const pptx=new PptxGenJS();
+  pptx.layout='LAYOUT_16x9';pptx.author='AZHAR-AI';pptx.title=topic;
+  const ts=pptx.addSlide();
+  ts.background={color:'050505'};
+  ts.addShape(pptx.ShapeType.rect,{x:0.5,y:2.4,w:9,h:0.02,fill:{color:'c9a84c'}});
+  ts.addText(topic,{x:0.5,y:1.0,w:9,h:1.4,fontSize:40,bold:true,color:'f5e0a0',fontFace:'Georgia',align:'center'});
+  ts.addText('AZHAR-AI  |  Executive Intelligence Platform',{x:0.5,y:4.5,w:9,h:0.5,fontSize:11,color:'7a7660',fontFace:'Calibri',align:'center',charSpacing:3});
+  lastPPTSlides.forEach(slide=>{
+    const s=pptx.addSlide();
+    s.background={color:'0a0a08'};
+    s.addShape(pptx.ShapeType.rect,{x:0,y:0,w:'100%',h:1.1,fill:{color:'111109'}});
+    s.addShape(pptx.ShapeType.rect,{x:0,y:1.1,w:'100%',h:0.02,fill:{color:'c9a84c'}});
+    s.addText(slide.title,{x:0.4,y:0.15,w:9.2,h:0.85,fontSize:26,bold:true,color:'f5e0a0',fontFace:'Georgia'});
+    if(slide.bullets.length){
+      const bt=slide.bullets.map(b=>({text:b,options:{bullet:{type:'bullet'},fontSize:15,color:'c8c4b0',fontFace:'Calibri',paraSpaceAfter:10}}));
+      s.addText(bt,{x:0.5,y:1.3,w:9,h:3.8});
     }
-  } catch(e) {
-    setLoad('ds-loader', null, false);
-    nameEl.textContent = '❌ Error: ' + e.message; nameEl.style.color = 'var(--red)';
-    alert('Error: ' + e.message);
-  }
-  input.value = '';
+    if(slide.note)s.addNotes(slide.note);
+    s.addText('AZHAR-AI',{x:8.2,y:5.1,w:1.6,h:0.4,fontSize:8,color:'c9a84c',fontFace:'Calibri',align:'right',charSpacing:2});
+  });
+  const es=pptx.addSlide();
+  es.background={color:'050505'};
+  es.addShape(pptx.ShapeType.rect,{x:0.5,y:2.6,w:9,h:0.02,fill:{color:'c9a84c'}});
+  es.addText('Thank You',{x:0.5,y:1.4,w:9,h:1.2,fontSize:48,bold:true,color:'f5e0a0',fontFace:'Georgia',align:'center'});
+  es.addText('Powered by Azhar',{x:0.5,y:4.5,w:9,h:0.5,fontSize:12,color:'c9a84c',fontFace:'Calibri',align:'center',charSpacing:3});
+  pptx.writeFile({fileName:(topic.replace(/[^a-z0-9]/gi,'_').substring(0,30)||'AZHAR_AI')+'.pptx'});
 }
 
-async function doAsk(q) {
-  if (!q || !q.trim()) return;
-  const el = document.getElementById('ds-out'); el.classList.add('show');
-  document.getElementById('ds-answer').textContent = '✦ Analysing dispatch data...';
-  document.getElementById('ds-send').disabled = true;
-  try {
-    const r = await fetch('/api/dispatch/ask', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({question: q}) });
-    const d = await r.json();
-    document.getElementById('ds-answer').textContent = d.result || 'No answer found.';
-  } catch(e) { document.getElementById('ds-answer').textContent = 'Error: ' + e.message; }
-  document.getElementById('ds-send').disabled = false;
+async function runPPT(){
+  const topic=document.getElementById('ppt-topic').value.trim();
+  if(!topic){alert('Please enter a presentation topic.');return;}
+  document.getElementById('ppt-out').classList.remove('show');
+  document.getElementById('ppt-success').classList.remove('show');
+  document.getElementById('ppt-dl').style.display='none';
+  setLoading('ppt-loader','ppt-btn',true);
+  try{
+    const fd=new FormData();
+    fd.append('topic',topic);fd.append('slides',getOpt('slide-opts'));fd.append('tone',getOpt('ppt-tone'));
+    const fi=document.getElementById('ppt-file');
+    if(fi.files[0])fd.append('file',fi.files[0]);
+    const r=await callPPTAPI(fd);
+    lastPPTSlides=parseSlides(r);
+    showOut('ppt-out','ppt-out-text',r);
+    document.getElementById('ppt-success').classList.add('show');
+    document.getElementById('ppt-dl').style.display='block';
+  }catch(e){alert('Error: '+e.message);}
+  setLoading('ppt-loader','ppt-btn',false);
 }
 
-// Admin password
-const ADMIN_PWD = 'azhar2026';
-function checkPwd() {
-  const pwd = document.getElementById('admin-pwd').value;
-  if (pwd === ADMIN_PWD) {
-    document.getElementById('admin-lock').style.display = 'none';
-    document.getElementById('admin-upload').style.display = 'block';
-    document.getElementById('admin-pwd').value = '';
-  } else {
-    const inp = document.getElementById('admin-pwd');
-    inp.style.borderColor = 'var(--red)'; inp.value = '';
-    inp.placeholder = '❌ Wrong password!';
-    setTimeout(() => { inp.style.borderColor = 'var(--border)'; inp.placeholder = 'Enter admin password...'; }, 2000);
-  }
-}
-function lockAdmin() {
-  document.getElementById('admin-lock').style.display = 'flex';
-  document.getElementById('admin-upload').style.display = 'none';
+async function runExcel(){
+  const f=document.getElementById('excel-formula').value.trim();
+  if(!f){alert('Please enter a formula or request.');return;}
+  document.getElementById('excel-out').classList.remove('show');
+  setLoading('excel-loader','excel-btn',true);
+  try{
+    const fd=new FormData();fd.append('question',f);
+    const fi=document.getElementById('excel-file');
+    if(fi.files[0])fd.append('file',fi.files[0]);
+    else{const c=document.getElementById('excel-context').value.trim();if(c)fd.append('question',f+'\n\nData:\n'+c);}
+    const r=await callExcelAPI(fd);
+    showOut('excel-out','excel-out-text',r);
+  }catch(e){alert('Error: '+e.message);}
+  setLoading('excel-loader','excel-btn',false);
 }
 
-// ── REJECTION ──────────────────────────────────────────────────
-async function doRejection() {
-  const data = document.getElementById('rej-data').value.trim();
-  const fileInput = document.getElementById('rej-file');
-  const hasFile = fileInput.files && fileInput.files[0];
-  if (!data && !hasFile) { alert('Please paste rejection data or upload a file.'); return; }
-  document.getElementById('rej-out').classList.remove('show');
-  setLoad('rej-loader','rej-btn',true);
-  try {
-    let result;
-    if (hasFile) {
-      // Send file directly to server
-      const fd = new FormData();
-      fd.append('file', fileInput.files[0]);
-      fd.append('analysisType', getPill('rej-type'));
-      const r = await fetch('/api/rejection', { method:'POST', body:fd });
-      const d = await r.json();
-      if (d.error) throw new Error(d.error);
-      result = d.result;
-    } else {
-      // Use pasted text
-      result = await api('You are AZHAR-AI Operations Intelligence for UAE logistics.\nAnalyse this rejection/returns data. Analysis Type: ' + getPill('rej-type') + '\nProvide: total rejections count, total value, top 10 customers by rejection value, top rejection reasons, top rejected products, monthly trend if dates available, recommendations.\n\nData:\n' + data.substring(0,8000));
-    }
-    showOut('rej-out','rej-answer', result);
-  } catch(e) { alert('Error: ' + e.message); }
-  setLoad('rej-loader','rej-btn',false);
-}
-
-// ── SUMMARY ────────────────────────────────────────────────────
-async function doSummary() {
-  const text = document.getElementById('sum-text').value.trim();
-  if (!text) { alert('Please paste your document.'); return; }
+async function runSummary(){
+  const t=document.getElementById('summary-text').value.trim();
+  if(!t){alert('Please paste your document.');return;}
+  const style=getOpt('sum-tone');
+  const styles={'Executive Brief':'Write a concise 3-5 sentence executive summary.','Bullet Points':'Summarise as clear bullet points by theme.','Action Items':'Extract all action items and next steps.','Key Decisions':'Identify key decisions with supporting context.'};
   document.getElementById('sum-out').classList.remove('show');
-  setLoad('sum-loader','sum-btn',true);
-  try {
-    const styles = {'Executive Brief':'Write a concise 4-6 sentence executive summary.','Bullet Points':'Summarise as clear bullet points.','Action Items':'Extract all action items and next steps.','Key Decisions':'Identify key decisions with context.','Operations Report':'Format as operations report: Overview, Key Metrics, Issues, Actions.'};
-    const type = getPill('sum-type');
-    const r = await api('You are AZHAR-AI for UAE logistics.\nStyle: ' + type + ' — ' + (styles[type]||styles['Executive Brief']) + '\n\nDocument:\n' + text);
-    showOut('sum-out','sum-answer',r);
-  } catch(e) { alert('Error: ' + e.message); }
-  setLoad('sum-loader','sum-btn',false);
+  setLoading('sum-loader','sum-btn',true);
+  try{
+    const r=await callAPI('/api/chat',{prompt:'You are AZHAR-AI, an executive assistant.\n\nSummarise the following. Style: '+style+' - '+styles[style]+'\n\nDocument:\n'+t});
+    showOut('sum-out','sum-out-text',r);
+  }catch(e){alert('Error: '+e.message);}
+  setLoading('sum-loader','sum-btn',false);
 }
 
-// ── EMAIL ──────────────────────────────────────────────────────
-let activeETab = 'em-final';
-function setETab(id, btn) {
-  activeETab = id;
-  document.querySelectorAll('.etab').forEach(t => t.classList.remove('on')); btn.classList.add('on');
-  document.querySelectorAll('.ebody').forEach(b => b.style.display = 'none');
-  document.getElementById(id).style.display = 'block';
-}
-function doCopyActive() {
-  navigator.clipboard.writeText(document.getElementById(activeETab).textContent).then(() => {
-    const btn = event.target; btn.textContent = 'Copied!'; setTimeout(() => btn.textContent = 'Copy', 2000);
-  });
-}
-async function doEmail() {
-  const body = document.getElementById('em-body').value.trim();
-  if (!body) { alert('Please enter your email.'); return; }
-  document.getElementById('em-diff').classList.remove('show');
-  setLoad('em-loader','em-btn',true);
-  try {
-    const type = getPill('em-type');
-    const to = document.getElementById('em-to').value.trim();
-    const raw = await api('You are AZHAR-AI professional email writer for UAE logistics.\nTask: ' + type + (to?'\nRecipient: '+to:'') + '\nEmail:\n' + body + '\n\nRespond in EXACT format:\n\nFINAL EMAIL:\n[email]\n\nSUBJECT LINE:\n[3 options]\n\nNOTES:\n[key points]');
-    const fe = raw.match(/FINAL EMAIL:\s*([\s\S]*?)(?=SUBJECT LINE:|$)/i);
-    const sl = raw.match(/SUBJECT LINE:\s*([\s\S]*?)(?=NOTES:|$)/i);
-    const nt = raw.match(/NOTES:\s*([\s\S]*?)$/i);
-    document.getElementById('em-final').textContent = fe ? fe[1].trim() : raw;
-    document.getElementById('em-subject').textContent = sl ? sl[1].trim() : '';
-    document.getElementById('em-notes').textContent = nt ? nt[1].trim() : '';
-    document.querySelectorAll('.etab').forEach(t => t.classList.remove('on'));
-    document.querySelectorAll('.etab')[0].classList.add('on');
-    document.querySelectorAll('.ebody').forEach(b => b.style.display = 'none');
-    document.getElementById('em-final').style.display = 'block';
-    activeETab = 'em-final';
-    document.getElementById('em-diff').classList.add('show');
-  } catch(e) { alert('Error: ' + e.message); }
-  setLoad('em-loader','em-btn',false);
+async function runEmail(){
+  const body=document.getElementById('email-body').value.trim();
+  if(!body){alert('Please enter your email draft.');return;}
+  const action=getOpt('email-action');
+  const recipient=document.getElementById('email-recipient').value.trim();
+  document.getElementById('email-out').classList.remove('show');
+  setLoading('email-loader','email-btn',true);
+  try{
+    const raw=await callAPI('/api/chat',{prompt:'You are AZHAR-AI, a professional correspondence specialist.\n\nTask: '+action+'\n'+(recipient?'Recipient: '+recipient:'')+'\nEmail:\n'+body+'\n\nRespond in this EXACT format:\n\nCORRECTED EMAIL:\n[refined email]\n\nSUBJECT LINE:\n[3 subject line options]\n\nWHAT CHANGED:\n[bullet points of improvements]'});
+    const c=raw.match(/CORRECTED EMAIL:\s*([\s\S]*?)(?=SUBJECT LINE:|$)/i);
+    const s=raw.match(/SUBJECT LINE:\s*([\s\S]*?)(?=WHAT CHANGED:|$)/i);
+    const w=raw.match(/WHAT CHANGED:\s*([\s\S]*?)$/i);
+    document.getElementById('diff-corrected').textContent=c?c[1].trim():raw;
+    document.getElementById('diff-subject').textContent=s?s[1].trim():'See refined email.';
+    document.getElementById('diff-changes').textContent=w?w[1].trim():'See refined email.';
+    document.querySelectorAll('.diff-btn').forEach(t=>t.classList.remove('on'));
+    document.querySelectorAll('.diff-btn')[0].classList.add('on');
+    document.querySelectorAll('.diff-body').forEach(c=>c.style.display='none');
+    document.getElementById('diff-corrected').style.display='block';
+    activeDiff='corrected';
+    document.getElementById('email-out').classList.add('show');
+  }catch(e){alert('Error: '+e.message);}
+  setLoading('email-loader','email-btn',false);
 }
 
-// ── INVOICE ────────────────────────────────────────────────────
-const COS = {
-  aki: { name:'Al Khayyat Investments LLC', addr:'P.O Box 11245, Dubai, UAE', contact:'Tel: 04 810 5555 | Fax: 04 885 9081 | info@aki.ae', color:'#1a237e' },
-  alphamed: { name:'Alphamed General Trading LLC', addr:'P.O Box 11245, Dubai, UAE', contact:'Tel: 04 810 5555 | alphamed@emirates.net', color:'#cc0000' }
-};
-let selCo = 'aki', invCount = 0;
+// CHAT
+function chatKeydown(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChat();}}
 
-function setCompany(k) {
-  selCo = k; const co = COS[k];
-  document.getElementById('inv-from').value = co.name;
-  document.getElementById('inv-addr').value = co.addr;
-  document.getElementById('inv-contact').value = co.contact;
+function clearChat(){
+  chatHistory=[];
+  document.getElementById('chat-window').innerHTML='<div class="chat-welcome"><div class="chat-welcome-icon">✦</div><div class="chat-welcome-title">How can I assist you today?</div><div class="chat-welcome-sub">Ask me anything — I am here to help</div></div>';
 }
 
-function addInvItem() {
-  invCount++;
-  const row = document.createElement('div');
-  row.className = 'item-row';
-  row.style.cssText = 'border:1px solid #2a2a1e;margin-bottom:10px;background:#161612;';
-  row.innerHTML =
-    '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-bottom:1px solid #2a2a1e;background:rgba(201,168,76,0.06);">'
-    + '<span style="font-size:11px;color:#c9a84c;font-weight:700;letter-spacing:2px;">ITEM ' + invCount + '</span>'
-    + '<button type="button" onclick="this.closest(\'.item-row\').remove();calcInv()" style="background:transparent;border:1px solid rgba(232,75,75,0.4);color:#e84b4b;cursor:pointer;font-size:10px;padding:5px 14px;font-family:Montserrat,sans-serif;letter-spacing:1px;">DELETE</button>'
-    + '</div>'
-    + '<div style="padding:10px 16px 0;">'
-    + '<div style="font-size:9px;color:#7a7660;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">Description</div>'
-    + '<input type="text" placeholder="Enter full item description here..." oninput="calcInv()" style="width:100%;height:44px;padding:10px 12px;background:#111109;border:1px solid #2a2a1e;color:#f0ece0;font-family:Montserrat,sans-serif;font-size:13px;outline:none;box-sizing:border-box;"/>'
-    + '</div>'
-    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:10px 16px 0;">'
-    + '<div><div style="font-size:9px;color:#7a7660;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">Barcode</div><input type="text" placeholder="Barcode number" style="width:100%;height:44px;padding:10px 12px;background:#111109;border:1px solid #2a2a1e;color:#f0ece0;font-family:Montserrat,sans-serif;font-size:13px;outline:none;box-sizing:border-box;"/></div>'
-    + '<div><div style="font-size:9px;color:#7a7660;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">Quantity</div><input type="text" placeholder="0" oninput="calcInv()" style="width:100%;height:44px;padding:10px 12px;background:#111109;border:1px solid #2a2a1e;color:#f0ece0;font-family:Montserrat,sans-serif;font-size:13px;outline:none;box-sizing:border-box;text-align:center;"/></div>'
-    + '</div>'
-    + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;padding:10px 16px 14px;">'
-    + '<div><div style="font-size:9px;color:#7a7660;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">Unit Price (AED)</div><input type="text" placeholder="0.00" oninput="calcInv()" style="width:100%;height:44px;padding:10px 12px;background:#111109;border:1px solid #2a2a1e;color:#f0ece0;font-family:Montserrat,sans-serif;font-size:13px;outline:none;box-sizing:border-box;text-align:right;"/></div>'
-    + '<div><div style="font-size:9px;color:#7a7660;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">VAT</div><label style="display:flex;align-items:center;gap:8px;height:44px;padding:0 12px;background:#111109;border:1px solid #2a2a1e;cursor:pointer;box-sizing:border-box;"><input type="checkbox" checked class="vat-chk" onchange="calcInv()" style="width:16px;height:16px;accent-color:#c9a84c;flex-shrink:0;"/><span style="font-size:11px;color:#7a7660;white-space:nowrap;">5% VAT</span></label></div>'
-    + '<div><div style="font-size:9px;color:#4ecb8d;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">VAT Amt (AED)</div><input type="text" readonly class="vat-amt" placeholder="Auto" style="width:100%;height:44px;padding:10px 12px;background:rgba(78,203,141,0.05);border:1px solid rgba(78,203,141,0.2);color:#4ecb8d;font-family:Montserrat,sans-serif;font-size:13px;font-weight:600;outline:none;box-sizing:border-box;text-align:right;cursor:default;"/></div>'
-    + '<div><div style="font-size:9px;color:#c9a84c;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">Net Amt (AED)</div><input type="text" readonly class="net-amt" placeholder="Auto" style="width:100%;height:44px;padding:10px 12px;background:rgba(201,168,76,0.05);border:1px solid rgba(201,168,76,0.2);color:#c9a84c;font-family:Montserrat,sans-serif;font-size:15px;font-weight:700;outline:none;box-sizing:border-box;text-align:right;cursor:default;"/></div>'
-    + '</div>';
-  document.getElementById('inv-items').appendChild(row);
-  row.querySelector('input').focus();
+function addMessage(role,text){
+  const win=document.getElementById('chat-window');
+  const welcome=win.querySelector('.chat-welcome');if(welcome)welcome.remove();
+  const div=document.createElement('div');
+  div.className='chat-msg '+role;
+  const avatar=role==='user'?'A':'✦';
+  div.innerHTML='<div class="chat-avatar">'+avatar+'</div><div class="chat-bubble">'+text.replace(/\n/g,'<br>')+'</div>';
+  win.appendChild(div);win.scrollTop=win.scrollHeight;
 }
 
-function calcInv() {
-  let sub = 0, totalVat = 0;
-  document.querySelectorAll('.item-row').forEach(row => {
-    const inputs = row.querySelectorAll('input[type=text]');
-    const chk = row.querySelector('.vat-chk');
-    const qty = parseFloat(inputs[2]?.value) || 0;
-    const price = parseFloat(inputs[3]?.value) || 0;
-    const amt = qty * price;
-    const vat = chk && chk.checked ? amt * 0.05 : 0;
-    const net = amt + vat;
-    const vatEl = row.querySelector('.vat-amt');
-    const netEl = row.querySelector('.net-amt');
-    if (vatEl) vatEl.value = vat > 0 ? vat.toFixed(2) : '';
-    if (netEl) netEl.value = net > 0 ? net.toFixed(2) : '';
-    sub += amt; totalVat += vat;
-  });
-  document.getElementById('inv-subtotal').textContent = 'AED ' + sub.toFixed(2);
-  document.getElementById('inv-vat').textContent = 'AED ' + totalVat.toFixed(2);
-  document.getElementById('inv-total').textContent = 'AED ' + (sub+totalVat).toFixed(2);
+function addTyping(){
+  const win=document.getElementById('chat-window');
+  const div=document.createElement('div');
+  div.className='chat-msg ai';div.id='chat-typing-indicator';
+  div.innerHTML='<div class="chat-avatar">✦</div><div class="chat-bubble"><div class="chat-typing"><span></span><span></span><span></span></div></div>';
+  win.appendChild(div);win.scrollTop=win.scrollHeight;
 }
 
-function getInvRows() {
-  let rows = ''; let i = 0;
-  document.querySelectorAll('.item-row').forEach(row => {
-    const inputs = row.querySelectorAll('input[type=text]');
-    const chk = row.querySelector('.vat-chk');
-    const desc = inputs[0]?.value || ''; if (!desc) return;
-    i++;
-    const bc = inputs[1]?.value||'', qty = inputs[2]?.value||'', price = inputs[3]?.value||'';
-    const vat = row.querySelector('.vat-amt')?.value||'';
-    const net = row.querySelector('.net-amt')?.value||'';
-    const td = 'padding:8px;border:1px solid #e0e0e0;font-size:10pt;';
-    rows += '<tr><td style="' + td + 'text-align:center;">' + i + '</td><td style="' + td + '">' + desc + '</td><td style="' + td + 'text-align:center;">' + bc + '</td><td style="' + td + 'text-align:center;">' + qty + '</td><td style="' + td + 'text-align:right;">' + price + '</td><td style="' + td + 'text-align:right;color:green;">' + (chk&&chk.checked?vat:'No VAT') + '</td><td style="' + td + 'text-align:right;font-weight:700;">' + net + '</td></tr>';
-  });
-  return rows || '<tr><td colspan="7" style="padding:10px;text-align:center;color:#aaa;">No items</td></tr>';
+function removeTyping(){const t=document.getElementById('chat-typing-indicator');if(t)t.remove();}
+
+async function sendChat(){
+  const input=document.getElementById('chat-input');
+  const msg=input.value.trim();if(!msg)return;
+  input.value='';
+  document.getElementById('chat-send').disabled=true;
+  addMessage('user',msg);
+  chatHistory.push({role:'user',content:msg});
+  addTyping();
+  try{
+    const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt:msg,history:chatHistory.slice(-10)})});
+    const d=await r.json();removeTyping();
+    const reply=d.result||'I apologise, I was unable to process that request.';
+    addMessage('ai',reply);
+    chatHistory.push({role:'assistant',content:reply});
+  }catch(e){removeTyping();addMessage('ai','I apologise, there was an error. Please try again.');}
+  document.getElementById('chat-send').disabled=false;
+  input.focus();
 }
 
-function previewInv() {
-  const co = COS[selCo];
-  const ref = document.getElementById('inv-ref').value || ('PRO-INV-' + Date.now().toString().slice(-8));
-  const css = 'body{font-family:Calibri,Arial,sans-serif;font-size:11pt;color:#1a1a1a;padding:30px 40px;background:#fff;}.hdr{background:' + co.color + ';padding:20px 30px;margin:-30px -40px 24px;color:#fff;display:flex;justify-content:space-between;align-items:center;}.hdr-co{font-size:20pt;font-weight:800;letter-spacing:2px;}.hdr-info{text-align:right;font-size:9pt;opacity:0.9;line-height:1.6;}h1{font-size:17pt;text-align:center;color:' + co.color + ';letter-spacing:4px;margin:0 0 20px;}.meta{display:flex;justify-content:space-between;margin-bottom:18px;}.lbl{font-size:8pt;color:#999;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;}.val{font-size:11pt;font-weight:700;}.bill{background:#f8f8f8;padding:12px;border-left:4px solid ' + co.color + ';margin-bottom:18px;}table{width:100%;border-collapse:collapse;margin-bottom:14px;}th{background:#1a1a2e;color:#c9a84c;padding:9px 8px;font-size:9pt;text-transform:uppercase;letter-spacing:1px;border:1px solid #ccc;}td{padding:8px;border:1px solid #e0e0e0;font-size:10pt;}tr:nth-child(even) td{background:#fafafa;}.tots{margin-left:auto;width:44%;}.tots table{width:100%;}.tots td{border:none;padding:5px 8px;font-size:11pt;}.gt td{font-weight:700;font-size:13pt;color:' + co.color + ';border-top:2px solid ' + co.color + ';padding-top:8px;}.sigs{display:flex;justify-content:space-between;margin-top:50px;}.sig{text-align:center;width:28%;border-top:1px solid #333;padding-top:8px;font-size:10pt;color:#555;}.footer{margin-top:24px;text-align:center;font-size:9pt;color:#aaa;border-top:1px solid #eee;padding-top:8px;}.pbtn{position:fixed;top:16px;right:16px;padding:12px 28px;background:' + co.color + ';color:#fff;border:none;font-size:11pt;cursor:pointer;font-weight:700;border-radius:4px;}@media print{.pbtn{display:none;}}';
-  const body = '<button class="pbtn" onclick="window.print()">🖨 Print / Save PDF</button>'
-    + '<div class="hdr"><div class="hdr-co">' + co.name + '</div><div class="hdr-info"><div>' + document.getElementById('inv-addr').value.split('\n').join(' | ') + '</div><div>' + document.getElementById('inv-contact').value + '</div></div></div>'
-    + '<h1>PROFORMA INVOICE</h1>'
-    + '<div class="meta"><div><div class="lbl">Bill To</div><div class="val">' + document.getElementById('inv-client').value + '</div><div style="font-size:10pt;color:#444;margin-top:3px;">' + document.getElementById('inv-client-addr').value + '</div></div><div style="text-align:right;"><div class="lbl">Reference No</div><div class="val" style="color:' + co.color + '">' + ref + '</div><div style="margin-top:5px;"><span class="lbl">Date: </span>' + document.getElementById('inv-date').value + '</div><div><span class="lbl">Valid: </span>' + document.getElementById('inv-valid').value + '</div><div><span class="lbl">Terms: </span>' + document.getElementById('inv-terms').value + '</div></div></div>'
-    + '<table><thead><tr><th style="width:4%;text-align:center;">Sr.</th><th style="width:30%">Description</th><th style="width:14%;text-align:center;">Barcode</th><th style="width:7%;text-align:center;">Qty</th><th style="width:14%;text-align:right;">Unit Price</th><th style="width:13%;text-align:right;">VAT 5%</th><th style="width:18%;text-align:right;">Net Amount</th></tr></thead><tbody>' + getInvRows() + '</tbody></table>'
-    + '<div class="tots"><table><tr><td>Subtotal (excl. VAT):</td><td style="text-align:right">' + document.getElementById('inv-subtotal').textContent + '</td></tr><tr><td>VAT (5%):</td><td style="text-align:right;color:green">' + document.getElementById('inv-vat').textContent + '</td></tr><tr class="gt"><td>Net Total:</td><td style="text-align:right">' + document.getElementById('inv-total').textContent + '</td></tr></table></div>'
-    + (document.getElementById('inv-notes').value ? '<div style="padding:10px;background:#f9f9f9;border-left:3px solid ' + co.color + ';margin-bottom:16px;"><strong>Notes:</strong> ' + document.getElementById('inv-notes').value + '</div>' : '')
-    + '<div class="sigs"><div class="sig">Prepared By</div><div class="sig">Authorized Signatory</div><div class="sig">Client Acknowledgement</div></div>'
-    + '<div class="footer">Powered by AZHAR-AI ✦ ' + co.name + '</div>';
-  const html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>' + ref + '</title><style>' + css + '</style></head><body>' + body + '</body></html>';
-  const blob = new Blob([html], {type:'text/html;charset=utf-8'});
-  const url = URL.createObjectURL(blob);
-  const win = window.open(url, '_blank');
-  if (!win) alert('Please allow popups for this site.');
-  setTimeout(() => URL.revokeObjectURL(url), 60000);
-}
-
-function downloadInvWord() {
-  const co = COS[selCo];
-  const ref = document.getElementById('inv-ref').value || ('PRO-INV-' + Date.now().toString().slice(-8));
-  const html = '<html><head><meta charset="utf-8"><title>' + ref + '</title><style>body{font-family:Calibri;font-size:11pt;margin:2cm;}h1{font-size:15pt;text-align:center;color:' + co.color + ';border-bottom:2px solid ' + co.color + ';padding-bottom:8px;margin-bottom:16px;}table{width:100%;border-collapse:collapse;margin:14px 0;}th{background:#1a1a2e;color:#c9a84c;padding:8px;font-size:9pt;border:1px solid #ddd;}td{padding:7px;border:1px solid #ddd;}</style></head><body>'
-    + '<h1>PROFORMA INVOICE</h1>'
-    + '<table><tr><td style="width:50%;border:none;vertical-align:top;"><strong>From:</strong><br>' + document.getElementById('inv-from').value + '<br>' + document.getElementById('inv-addr').value + '<br>' + document.getElementById('inv-contact').value + '</td><td style="width:50%;border:none;text-align:right;vertical-align:top;"><strong>Ref:</strong> ' + ref + '<br><strong>Date:</strong> ' + document.getElementById('inv-date').value + '<br><strong>Valid:</strong> ' + document.getElementById('inv-valid').value + '</td></tr></table>'
-    + '<div style="background:#f0f0f0;padding:10px;margin-bottom:14px;"><strong>Bill To:</strong> ' + document.getElementById('inv-client').value + '<br>' + document.getElementById('inv-client-addr').value + '</div>'
-    + '<table><thead><tr><th>Sr.</th><th>Description</th><th>Barcode</th><th>Qty</th><th>Unit Price</th><th>VAT 5%</th><th>Net Amount</th></tr></thead><tbody>' + getInvRows() + '</tbody></table>'
-    + '<table style="margin-left:auto;width:40%;"><tr><td>Subtotal:</td><td style="text-align:right">' + document.getElementById('inv-subtotal').textContent + '</td></tr><tr><td>VAT:</td><td style="text-align:right;color:green">' + document.getElementById('inv-vat').textContent + '</td></tr><tr style="font-weight:700;color:' + co.color + '"><td>Net Total:</td><td style="text-align:right">' + document.getElementById('inv-total').textContent + '</td></tr></table>'
-    + '<p style="text-align:center;margin-top:40px;color:#aaa;font-size:9pt;">Powered by AZHAR-AI ✦ ' + co.name + '</p></body></html>';
-  const blob = new Blob([html], {type:'application/msword'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a'); a.href=url; a.download=ref+'.doc'; a.click();
-  URL.revokeObjectURL(url);
-}
-
-// ── EXCEL ──────────────────────────────────────────────────────
-async function doExcel() {
-  const q = document.getElementById('xl-q').value.trim();
-  if (!q) { alert('Please enter your question.'); return; }
-  document.getElementById('xl-out').classList.remove('show');
-  setLoad('xl-loader','xl-btn',true);
-  try {
-    const ctx = document.getElementById('xl-ctx').value.trim();
-    const fd = new FormData();
-    fd.append('question', q + (ctx ? '\n\nData:\n' + ctx : ''));
-    const fi = document.getElementById('xl-file');
-    if (fi.files[0]) fd.append('file', fi.files[0]);
-    const r = await fetch('/api/excel', {method:'POST', body:fd});
-    const d = await r.json();
-    if (d.error) throw new Error(d.error);
-    showOut('xl-out','xl-answer', d.result||'No response.');
-  } catch(e) { alert('Error: ' + e.message); }
-  setLoad('xl-loader','xl-btn',false);
-}
-
-// ── INIT ───────────────────────────────────────────────────────
-setCompany('aki');
-addInvItem();
-loadStatus();
-
-// ── VIEW: TODAY / MTD / YTD ───────────────────────────────────
-let currentView = 'today';
-let allHistory = {};
-
-function setView(view) {
-  currentView = view;
-  document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('on'));
-  document.getElementById('vbtn-' + view).classList.add('on');
-
-  const label = document.getElementById('ds-period-label');
-  const now = new Date();
-  const monthName = now.toLocaleString('en-AE', {month:'long'});
-  const year = now.getFullYear();
-
-  if (view === 'today') {
-    label.textContent = 'TODAY';
-    label.style.display = 'block';
-    // Show date slicer for today view
-    document.getElementById('ds-date-wrap').style.display = 'flex';
-    loadStatus();
-  } else if (view === 'mtd') {
-    label.textContent = 'MTD — ' + monthName + ' ' + year;
-    label.style.display = 'block';
-    document.getElementById('ds-date-wrap').style.display = 'none';
-    buildAggregated('mtd');
-  } else if (view === 'ytd') {
-    label.textContent = 'YTD — ' + year;
-    label.style.display = 'block';
-    document.getElementById('ds-date-wrap').style.display = 'none';
-    buildAggregated('ytd');
+// DISPATCH COPILOT
+async function loadDispatchStatus(){
+  try{
+    const r=await fetch('/api/dispatch/status');
+    const d=await r.json();
+    const statusEl=document.getElementById('dispatch-status');
+    if(d.hasData && d.summary){
+      const s=d.summary;
+      const uploadTime=new Date(d.uploadedAt).toLocaleString('en-AE');
+      statusEl.className='dispatch-status live';
+      statusEl.innerHTML='<div class="dispatch-status-icon">✅</div><div class="dispatch-status-text">Live data loaded by '+d.uploadedBy+' at '+uploadTime+'</div>';
+      // Fill summary cards
+      document.getElementById('ds-orders-val').textContent=s.total_orders?.toLocaleString()||'—';
+      document.getElementById('ds-value-val').textContent=s.total_value?Math.round(s.total_value).toLocaleString():'—';
+      document.getElementById('ds-lulu-val').textContent=s.lulu_orders?.toLocaleString()||'—';
+      document.getElementById('ds-routes-val').textContent=s.total_routes?.toLocaleString()||'—';
+      document.getElementById('ds-drivers-val').textContent=s.total_drivers?.toLocaleString()||'—';
+      document.getElementById('ds-luluval-val').textContent=s.lulu_value?Math.round(s.lulu_value).toLocaleString():'—';
+      document.getElementById('dispatch-summary').style.display='grid';
+      document.getElementById('quick-q-label').style.display='block';
+      document.getElementById('quick-questions').style.display='flex';
+      document.getElementById('dispatch-ask-label').style.display='block';
+      document.getElementById('dispatch-input-row').style.display='flex';
+    } else {
+      statusEl.className='dispatch-status';
+      statusEl.innerHTML='<div class="dispatch-status-icon">⚠️</div><div class="dispatch-status-text">No dispatch data loaded today. Ask admin to upload the daily report.</div>';
+    }
+  }catch(e){
+    document.getElementById('dispatch-status').innerHTML='<div class="dispatch-status-icon">⚠️</div><div class="dispatch-status-text">Could not connect to server.</div>';
   }
 }
 
-async function buildAggregated(period) {
-  const el = document.getElementById('ds-status');
-  el.className = 'd-status';
-  el.innerHTML = '<span style="font-size:16px;">⏳</span><span class="d-status-txt">Loading ' + period.toUpperCase() + ' data...</span>';
+function dispatchKeydown(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();askDispatch();}}
 
-  try {
-    const r = await fetch('/api/dispatch/status');
-    const d = await r.json();
+function askQuick(q){
+  document.getElementById('dispatch-input').value=q;
+  askDispatch();
+}
 
-    if (!d.availableDates || d.availableDates.length === 0) {
-      el.innerHTML = '<span style="font-size:16px;">⚠️</span><span class="d-status-txt">No data available. Upload your Excel files first.</span>';
-      return;
+async function askDispatch(){
+  const q=document.getElementById('dispatch-input').value.trim();
+  if(!q){alert('Please enter a question.');return;}
+  document.getElementById('dispatch-send').disabled=true;
+  document.getElementById('dispatch-out').classList.add('show');
+  document.getElementById('dispatch-out-text').textContent='Analysing your dispatch data...';
+  try{
+    const r=await fetch('/api/dispatch/ask',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:q})});
+    const d=await r.json();
+    document.getElementById('dispatch-out-text').textContent=d.result||'No answer.';
+  }catch(e){
+    document.getElementById('dispatch-out-text').textContent='Error: '+e.message;
+  }
+  document.getElementById('dispatch-send').disabled=false;
+}
+
+async function handleDispatchFile(input){
+  const file=input.files[0];if(!file)return;
+  const nameEl=document.getElementById('dispatch-file-name');
+  const box=document.getElementById('dispatch-upload-box');
+  nameEl.textContent='✓ '+file.name+' uploading...';
+  box.classList.add('has-file');
+  document.getElementById('dispatch-upload-loader').style.display='block';
+  try{
+    const fd=new FormData();
+    fd.append('file',file);
+    fd.append('uploadedBy','Azhar');
+    const r=await fetch('/api/dispatch/upload',{method:'POST',body:fd});
+    const d=await r.json();
+    document.getElementById('dispatch-upload-loader').style.display='none';
+    if(d.success){
+      nameEl.textContent='✓ '+file.name+' uploaded! '+( d.summary?.total_orders||'')+ ' orders loaded.';
+      nameEl.classList.add('loaded');
+      loadDispatchStatus();
+      alert('✅ Dispatch data uploaded successfully!
+
+Your team can now ask questions about today's dispatch.');
+    } else {
+      nameEl.textContent='Upload failed: '+(d.error||'Unknown error');
+      alert('Upload failed: '+(d.error||'Unknown error'));
     }
-
-    // Filter dates based on period
-    const now = new Date();
-    const thisYear = now.getFullYear();
-    const thisMonth = now.getMonth();
-
-    const filteredDates = d.availableDates.filter(dk => {
-      const date = new Date(dk);
-      if (period === 'mtd') return date.getFullYear() === thisYear && date.getMonth() === thisMonth;
-      if (period === 'ytd') return date.getFullYear() === thisYear;
-      return true;
-    });
-
-    if (filteredDates.length === 0) {
-      el.innerHTML = '<span style="font-size:16px;">⚠️</span><span class="d-status-txt">No data found for this period. Upload more daily files.</span>';
-      return;
-    }
-
-    // Fetch all dates and aggregate
-    const results = await Promise.all(filteredDates.map(dk =>
-      fetch('/api/dispatch/date/' + dk).then(r => r.json()).catch(() => null)
-    ));
-
-    const validResults = results.filter(r => r && r.hasData && r.summary);
-
-    if (validResults.length === 0) {
-      el.innerHTML = '<span style="font-size:16px;">⚠️</span><span class="d-status-txt">Could not load period data.</span>';
-      return;
-    }
-
-    // Aggregate all summaries
-    const agg = aggregateSummaries(validResults.map(r => r.summary));
-
-    const periodLabel = period === 'mtd'
-      ? 'MTD — ' + now.toLocaleString('en-AE',{month:'long'}) + ' ' + now.getFullYear() + ' (' + filteredDates.length + ' days)'
-      : 'YTD — ' + now.getFullYear() + ' (' + filteredDates.length + ' days)';
-
-    const syntheticData = {
-      summary: agg,
-      uploadedBy: filteredDates.length + ' days combined',
-      date: filteredDates[0],
-      hasData: true
-    };
-
-    // Update status
-    el.className = 'd-status live';
-    const val = agg.total_value >= 1000000 ? (agg.total_value/1000000).toFixed(2)+'M' : Math.round(agg.total_value).toLocaleString();
-    el.innerHTML = '<span style="font-size:16px;">✅</span><span class="d-status-txt"><strong>' + periodLabel + '</strong> &nbsp;|&nbsp; ' + agg.total_orders.toLocaleString() + ' Orders &nbsp;|&nbsp; AED ' + val + '</span>';
-
-    buildDashboard(syntheticData);
-
-  } catch(e) {
-    el.innerHTML = '<span style="font-size:16px;">❌</span><span class="d-status-txt">Error: ' + e.message + '</span>';
+  }catch(err){
+    document.getElementById('dispatch-upload-loader').style.display='none';
+    nameEl.textContent='Upload error: '+err.message;
+    alert('Error: '+err.message);
   }
 }
-
-function aggregateSummaries(summaries) {
-  const agg = {
-    total_orders: 0, total_value: 0, total_routes: 0, total_drivers: 0, total_drops: 0,
-    food_orders: 0, food_value: 0, non_food_orders: 0, non_food_value: 0,
-    pl_orders: 0, van_orders: 0, lulu_orders: 0, lulu_value: 0,
-    by_city: {}, top_customers: {}, top_drivers: {}, top_routes: [],
-    type_breakdown: { DCV:{orders:0,value:0}, DCF:{orders:0,value:0}, DGC:{orders:0,value:0}, DGS:{orders:0,value:0}, DSN:{orders:0,value:0}, HCP:{orders:0,value:0} }
-  };
-
-  summaries.forEach(s => {
-    agg.total_orders += s.total_orders || 0;
-    agg.total_value += s.total_value || 0;
-    agg.total_routes += s.total_routes || 0;
-    agg.total_drivers += s.total_drivers || 0;
-    agg.total_drops += s.total_drops || 0;
-    agg.food_orders += s.food_orders || 0;
-    agg.food_value += s.food_value || 0;
-    agg.non_food_orders += s.non_food_orders || 0;
-    agg.non_food_value += s.non_food_value || 0;
-    agg.pl_orders += s.pl_orders || 0;
-    agg.van_orders += s.van_orders || 0;
-    agg.lulu_orders += s.lulu_orders || 0;
-    agg.lulu_value += s.lulu_value || 0;
-
-    // Aggregate by_city
-    if (s.by_city) s.by_city.forEach(c => {
-      if (!agg.by_city[c.city]) agg.by_city[c.city] = {orders:0,value:0};
-      agg.by_city[c.city].orders += c.orders || 0;
-      agg.by_city[c.city].value += c.value || 0;
-    });
-
-    // Aggregate top_customers
-    if (s.top_customers) s.top_customers.forEach(c => {
-      if (!agg.top_customers[c.name]) agg.top_customers[c.name] = {orders:0,value:0};
-      agg.top_customers[c.name].orders += c.orders || 0;
-      agg.top_customers[c.name].value += c.value || 0;
-    });
-
-    // Aggregate type_breakdown
-    if (s.type_breakdown && agg.type_breakdown) {
-      Object.keys(agg.type_breakdown).forEach(k => {
-        if (s.type_breakdown[k]) {
-          agg.type_breakdown[k].orders += s.type_breakdown[k].orders || 0;
-          agg.type_breakdown[k].value += s.type_breakdown[k].value || 0;
-        }
-      });
-    }
-  });
-
-  // Convert objects to sorted arrays
-  agg.by_city = Object.entries(agg.by_city)
-    .map(([city,v]) => ({city, orders:v.orders, value:Math.round(v.value)}))
-    .sort((a,b) => b.orders - a.orders);
-
-  agg.top_customers = Object.entries(agg.top_customers)
-    .map(([name,v]) => ({name, orders:v.orders, value:Math.round(v.value)}))
-    .sort((a,b) => b.value - a.value)
-    .slice(0,6);
-
-  agg.total_value = Math.round(agg.total_value);
-  agg.food_value = Math.round(agg.food_value);
-  agg.non_food_value = Math.round(agg.non_food_value);
-
-  return agg;
-}
-
 </script>
 </body>
 </html>
