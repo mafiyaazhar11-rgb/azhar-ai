@@ -238,7 +238,7 @@ footer span{color:var(--gold);}
               <button onclick="rejLock()" style="padding:6px 10px;background:transparent;border:1px solid var(--border);color:var(--muted);font-family:Montserrat,sans-serif;font-size:9px;cursor:pointer;">🔒 Lock</button>
             </div>
             <input type="file" id="rej-upload-input" accept=".xlsx,.xls,.csv" style="display:none" onchange="rejUploadFile(this)"/>
-            <span id="rej-upload-status" style="font-size:10px;color:var(--muted);"></span>
+            <span id="rej-upload-status" style="font-size:10px;color:var(--muted);max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
           </div>
         </div>
 
@@ -604,7 +604,15 @@ async function rejUploadFile(input){
 async function rejLoadFromServer(){
   try{
     const r=await fetch('/api/rejection/status');
-    if(!r.ok){const sl=document.getElementById('rej-scope-label');if(sl)sl.textContent='Upload your Excel file to load data';return;}
+    // If server returns HTML (old server), silently ignore
+    const ct=r.headers.get('content-type')||'';
+    if(!r.ok||!ct.includes('json')){
+      const sl=document.getElementById('rej-scope-label');
+      if(sl)sl.textContent='Upload your Excel file to load data';
+      const st=document.getElementById('rej-upload-status');
+      if(st)st.textContent='';
+      return;
+    }
     const d=await r.json();
     if(d.hasData && d.orgs && d.months){
       // WIPE embedded data and replace with server data entirely
@@ -637,10 +645,10 @@ async function rejLoadFromServer(){
       rejRender();
     }
   } catch(e) {
-    const st=document.getElementById('rej-upload-status');
     const sl=document.getElementById('rej-scope-label');
     if(sl) sl.textContent='Upload your Excel file to load data';
-    if(st) { st.textContent=''; }
+    const st=document.getElementById('rej-upload-status');
+    if(st) st.textContent='';
   }
 }
 
