@@ -171,6 +171,7 @@ footer span{color:var(--gold);}
   <button class="sb-item" onclick="goTab('email',this)"><span class="icon">✉️</span> Email Writer</button>
   <button class="sb-item" onclick="goTab('invoice',this)"><span class="icon">💼</span> Proforma Invoice</button>
   <button class="sb-item" onclick="goTab('excel',this)"><span class="icon">📐</span> Excel Support</button>
+  <button class="sb-item" onclick="goTab('returns',this)"><span class="icon">🔄</span> Daily Returns</button>
   <div class="sb-footer"><div class="sb-user"><div class="sb-avatar">A</div><div><div class="sb-user-name">Azhar</div><div class="sb-user-role">Administrator</div></div></div></div>
 </aside>
 
@@ -336,13 +337,81 @@ footer span{color:var(--gold);}
     </div>
 
     <!-- ══ EXECUTIVE SUMMARY ════════════════════════════ -->
-    <div class="panel" id="summary"><div class="box"><div class="box-title">📋 Executive Summary Generator</div><label class="lbl">Source Document</label><textarea id="sum-text" style="min-height:160px;" placeholder="Paste your document, report, email or meeting notes here..."></textarea><label class="lbl">Output Format</label><div class="pills" id="sum-type"><div class="pill on" onclick="setPill(this,'sum-type')">Executive Brief</div><div class="pill" onclick="setPill(this,'sum-type')">Bullet Points</div><div class="pill" onclick="setPill(this,'sum-type')">Action Items</div><div class="pill" onclick="setPill(this,'sum-type')">Key Decisions</div><div class="pill" onclick="setPill(this,'sum-type')">Operations Report</div></div><button class="btn" id="sum-btn" onclick="doSummary()"><span>Generate Executive Summary</span></button><div class="loader" id="sum-loader"><div class="ring"></div><div class="ring-txt">Processing document...</div></div><div class="out" id="sum-out"><div class="out-head"><span class="out-lbl">✦ Executive Summary</span><button class="copy" onclick="doCopy('sum-answer')">Copy</button></div><div class="out-body" id="sum-answer"></div></div></div></div>
+    <div class="panel" id="summary">
+  <div class="box" style="margin-bottom:16px;">
+    <div class="box-title">📊 Live Data Summary</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+      <button onclick="loadDispatchSummary()" style="padding:12px;background:var(--glow);border:1px solid var(--gold);color:var(--gold);font-family:Montserrat,sans-serif;font-size:10px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:all 0.2s;" onmouseover="this.style.background='rgba(201,168,76,0.2)'" onmouseout="this.style.background='var(--glow)'">🚚 Load Today Dispatch Data</button>
+      <button onclick="loadRejectionSummary()" style="padding:12px;background:rgba(232,75,75,0.1);border:1px solid var(--red);color:var(--red);font-family:Montserrat,sans-serif;font-size:10px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:all 0.2s;" onmouseover="this.style.background='rgba(232,75,75,0.2)'" onmouseout="this.style.background='rgba(232,75,75,0.1)'">📊 Load YTD Rejection Data</button>
+    </div>
+    <div id="sum-data-preview" style="display:none;background:var(--surface);border:1px solid var(--border);padding:14px;margin-bottom:14px;font-size:11px;color:var(--muted);line-height:1.8;white-space:pre-wrap;max-height:120px;overflow-y:auto;"></div>
+  </div>
+  <div class="box"><div class="box-title">📋 Executive Summary Generator</div>
+    <label class="lbl">Source Document</label>
+    <textarea id="sum-text" style="min-height:160px;" placeholder="Paste your document, or click the buttons above to auto-load live dispatch / rejection data..."></textarea>
+    <label class="lbl">Output Format</label>
+    <div class="pills" id="sum-type">
+      <div class="pill on" onclick="setPill(this,'sum-type')">Executive Brief</div>
+      <div class="pill" onclick="setPill(this,'sum-type')">Bullet Points</div>
+      <div class="pill" onclick="setPill(this,'sum-type')">Action Items</div>
+      <div class="pill" onclick="setPill(this,'sum-type')">Key Decisions</div>
+      <div class="pill" onclick="setPill(this,'sum-type')">Operations Report</div>
+    </div>
+    <button class="btn" id="sum-btn" onclick="doSummary()"><span>Generate Executive Summary</span></button>
+    <div class="loader" id="sum-loader"><div class="ring"></div><div class="ring-txt">Processing document...</div></div>
+    <div class="out" id="sum-out"><div class="out-head"><span class="out-lbl">✦ Executive Summary</span><button class="copy" onclick="doCopy('sum-answer')">Copy</button></div><div class="out-body" id="sum-answer"></div></div>
+  </div>
+</div>
 
     <!-- ══ EMAIL WRITER ═════════════════════════════════ -->
     <div class="panel" id="email"><div class="box"><div class="box-title">✉️ Professional Email Writer</div><label class="lbl">Your Draft or Description</label><textarea id="em-body" style="min-height:120px;" placeholder="Paste your email draft, or describe what you need to communicate..."></textarea><label class="lbl">Email Type</label><div class="pills" id="em-type"><div class="pill on" onclick="setPill(this,'em-type')">Fix &amp; Polish</div><div class="pill" onclick="setPill(this,'em-type')">Customer Complaint</div><div class="pill" onclick="setPill(this,'em-type')">Supplier</div><div class="pill" onclick="setPill(this,'em-type')">Management Update</div><div class="pill" onclick="setPill(this,'em-type')">Apology</div><div class="pill" onclick="setPill(this,'em-type')">Follow Up</div></div><label class="lbl">Recipient (Optional)</label><textarea id="em-to" style="min-height:44px;" placeholder="e.g. Lulu procurement manager, CEO, Supplier..."></textarea><button class="btn" id="em-btn" onclick="doEmail()"><span>Write Professional Email</span></button><div class="loader" id="em-loader"><div class="ring"></div><div class="ring-txt">Writing your email...</div></div><div class="ediff" id="em-diff"><div class="etabs"><button class="etab on" onclick="setETab('em-final',this)">Final Email</button><button class="etab" onclick="setETab('em-subject',this)">Subject Lines</button><button class="etab" onclick="setETab('em-notes',this)">Notes</button><button class="ecopy" onclick="doCopyActive()">Copy</button></div><div class="ebody" id="em-final"></div><div class="ebody" id="em-subject" style="display:none;"></div><div class="ebody" id="em-notes" style="display:none;"></div></div></div></div>
 
     <!-- ══ PROFORMA INVOICE ═════════════════════════════ -->
     <div class="panel" id="invoice"><div class="box"><div class="box-title">💼 Proforma Invoice Generator</div><label class="lbl">Select Company Letterhead</label><div class="pills" id="inv-co" style="margin-bottom:18px;"><div class="pill on" onclick="setPill(this,'inv-co');setCompany('aki')" style="padding:10px 18px;">🏢 AKI — Al Khayyat Investments</div><div class="pill" onclick="setPill(this,'inv-co');setCompany('alphamed')" style="padding:10px 18px;">🏥 Alphamed General Trading</div></div><div class="inv-grid"><div><div style="font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">From (Your Company)</div><input type="text" id="inv-from" class="inv-inp" placeholder="Company name" style="margin-bottom:6px;"/><textarea id="inv-addr" class="inv-inp" style="height:64px;margin-bottom:6px;resize:none;" placeholder="Address"></textarea><input type="text" id="inv-contact" class="inv-inp" placeholder="Tel / Email"/></div><div><div style="font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">Bill To (Client)</div><input type="text" id="inv-client" class="inv-inp" placeholder="Client name" style="margin-bottom:6px;"/><textarea id="inv-client-addr" class="inv-inp" style="height:64px;resize:none;" placeholder="Client address"></textarea></div><div><div style="font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">Invoice Details</div><input type="text" id="inv-ref" class="inv-inp" placeholder="Reference No" style="margin-bottom:6px;"/><input type="text" id="inv-date" class="inv-inp" placeholder="Date" style="margin-bottom:6px;"/><input type="text" id="inv-valid" class="inv-inp" placeholder="Valid Until" style="margin-bottom:6px;"/><input type="text" id="inv-terms" class="inv-inp" placeholder="Payment Terms"/></div></div><label class="lbl" style="margin-top:18px;">Line Items</label><div id="inv-items" style="margin-bottom:10px;width:100%;"></div><button type="button" onclick="addInvItem()" style="padding:9px 18px;background:transparent;border:1px solid var(--border);color:var(--muted);font-family:'Montserrat',sans-serif;font-size:9px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all 0.2s;margin-bottom:16px;" onmouseover="this.style.borderColor='var(--gold)';this.style.color='var(--gold)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">+ Add Line Item</button><div class="inv-totals"><div class="inv-total-row"><span style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Subtotal (excl. VAT)</span><span style="font-size:13px;color:var(--text);" id="inv-subtotal">AED 0.00</span></div><div class="inv-total-row"><span style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">VAT (5%)</span><span style="font-size:13px;color:var(--green);" id="inv-vat">AED 0.00</span></div><div class="inv-total-row" style="border-top:1px solid var(--border);padding-top:10px;margin-top:4px;"><span style="font-size:12px;color:var(--gold);font-weight:700;text-transform:uppercase;letter-spacing:1px;">Net Total (incl. VAT)</span><span style="font-size:20px;color:var(--gold);font-weight:700;font-family:'Cormorant Garamond',serif;" id="inv-total">AED 0.00</span></div></div><label class="lbl">Special Notes / Terms &amp; Conditions</label><textarea id="inv-notes" class="inv-inp" style="height:60px;margin-bottom:14px;" placeholder="e.g. All prices in AED. VAT 5% applicable."></textarea><div class="inv-btns"><button class="inv-btn" onclick="previewInv()">👁 Preview &amp; Print PDF</button><button class="inv-btn blue" onclick="downloadInvWord()">⬇ Download Word</button></div></div></div>
+
+    <!-- ══ DAILY RETURNS ═══════════════════════════════ -->
+    <div class="panel" id="returns">
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;text-align:center;padding:40px;">
+        <!-- Coming Soon Badge -->
+        <div style="background:rgba(201,168,76,0.1);border:1px solid var(--gold);padding:8px 20px;font-size:9px;letter-spacing:3px;color:var(--gold);text-transform:uppercase;margin-bottom:32px;">Coming Soon</div>
+        <!-- Icon -->
+        <div style="font-size:64px;margin-bottom:24px;filter:drop-shadow(0 0 20px rgba(201,168,76,0.3));">🔄</div>
+        <!-- Title -->
+        <div style="font-family:'Cormorant Garamond',serif;font-size:36px;font-weight:700;color:var(--white);margin-bottom:12px;">Daily Returns Dashboard</div>
+        <div style="font-size:12px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:40px;">Invoice Cancellations - GRV Returns - BU-wise Analysis</div>
+        <!-- Feature Cards -->
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;max-width:800px;width:100%;margin-bottom:40px;">
+          <div style="background:var(--card);border:1px solid var(--border);padding:24px;position:relative;">
+            <div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:0.4;"></div>
+            <div style="font-size:28px;margin-bottom:12px;">📄</div>
+            <div style="font-size:11px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;">Invoice Cancellations</div>
+            <div style="font-size:11px;color:var(--muted);line-height:1.6;">Track daily cancelled invoices by BU, customer and value</div>
+          </div>
+          <div style="background:var(--card);border:1px solid var(--border);padding:24px;position:relative;">
+            <div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:0.4;"></div>
+            <div style="font-size:28px;margin-bottom:12px;">📦</div>
+            <div style="font-size:11px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;">GRV Returns</div>
+            <div style="font-size:11px;color:var(--muted);line-height:1.6;">Goods Return Voucher analysis with root cause breakdown</div>
+          </div>
+          <div style="background:var(--card);border:1px solid var(--border);padding:24px;position:relative;">
+            <div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:0.4;"></div>
+            <div style="font-size:28px;margin-bottom:12px;">📊</div>
+            <div style="font-size:11px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;">BU-wise Dashboard</div>
+            <div style="font-size:11px;color:var(--muted);line-height:1.6;">DCV - DGC - DSN - DGS - DCF breakdown with trends</div>
+          </div>
+        </div>
+        <!-- Progress bar -->
+        <div style="max-width:400px;width:100%;">
+          <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-bottom:8px;letter-spacing:1px;">
+            <span>DEVELOPMENT PROGRESS</span>
+            <span style="color:var(--gold);">65%</span>
+          </div>
+          <div style="height:3px;background:var(--border);border-radius:2px;">
+            <div style="height:3px;width:65%;background:linear-gradient(90deg,var(--gold),var(--gold2));border-radius:2px;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- ══ EXCEL SUPPORT ════════════════════════════════ -->
     <div class="panel" id="excel"><div class="box"><div class="box-title">📐 Excel Support &amp; Data Analysis</div><div class="upload" onclick="document.getElementById('xl-file').click()"><div style="font-size:22px;margin-bottom:6px;">📊</div><div style="font-size:11px;color:var(--muted);">Upload .csv or .xlsx file</div><div style="font-size:10px;color:var(--muted);margin-top:3px;" id="xl-file-name">File → Save As → CSV first</div></div><input type="file" id="xl-file" accept=".csv,.txt,.xlsx" style="display:none" onchange="loadFileExcel(this)"/><label class="lbl">Your Formula or Question</label><textarea id="xl-q" placeholder="e.g. Fix my VLOOKUP returning #N/A&#10;e.g. Analyse this data and give key insights"></textarea><label class="lbl">Context (Optional)</label><textarea id="xl-ctx" style="min-height:55px;" placeholder="e.g. Column A = Date, Column B = Customer, Column C = Amount..."></textarea><button class="btn" id="xl-btn" onclick="doExcel()"><span>Analyse &amp; Fix Excel</span></button><div class="loader" id="xl-loader"><div class="ring"></div><div class="ring-txt">Analysing your data...</div></div><div class="out" id="xl-out"><div class="out-head"><span class="out-lbl">✦ Excel Analysis</span><button class="copy" onclick="doCopy('xl-answer')">Copy</button></div><div class="out-body" id="xl-answer"></div></div></div></div>
@@ -353,10 +422,10 @@ footer span{color:var(--gold);}
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
-// ── PASSWORD ──────────────────────────────────────────────────
+//  PASSWORD 
 const ADMIN_PWD = 'azhar2026';
 
-// ── CLOCK ─────────────────────────────────────────────────────
+//  CLOCK 
 function updateClock(){
   const now=new Date();
   const days=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
@@ -366,14 +435,15 @@ function updateClock(){
 }
 updateClock(); setInterval(updateClock,1000);
 
-// ── TAB NAV ───────────────────────────────────────────────────
+//  TAB NAV 
 const TITLES={
   dispatch:  ['Welcome back, Azhar','Operations & Customer Service AI Command Centre'],
-  rejection: ['Daily Rejection Analysis','YTD Jan–May 2026 · Pivot Dashboard'],
+  rejection: ['Daily Rejection Analysis','YTD JanMay 2026  Pivot Dashboard'],
   summary:   ['Executive Summary Generator','Create professional summaries for leadership'],
   email:     ['Professional Email Writer','Write and refine business correspondence'],
   invoice:   ['Proforma Invoice Generator','Create professional invoices with letterhead'],
-  excel:     ['Excel Support & Data Analysis','Fix formulas and analyse spreadsheet data']
+  excel:     ['Excel Support & Data Analysis','Fix formulas and analyse spreadsheet data'],
+  returns:   ['Daily Returns Dashboard','Invoice Cancellations - GRV Returns - BU-wise Analysis']
 };
 function goTab(id,btn){
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
@@ -386,16 +456,16 @@ function goTab(id,btn){
   if(id==='rejection') rejLoadFromServer();
 }
 
-// ── UTILS ─────────────────────────────────────────────────────
+//  UTILS 
 function setPill(el,g){document.querySelectorAll('#'+g+' .pill').forEach(p=>p.classList.remove('on'));el.classList.add('on');}
 function getPill(g){return document.querySelector('#'+g+' .pill.on')?.textContent.trim()||'';}
 function doCopy(id){navigator.clipboard.writeText(document.getElementById(id).textContent).then(()=>{const btn=event.target;btn.textContent='Copied!';setTimeout(()=>btn.textContent='Copy',2000);});}
 function showOut(outId,answerId,text){document.getElementById(answerId).textContent=text;document.getElementById(outId).classList.add('show');}
 function setLoad(lid,bid,on){document.getElementById(lid).style.display=on?'block':'none';if(bid)document.getElementById(bid).disabled=on;}
 async function api(prompt){const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt})});const d=await r.json();if(d.error)throw new Error(d.error);return d.result||'No response.';}
-function loadFileExcel(input){const file=input.files[0];if(!file)return;const reader=new FileReader();reader.onload=e=>{document.getElementById('xl-ctx').value='FILE: '+file.name+'\nDATA:\n'+e.target.result.substring(0,4000);const el=document.getElementById('xl-file-name');el.textContent='✓ '+file.name;el.style.color='var(--green)';if(!document.getElementById('xl-q').value.trim())document.getElementById('xl-q').value='Analyse this data. Find key insights and give a summary.';};reader.readAsText(file);}
+function loadFileExcel(input){const file=input.files[0];if(!file)return;const reader=new FileReader();reader.onload=e=>{document.getElementById('xl-ctx').value='FILE: '+file.name+'\nDATA:\n'+e.target.result.substring(0,4000);const el=document.getElementById('xl-file-name');el.textContent=' '+file.name;el.style.color='var(--green)';if(!document.getElementById('xl-q').value.trim())document.getElementById('xl-q').value='Analyse this data. Find key insights and give a summary.';};reader.readAsText(file);}
 
-// ── DISPATCH ──────────────────────────────────────────────────
+//  DISPATCH 
 async function loadStatus(){
   try{
     const r=await fetch('/api/dispatch/status');
@@ -405,12 +475,12 @@ async function loadStatus(){
     else{
       const el=document.getElementById('ds-status');
       el.className='d-status';
-      el.innerHTML='<span style="font-size:16px;">⚠️</span><span class="d-status-txt">No dispatch data yet. Upload your Excel file below.</span>';
+      el.innerHTML='<span style="font-size:16px;"></span><span class="d-status-txt">No dispatch data yet. Upload your Excel file below.</span>';
     }
   }catch(e){
     const el=document.getElementById('ds-status');
     el.className='d-status';
-    el.innerHTML='<span style="font-size:16px;">⚠️</span><span class="d-status-txt">Server starting... please refresh in 30 seconds.</span>';
+    el.innerHTML='<span style="font-size:16px;"></span><span class="d-status-txt">Server starting... please refresh in 30 seconds.</span>';
   }
 }
 
@@ -437,13 +507,13 @@ function buildDashboard(d){
   const s=d.summary;
   const today=new Date().toISOString().split('T')[0];
   const lbl=d.date===today?'Today':d.date;
-  const val=s.total_value?(s.total_value>=1000000?(s.total_value/1000000).toFixed(2)+'M':Math.round(s.total_value).toLocaleString()):'—';
+  const val=s.total_value?(s.total_value>=1000000?(s.total_value/1000000).toFixed(2)+'M':Math.round(s.total_value).toLocaleString()):'';
   const el=document.getElementById('ds-status');
   el.className='d-status live';
-  el.innerHTML='<span style="font-size:16px;">✅</span><span class="d-status-txt"><strong>'+lbl+'</strong> &nbsp;|&nbsp; '+(s.total_orders||0).toLocaleString()+' Orders &nbsp;|&nbsp; AED '+val+' &nbsp;|&nbsp; By: '+d.uploadedBy+'</span>';
+  el.innerHTML='<span style="font-size:16px;"></span><span class="d-status-txt"><strong>'+lbl+'</strong> &nbsp;|&nbsp; '+(s.total_orders||0).toLocaleString()+' Orders &nbsp;|&nbsp; AED '+val+' &nbsp;|&nbsp; By: '+d.uploadedBy+'</span>';
 
   document.getElementById('k-orders').textContent=(s.total_orders||0).toLocaleString();
-  document.getElementById('k-routes-sub').textContent=(s.total_routes||0)+' routes · '+(s.total_drivers||0)+' drivers';
+  document.getElementById('k-routes-sub').textContent=(s.total_routes||0)+' routes  '+(s.total_drivers||0)+' drivers';
   const dropsEl=document.getElementById('k-drops');
   if(dropsEl) dropsEl.textContent=(s.total_drops||0).toLocaleString()+' total drops';
   document.getElementById('k-value').textContent='AED '+val;
@@ -452,7 +522,7 @@ function buildDashboard(d){
   document.getElementById('k-food').textContent=(s.food_orders||0).toLocaleString();
   document.getElementById('k-food-val').textContent='AED '+(s.food_value?Math.round(s.food_value).toLocaleString():'0');
 
-  // NON FOOD — uses non_food_orders / non_food_value (correct field names from server)
+  // NON FOOD  uses non_food_orders / non_food_value (correct field names from server)
   document.getElementById('k-nonfood').textContent=(s.non_food_orders||0).toLocaleString();
   document.getElementById('k-nonfood-val').textContent='AED '+(s.non_food_value?Math.round(s.non_food_value).toLocaleString():'0');
 
@@ -525,7 +595,7 @@ function buildDashboard(d){
   // TOP ROUTES
   if(s.top_routes&&s.top_routes.length){
     document.getElementById('ds-route-body').innerHTML=s.top_routes.map(r=>
-      '<tr><td style="color:var(--gold);font-weight:600;">'+r.route+'</td><td>'+(r.driver||'—')+'</td><td style="text-align:center;font-weight:700;color:var(--gold);">'+r.drops+'</td><td style="text-align:right;">AED '+(r.value||0).toLocaleString()+'</td></tr>'
+      '<tr><td style="color:var(--gold);font-weight:600;">'+r.route+'</td><td>'+(r.driver||'')+'</td><td style="text-align:center;font-weight:700;color:var(--gold);">'+r.drops+'</td><td style="text-align:right;">AED '+(r.value||0).toLocaleString()+'</td></tr>'
     ).join('');
     document.getElementById('ds-routes-box').style.display='block';
   }
@@ -537,7 +607,7 @@ function buildDashboard(d){
 async function doUpload(input){
   const file=input.files[0]; if(!file)return;
   const nameEl=document.getElementById('ds-file-name');
-  nameEl.textContent='⏳ Uploading '+file.name+'...'; nameEl.style.color='var(--muted)';
+  nameEl.textContent=' Uploading '+file.name+'...'; nameEl.style.color='var(--muted)';
   setLoad('ds-loader',null,true);
   try{
     const fd=new FormData(); fd.append('file',file); fd.append('uploadedBy','Azhar');
@@ -545,16 +615,16 @@ async function doUpload(input){
     const d=await r.json();
     setLoad('ds-loader',null,false);
     if(d.success){
-      nameEl.textContent='✓ '+file.name+' — '+(d.summary?.total_orders||0).toLocaleString()+' orders loaded';
+      nameEl.textContent=' '+file.name+'  '+(d.summary?.total_orders||0).toLocaleString()+' orders loaded';
       nameEl.style.color='var(--green)';
       buildDashboard(d); loadStatus();
     }else{
-      nameEl.textContent='❌ '+(d.error||'Upload failed'); nameEl.style.color='var(--red)';
+      nameEl.textContent=' '+(d.error||'Upload failed'); nameEl.style.color='var(--red)';
       alert('Upload failed: '+(d.error||'Unknown error'));
     }
   }catch(e){
     setLoad('ds-loader',null,false);
-    nameEl.textContent='❌ Error: '+e.message; nameEl.style.color='var(--red)';
+    nameEl.textContent=' Error: '+e.message; nameEl.style.color='var(--red)';
     alert('Error: '+e.message);
   }
   input.value='';
@@ -563,7 +633,7 @@ async function doUpload(input){
 async function doAsk(q){
   if(!q||!q.trim())return;
   const el=document.getElementById('ds-out'); el.classList.add('show');
-  document.getElementById('ds-answer').textContent='✦ Analysing dispatch data...';
+  document.getElementById('ds-answer').textContent=' Analysing dispatch data...';
   document.getElementById('ds-send').disabled=true;
   try{
     const r=await fetch('/api/dispatch/ask',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:q})});
@@ -582,17 +652,17 @@ function checkPwd(){
   }else{
     const inp=document.getElementById('admin-pwd');
     inp.style.borderColor='var(--red)'; inp.value='';
-    inp.placeholder='❌ Wrong password!';
+    inp.placeholder=' Wrong password!';
     setTimeout(()=>{inp.style.borderColor='var(--border)';inp.placeholder='Enter admin password...';},2000);
   }
 }
 function lockAdmin(){document.getElementById('admin-lock').style.display='flex';document.getElementById('admin-upload').style.display='none';}
 
-// ══════════════════════════════════════════════════════════════
+// 
 // REJECTION PIVOT DASHBOARD
-// ══════════════════════════════════════════════════════════════
+// 
 const DAY_DATA  = {};
-const ORG_DATA  = { all:{del:[0,0,0,0,0],rej:[0,0,0,0,0],tDel:0,tRej:0,val:'—',reasons:[],custs:[],areas:[]} };
+const ORG_DATA  = { all:{del:[0,0,0,0,0],rej:[0,0,0,0,0],tDel:0,tRej:0,val:'',reasons:[],custs:[],areas:[]} };
 const ORG_SUMMARY = [];
 const REJ_MONTHS  = ['Jan','Feb','Mar','Apr','May'];
 
@@ -650,7 +720,7 @@ function rejFilter(dim, val){
       } else {
         if(banner2)banner2.style.display='flex';
         var dayLabel=rejSelectedDays.length===1?moNames[rejMonth]+' '+rejSelectedDays[0]:rejSelectedDays.length+' days selected: '+rejSelectedDays.sort(function(a,b){return a-b;}).join(', ');
-        if(bannerTxt)bannerTxt.textContent='📅 Viewing: '+dayLabel+' — Click more days to add';
+        if(bannerTxt)bannerTxt.textContent=' Viewing: '+dayLabel+'  Click more days to add';
         document.getElementById('rd-all').classList.remove('on');
       }
     }
@@ -694,7 +764,7 @@ function buildDayGrid(){
     cell.title=moName+' '+d+': '+rejCount+' rejections';
     cell.style.cssText='width:44px;height:44px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:'+bg+';border:1px solid #2a2a1e;cursor:pointer;transition:all 0.15s;gap:1px;border-radius:2px;';
     cell.innerHTML='<span style="font-size:13px;font-weight:700;color:'+tc+';">'+d+'</span><span style="font-size:8px;color:'+sc+';">'+(rejCount>0?rejCount:'')+'</span>';
-    (function(day){cell.onclick=function(){rejFilter('day',day);}; cell.title=moName+' '+day+': '+rejCount+' rejections — click to select, click again to deselect';})(d);
+    (function(day){cell.onclick=function(){rejFilter('day',day);}; cell.title=moName+' '+day+': '+rejCount+' rejections  click to select, click again to deselect';})(d);
     dayGrid.appendChild(cell);
   }
   if(allBtn)allBtn.classList.add('on');
@@ -715,8 +785,8 @@ function getFilteredData(){
   if(rejBU === 'consumer' && rejORG === 'all') effectiveORG = 'CONSUMER_DIC';
 
   // Step 0: Check if selected ORG is compatible with type filter
-  // If DCV/DCF selected + Non-Food → return zeros
-  // If DGC/DGS/DSN selected + Food → return zeros
+  // If DCV/DCF selected + Non-Food  return zeros
+  // If DGC/DGS/DSN selected + Food  return zeros
   var FOOD_ORGS2    = ['DCV','DCF'];
   var NONFOOD_ORGS2 = ['DGC','DGS','DSN'];
   if(effectiveORG !== 'all' && effectiveORG !== 'CONSUMER_DIC'){
@@ -930,7 +1000,7 @@ function getOrgFilteredCount(o){
 }
 function getOrgFilteredVal(o){
   var orgD = ORG_DATA[o.org];
-  if(!orgD) return o.val||'—';
+  if(!orgD) return o.val||'';
   // For value, use type-specific YTD value as approximation
   if(rejType==='food')    return orgD.food_val||'AED 0K';
   if(rejType==='nonfood') return orgD.nonfood_val||'AED 0K';
@@ -944,7 +1014,7 @@ function getOrgFilteredVal(o){
     var moVal = rawVal * moRatio;
     return moVal>=1000000?'AED '+(moVal/1000000).toFixed(2)+'M':'AED '+Math.round(moVal/1000)+'K';
   }
-  return o.val||'—';
+  return o.val||'';
 }
 
 function rejRender(){
@@ -956,18 +1026,18 @@ function rejRender(){
   const moL=rejMonth==='all'?'All Months':REJ_MONTHS[rejMonth-1];
   const tyL=rejType==='all'?'All Types':rejType==='food'?'Food':'Non-Food';
   const srL=rejSrc==='all'?'All Sources':rejSrc==='external'?'External':'Internal';
-  const dayL=rejDay==='all'?'':'· Day '+rejDay;
+  const dayL=rejDay==='all'?'':' Day '+rejDay;
   const se=document.getElementById('rej-scope-label');
-  if(se)se.textContent=buL+' · '+orgL+' · '+moL+' '+dayL+' · '+tyL+' · '+srL;
+  if(se)se.textContent=buL+'  '+orgL+'  '+moL+' '+dayL+'  '+tyL+'  '+srL;
   const cse=document.getElementById('rej-chart-sub');
-  if(cse)cse.textContent=orgL+(rejDay!=='all'?' · Day '+rejDay:' · '+moL);
+  if(cse)cse.textContent=orgL+(rejDay!=='all'?'  Day '+rejDay:'  '+moL);
 
   // ORG Cards
   const oc=document.getElementById('rej-org-cards');
   if(oc)// Add filter indicator above cards
 var filterNote = document.getElementById('rej-filter-note');
 if(!filterNote){ filterNote=document.createElement('div'); filterNote.id='rej-filter-note'; filterNote.style.cssText='font-size:10px;color:var(--gold);letter-spacing:1px;margin-bottom:8px;padding:4px 0;'; oc.parentNode.insertBefore(filterNote, oc); }
-filterNote.textContent = rejORG!=='all' ? '✦ ORG FILTER ACTIVE: Showing '+rejORG+' data only — KPIs below reflect this filter' : '';
+filterNote.textContent = rejORG!=='all' ? ' ORG FILTER ACTIVE: Showing '+rejORG+' data only  KPIs below reflect this filter' : '';
 
 oc.innerHTML=ORG_SUMMARY.map(function(o){
     var onCls=rejORG===o.org?'on':(rejORG!=='all'?'dim':'');
@@ -1056,7 +1126,7 @@ function rejUnlock(){
   }else{
     const inp=document.getElementById('rej-pwd');
     inp.style.borderColor='var(--red)'; inp.value='';
-    inp.placeholder='❌ Wrong password!';
+    inp.placeholder=' Wrong password!';
     setTimeout(()=>{inp.style.borderColor='var(--border)';inp.placeholder='Enter password...';},2000);
   }
 }
@@ -1065,26 +1135,26 @@ function rejLock(){document.getElementById('rej-unlocked-wrap').style.display='n
 async function rejUploadFile(input){
   const file=input.files[0]; if(!file)return;
   const st=document.getElementById('rej-upload-status');
-  if(st){st.textContent='⏳ Uploading '+file.name+'...';st.style.color='var(--muted)';}
+  if(st){st.textContent=' Uploading '+file.name+'...';st.style.color='var(--muted)';}
   try{
     const fd=new FormData(); fd.append('file',file); fd.append('uploadedBy','Azhar');
     const r=await fetch('/api/rejection/upload',{method:'POST',body:fd});
     const d=await r.json();
     if(d.success){
-      if(st){st.textContent='✓ '+file.name+' — '+d.summary.totalRej.toLocaleString()+' rejections loaded';st.style.color='var(--green)';}
-      document.getElementById('rej-source-note').textContent='Source: '+file.name+' · Rejections = Status R/D or HOLD · Loaded from server';
+      if(st){st.textContent=' '+file.name+'  '+d.summary.totalRej.toLocaleString()+' rejections loaded';st.style.color='var(--green)';}
+      document.getElementById('rej-source-note').textContent='Source: '+file.name+'  Rejections = Status R/D or HOLD  Loaded from server';
       await rejLoadFromServer();
     }else{
-      if(st){st.textContent='❌ '+(d.error||'Upload failed');st.style.color='var(--red)';}
+      if(st){st.textContent=' '+(d.error||'Upload failed');st.style.color='var(--red)';}
       alert('Upload failed: '+(d.error||'Unknown'));
     }
   }catch(e){
-    if(st){st.textContent='❌ Error: '+e.message;st.style.color='var(--red)';}
+    if(st){st.textContent=' Error: '+e.message;st.style.color='var(--red)';}
   }
   rejLock(); input.value='';
 }
 
-// ── FIXED: rejLoadFromServer — no HTML-detection, clean JSON parse ──
+//  FIXED: rejLoadFromServer  no HTML-detection, clean JSON parse 
 async function rejLoadFromServer(){
   try{
     const r=await fetch('/api/rejection/status');
@@ -1127,14 +1197,14 @@ async function rejLoadFromServer(){
 
       // Update source note
       const sn=document.getElementById('rej-source-note');
-      if(sn&&d.fileName)sn.textContent='Source: '+d.fileName+' · Uploaded: '+new Date(d.uploadedAt).toLocaleDateString('en-AE')+' · Data persisted on server';
+      if(sn&&d.fileName)sn.textContent='Source: '+d.fileName+'  Uploaded: '+new Date(d.uploadedAt).toLocaleDateString('en-AE')+'  Data persisted on server';
 
       // Update status badge
       const st=document.getElementById('rej-upload-status');
-      if(st){st.textContent='✓ Data active — '+(d.uploadedAt||'').slice(0,10);st.style.color='var(--green)';}
+      if(st){st.textContent=' Data active  '+(d.uploadedAt||'').slice(0,10);st.style.color='var(--green)';}
 
       const sl=document.getElementById('rej-scope-label');
-      if(sl)sl.textContent='All BU · All ORG · All Months · All Types · All Sources';
+      if(sl)sl.textContent='All BU  All ORG  All Months  All Types  All Sources';
 
       // Reset filters to all on fresh load
       rejMonth='all'; rejDay='all'; rejORG='all'; rejBU='all'; rejType='all'; rejSrc='all';
@@ -1154,7 +1224,49 @@ async function rejLoadFromServer(){
   }
 }
 
-// ── SUMMARY ───────────────────────────────────────────────────
+//  SUMMARY 
+function loadDispatchSummary(){
+  fetch('/api/dispatch/status').then(function(r){return r.json();}).then(function(d){
+    if(!d.hasData){alert('No dispatch data loaded. Please upload dispatch file first.');return;}
+    var s=d.summary;
+    var tb=s.type_breakdown||{};
+    var lines=['DISPATCH REPORT - '+d.date,'Uploaded by: '+d.uploadedBy,'','TOTAL ORDERS: '+s.total_orders.toLocaleString(),'TOTAL VALUE: AED '+Math.round(s.total_value).toLocaleString(),'TOTAL ROUTES: '+s.total_routes,'TOTAL DRIVERS: '+s.total_drivers,'TOTAL DROPS: '+s.total_drops,'','FOOD ORDERS: '+s.food_orders+' | AED '+Math.round(s.food_value).toLocaleString(),'NON-FOOD ORDERS: '+s.non_food_orders+' | AED '+Math.round(s.non_food_value).toLocaleString(),'3PL ORDERS: '+s.pl_orders,'','ORG BREAKDOWN:','  DCV: '+((tb.DCV||{}).orders||0)+' orders | AED '+Math.round((tb.DCV||{}).value||0).toLocaleString(),'  DGC: '+((tb.DGC||{}).orders||0)+' orders | AED '+Math.round((tb.DGC||{}).value||0).toLocaleString(),'  DSN: '+((tb.DSN||{}).orders||0)+' orders | AED '+Math.round((tb.DSN||{}).value||0).toLocaleString(),'  DGS: '+((tb.DGS||{}).orders||0)+' orders | AED '+Math.round((tb.DGS||{}).value||0).toLocaleString(),'  DCF: '+((tb.DCF||{}).orders||0)+' orders | AED '+Math.round((tb.DCF||{}).value||0).toLocaleString(),'','TOP CITIES:'];
+    (s.by_city||[]).slice(0,5).forEach(function(c){lines.push('  '+c.city+': '+c.orders+' orders');});
+    lines.push(''); lines.push('TOP CUSTOMERS:');
+    (s.top_customers||[]).slice(0,5).forEach(function(c){lines.push('  '+c.name+': '+c.orders+' orders | AED '+Math.round(c.value).toLocaleString());});
+    var text=lines.join('\n');
+    document.getElementById('sum-text').value=text;
+    var prev=document.getElementById('sum-data-preview');
+    prev.textContent='Dispatch data loaded: '+d.date+' | '+s.total_orders+' orders | AED '+Math.round(s.total_value/1000000*100)/100+'M';
+    prev.style.display='block'; prev.style.color='var(--green)';
+  }).catch(function(e){alert('Error loading dispatch: '+e.message);});
+}
+
+function loadRejectionSummary(){
+  fetch('/api/rejection/status').then(function(r){return r.json();}).then(function(d){
+    if(!d.hasData){alert('No rejection data loaded. Please upload rejection file first.');return;}
+    var all=(d.orgs||{}).all||{};
+    var totalOrders=(all.tRej||0)+(all.tDel||0);
+    var rejRate=totalOrders>0?((all.tRej||0)/totalOrders*100).toFixed(2)+'%':'0%';
+    var lines=['REJECTION REPORT - YTD JAN-MAY 2026','Source: '+d.fileName,'Last Updated: '+new Date(d.uploadedAt).toLocaleDateString('en-AE'),'','TOTAL ORDERS: '+(d.totalOrders||0).toLocaleString(),'TOTAL REJECTIONS: '+(all.tRej||0).toLocaleString(),'TOTAL DELIVERED: '+(all.tDel||0).toLocaleString(),'REJECTION RATE: '+rejRate,'VALUE AT RISK: '+(all.val||'---'),'','ORG BREAKDOWN:'];
+    ['DCV','DGC','DSN','DGS','DCF'].forEach(function(org){
+      var v=(d.orgs||{})[org]||{};
+      var t=(v.tRej||0)+(v.tDel||0);
+      var r=t>0?((v.tRej||0)/t*100).toFixed(1)+'%':'0%';
+      lines.push('  '+org+': '+(v.tRej||0)+' rejections | Rate: '+r+' | '+(v.val||'AED 0K'));
+    });
+    lines.push(''); lines.push('TOP ROOT CAUSES:');
+    (all.reasons||[]).slice(0,5).forEach(function(r,i){lines.push('  '+(i+1)+'. '+r.l+': '+r.n);});
+    lines.push(''); lines.push('TOP CUSTOMERS BY REJECTIONS:');
+    (all.custs||[]).slice(0,5).forEach(function(c,i){lines.push('  '+(i+1)+'. '+c.n+': '+c.c+' rejections');});
+    var text=lines.join('\n');
+    document.getElementById('sum-text').value=text;
+    var prev=document.getElementById('sum-data-preview');
+    prev.textContent='Rejection data loaded: '+(all.tRej||0).toLocaleString()+' rejections | Rate: '+rejRate+' | '+d.fileName;
+    prev.style.display='block'; prev.style.color='var(--red)';
+  }).catch(function(e){alert('Error loading rejection: '+e.message);});
+}
+
 async function doSummary(){
   const text=document.getElementById('sum-text').value.trim();
   if(!text){alert('Please paste your document.');return;}
@@ -1163,13 +1275,13 @@ async function doSummary(){
   try{
     const styles={'Executive Brief':'Write a concise 4-6 sentence executive summary.','Bullet Points':'Summarise as clear bullet points.','Action Items':'Extract all action items and next steps.','Key Decisions':'Identify key decisions with context.','Operations Report':'Format as operations report: Overview, Key Metrics, Issues, Actions.'};
     const type=getPill('sum-type');
-    const r=await api('You are AZHAR-AI for UAE logistics.\nStyle: '+type+' — '+(styles[type]||styles['Executive Brief'])+'\n\nDocument:\n'+text);
+    const r=await api('You are AZHAR-AI for UAE logistics.\nStyle: '+type+'  '+(styles[type]||styles['Executive Brief'])+'\n\nDocument:\n'+text);
     showOut('sum-out','sum-answer',r);
   }catch(e){alert('Error: '+e.message);}
   setLoad('sum-loader','sum-btn',false);
 }
 
-// ── EMAIL ─────────────────────────────────────────────────────
+//  EMAIL 
 let activeETab='em-final';
 function setETab(id,btn){activeETab=id;document.querySelectorAll('.etab').forEach(t=>t.classList.remove('on'));btn.classList.add('on');document.querySelectorAll('.ebody').forEach(b=>b.style.display='none');document.getElementById(id).style.display='block';}
 function doCopyActive(){navigator.clipboard.writeText(document.getElementById(activeETab).textContent).then(()=>{const btn=event.target;btn.textContent='Copied!';setTimeout(()=>btn.textContent='Copy',2000);});}
@@ -1198,17 +1310,17 @@ async function doEmail(){
   setLoad('em-loader','em-btn',false);
 }
 
-// ── INVOICE ───────────────────────────────────────────────────
+//  INVOICE 
 const COS={aki:{name:'Al Khayyat Investments LLC',addr:'P.O Box 11245, Dubai, UAE',contact:'Tel: 04 810 5555 | Fax: 04 885 9081 | info@aki.ae',color:'#1a237e'},alphamed:{name:'Alphamed General Trading LLC',addr:'P.O Box 11245, Dubai, UAE',contact:'Tel: 04 810 5555 | alphamed@emirates.net',color:'#cc0000'}};
 let selCo='aki',invCount=0;
 function setCompany(k){selCo=k;const co=COS[k];document.getElementById('inv-from').value=co.name;document.getElementById('inv-addr').value=co.addr;document.getElementById('inv-contact').value=co.contact;}
 function addInvItem(){invCount++;const row=document.createElement('div');row.className='item-row';row.style.cssText='border:1px solid #2a2a1e;margin-bottom:10px;background:#161612;';row.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-bottom:1px solid #2a2a1e;background:rgba(201,168,76,0.06);"><span style="font-size:11px;color:#c9a84c;font-weight:700;letter-spacing:2px;">ITEM '+invCount+'</span><button type="button" onclick="this.closest(\'.item-row\').remove();calcInv()" style="background:transparent;border:1px solid rgba(232,75,75,0.4);color:#e84b4b;cursor:pointer;font-size:10px;padding:5px 14px;font-family:Montserrat,sans-serif;letter-spacing:1px;">DELETE</button></div><div style="padding:10px 16px 0;"><div style="font-size:9px;color:#7a7660;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">Description</div><input type="text" placeholder="Enter full item description here..." oninput="calcInv()" style="width:100%;height:44px;padding:10px 12px;background:#111109;border:1px solid #2a2a1e;color:#f0ece0;font-family:Montserrat,sans-serif;font-size:13px;outline:none;box-sizing:border-box;"/></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:10px 16px 0;"><div><div style="font-size:9px;color:#7a7660;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">Barcode</div><input type="text" placeholder="Barcode number" style="width:100%;height:44px;padding:10px 12px;background:#111109;border:1px solid #2a2a1e;color:#f0ece0;font-family:Montserrat,sans-serif;font-size:13px;outline:none;box-sizing:border-box;"/></div><div><div style="font-size:9px;color:#7a7660;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">Quantity</div><input type="text" placeholder="0" oninput="calcInv()" style="width:100%;height:44px;padding:10px 12px;background:#111109;border:1px solid #2a2a1e;color:#f0ece0;font-family:Montserrat,sans-serif;font-size:13px;outline:none;box-sizing:border-box;text-align:center;"/></div></div><div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;padding:10px 16px 14px;"><div><div style="font-size:9px;color:#7a7660;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">Unit Price (AED)</div><input type="text" placeholder="0.00" oninput="calcInv()" style="width:100%;height:44px;padding:10px 12px;background:#111109;border:1px solid #2a2a1e;color:#f0ece0;font-family:Montserrat,sans-serif;font-size:13px;outline:none;box-sizing:border-box;text-align:right;"/></div><div><div style="font-size:9px;color:#7a7660;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">VAT</div><label style="display:flex;align-items:center;gap:8px;height:44px;padding:0 12px;background:#111109;border:1px solid #2a2a1e;cursor:pointer;box-sizing:border-box;"><input type="checkbox" checked class="vat-chk" onchange="calcInv()" style="width:16px;height:16px;accent-color:#c9a84c;flex-shrink:0;"/><span style="font-size:11px;color:#7a7660;white-space:nowrap;">5% VAT</span></label></div><div><div style="font-size:9px;color:#4ecb8d;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">VAT Amt (AED)</div><input type="text" readonly class="vat-amt" placeholder="Auto" style="width:100%;height:44px;padding:10px 12px;background:rgba(78,203,141,0.05);border:1px solid rgba(78,203,141,0.2);color:#4ecb8d;font-family:Montserrat,sans-serif;font-size:13px;font-weight:600;outline:none;box-sizing:border-box;text-align:right;cursor:default;"/></div><div><div style="font-size:9px;color:#c9a84c;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">Net Amt (AED)</div><input type="text" readonly class="net-amt" placeholder="Auto" style="width:100%;height:44px;padding:10px 12px;background:rgba(201,168,76,0.05);border:1px solid rgba(201,168,76,0.2);color:#c9a84c;font-family:Montserrat,sans-serif;font-size:15px;font-weight:700;outline:none;box-sizing:border-box;text-align:right;cursor:default;"/></div></div>';document.getElementById('inv-items').appendChild(row);row.querySelector('input').focus();}
 function calcInv(){let sub=0,totalVat=0;document.querySelectorAll('.item-row').forEach(row=>{const inputs=row.querySelectorAll('input[type=text]');const chk=row.querySelector('.vat-chk');const qty=parseFloat(inputs[2]?.value)||0,price=parseFloat(inputs[3]?.value)||0;const amt=qty*price,vat=chk&&chk.checked?amt*0.05:0,net=amt+vat;const vatEl=row.querySelector('.vat-amt'),netEl=row.querySelector('.net-amt');if(vatEl)vatEl.value=vat>0?vat.toFixed(2):'';if(netEl)netEl.value=net>0?net.toFixed(2):'';sub+=amt;totalVat+=vat;});document.getElementById('inv-subtotal').textContent='AED '+sub.toFixed(2);document.getElementById('inv-vat').textContent='AED '+totalVat.toFixed(2);document.getElementById('inv-total').textContent='AED '+(sub+totalVat).toFixed(2);}
 function getInvRows(){let rows='',i=0;document.querySelectorAll('.item-row').forEach(row=>{const inputs=row.querySelectorAll('input[type=text]');const chk=row.querySelector('.vat-chk');const desc=inputs[0]?.value||'';if(!desc)return;i++;const bc=inputs[1]?.value||'',qty=inputs[2]?.value||'',price=inputs[3]?.value||'';const vat=row.querySelector('.vat-amt')?.value||'',net=row.querySelector('.net-amt')?.value||'';const td='padding:8px;border:1px solid #e0e0e0;font-size:10pt;';rows+='<tr><td style="'+td+'text-align:center;">'+i+'</td><td style="'+td+'">'+desc+'</td><td style="'+td+'text-align:center;">'+bc+'</td><td style="'+td+'text-align:center;">'+qty+'</td><td style="'+td+'text-align:right;">'+price+'</td><td style="'+td+'text-align:right;color:green;">'+(chk&&chk.checked?vat:'No VAT')+'</td><td style="'+td+'text-align:right;font-weight:700;">'+net+'</td></tr>';});return rows||'<tr><td colspan="7" style="padding:10px;text-align:center;color:#aaa;">No items</td></tr>';}
-function previewInv(){const co=COS[selCo];const ref=document.getElementById('inv-ref').value||('PRO-INV-'+Date.now().toString().slice(-8));const css='body{font-family:Calibri,Arial,sans-serif;font-size:11pt;color:#1a1a1a;padding:30px 40px;background:#fff;}.hdr{background:'+co.color+';padding:20px 30px;margin:-30px -40px 24px;color:#fff;display:flex;justify-content:space-between;align-items:center;}.hdr-co{font-size:20pt;font-weight:800;letter-spacing:2px;}.hdr-info{text-align:right;font-size:9pt;opacity:0.9;line-height:1.6;}h1{font-size:17pt;text-align:center;color:'+co.color+';letter-spacing:4px;margin:0 0 20px;}table{width:100%;border-collapse:collapse;margin-bottom:14px;}th{background:#1a1a2e;color:#c9a84c;padding:9px 8px;font-size:9pt;text-transform:uppercase;letter-spacing:1px;border:1px solid #ccc;}td{padding:8px;border:1px solid #e0e0e0;font-size:10pt;}tr:nth-child(even) td{background:#fafafa;}.tots{margin-left:auto;width:44%;}.tots table{width:100%;}.tots td{border:none;padding:5px 8px;font-size:11pt;}.gt td{font-weight:700;font-size:13pt;color:'+co.color+';border-top:2px solid '+co.color+';padding-top:8px;}.sigs{display:flex;justify-content:space-between;margin-top:50px;}.sig{text-align:center;width:28%;border-top:1px solid #333;padding-top:8px;font-size:10pt;color:#555;}.pbtn{position:fixed;top:16px;right:16px;padding:12px 28px;background:'+co.color+';color:#fff;border:none;font-size:11pt;cursor:pointer;font-weight:700;border-radius:4px;}@media print{.pbtn{display:none;}}';const body='<button class="pbtn" onclick="window.print()">🖨 Print / Save PDF</button><div class="hdr"><div class="hdr-co">'+co.name+'</div><div class="hdr-info"><div>'+document.getElementById('inv-addr').value.split('\n').join(' | ')+'</div><div>'+document.getElementById('inv-contact').value+'</div></div></div><h1>PROFORMA INVOICE</h1><div style="display:flex;justify-content:space-between;margin-bottom:18px;"><div><div style="font-size:8pt;color:#999;text-transform:uppercase;margin-bottom:2px;">Bill To</div><div style="font-size:11pt;font-weight:700;">'+document.getElementById('inv-client').value+'</div><div style="font-size:10pt;color:#444;margin-top:3px;">'+document.getElementById('inv-client-addr').value+'</div></div><div style="text-align:right;"><div style="font-size:8pt;color:#999;text-transform:uppercase;margin-bottom:2px;">Reference No</div><div style="font-size:11pt;font-weight:700;color:'+co.color+'">'+ref+'</div></div></div><table><thead><tr><th style="width:4%;text-align:center;">Sr.</th><th style="width:30%">Description</th><th style="width:14%;text-align:center;">Barcode</th><th style="width:7%;text-align:center;">Qty</th><th style="width:14%;text-align:right;">Unit Price</th><th style="width:13%;text-align:right;">VAT 5%</th><th style="width:18%;text-align:right;">Net Amount</th></tr></thead><tbody>'+getInvRows()+'</tbody></table><div class="tots"><table><tr><td>Subtotal:</td><td style="text-align:right">'+document.getElementById('inv-subtotal').textContent+'</td></tr><tr><td>VAT (5%):</td><td style="text-align:right;color:green">'+document.getElementById('inv-vat').textContent+'</td></tr><tr class="gt"><td>Net Total:</td><td style="text-align:right">'+document.getElementById('inv-total').textContent+'</td></tr></table></div>'+(document.getElementById('inv-notes').value?'<div style="padding:10px;background:#f9f9f9;border-left:3px solid '+co.color+';margin-bottom:16px;"><strong>Notes:</strong> '+document.getElementById('inv-notes').value+'</div>':'')+'<div class="sigs"><div class="sig">Prepared By</div><div class="sig">Authorized Signatory</div><div class="sig">Client Acknowledgement</div></div>';const html='<!DOCTYPE html><html><head><meta charset="utf-8"><title>'+ref+'</title><style>'+css+'</style></head><body>'+body+'</body></html>';const blob=new Blob([html],{type:'text/html;charset=utf-8'});const url=URL.createObjectURL(blob);const win=window.open(url,'_blank');if(!win)alert('Please allow popups for this site.');setTimeout(()=>URL.revokeObjectURL(url),60000);}
+function previewInv(){const co=COS[selCo];const ref=document.getElementById('inv-ref').value||('PRO-INV-'+Date.now().toString().slice(-8));const css='body{font-family:Calibri,Arial,sans-serif;font-size:11pt;color:#1a1a1a;padding:30px 40px;background:#fff;}.hdr{background:'+co.color+';padding:20px 30px;margin:-30px -40px 24px;color:#fff;display:flex;justify-content:space-between;align-items:center;}.hdr-co{font-size:20pt;font-weight:800;letter-spacing:2px;}.hdr-info{text-align:right;font-size:9pt;opacity:0.9;line-height:1.6;}h1{font-size:17pt;text-align:center;color:'+co.color+';letter-spacing:4px;margin:0 0 20px;}table{width:100%;border-collapse:collapse;margin-bottom:14px;}th{background:#1a1a2e;color:#c9a84c;padding:9px 8px;font-size:9pt;text-transform:uppercase;letter-spacing:1px;border:1px solid #ccc;}td{padding:8px;border:1px solid #e0e0e0;font-size:10pt;}tr:nth-child(even) td{background:#fafafa;}.tots{margin-left:auto;width:44%;}.tots table{width:100%;}.tots td{border:none;padding:5px 8px;font-size:11pt;}.gt td{font-weight:700;font-size:13pt;color:'+co.color+';border-top:2px solid '+co.color+';padding-top:8px;}.sigs{display:flex;justify-content:space-between;margin-top:50px;}.sig{text-align:center;width:28%;border-top:1px solid #333;padding-top:8px;font-size:10pt;color:#555;}.pbtn{position:fixed;top:16px;right:16px;padding:12px 28px;background:'+co.color+';color:#fff;border:none;font-size:11pt;cursor:pointer;font-weight:700;border-radius:4px;}@media print{.pbtn{display:none;}}';const body='<button class="pbtn" onclick="window.print()"> Print / Save PDF</button><div class="hdr"><div class="hdr-co">'+co.name+'</div><div class="hdr-info"><div>'+document.getElementById('inv-addr').value.split('\n').join(' | ')+'</div><div>'+document.getElementById('inv-contact').value+'</div></div></div><h1>PROFORMA INVOICE</h1><div style="display:flex;justify-content:space-between;margin-bottom:18px;"><div><div style="font-size:8pt;color:#999;text-transform:uppercase;margin-bottom:2px;">Bill To</div><div style="font-size:11pt;font-weight:700;">'+document.getElementById('inv-client').value+'</div><div style="font-size:10pt;color:#444;margin-top:3px;">'+document.getElementById('inv-client-addr').value+'</div></div><div style="text-align:right;"><div style="font-size:8pt;color:#999;text-transform:uppercase;margin-bottom:2px;">Reference No</div><div style="font-size:11pt;font-weight:700;color:'+co.color+'">'+ref+'</div></div></div><table><thead><tr><th style="width:4%;text-align:center;">Sr.</th><th style="width:30%">Description</th><th style="width:14%;text-align:center;">Barcode</th><th style="width:7%;text-align:center;">Qty</th><th style="width:14%;text-align:right;">Unit Price</th><th style="width:13%;text-align:right;">VAT 5%</th><th style="width:18%;text-align:right;">Net Amount</th></tr></thead><tbody>'+getInvRows()+'</tbody></table><div class="tots"><table><tr><td>Subtotal:</td><td style="text-align:right">'+document.getElementById('inv-subtotal').textContent+'</td></tr><tr><td>VAT (5%):</td><td style="text-align:right;color:green">'+document.getElementById('inv-vat').textContent+'</td></tr><tr class="gt"><td>Net Total:</td><td style="text-align:right">'+document.getElementById('inv-total').textContent+'</td></tr></table></div>'+(document.getElementById('inv-notes').value?'<div style="padding:10px;background:#f9f9f9;border-left:3px solid '+co.color+';margin-bottom:16px;"><strong>Notes:</strong> '+document.getElementById('inv-notes').value+'</div>':'')+'<div class="sigs"><div class="sig">Prepared By</div><div class="sig">Authorized Signatory</div><div class="sig">Client Acknowledgement</div></div>';const html='<!DOCTYPE html><html><head><meta charset="utf-8"><title>'+ref+'</title><style>'+css+'</style></head><body>'+body+'</body></html>';const blob=new Blob([html],{type:'text/html;charset=utf-8'});const url=URL.createObjectURL(blob);const win=window.open(url,'_blank');if(!win)alert('Please allow popups for this site.');setTimeout(()=>URL.revokeObjectURL(url),60000);}
 function downloadInvWord(){const co=COS[selCo];const ref=document.getElementById('inv-ref').value||('PRO-INV-'+Date.now().toString().slice(-8));const html='<html><head><meta charset="utf-8"><title>'+ref+'</title><style>body{font-family:Calibri;font-size:11pt;margin:2cm;}h1{font-size:15pt;text-align:center;color:'+co.color+';border-bottom:2px solid '+co.color+';padding-bottom:8px;margin-bottom:16px;}table{width:100%;border-collapse:collapse;margin:14px 0;}th{background:#1a1a2e;color:#c9a84c;padding:8px;font-size:9pt;border:1px solid #ddd;}td{padding:7px;border:1px solid #ddd;}</style></head><body><h1>PROFORMA INVOICE</h1><table><tr><td style="width:50%;border:none;vertical-align:top;"><strong>From:</strong><br>'+document.getElementById('inv-from').value+'<br>'+document.getElementById('inv-addr').value+'<br>'+document.getElementById('inv-contact').value+'</td><td style="width:50%;border:none;text-align:right;vertical-align:top;"><strong>Ref:</strong> '+ref+'<br><strong>Date:</strong> '+document.getElementById('inv-date').value+'</td></tr></table><div style="background:#f0f0f0;padding:10px;margin-bottom:14px;"><strong>Bill To:</strong> '+document.getElementById('inv-client').value+'<br>'+document.getElementById('inv-client-addr').value+'</div><table><thead><tr><th>Sr.</th><th>Description</th><th>Barcode</th><th>Qty</th><th>Unit Price</th><th>VAT 5%</th><th>Net Amount</th></tr></thead><tbody>'+getInvRows()+'</tbody></table><table style="margin-left:auto;width:40%;"><tr><td>Subtotal:</td><td style="text-align:right">'+document.getElementById('inv-subtotal').textContent+'</td></tr><tr><td>VAT:</td><td style="text-align:right;color:green">'+document.getElementById('inv-vat').textContent+'</td></tr><tr style="font-weight:700;color:'+co.color+'"><td>Net Total:</td><td style="text-align:right">'+document.getElementById('inv-total').textContent+'</td></tr></table></body></html>';const blob=new Blob([html],{type:'application/msword'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=ref+'.doc';a.click();URL.revokeObjectURL(url);}
 
-// ── EXCEL ─────────────────────────────────────────────────────
+//  EXCEL 
 async function doExcel(){
   const q=document.getElementById('xl-q').value.trim();
   if(!q){alert('Please enter your question.');return;}
@@ -1228,7 +1340,7 @@ async function doExcel(){
   setLoad('xl-loader','xl-btn',false);
 }
 
-// ── INIT ──────────────────────────────────────────────────────
+//  INIT 
 setCompany('aki');
 addInvItem();
 loadStatus();
