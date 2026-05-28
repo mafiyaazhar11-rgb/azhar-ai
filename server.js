@@ -60,9 +60,15 @@ function normaliseCity(raw) {
 function extractDriverName(contact) {
   var s = toStr(contact);
   if (!s) return '';
-  var m = s.match(/^([A-Za-z][A-Za-z\s]{1,29})(?:\s*[-+\d])/);
+  // If it looks like a pure name (no digits), return as-is
+  if (/^[A-Za-z][A-Za-z\s]{2,}$/.test(s)) return s.trim();
+  // Try to extract name before phone number
+  var m = s.match(/^([A-Za-z][A-Za-z\s]{2,29})(?:\s*[-+\d])/);
   if (m) return m[1].trim();
-  return s.split(/[-+\d]/)[0].trim();
+  // Split on digit/dash - but only if result is more than 1 char
+  var parts = s.split(/[-+\d]/);
+  var name = (parts[0]||'').trim();
+  return name.length > 1 ? name : s.trim();
 }
 
 function stripBranch(name) {
@@ -115,7 +121,7 @@ function parseDispatch(buffer) {
     city: findCol('CITY', 'AREA'),
     customer: findCol('CUSTOMER NAME', 'CUSTOMER'),
     amount: findCol('TOTAL_AMOUNT', 'AMOUNT', 'VALUE'),
-    driver: findCol('DRIVER CONTACT', 'DRIVER_CONTACT', 'DRIVER', 'DRIVERS NAME'),
+    driver: findCol('DRIVERS NAME', 'DRIVER NAME', 'DRIVER_NAME') || findCol('DRIVER CONTACT', 'DRIVER_CONTACT', 'DRIVER'),
     location: findCol('LOCATION_ID', 'LOCATION'),
     type: findCol('TYPE'),
     org: findCol('ORGANIZATION') || findCol('ORG-BU') || findCol('ORG')
@@ -448,11 +454,13 @@ app.post('/api/rejection/upload', upload.single('file'), function(req, res) {
       }
 
       if (mo) {
-        if (!monthMap[mo]) monthMap[mo] = { days:{}, tDel:0, tRej:0, val:0, reasons:{}, data:{} };
+        if (!monthMap[mo]) monthMap[mo] = { days:{}, tDel:0, tRej:0, val:0, reasons:{}, custs:{}, areas:{}, data:{} };
         if (del) monthMap[mo].tDel++;
         if (rej) {
           monthMap[mo].tRej++; monthMap[mo].val += val;
           if (root) monthMap[mo].reasons[root] = (monthMap[mo].reasons[root]||0)+1;
+          if (cust) monthMap[mo].custs[cust] = (monthMap[mo].custs[cust]||0)+1;
+          if (area) monthMap[mo].areas[area] = (monthMap[mo].areas[area]||0)+1;
           if (day) monthMap[mo].days[day] = 1;
         }
         if (day) {
@@ -501,7 +509,7 @@ app.post('/api/rejection/upload', upload.single('file'), function(req, res) {
         var dd = md.data[day];
         dataOut[day] = { tDel:dd.tDel, tRej:dd.tRej, val:fmtVal(dd.val), reasons:top10(dd.reasons), custs:top8c(dd.custs), areas:top6a(dd.areas) };
       });
-      monthsOut[mo2] = { days:Object.keys(md.days).map(Number).sort(function(a,b){return a-b;}), tDel:md.tDel, tRej:md.tRej, val:fmtVal(md.val), reasons:top10(md.reasons), data:dataOut };
+      monthsOut[mo2] = { days:Object.keys(md.days).map(Number).sort(function(a,b){return a-b;}), tDel:md.tDel, tRej:md.tRej, val:fmtVal(md.val), reasons:top10(md.reasons), custs:top8c(md.custs||{}), areas:top6a(md.areas||{}), data:dataOut };
     });
 
     var allFoodRej=0,allNonFoodRej=0,allExtRej=0,allIntRej=0,allFoodVal=0,allNonFoodVal=0;
