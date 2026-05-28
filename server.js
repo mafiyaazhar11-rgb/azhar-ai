@@ -299,17 +299,43 @@ app.post('/api/rejection/upload', upload.single('file'), function(req, res) {
   try {
     if (!req.file) return res.status(400).json({ error:'No file received' });
     var ext = path.extname(req.file.originalname||'').toLowerCase();
-    if (ext !== '.xlsx' && ext !== '.xls') return res.status(400).json({ error:'Please upload .xlsx or .xls' });
+    if (ext !== '.xlsx' && ext !== '.xls' && ext !== '.csv') return res.status(400).json({ error:'Please upload .xlsx, .xls or .csv' });
 
     console.log('Reading rejection file:', req.file.originalname, req.file.size, 'bytes');
-    var wb = XLSX.read(req.file.buffer, { type:'buffer' });
-
-    // Find correct sheet automatically
-    var sheetName = findDataSheet(wb);
-    var ws = wb.Sheets[sheetName];
-    var rows = XLSX.utils.sheet_to_json(ws, { defval:'' });
-    console.log('Rejection rows:', rows.length, 'in sheet:', sheetName);
-    if (!rows.length) return res.status(400).json({ error:'No rows found in sheet: '+sheetName });
+    var rows = [];
+    if (ext === '.csv') {
+      // Fast proper CSV parsing (handles quoted fields with commas)
+      var csvText = req.file.buffer.toString('utf8');
+      var csvRows = csvText.split('\n').filter(function(l){return l.trim();});
+      if (csvRows.length < 2) return res.status(400).json({ error:'CSV file is empty' });
+      function parseCSVLine(line) {
+        var result = [], cell = '', inQ = false;
+        for (var ci2=0; ci2<line.length; ci2++) {
+          var ch = line[ci2];
+          if (ch === '"') { inQ = !inQ; }
+          else if (ch === ',' && !inQ) { result.push(cell.trim()); cell = ''; }
+          else { cell += ch; }
+        }
+        result.push(cell.trim());
+        return result;
+      }
+      var headers = parseCSVLine(csvRows[0]).map(function(h){return h.replace(/"/g,'').trim();});
+      for (var ci=1; ci<csvRows.length; ci++) {
+        if (!csvRows[ci].trim()) continue;
+        var vals = parseCSVLine(csvRows[ci]);
+        var rowObj = {};
+        headers.forEach(function(h,hi){ rowObj[h] = (vals[hi]||'').replace(/"/g,'').trim(); });
+        rows.push(rowObj);
+      }
+      console.log('CSV rows parsed:', rows.length);
+    } else {
+      var wb = XLSX.read(req.file.buffer, { type:'buffer', dense:true, cellDates:false, cellNF:false, cellHTML:false, cellFormula:false });
+      var sheetName = findDataSheet(wb);
+      var ws = wb.Sheets[sheetName];
+      rows = XLSX.utils.sheet_to_json(ws, { defval:'', raw:true });
+      console.log('Rejection rows:', rows.length, 'in sheet:', sheetName);
+    }
+    if (!rows.length) return res.status(400).json({ error:'No rows found in file' });
 
     var keys0 = Object.keys(rows[0]);
     function findC() {
