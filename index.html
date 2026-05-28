@@ -258,10 +258,10 @@ footer span{color:var(--gold);}
         </div>
 
         <!-- FILTER ROWS -->
-        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;align-items:center;">
+        <div style="display:none;">
           <span style="font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;min-width:24px;">BU</span>
           <button class="rej-pill on" id="rb-all" onclick="rejFilter('bu','all')">All</button>
-          <button class="rej-pill" id="rb-con" onclick="rejFilter('bu','consumer')">Consumer DIC</button>
+
 
         </div>
         <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;align-items:center;">
@@ -839,8 +839,13 @@ function getFilteredData(){
     typeRatio = orgTotalRej > 0 ? (orgBase.food_rej||0) / orgTotalRej : 0;
     // Set tDel directly from real food delivered count
     // Use ratio of food_del/tDel to scale the time-filtered base.tDel
-    var foodDelRatio = (orgBase.tDel||0) > 0 ? (orgBase.food_del||0)/(orgBase.tDel||1) : typeRatio;
-    base.tDel = Math.round((base.tDel||0) * foodDelRatio);
+    // Use food_del ratio if available, otherwise use food_rej ratio as best estimate
+    var foodDelRatioRaw = (orgBase.food_del||0) > 0 && (orgBase.tDel||0) > 0
+      ? (orgBase.food_del||0)/(orgBase.tDel||1)
+      : ((orgBase.food_rej||0) > 0 ? (orgBase.food_rej||0)/(orgBase.tRej||1) : typeRatio);
+    base.tDel = Math.round((base.tDel||0) * foodDelRatioRaw);
+    // Safety: ensure tDel is never 0 when there are rejections (causes 100% rate)
+    if(base.tDel === 0 && base.tRej > 0) base.tDel = Math.round(base.tRej * (1/typeRatio - 1));
     // Update val to food val (proportional)
     var foodValNum = parseFloat((orgBase.food_val||'0').replace(/[^0-9.]/g,'')) * ((orgBase.food_val||'').includes('M')?1000000:1000);
     var baseValNum = parseFloat((base.val||'0').replace(/[^0-9.]/g,'')) * ((base.val||'').includes('M')?1000000:1000);
