@@ -814,7 +814,7 @@ function getFilteredData(){
       del:[0,0,0,0,0].map(function(_,i){return i===mi?mDel:0;}),
       rej:[0,0,0,0,0].map(function(_,i){return i===mi?mRej:0;}),
       reasons:(moInfo2.reasons&&moInfo2.reasons.length)?moInfo2.reasons:(orgBase.reasons||[]),
-      custs:orgBase.custs||[], areas:(moInfo2.areas&&moInfo2.areas.length)?moInfo2.areas:(orgBase.areas||[])
+      custs:(moInfo2.custs&&moInfo2.custs.length)?moInfo2.custs:(orgBase.custs||[]), areas:(moInfo2.areas&&moInfo2.areas.length)?moInfo2.areas:(orgBase.areas||[])
     };
   }
 
