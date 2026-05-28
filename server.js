@@ -478,4 +478,73 @@ app.get('/api/rejection/status', function(req, res) {
   res.json({ hasData:true, uploadedAt:rejectionData.uploadedAt, uploadedBy:rejectionData.uploadedBy, fileName:rejectionData.fileName, totalOrders:rejectionData.totalOrders, orgs:rejectionData.orgs, months:rejectionData.months });
 });
 
-app.post(
+app.post('/api/chat', function(req, res) {
+  try {
+    var prompt = req.body.prompt;
+    var history = req.body.history || [];
+    var messages = history.slice(-10).map(function(h) {
+      return { role: h.role === 'assistant' ? 'assistant' : 'user', content: h.content };
+    });
+    if (!messages.length || messages[messages.length-1].content !== prompt) {
+      messages.push({ role:'user', content:prompt });
+    }
+    anthropic.messages.create({
+      model:'claude-haiku-4-5-20251001', max_tokens:2000,
+      system:'You are AZHAR-AI, a professional executive assistant for a UAE logistics company.',
+      messages:messages
+    }).then(function(msg) {
+      res.json({ result: msg.content[0].text });
+    }).catch(function(e) {
+      res.status(500).json({ error: e.message });
+    });
+  } catch(e) {
+    if (!res.headersSent) res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/excel', upload.single('file'), function(req, res) {
+  try {
+    var question = req.body.question || 'Analyse this data';
+    var dataText = '';
+    if (req.file) {
+      var ext2 = path.extname(req.file.originalname||'').toLowerCase();
+      if (ext2 === '.xlsx' || ext2 === '.xls') {
+        var wb3 = XLSX.read(req.file.buffer, { type:'buffer' });
+        dataText = XLSX.utils.sheet_to_csv(wb3.Sheets[wb3.SheetNames[0]]);
+      } else {
+        dataText = req.file.buffer.toString('utf8');
+      }
+    }
+    anthropic.messages.create({
+      model:'claude-haiku-4-5-20251001', max_tokens:2000,
+      messages:[{ role:'user', content:question+(dataText?'\n\nData:\n'+dataText.substring(0,8000):'') }]
+    }).then(function(msg) {
+      res.json({ result: msg.content[0].text });
+    }).catch(function(e) {
+      res.status(500).json({ error: e.message });
+    });
+  } catch(e) {
+    if (!res.headersSent) res.status(500).json({ error: e.message });
+  }
+});
+
+// STATIC - MUST BE LAST
+app.get('/', function(req, res) {
+  var p1 = path.join(__dirname, 'public', 'index.html');
+  var p2 = path.join(__dirname, 'index.html');
+  var p3 = path.join(__dirname, 'azhar-ai-v4.html');
+  if (fs.existsSync(p1)) return res.sendFile(p1);
+  if (fs.existsSync(p2)) return res.sendFile(p2);
+  if (fs.existsSync(p3)) return res.sendFile(p3);
+  res.status(404).json({ error:'index.html not found' });
+});
+app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(__dirname));
+
+app.use(function(err, req, res, next) {
+  console.error('Global error:', err.message);
+  if (!res.headersSent) res.status(500).json({ error: err.message || 'Server error' });
+});
+
+var PORT = process.env.PORT || 3000;
+app.listen(PORT, function() { console.log('AZHAR-AI server running on port ' + PORT); });
