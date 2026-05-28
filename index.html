@@ -147,6 +147,7 @@ textarea{resize:vertical;min-height:100px;line-height:1.7;}
 .day-cell:hover{border-color:var(--gold)!important;transform:scale(1.08);z-index:1;}
 .day-cell.on{border-color:var(--gold)!important;box-shadow:0 0 10px rgba(201,168,76,0.4);}
 .org-card.on{border-color:var(--gold);background:var(--glow);box-shadow:0 0 12px rgba(201,168,76,0.15);}
+.org-card.dim{opacity:0.3;}
 footer{padding:16px 28px;border-top:1px solid var(--border);text-align:center;font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;flex-shrink:0;}
 footer span{color:var(--gold);}
 @keyframes logoSpin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
@@ -812,8 +813,13 @@ function rejRender(){
 
   // ORG Cards
   const oc=document.getElementById('rej-org-cards');
-  if(oc)oc.innerHTML=ORG_SUMMARY.map(function(o){
-    var onCls=rejORG===o.org?'on':'';
+  if(oc)// Add filter indicator above cards
+var filterNote = document.getElementById('rej-filter-note');
+if(!filterNote){ filterNote=document.createElement('div'); filterNote.id='rej-filter-note'; filterNote.style.cssText='font-size:10px;color:var(--gold);letter-spacing:1px;margin-bottom:8px;padding:4px 0;'; oc.parentNode.insertBefore(filterNote, oc); }
+filterNote.textContent = rejORG!=='all' ? '✦ ORG FILTER ACTIVE: Showing '+rejORG+' data only' : '';
+
+oc.innerHTML=ORG_SUMMARY.map(function(o){
+    var onCls=rejORG===o.org?'on':(rejORG!=='all'?'dim':'');
     return '<div class="org-card '+onCls+'" onclick="rejFilter(\'org\',\''+o.org+'\')">'
       +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">'
       +'<span style="font-size:13px;font-weight:700;color:'+o.color+';">'+o.org+'</span>'
