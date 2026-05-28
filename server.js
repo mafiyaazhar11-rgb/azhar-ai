@@ -313,7 +313,7 @@ app.post('/api/rejection/upload', upload.single('file'), async (req, res) => {
     const parseDate = v => {
       if (!v) return null;
       if (v instanceof Date) return v;
-      if (typeof v === 'number') { const d=XLSX.SSF.parse_date_code(v); if(d) return new Date(d.y,d.m-1,d.d); }
+      if (typeof v === 'number') { try { const d=XLSX.SSF.parse_date_code(v); if(d) return new Date(d.y,d.m-1,d.d); } catch(e) { const unix=Math.round((v-25569)*86400*1000); const dd=new Date(unix); if(!isNaN(dd)) return dd; } }
       const d = new Date(v); return isNaN(d)?null:d;
     };
 
@@ -404,7 +404,9 @@ app.post('/api/rejection/upload', upload.single('file'), async (req, res) => {
     res.json({ success:true, summary:{ totalRej,totalDel,fileName:req.file.originalname } });
   } catch(e) {
     console.error('Rejection upload error:', e.message, e.stack);
-    res.status(500).json({ error:e.message });
+    if (!res.headersSent) {
+      res.status(500).json({ error: e.message });
+    }
   }
 });
 
@@ -455,6 +457,12 @@ app.get('/', (req, res) => {
 });
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.static(__dirname));
+
+// ── GLOBAL ERROR HANDLER — always returns JSON never HTML ────
+app.use((err, req, res, next) => {
+  console.error('Global error:', err.message, err.stack);
+  res.status(500).json({ error: err.message || 'Internal server error' });
+});
 
 // ── START ─────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
