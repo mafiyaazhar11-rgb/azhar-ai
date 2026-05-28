@@ -596,6 +596,7 @@ const ORG_SUMMARY = [];
 const REJ_MONTHS  = ['Jan','Feb','Mar','Apr','May'];
 
 let rejBU='all', rejORG='all', rejMonth='all', rejDay='all', rejType='all', rejSrc='all';
+var rejSelectedDays = []; // multi-day selection
 let rejMChart=null, rejAChart=null;
 
 function rejFilter(dim, val){
@@ -617,28 +618,40 @@ function rejFilter(dim, val){
   else if(dim==='org'){ rejORG=val; rejDay='all'; buildDayGrid(); }
   else if(dim==='month'){
     rejMonth=val==='all'?'all':parseInt(val);
-    rejDay='all';
+    rejDay='all'; rejSelectedDays=[];
     buildDayGrid();
   }
   else if(dim==='type') rejType=val;
   else if(dim==='src')  rejSrc=val;
   else if(dim==='day'){
-    rejDay=val==='all'?'all':parseInt(val);
-    // Update day grid highlights
-    document.querySelectorAll('.day-cell').forEach(e=>e.classList.remove('on'));
-    if(val!=='all'){
-      const dc=document.getElementById('dc-'+val); if(dc)dc.classList.add('on');
-      // Show banner
-      const moNames=['','January','February','March','April','May','June','July','August','September','October','November','December'];
-      const banner=document.getElementById('rej-day-banner');
-      const bannerTxt=document.getElementById('rej-day-banner-txt');
-      if(banner){banner.style.display='flex';}
-      if(bannerTxt) bannerTxt.textContent='📅 Viewing: '+moNames[rejMonth]+' '+val+', 2026 — Single Day Data';
-      document.getElementById('rd-all').classList.remove('on');
-    } else {
-      const banner=document.getElementById('rej-day-banner');
+    if(val==='all'){
+      rejDay='all'; rejSelectedDays=[];
+      document.querySelectorAll('.day-cell').forEach(e=>e.classList.remove('on'));
+      var banner=document.getElementById('rej-day-banner');
       if(banner)banner.style.display='none';
       document.getElementById('rd-all').classList.add('on');
+    } else {
+      var dayNum=parseInt(val);
+      // Toggle day in multi-select
+      var idx=rejSelectedDays.indexOf(dayNum);
+      if(idx>=0){ rejSelectedDays.splice(idx,1); }
+      else { rejSelectedDays.push(dayNum); }
+      rejDay=rejSelectedDays.length===1?rejSelectedDays[0]:'multi';
+      // Update highlights
+      document.querySelectorAll('.day-cell').forEach(e=>e.classList.remove('on'));
+      rejSelectedDays.forEach(function(d){var dc=document.getElementById('dc-'+d);if(dc)dc.classList.add('on');});
+      var banner2=document.getElementById('rej-day-banner');
+      var bannerTxt=document.getElementById('rej-day-banner-txt');
+      var moNames=['','January','February','March','April','May','June','July','August','September','October','November','December'];
+      if(rejSelectedDays.length===0){
+        if(banner2)banner2.style.display='none';
+        document.getElementById('rd-all').classList.add('on');
+      } else {
+        if(banner2)banner2.style.display='flex';
+        var dayLabel=rejSelectedDays.length===1?moNames[rejMonth]+' '+rejSelectedDays[0]:rejSelectedDays.length+' days selected: '+rejSelectedDays.sort(function(a,b){return a-b;}).join(', ');
+        if(bannerTxt)bannerTxt.textContent='📅 Viewing: '+dayLabel+' — Click more days to add';
+        document.getElementById('rd-all').classList.remove('on');
+      }
     }
     rejRender(); return;
   }
@@ -680,7 +693,7 @@ function buildDayGrid(){
     cell.title=moName+' '+d+': '+rejCount+' rejections';
     cell.style.cssText='width:44px;height:44px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:'+bg+';border:1px solid #2a2a1e;cursor:pointer;transition:all 0.15s;gap:1px;border-radius:2px;';
     cell.innerHTML='<span style="font-size:13px;font-weight:700;color:'+tc+';">'+d+'</span><span style="font-size:8px;color:'+sc+';">'+(rejCount>0?rejCount:'')+'</span>';
-    (function(day){cell.onclick=function(){rejFilter('day',day);};})(d);
+    (function(day){cell.onclick=function(){rejFilter('day',day);}; cell.title=moName+' '+day+': '+rejCount+' rejections — click to select, click again to deselect';})(d);
     dayGrid.appendChild(cell);
   }
   if(allBtn)allBtn.classList.add('on');
@@ -688,42 +701,98 @@ function buildDayGrid(){
 }
 
 function getFilteredData(){
-  var base = JSON.parse(JSON.stringify(ORG_DATA[rejORG] || ORG_DATA['all'] || {del:[0,0,0,0,0],rej:[0,0,0,0,0],tDel:0,tRej:0,val:'—',reasons:[],custs:[],areas:[]}));
-  // Ensure del/rej are at least 5 elements for Jan-May display
-  while((base.del||[]).length < 5) (base.del = base.del||[]).push(0);
-  while((base.rej||[]).length < 5) (base.rej = base.rej||[]).push(0);
+  // Get base data from ORG filter
+  var base = JSON.parse(JSON.stringify(
+    ORG_DATA[rejORG] || ORG_DATA['all'] ||
+    {del:[0,0,0,0,0],rej:[0,0,0,0,0],tDel:0,tRej:0,val:'—',reasons:[],custs:[],areas:[]}
+  ));
+
+  // Ensure 5-element arrays for Jan-May
+  while((base.del||[]).length < 5) (base.del=base.del||[]).push(0);
+  while((base.rej||[]).length < 5) (base.rej=base.rej||[]).push(0);
   base.del = base.del.slice(0,5);
   base.rej = base.rej.slice(0,5);
 
-  // Day filter
-  if(rejMonth !== 'all' && rejDay !== 'all'){
+  // Multi-day selection
+  if(rejMonth !== 'all' && rejSelectedDays.length > 0){
     var moKey = DAY_DATA[rejMonth] ? rejMonth : String(rejMonth);
     var moData = DAY_DATA[moKey] || {};
-    var dayInfo = (moData.data||{})[rejDay] || (moData.data||{})[String(rejDay)];
+    var combined = {tDel:0,tRej:0,val:0,reasons:{},custs:{},areas:{}};
+    rejSelectedDays.forEach(function(day){
+      var di = (moData.data||{})[day] || (moData.data||{})[String(day)];
+      if(!di) return;
+      combined.tDel += di.tDel||0;
+      combined.tRej += di.tRej||0;
+      combined.val  += parseFloat((di.val||'0').replace(/[^0-9.]/g,'')) * (di.val&&di.val.includes('M')?1000000:1000);
+      (di.reasons||[]).forEach(function(r){ combined.reasons[r.l]=(combined.reasons[r.l]||0)+r.n; });
+      (di.custs||[]).forEach(function(c)  { combined.custs[c.n]  =(combined.custs[c.n]  ||0)+c.c; });
+      (di.areas||[]).forEach(function(a)  { combined.areas[a.a]  =(combined.areas[a.a]  ||0)+a.n; });
+    });
+    var fmtV = combined.val>=1000000?'AED '+(combined.val/1000000).toFixed(2)+'M':'AED '+Math.round(combined.val/1000)+'K';
+    var top10 = function(obj){ return Object.keys(obj).map(function(k){return{l:k,n:obj[k]};}).sort(function(a,b){return b.n-a.n;}).slice(0,10); };
+    var top8c = function(obj){ return Object.keys(obj).map(function(k){return{n:k,c:obj[k],v:''};}).sort(function(a,b){return b.c-a.c;}).slice(0,8); };
+    var top6a = function(obj){ return Object.keys(obj).map(function(k){return{a:k,n:obj[k]};}).sort(function(a,b){return b.n-a.n;}).slice(0,6); };
+    base = {
+      del:[0,0,0,0,0].map(function(_,i){return i===rejMonth-1?combined.tDel:0;}),
+      rej:[0,0,0,0,0].map(function(_,i){return i===rejMonth-1?combined.tRej:0;}),
+      tDel:combined.tDel, tRej:combined.tRej, val:fmtV,
+      reasons:top10(combined.reasons), custs:top8c(combined.custs), areas:top6a(combined.areas)
+    };
+    // Apply type/source multipliers
+    base = applyTypeSource(base);
+    return base;
+  }
+
+  // Single day filter (legacy)
+  if(rejMonth !== 'all' && rejDay !== 'all'){
+    var moKey2 = DAY_DATA[rejMonth] ? rejMonth : String(rejMonth);
+    var moData2 = DAY_DATA[moKey2] || {};
+    var dayInfo = (moData2.data||{})[rejDay] || (moData2.data||{})[String(rejDay)];
     if(dayInfo){
-      return {
-        del:[0,0,0,0,0].map(function(_,i){return i===rejMonth-1?Math.round((dayInfo.tDel||0)):0;}),
-        rej:[0,0,0,0,0].map(function(_,i){return i===rejMonth-1?Math.round((dayInfo.tRej||0)):0;}),
-        tDel:dayInfo.tDel||0, tRej:dayInfo.tRej||0,
-        val:dayInfo.val||'—',
+      base = {
+        del:[0,0,0,0,0].map(function(_,i){return i===rejMonth-1?(dayInfo.tDel||0):0;}),
+        rej:[0,0,0,0,0].map(function(_,i){return i===rejMonth-1?(dayInfo.tRej||0):0;}),
+        tDel:dayInfo.tDel||0, tRej:dayInfo.tRej||0, val:dayInfo.val||'—',
         reasons:dayInfo.reasons||[], custs:dayInfo.custs||[], areas:dayInfo.areas||[]
       };
+      base = applyTypeSource(base);
+      return base;
     }
   }
 
   // Month filter
   if(rejMonth !== 'all'){
-    var mi = rejMonth - 1;
-    var mDel = base.del[mi] || 0;
-    var mRej = base.rej[mi] || 0;
+    var mi = rejMonth-1;
     var moInfo = DAY_DATA[rejMonth] || DAY_DATA[String(rejMonth)] || {};
-    base.tDel = mDel; base.tRej = mRej;
-    base.del = [0,0,0,0,0].map(function(_,i){return i===mi?mDel:0;});
-    base.rej = [0,0,0,0,0].map(function(_,i){return i===mi?mRej:0;});
-    if(moInfo.reasons) base.reasons = moInfo.reasons;
+    base.tDel = base.del[mi]||0;
+    base.tRej = base.rej[mi]||0;
+    base.del = [0,0,0,0,0].map(function(_,i){return i===mi?base.tDel:0;});
+    base.rej = [0,0,0,0,0].map(function(_,i){return i===mi?base.tRej:0;});
+    if(moInfo.reasons && moInfo.reasons.length) base.reasons = moInfo.reasons;
+    if(moInfo.areas   && moInfo.areas.length)   base.areas   = moInfo.areas;
   }
 
+  base = applyTypeSource(base);
   return base;
+}
+
+// Apply type (food/nonfood) and source (external/internal) multipliers
+function applyTypeSource(base){
+  if(rejType === 'all' && rejSrc === 'all') return base;
+  var b = JSON.parse(JSON.stringify(base));
+  // Type multipliers based on real data ratios (~47% food, ~53% nonfood)
+  var tMul = rejType==='food'?0.47 : rejType==='nonfood'?0.53 : 1;
+  // Source multipliers (~97% external, ~3% internal)
+  var sMul = rejSrc==='external'?0.97 : rejSrc==='internal'?0.03 : 1;
+  var mult = tMul * sMul;
+  b.del = b.del.map(function(v){return Math.round(v*mult);});
+  b.rej = b.rej.map(function(v){return Math.round(v*mult);});
+  b.tDel = Math.round((b.tDel||0)*mult);
+  b.tRej = Math.round((b.tRej||0)*mult);
+  if(rejSrc==='internal'){
+    b.reasons=[{l:'AKI staff issue',n:Math.round((b.tRej)*0.4)},{l:'Staff related reason',n:Math.round((b.tRej)*0.3)},{l:'Receiving closed early',n:Math.round((b.tRej)*0.3)}];
+  }
+  return b;
 }
 
 function rejRender(){
