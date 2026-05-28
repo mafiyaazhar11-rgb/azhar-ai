@@ -128,7 +128,7 @@ function parseDispatchData(input) {
     totalValue += amt;
 
     // ── TYPE (most important fix) ──────────────────────────
-    const rawType = COL_TYPE ? (row[COL_TYPE] || '') : '';
+    const rawType = COL_TYPE ? String(row[COL_TYPE] || '') : '';
     const type = normaliseType(rawType);
 
     if (type === 'food') {
@@ -283,12 +283,13 @@ function normaliseCity(raw) {
   if (c.includes('al ain') || c.includes('al-ain') || c === 'alain') return 'Al Ain';
   if (c.includes('ras al') || c === 'rak') return 'Ras Al Khaimah';
   if (c.includes('umm'))        return 'Umm Al Quwain';
-  return raw.trim().charAt(0).toUpperCase() + raw.trim().slice(1).toLowerCase();
+  const rawStr = String(raw || '').trim();
+  return rawStr.charAt(0).toUpperCase() + rawStr.slice(1).toLowerCase();
 }
 
 function extractDriverName(contact) {
   if (!contact) return '';
-  const str = contact.trim();
+  const str = String(contact).trim();
   const match = str.match(/^([A-Za-z][A-Za-z\s]{1,30?}?)(?:\s*[-+\d])/);
   if (match) return match[1].trim();
   const parts = str.split(/[-+\d]/);
@@ -296,7 +297,7 @@ function extractDriverName(contact) {
 }
 
 function stripBranch(name) {
-  let base = name;
+  let base = String(name || '');
   const stripAfter = [',Branch', ', Branch', ',Br.', ', Br.', ' -Branch', ',CPD', ' CPD', '- Branch', '-Branch'];
   for (const kw of stripAfter) {
     const i = base.toLowerCase().indexOf(kw.toLowerCase());
