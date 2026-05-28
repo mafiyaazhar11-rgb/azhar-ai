@@ -790,6 +790,12 @@ function applyTypeSource(base){
   b.rej = b.rej.map(function(v){return Math.round(v*mult);});
   b.tDel = Math.round((b.tDel||0)*mult);
   b.tRej = Math.round((b.tRej||0)*mult);
+  // Also scale the value
+  if(b.val && b.val !== '—'){
+    var rawV = parseFloat(b.val.replace(/[^0-9.]/g,'')) * (b.val.includes('M')?1000000:1000);
+    var newV = rawV * mult;
+    b.val = newV>=1000000?'AED '+(newV/1000000).toFixed(2)+'M':'AED '+Math.round(newV/1000)+'K';
+  }
   if(rejSrc==='internal'){
     b.reasons=[{l:'AKI staff issue',n:Math.round((b.tRej)*0.4)},{l:'Staff related reason',n:Math.round((b.tRej)*0.3)},{l:'Receiving closed early',n:Math.round((b.tRej)*0.3)}];
   }
@@ -816,17 +822,21 @@ function rejRender(){
   if(oc)// Add filter indicator above cards
 var filterNote = document.getElementById('rej-filter-note');
 if(!filterNote){ filterNote=document.createElement('div'); filterNote.id='rej-filter-note'; filterNote.style.cssText='font-size:10px;color:var(--gold);letter-spacing:1px;margin-bottom:8px;padding:4px 0;'; oc.parentNode.insertBefore(filterNote, oc); }
-filterNote.textContent = rejORG!=='all' ? '✦ ORG FILTER ACTIVE: Showing '+rejORG+' data only' : '';
+filterNote.textContent = rejORG!=='all' ? '✦ ORG FILTER ACTIVE: Showing '+rejORG+' data only — KPIs below reflect this filter' : '';
 
 oc.innerHTML=ORG_SUMMARY.map(function(o){
     var onCls=rejORG===o.org?'on':(rejORG!=='all'?'dim':'');
+    // When org is selected, show that org's actual data in its card
+    var cardData = (rejORG===o.org && ORG_DATA[o.org]) ? ORG_DATA[o.org] : o;
+    var cardRej = rejORG===o.org ? (cardData.tRej||o.rej) : o.rej;
+    var cardVal = rejORG===o.org ? (cardData.val||o.val) : o.val;
     return '<div class="org-card '+onCls+'" onclick="rejFilter(\'org\',\''+o.org+'\')">'
       +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">'
       +'<span style="font-size:13px;font-weight:700;color:'+o.color+';">'+o.org+'</span>'
       +'<span style="font-size:9px;color:var(--red);background:rgba(232,75,75,0.1);padding:2px 6px;border-radius:10px;">'+o.rate+'</span>'
       +'</div>'
-      +'<div style="font-family:\'Cormorant Garamond\',serif;font-size:20px;font-weight:700;color:var(--text);">'+(o.rej||0).toLocaleString()+'</div>'
-      +'<div style="font-size:10px;color:var(--gold);margin-top:2px;">'+(o.val||'—')+'</div>'
+      +'<div style="font-family:\'Cormorant Garamond\',serif;font-size:20px;font-weight:700;color:var(--text);">'+((rejORG===o.org?cardRej:o.rej)||0).toLocaleString()+'</div>'
+      +'<div style="font-size:10px;color:var(--gold);margin-top:2px;">'+((rejORG===o.org?cardVal:o.val)||'—')+'</div>'
       +'<div style="font-size:9px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+o.bu+'</div>'
       +'</div>';
   }).join('');
@@ -948,16 +958,23 @@ async function rejLoadFromServer(){
       Object.keys(d.months).forEach(mo=>{DAY_DATA[parseInt(mo)]=d.months[mo];});
 
       // Rebuild ORG_SUMMARY from live data
-      const validOrgs=['DCV','DGC','DSN','DGS','DCF'];
-      const orgColors={DCV:'#e84b4b',DGC:'#5b8dee',DSN:'#c9a84c',DGS:'#4ecb8d',DCF:'#e8854b'};
-      const buMap={DCV:'Consumer DIC',DGC:'Consumer DIC / Salon',DSN:'Consumer DIC',DGS:'Consumer DIC',DCF:'Consumer DIC'};
+      var orgColors2={DCV:'#e84b4b',DGC:'#5b8dee',DSN:'#c9a84c',DGS:'#4ecb8d',DCF:'#e8854b'};
+      var buMap2={DCV:'Consumer DIC',DGC:'Consumer DIC / Salon',DSN:'Consumer DIC',DGS:'Consumer DIC',DCF:'Consumer DIC'};
       ORG_SUMMARY.length=0;
-      validOrgs.forEach(org=>{
-        const v=d.orgs[org]; if(!v)return;
-        const total=v.tDel+v.tRej;
-        const rate=total>0?(v.tRej/total*100).toFixed(1)+'%':'0%';
-        ORG_SUMMARY.push({org,bu:buMap[org]||'',rej:v.tRej,val:v.val,color:orgColors[org],rate});
+      // Build from ALL orgs in server data (not just hardcoded list)
+      ['DCV','DGC','DSN','DGS','DCF'].forEach(function(org){
+        var v=d.orgs[org];
+        if(!v){
+          // Try to find it case-insensitively
+          var k=Object.keys(d.orgs).find(function(k2){return k2.toUpperCase()===org;});
+          if(k) v=d.orgs[k];
+        }
+        if(!v) v={tDel:0,tRej:0,val:'AED 0K'};
+        var total=v.tDel+v.tRej;
+        var rate=total>0?(v.tRej/total*100).toFixed(1)+'%':'0%';
+        ORG_SUMMARY.push({org:org,bu:buMap2[org]||'',rej:v.tRej,val:v.val,color:orgColors2[org]||'#7a7660',rate:rate});
       });
+      console.log('ORG_SUMMARY built:', ORG_SUMMARY.length, 'orgs:', ORG_SUMMARY.map(function(o){return o.org+'('+o.rej+')';}));
 
       // Update total badge
       const tb=document.getElementById('rej-total-badge');
