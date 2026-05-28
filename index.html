@@ -144,6 +144,8 @@ textarea{resize:vertical;min-height:100px;line-height:1.7;}
 .rej-pill:hover:not(.on){border-color:var(--gold);color:var(--gold);}
 .org-card{background:var(--surface);border:1px solid var(--border);padding:10px 14px;display:flex;flex-direction:column;gap:4px;cursor:pointer;transition:all 0.2s;}
 .org-card:hover{border-color:var(--gold);}
+.day-cell:hover{border-color:var(--gold)!important;transform:scale(1.08);z-index:1;}
+.day-cell.on{border-color:var(--gold)!important;box-shadow:0 0 10px rgba(201,168,76,0.4);}
 .org-card.on{border-color:var(--gold);background:var(--glow);box-shadow:0 0 12px rgba(201,168,76,0.15);}
 footer{padding:16px 28px;border-top:1px solid var(--border);text-align:center;font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;flex-shrink:0;}
 footer span{color:var(--gold);}
@@ -280,10 +282,17 @@ footer span{color:var(--gold);}
           <button class="rej-pill" id="rm-5" onclick="rejFilter('month',5)">May</button>
         </div>
         <!-- Day row — shown when a month is selected -->
-        <div id="rej-day-row" style="display:none;flex-wrap:wrap;gap:6px;margin-bottom:10px;align-items:center;">
-          <span style="font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;min-width:24px;">DAY</span>
-          <button class="rej-pill on" id="rd-all" onclick="rejFilter('day','all')">All</button>
-          <div id="rej-day-pills" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+        <div id="rej-day-row" style="display:none;margin-bottom:10px;">
+          <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:8px;">
+            <span style="font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;min-width:24px;">DAY</span>
+            <button class="rej-pill on" id="rd-all" onclick="rejFilter('day','all')">All Days</button>
+            <span style="font-size:10px;color:var(--muted);margin-left:4px;" id="rej-day-hint">← click a day to drill down to that date</span>
+          </div>
+          <div id="rej-day-grid" style="display:flex;flex-wrap:wrap;gap:4px;padding:10px 12px;background:var(--surface);border:1px solid var(--border);"></div>
+          <div id="rej-day-banner" style="display:none;margin-top:8px;padding:8px 14px;background:rgba(201,168,76,0.12);border:1px solid var(--gold);align-items:center;justify-content:space-between;">
+            <span style="font-size:11px;color:var(--gold);font-weight:600;" id="rej-day-banner-txt">—</span>
+            <button onclick="rejFilter('day','all')" style="background:transparent;border:1px solid var(--border);color:var(--muted);font-size:9px;padding:3px 10px;cursor:pointer;font-family:Montserrat,sans-serif;letter-spacing:1px;text-transform:uppercase;">✕ Clear Day</button>
+          </div>
         </div>
         <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
           <span style="font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;min-width:24px;">TYPE</span>
@@ -604,35 +613,33 @@ function rejFilter(dim, val){
     if(pref) document.querySelectorAll('[id^="'+pref+'"]').forEach(e=>e.classList.remove('on'));
   }
 
-  if(dim==='bu')    rejBU=val;
-  else if(dim==='org'){  rejORG=val; rejDay='all'; const dr=document.getElementById('rej-day-row'); if(dr)dr.style.display='none'; }
+  if(dim==='bu') rejBU=val;
+  else if(dim==='org'){ rejORG=val; rejDay='all'; buildDayGrid(); }
   else if(dim==='month'){
     rejMonth=val==='all'?'all':parseInt(val);
     rejDay='all';
-    const dayRow=document.getElementById('rej-day-row');
-    const dayPills=document.getElementById('rej-day-pills');
-    const allBtn=document.getElementById('rd-all');
-    if(val==='all'){
-      dayRow.style.display='none';
-      if(allBtn)allBtn.classList.add('on');
-    }else{
-      const mo=parseInt(val);
-      const moData=DAY_DATA[mo]||DAY_DATA[String(mo)]||{};
-      const days=(moData.days||[]).sort((a,b)=>a-b);
-      if(days.length>0){
-        dayPills.innerHTML=days.map(day=>'<button class="rej-pill" id="rd-'+day+'" onclick="rejFilter(\'day\','+day+')" >'+day+'</button>').join('');
-        dayRow.style.display='flex';
-        if(allBtn)allBtn.classList.add('on');
-      }
-    }
+    buildDayGrid();
   }
   else if(dim==='type') rejType=val;
   else if(dim==='src')  rejSrc=val;
   else if(dim==='day'){
     rejDay=val==='all'?'all':parseInt(val);
-    document.querySelectorAll('[id^="rd-"]').forEach(e=>e.classList.remove('on'));
-    const tgt=val==='all'?'rd-all':'rd-'+val;
-    const e=document.getElementById(tgt); if(e)e.classList.add('on');
+    // Update day grid highlights
+    document.querySelectorAll('.day-cell').forEach(e=>e.classList.remove('on'));
+    if(val!=='all'){
+      const dc=document.getElementById('dc-'+val); if(dc)dc.classList.add('on');
+      // Show banner
+      const moNames=['','January','February','March','April','May','June','July','August','September','October','November','December'];
+      const banner=document.getElementById('rej-day-banner');
+      const bannerTxt=document.getElementById('rej-day-banner-txt');
+      if(banner){banner.style.display='flex';}
+      if(bannerTxt) bannerTxt.textContent='📅 Viewing: '+moNames[rejMonth]+' '+val+', 2026 — Single Day Data';
+      document.getElementById('rd-all').classList.remove('on');
+    } else {
+      const banner=document.getElementById('rej-day-banner');
+      if(banner)banner.style.display='none';
+      document.getElementById('rd-all').classList.add('on');
+    }
     rejRender(); return;
   }
 
@@ -641,57 +648,43 @@ function rejFilter(dim, val){
   rejRender();
 }
 
-function getFilteredData(){
-  // Get base ORG data (first 5 months only for chart)
-  let base=JSON.parse(JSON.stringify(ORG_DATA[rejORG]||ORG_DATA.all));
-  // Ensure del/rej are 5-element for display
-  if(base.del&&base.del.length>5){base.del=base.del.slice(0,5);}
-  if(base.rej&&base.rej.length>5){base.rej=base.rej.slice(0,5);}
-  while((base.del||[]).length<5){(base.del=base.del||[]).push(0);}
-  while((base.rej||[]).length<5){(base.rej=base.rej||[]).push(0);}
-
-  // Day filter
-  if(rejMonth!=='all'&&rejDay!=='all'){
-    const moKey=DAY_DATA[rejMonth]?rejMonth:String(rejMonth);
-    const dayInfo=(DAY_DATA[moKey]||{}).data?.[rejDay]||(DAY_DATA[moKey]||{}).data?.[String(rejDay)];
-    if(dayInfo){
-      const tMul=rejType==='all'?1:rejType==='food'?0.47:0.51;
-      const sMul=rejSrc==='all'?1:rejSrc==='external'?0.97:0.03;
-      return{
-        del:[0,0,0,0,0].map((_,i)=>i===rejMonth-1?Math.round((dayInfo.tDel||0)*tMul*sMul):0),
-        rej:[0,0,0,0,0].map((_,i)=>i===rejMonth-1?Math.round((dayInfo.tRej||0)*tMul*sMul):0),
-        tDel:Math.round((dayInfo.tDel||0)*tMul*sMul),
-        tRej:Math.round((dayInfo.tRej||0)*tMul*sMul),
-        val:dayInfo.val||'—',
-        reasons:rejSrc==='internal'?[{l:'AKI staff issue',n:Math.round((dayInfo.tRej||0)*0.03)}]:(dayInfo.reasons||[]),
-        custs:dayInfo.custs||[],
-        areas:dayInfo.areas||[]
-      };
-    }
+function buildDayGrid(){
+  var dayRow=document.getElementById('rej-day-row');
+  var dayGrid=document.getElementById('rej-day-grid');
+  var banner=document.getElementById('rej-day-banner');
+  var allBtn=document.getElementById('rd-all');
+  if(banner)banner.style.display='none';
+  rejDay='all';
+  if(rejMonth==='all'){if(dayRow)dayRow.style.display='none';return;}
+  var mo=parseInt(rejMonth);
+  var moData=DAY_DATA[mo]||DAY_DATA[String(mo)]||{};
+  var days=(moData.days||[]).map(function(d){return parseInt(d);}).sort(function(a,b){return a-b;});
+  if(!days.length){if(dayRow)dayRow.style.display='none';return;}
+  var moNames=['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var moName=moNames[mo]||'';
+  var moMonthData=moData.data||{};
+  var allCounts=days.map(function(d){return (moMonthData[d]||moMonthData[String(d)]||{}).tRej||0;});
+  var maxCount=Math.max.apply(null,allCounts.concat([1]));
+  dayGrid.innerHTML='';
+  for(var i=0;i<days.length;i++){
+    var d=days[i];
+    var dayData=moMonthData[d]||moMonthData[String(d)]||{};
+    var rejCount=dayData.tRej||0;
+    var intensity=Math.round((rejCount/maxCount)*100);
+    var bg=rejCount===0?'#161612':intensity>70?'rgba(232,75,75,0.75)':intensity>40?'rgba(232,75,75,0.4)':intensity>15?'rgba(232,133,75,0.3)':'rgba(201,168,76,0.15)';
+    var tc=intensity>40?'#fff':'#f0ece0';
+    var sc=intensity>40?'rgba(255,255,255,0.75)':'#7a7660';
+    var cell=document.createElement('div');
+    cell.className='day-cell';
+    cell.id='dc-'+d;
+    cell.title=moName+' '+d+': '+rejCount+' rejections';
+    cell.style.cssText='width:44px;height:44px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:'+bg+';border:1px solid #2a2a1e;cursor:pointer;transition:all 0.15s;gap:1px;border-radius:2px;';
+    cell.innerHTML='<span style="font-size:13px;font-weight:700;color:'+tc+';">'+d+'</span><span style="font-size:8px;color:'+sc+';">'+(rejCount>0?rejCount:'')+'</span>';
+    (function(day){cell.onclick=function(){rejFilter('day',day);};})(d);
+    dayGrid.appendChild(cell);
   }
-
-  // Month filter
-  if(rejMonth!=='all'){
-    const mi=rejMonth-1;
-    const mDel=base.del[mi]||0;
-    const mRej=base.rej[mi]||0;
-    base.tDel=mDel; base.tRej=mRej;
-    base.del=[0,0,0,0,0].map((_,i)=>i===mi?mDel:0);
-    base.rej=[0,0,0,0,0].map((_,i)=>i===mi?mRej:0);
-  }
-
-  // Type / source multiplier
-  const tMul=rejType==='all'?1:rejType==='food'?0.47:0.51;
-  const sMul=rejSrc==='all'?1:rejSrc==='external'?0.97:0.03;
-  const mult=tMul*sMul;
-  if(mult!==1){
-    base.del=base.del.map(v=>Math.round(v*mult));
-    base.rej=base.rej.map(v=>Math.round(v*mult));
-    base.tDel=Math.round(base.tDel*mult);
-    base.tRej=Math.round(base.tRej*mult);
-    if(rejSrc==='internal') base.reasons=[{l:'AKI staff issue',n:211},{l:'AKI staff related reason',n:22},{l:'Receiving closed / early',n:6}];
-  }
-  return base;
+  if(allBtn)allBtn.classList.add('on');
+  if(dayRow)dayRow.style.display='block';
 }
 
 function rejRender(){
@@ -711,26 +704,28 @@ function rejRender(){
 
   // ORG Cards
   const oc=document.getElementById('rej-org-cards');
-  if(oc)oc.innerHTML=ORG_SUMMARY.map(o=>`
-    <div class="org-card ${rejORG===o.org?'on':''}" onclick="rejFilter('org','${o.org}')">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-        <span style="font-size:13px;font-weight:700;color:${o.color};">${o.org}</span>
-        <span style="font-size:9px;color:var(--red);background:rgba(232,75,75,0.1);padding:2px 6px;border-radius:10px;">${o.rate}</span>
-      </div>
-      <div style="font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:700;color:var(--text);">${(o.rej||0).toLocaleString()}</div>
-      <div style="font-size:10px;color:var(--gold);margin-top:2px;">${o.val||'—'}</div>
-      <div style="font-size:9px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${o.bu}</div>
-    </div>`).join('');
+  if(oc)oc.innerHTML=ORG_SUMMARY.map(function(o){
+    var onCls=rejORG===o.org?'on':'';
+    return '<div class="org-card '+onCls+'" onclick="rejFilter(\'org\',\''+o.org+'\')">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">'
+      +'<span style="font-size:13px;font-weight:700;color:'+o.color+';">'+o.org+'</span>'
+      +'<span style="font-size:9px;color:var(--red);background:rgba(232,75,75,0.1);padding:2px 6px;border-radius:10px;">'+o.rate+'</span>'
+      +'</div>'
+      +'<div style="font-family:\'Cormorant Garamond\',serif;font-size:20px;font-weight:700;color:var(--text);">'+(o.rej||0).toLocaleString()+'</div>'
+      +'<div style="font-size:10px;color:var(--gold);margin-top:2px;">'+(o.val||'—')+'</div>'
+      +'<div style="font-size:9px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+o.bu+'</div>'
+      +'</div>';
+  }).join('');
 
   // KPI Cards
   const totalOrders=d.tDel+d.tRej;
   const rejRate=totalOrders>0?(d.tRej/totalOrders*100).toFixed(2)+'%':'0%';
   const kEl=document.getElementById('rej-kpis');
-  if(kEl)kEl.innerHTML=`
-    <div style="background:var(--card);border:1px solid var(--border);padding:16px;position:relative;"><div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:0.4;"></div><div style="font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">Total Rejections</div><div style="font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:700;color:var(--gold);">${d.tRej.toLocaleString()}</div></div>
-    <div style="background:rgba(232,75,75,0.1);border:1px solid rgba(232,75,75,0.3);padding:16px;"><div style="font-size:9px;letter-spacing:2px;color:var(--red);text-transform:uppercase;margin-bottom:6px;">Rejection Rate</div><div style="font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:700;color:var(--red);">${rejRate}</div></div>
-    <div style="background:var(--card);border:1px solid var(--border);padding:16px;position:relative;"><div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:0.4;"></div><div style="font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">Delivered</div><div style="font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:700;color:var(--green);">${d.tDel.toLocaleString()}</div></div>
-    <div style="background:var(--card);border:1px solid var(--border);padding:16px;position:relative;"><div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:0.4;"></div><div style="font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">Value at Risk</div><div style="font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:700;color:var(--gold);">${d.val}</div></div>`;
+  if(kEl)kEl.innerHTML=''
+    +'<div style="background:var(--card);border:1px solid var(--border);padding:16px;position:relative;"><div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:0.4;"></div><div style="font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">Total Rejections</div><div style="font-family:\'Cormorant Garamond\',serif;font-size:28px;font-weight:700;color:var(--gold);">'+d.tRej.toLocaleString()+'</div></div>'
+    +'<div style="background:rgba(232,75,75,0.1);border:1px solid rgba(232,75,75,0.3);padding:16px;"><div style="font-size:9px;letter-spacing:2px;color:var(--red);text-transform:uppercase;margin-bottom:6px;">Rejection Rate</div><div style="font-family:\'Cormorant Garamond\',serif;font-size:28px;font-weight:700;color:var(--red);">'+rejRate+'</div></div>'
+    +'<div style="background:var(--card);border:1px solid var(--border);padding:16px;position:relative;"><div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:0.4;"></div><div style="font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">Delivered</div><div style="font-family:\'Cormorant Garamond\',serif;font-size:28px;font-weight:700;color:var(--green);">'+d.tDel.toLocaleString()+'</div></div>'
+    +'<div style="background:var(--card);border:1px solid var(--border);padding:16px;position:relative;"><div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:0.4;"></div><div style="font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">Value at Risk</div><div style="font-family:\'Cormorant Garamond\',serif;font-size:28px;font-weight:700;color:var(--gold);">'+d.val+'</div></div>';
 
   // Charts
   const gridC='rgba(255,255,255,0.06)', tickC='#7a7660';
@@ -750,31 +745,33 @@ function rejRender(){
   const topR=(d.reasons||[]).slice(0,12);
   const maxR=Math.max(...topR.map(r=>r.n),1);
   const rp=document.getElementById('rej-reasons-panel');
-  if(rp)rp.innerHTML=topR.map((r,i)=>`
-    <div style="margin-bottom:10px;">
-      <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px;gap:8px;">
-        <span style="color:#ffffff;font-weight:500;flex:1;">${r.l}</span>
-        <span style="color:var(--gold);font-weight:700;white-space:nowrap;flex-shrink:0;">${(r.n||0).toLocaleString()}</span>
-      </div>
-      <div style="height:4px;background:var(--border);border-radius:2px;">
-        <div style="height:4px;width:${Math.round((r.n||0)/maxR*100)}%;background:${i<3?'var(--red)':i<6?'#e8854b':'#5b8dee'};border-radius:2px;transition:width 0.5s;"></div>
-      </div>
-    </div>`).join('');
+  if(rp)rp.innerHTML=topR.map(function(r,i){
+    var barColor=i<3?'var(--red)':i<6?'#e8854b':'#5b8dee';
+    var barW=Math.round((r.n||0)/maxR*100);
+    return '<div style="margin-bottom:10px;">'
+      +'<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px;gap:8px;">'
+      +'<span style="color:#ffffff;font-weight:500;flex:1;">'+r.l+'</span>'
+      +'<span style="color:var(--gold);font-weight:700;white-space:nowrap;flex-shrink:0;">'+(r.n||0).toLocaleString()+'</span>'
+      +'</div>'
+      +'<div style="height:4px;background:var(--border);border-radius:2px;">'
+      +'<div style="height:4px;width:'+barW+'%;background:'+barColor+';border-radius:2px;transition:width 0.5s;"></div>'
+      +'</div></div>';
+  }).join('');
 
   // Customers
   const cp=document.getElementById('rej-cust-panel');
-  if(cp)cp.innerHTML=(d.custs||[]).slice(0,8).map((c,i)=>{
-    const cols=['var(--red)','var(--red)','var(--gold)','var(--gold)','var(--blue)'];
-    return`<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(42,42,30,0.5);">
-      <div style="display:flex;align-items:center;gap:8px;min-width:0;">
-        <span style="font-size:11px;font-weight:700;color:${cols[i]||'var(--muted)'};width:16px;flex-shrink:0;">${i+1}</span>
-        <span style="font-size:12px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${c.n}</span>
-      </div>
-      <div style="text-align:right;flex-shrink:0;margin-left:8px;">
-        <div style="font-size:12px;font-weight:700;color:var(--text);">${c.c}</div>
-        <div style="font-size:10px;color:var(--muted);">${c.v||''}</div>
-      </div>
-    </div>`;
+  if(cp)cp.innerHTML=(d.custs||[]).slice(0,8).map(function(c,i){
+    var cols=['var(--red)','var(--red)','var(--gold)','var(--gold)','var(--blue)'];
+    var col=cols[i]||'var(--muted)';
+    return '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(42,42,30,0.5);">'
+      +'<div style="display:flex;align-items:center;gap:8px;min-width:0;">'
+      +'<span style="font-size:11px;font-weight:700;color:'+col+';width:16px;flex-shrink:0;">'+(i+1)+'</span>'
+      +'<span style="font-size:12px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+c.n+'</span>'
+      +'</div>'
+      +'<div style="text-align:right;flex-shrink:0;margin-left:8px;">'
+      +'<div style="font-size:12px;font-weight:700;color:var(--text);">'+c.c+'</div>'
+      +'<div style="font-size:10px;color:var(--muted);">'+(c.v||'')+'</div>'
+      +'</div></div>';
   }).join('');
 }
 
@@ -862,6 +859,12 @@ async function rejLoadFromServer(){
 
       const sl=document.getElementById('rej-scope-label');
       if(sl)sl.textContent='All BU · All ORG · All Months · All Types · All Sources';
+
+      // Reset filters to all on fresh load
+      rejMonth='all'; rejDay='all'; rejORG='all'; rejBU='all'; rejType='all'; rejSrc='all';
+      document.querySelectorAll('.rej-pill').forEach(p=>p.classList.remove('on'));
+      ['rb-all','ro-all','rm-all','rt-all','rs-all'].forEach(id=>{const e=document.getElementById(id);if(e)e.classList.add('on');});
+      const dr=document.getElementById('rej-day-row'); if(dr)dr.style.display='none';
 
       rejRender();
     }else{
