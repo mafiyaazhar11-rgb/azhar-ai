@@ -778,28 +778,61 @@ function getFilteredData(){
 }
 
 // Apply type (food/nonfood) and source (external/internal) multipliers
+// Apply type (food/nonfood) and source (external/internal) filters using REAL data
 function applyTypeSource(base){
   if(rejType === 'all' && rejSrc === 'all') return base;
   var b = JSON.parse(JSON.stringify(base));
-  // Type multipliers based on real data ratios (~47% food, ~53% nonfood)
-  var tMul = rejType==='food'?0.47 : rejType==='nonfood'?0.53 : 1;
-  // Source multipliers (~97% external, ~3% internal)
-  var sMul = rejSrc==='external'?0.97 : rejSrc==='internal'?0.03 : 1;
-  var mult = tMul * sMul;
-  b.del = b.del.map(function(v){return Math.round(v*mult);});
-  b.rej = b.rej.map(function(v){return Math.round(v*mult);});
-  b.tDel = Math.round((b.tDel||0)*mult);
-  b.tRej = Math.round((b.tRej||0)*mult);
-  // Also scale the value
-  if(b.val && b.val !== '—'){
+
+  // Use real stored counts if available
+  if(rejType === 'food' && base.food_rej !== undefined){
+    b.tRej = base.food_rej || 0;
+    b.val  = base.food_val || 'AED 0K';
+  } else if(rejType === 'nonfood' && base.nonfood_rej !== undefined){
+    b.tRej = base.nonfood_rej || 0;
+    b.val  = base.nonfood_val || 'AED 0K';
+  }
+
+  if(rejSrc === 'external' && base.ext_rej !== undefined){
+    if(rejType !== 'all') b.tRej = Math.round(b.tRej * (base.ext_rej / Math.max(base.tRej,1)));
+    else { b.tRej = base.ext_rej || 0; }
+  } else if(rejSrc === 'internal' && base.int_rej !== undefined){
+    if(rejType !== 'all') b.tRej = Math.round(b.tRej * (base.int_rej / Math.max(base.tRej,1)));
+    else { b.tRej = base.int_rej || 0; }
+    b.reasons=[{l:'AKI staff issue',n:Math.round(b.tRej*0.4)},{l:'Staff related reason',n:Math.round(b.tRej*0.35)},{l:'Receiving closed early',n:Math.round(b.tRej*0.25)}];
+  }
+
+  // Scale del and chart arrays proportionally
+  var origRej = base.tRej || 1;
+  var ratio = b.tRej / origRej;
+  b.del = b.del.map(function(v){return Math.round(v*ratio);});
+  b.rej = b.rej.map(function(v){return Math.round(v*ratio);});
+  b.tDel = Math.round((base.tDel||0) * ratio);
+
+  // Scale value if not already set from real data
+  if(rejType === 'all' && b.val && b.val !== 'AED 0K'){
     var rawV = parseFloat(b.val.replace(/[^0-9.]/g,'')) * (b.val.includes('M')?1000000:1000);
-    var newV = rawV * mult;
+    var newV = rawV * ratio;
     b.val = newV>=1000000?'AED '+(newV/1000000).toFixed(2)+'M':'AED '+Math.round(newV/1000)+'K';
   }
-  if(rejSrc==='internal'){
-    b.reasons=[{l:'AKI staff issue',n:Math.round((b.tRej)*0.4)},{l:'Staff related reason',n:Math.round((b.tRej)*0.3)},{l:'Receiving closed early',n:Math.round((b.tRej)*0.3)}];
-  }
+
   return b;
+}
+// Get org rejection count based on current type/source filter
+function getOrgFilteredCount(o){
+  var orgD = ORG_DATA[o.org];
+  if(!orgD) return o.rej||0;
+  if(rejType==='food')    return orgD.food_rej||0;
+  if(rejType==='nonfood') return orgD.nonfood_rej||0;
+  if(rejSrc==='external') return orgD.ext_rej||0;
+  if(rejSrc==='internal') return orgD.int_rej||0;
+  return o.rej||0;
+}
+function getOrgFilteredVal(o){
+  var orgD = ORG_DATA[o.org];
+  if(!orgD) return o.val||'—';
+  if(rejType==='food')    return orgD.food_val||'AED 0K';
+  if(rejType==='nonfood') return orgD.nonfood_val||'AED 0K';
+  return o.val||'—';
 }
 
 function rejRender(){
@@ -835,8 +868,8 @@ oc.innerHTML=ORG_SUMMARY.map(function(o){
       +'<span style="font-size:13px;font-weight:700;color:'+o.color+';">'+o.org+'</span>'
       +'<span style="font-size:9px;color:var(--red);background:rgba(232,75,75,0.1);padding:2px 6px;border-radius:10px;">'+o.rate+'</span>'
       +'</div>'
-      +'<div style="font-family:\'Cormorant Garamond\',serif;font-size:20px;font-weight:700;color:var(--text);">'+((rejORG===o.org?cardRej:o.rej)||0).toLocaleString()+'</div>'
-      +'<div style="font-size:10px;color:var(--gold);margin-top:2px;">'+((rejORG===o.org?cardVal:o.val)||'—')+'</div>'
+      +'<div style="font-family:\'Cormorant Garamond\',serif;font-size:20px;font-weight:700;color:var(--text);">'+getOrgFilteredCount(o).toLocaleString()+'</div>'
+      +'<div style="font-size:10px;color:var(--gold);margin-top:2px;">'+getOrgFilteredVal(o)+'</div>'
       +'<div style="font-size:9px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+o.bu+'</div>'
       +'</div>';
   }).join('');
