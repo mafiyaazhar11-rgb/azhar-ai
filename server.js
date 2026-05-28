@@ -35,11 +35,14 @@ app.get('/health', function(req, res) {
 function toStr(v) { return String(v == null ? '' : v).trim(); }
 
 function normaliseType(raw) {
-  var t = toStr(raw).toUpperCase().replace(/\s+/g, ' ');
+  var t = toStr(raw).toUpperCase().replace(/\s+/g, ' ').trim();
   if (t === 'FOOD') return 'food';
-  if (t === 'NON FOOD') return 'nonfood';
-  if (t === '3PL' || t === '3 PL') return '3pl';
+  if (t === 'NON FOOD' || t === 'NON-FOOD') return 'nonfood';
+  if (t === '3PL' || t === '3 PL' || t === '3PL') return '3pl';
   if (t === 'VAN') return 'van';
+  // Handle partial matches
+  if (t.startsWith('FOOD')) return 'food';
+  if (t.includes('NON FOOD') || t.includes('NON-FOOD')) return 'nonfood';
   return t.toLowerCase();
 }
 
@@ -117,14 +120,14 @@ function parseDispatch(buffer) {
   }
 
   var C = {
-    route: findCol('ROUTE'),
-    city: findCol('CITY', 'AREA'),
+    route:    findCol('ROUTE'),
+    city:     findCol('CITY', 'AREA'),
     customer: findCol('CUSTOMER NAME', 'CUSTOMER'),
-    amount: findCol('TOTAL_AMOUNT', 'AMOUNT', 'VALUE'),
-    driver: findCol('DRIVERS NAME', 'DRIVER NAME', 'DRIVER_NAME') || findCol('DRIVER CONTACT', 'DRIVER_CONTACT', 'DRIVER'),
+    amount:   findCol('TOTAL_AMOUNT', 'AMOUNT', 'VALUE'),
+    driver:   findCol('DRIVER CONTACT DETAILS', 'DRIVERS NAME', 'DRIVER NAME', 'DRIVER_NAME', 'DRIVER CONTACT', 'DRIVER_CONTACT', 'DRIVER'),
     location: findCol('LOCATION_ID', 'LOCATION'),
-    type: findCol('TYPE'),
-    org: findCol('ORGANIZATION') || findCol('ORG-BU') || findCol('ORG')
+    type:     findCol('TYPE'),
+    org:      findCol('BU') || findCol('ORGANIZATION') || findCol('ORG-BU') || findCol('ORG')
   };
   console.log('Dispatch cols:', JSON.stringify(C));
 
