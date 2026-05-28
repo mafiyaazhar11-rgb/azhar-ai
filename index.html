@@ -262,7 +262,7 @@ footer span{color:var(--gold);}
           <span style="font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;min-width:24px;">BU</span>
           <button class="rej-pill on" id="rb-all" onclick="rejFilter('bu','all')">All</button>
           <button class="rej-pill" id="rb-con" onclick="rejFilter('bu','consumer')">Consumer DIC</button>
-          <button class="rej-pill" id="rb-sal" onclick="rejFilter('bu','salon')">Salon</button>
+
         </div>
         <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;align-items:center;">
           <span style="font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;min-width:24px;">ORG</span>
@@ -732,6 +732,7 @@ function getFilteredData(){
     // Consumer DIC = DCV + DCF + DGS + DSN (not DGC/Salon)
     var consOrgs = ['DCV','DCF','DGS','DSN'];
     var consData = {tDel:0,tRej:0,val:0,food_rej:0,food_del:0,nonfood_rej:0,nonfood_del:0,ext_rej:0,int_rej:0,del:[0,0,0,0,0,0,0,0,0,0,0,0],rej:[0,0,0,0,0,0,0,0,0,0,0,0],reasons:{},custs:{},areas:{}};
+    var consFoodVal=0, consNFVal=0;
     consOrgs.forEach(function(o){
       var v=ORG_DATA[o]; if(!v)return;
       consData.tDel+=v.tDel||0; consData.tRej+=v.tRej||0;
@@ -740,12 +741,18 @@ function getFilteredData(){
       consData.ext_rej+=(v.ext_rej||0); consData.int_rej+=(v.int_rej||0);
       var rv=parseFloat((v.val||'0').replace(/[^0-9.]/g,''))*((v.val||'').includes('M')?1000000:1000);
       consData.val+=rv;
+      var fv=parseFloat((v.food_val||'0').replace(/[^0-9.]/g,''))*((v.food_val||'').includes('M')?1000000:1000);
+      consFoodVal+=fv;
+      var nv=parseFloat((v.nonfood_val||'0').replace(/[^0-9.]/g,''))*((v.nonfood_val||'').includes('M')?1000000:1000);
+      consNFVal+=nv;
       (v.del||[]).forEach(function(d,i){consData.del[i]+=d;});
       (v.rej||[]).forEach(function(r,i){consData.rej[i]+=r;});
       Object.keys(v.reasons||{}).forEach(function(k){consData.reasons[k]=(consData.reasons[k]||0)+(v.reasons[k]||0);});
     });
-    var fmtConsVal=consData.val>=1000000?'AED '+(consData.val/1000000).toFixed(2)+'M':'AED '+Math.round(consData.val/1000)+'K';
-    consData.val=fmtConsVal;
+    var fmtV2=function(n){return n>=1000000?'AED '+(n/1000000).toFixed(2)+'M':'AED '+Math.round(n/1000)+'K';};
+    consData.val        = fmtV2(consData.val);
+    consData.food_val   = fmtV2(consFoodVal);
+    consData.nonfood_val= fmtV2(consNFVal);
     orgBase = JSON.parse(JSON.stringify(consData));
   } else {
     orgBase = JSON.parse(JSON.stringify(
@@ -838,7 +845,11 @@ function getFilteredData(){
     var foodValNum = parseFloat((orgBase.food_val||'0').replace(/[^0-9.]/g,'')) * ((orgBase.food_val||'').includes('M')?1000000:1000);
     var baseValNum = parseFloat((base.val||'0').replace(/[^0-9.]/g,'')) * ((base.val||'').includes('M')?1000000:1000);
     var orgValNum  = parseFloat((orgBase.val||'0').replace(/[^0-9.]/g,'')) * ((orgBase.val||'').includes('M')?1000000:1000);
-    var foodValRatio = orgValNum > 0 ? foodValNum / orgValNum : 0;
+    // Fallback: if food_val not stored, estimate from food_rej ratio
+    if(foodValNum === 0 && (orgBase.food_rej||0) > 0 && (orgBase.tRej||0) > 0){
+      foodValNum = orgValNum * ((orgBase.food_rej||0) / (orgBase.tRej||1));
+    }
+    var foodValRatio = orgValNum > 0 ? foodValNum / orgValNum : (orgBase.food_rej||0)/(orgBase.tRej||1);
     var newVal = baseValNum * foodValRatio;
     base.val = newVal>=1000000?'AED '+(newVal/1000000).toFixed(2)+'M':'AED '+Math.round(newVal/1000)+'K';
   } else if(rejType === 'nonfood'){
@@ -935,7 +946,7 @@ function rejRender(){
   const d=getFilteredData(); if(!d)return;
 
   // Scope label
-  const buL=rejBU==='all'?'All BU':rejBU==='consumer'?'Consumer DIC':'Salon';
+  const buL=rejBU==='all'?'All BU':'Consumer DIC';
   const orgL=rejORG==='all'?'All ORG':rejORG;
   const moL=rejMonth==='all'?'All Months':REJ_MONTHS[rejMonth-1];
   const tyL=rejType==='all'?'All Types':rejType==='food'?'Food':'Non-Food';
