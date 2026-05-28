@@ -29,21 +29,6 @@ function loadJSON(filepath) {
   return null;
 }
 
-// ── STATIC FILES ──────────────────────────────────────────────
-// Serve index.html from public/ or root
-app.get('/', (req, res) => {
-  const p1 = path.join(__dirname, 'public', 'index.html');
-  const p2 = path.join(__dirname, 'azhar-ai-v4.html');
-  const p3 = path.join(__dirname, 'index.html');
-  if (fs.existsSync(p1)) return res.sendFile(p1);
-  if (fs.existsSync(p2)) return res.sendFile(p2);
-  if (fs.existsSync(p3)) return res.sendFile(p3);
-  res.status(404).send('No index file found. Please add azhar-ai-v4.html to the project root.');
-});
-
-app.use(express.static(path.join(__dirname, 'public')));
-app.use(express.static(__dirname));
-
 app.get('/health', (req, res) => res.json({ status: 'ok', time: new Date().toISOString() }));
 
 // ─────────────────────────────────────────────────────────────
@@ -754,6 +739,19 @@ app.post('/api/powerpoint', upload.single('file'), async (req, res) => {
     res.status(500).json({ error: e.message });
   }
 });
+
+// ─── STATIC FILES — must be LAST, after all API routes ──────
+app.get('/', (req, res) => {
+  const p1 = path.join(__dirname, 'public', 'index.html');
+  const p2 = path.join(__dirname, 'index.html');
+  const p3 = path.join(__dirname, 'azhar-ai-v4.html');
+  if (fs.existsSync(p1)) return res.sendFile(p1);
+  if (fs.existsSync(p2)) return res.sendFile(p2);
+  if (fs.existsSync(p3)) return res.sendFile(p3);
+  res.status(404).json({ error: 'index.html not found' });
+});
+app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(__dirname));
 
 // ─── START ────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
