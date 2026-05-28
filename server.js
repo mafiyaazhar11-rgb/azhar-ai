@@ -144,7 +144,7 @@ function parseDispatchData(input) {
     }
 
     // ── ORG ───────────────────────────────────────────────
-    const rawOrg = COL_ORG ? (row[COL_ORG] || '').trim().toUpperCase() : '';
+    const rawOrg = COL_ORG ? String(row[COL_ORG] || '').trim().toUpperCase() : '';
     if (orgStats[rawOrg]) {
       orgStats[rawOrg].o++;
       orgStats[rawOrg].v += amt;
@@ -155,7 +155,7 @@ function parseDispatchData(input) {
 
     // ── CITY ──────────────────────────────────────────────
     if (COL_CITY && row[COL_CITY]) {
-      const city = normaliseCity(row[COL_CITY]);
+      const city = normaliseCity(String(row[COL_CITY] || ''));
       if (!cities[city]) cities[city] = { orders: 0, value: 0 };
       cities[city].orders++;
       cities[city].value += amt;
@@ -163,7 +163,7 @@ function parseDispatchData(input) {
 
     // ── CUSTOMER ──────────────────────────────────────────
     if (COL_CUSTOMER && row[COL_CUSTOMER]) {
-      const cust = row[COL_CUSTOMER].trim();
+      const cust = String(row[COL_CUSTOMER] || '').trim();
       if (!customers[cust]) customers[cust] = { orders: 0, value: 0 };
       customers[cust].orders++;
       customers[cust].value += amt;
@@ -171,21 +171,21 @@ function parseDispatchData(input) {
 
     // ── ROUTES & DRIVERS ──────────────────────────────────
     if (COL_ROUTE && row[COL_ROUTE]) {
-      const route = row[COL_ROUTE].trim();
+      const route = String(row[COL_ROUTE] || '').trim();
       if (!routes[route]) routes[route] = { locations: new Set(), driver: '', value: 0 };
-      const locId = COL_LOCATION ? (row[COL_LOCATION] || '').trim() : '';
+      const locId = COL_LOCATION ? String(row[COL_LOCATION] || '').trim() : '';
       if (locId) routes[route].locations.add(locId);
       routes[route].value += amt;
 
       // Extract driver name from contact field
       if (COL_DRIVER && row[COL_DRIVER] && !routes[route].driver) {
-        routes[route].driver = extractDriverName(row[COL_DRIVER]);
+        routes[route].driver = extractDriverName(String(row[COL_DRIVER] || ''));
       }
     }
 
     // Track unique drivers
     if (COL_DRIVER && row[COL_DRIVER]) {
-      const drvKey = extractDriverName(row[COL_DRIVER]) || row[COL_DRIVER].trim();
+      const drvKey = extractDriverName(row[COL_DRIVER]) || String(row[COL_DRIVER] || '').trim();
       if (drvKey) driverSet.add(drvKey);
     }
   }
