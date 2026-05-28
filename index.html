@@ -706,23 +706,53 @@ function getFilteredData(){
   var top8cx = function(obj){ return Object.keys(obj).map(function(k){return{n:k,c:obj[k],v:''};}).sort(function(a,b){return b.c-a.c;}).slice(0,8); };
   var top6ax = function(obj){ return Object.keys(obj).map(function(k){return{a:k,n:obj[k]};}).sort(function(a,b){return b.n-a.n;}).slice(0,6); };
 
+  // Step -1: BU filter maps to ORG
+  // Salon = DGC only
+  // Consumer DIC = DCV, DCF, DGS, DSN (not DGC/Salon)
+  // BU filter: Salon=DGC, Consumer DIC = everything except DGC
+  var effectiveORG = rejORG;
+  if(rejBU === 'salon'    && rejORG === 'all') effectiveORG = 'DGC';
+  if(rejBU === 'consumer' && rejORG === 'all') effectiveORG = 'CONSUMER_DIC';
+
   // Step 0: Check if selected ORG is compatible with type filter
   // If DCV/DCF selected + Non-Food → return zeros
   // If DGC/DGS/DSN selected + Food → return zeros
   var FOOD_ORGS2    = ['DCV','DCF'];
   var NONFOOD_ORGS2 = ['DGC','DGS','DSN'];
-  if(rejORG !== 'all'){
-    if(rejType === 'food'    && NONFOOD_ORGS2.indexOf(rejORG) >= 0)
+  if(effectiveORG !== 'all' && effectiveORG !== 'CONSUMER_DIC'){
+    if(rejType === 'food'    && NONFOOD_ORGS2.indexOf(effectiveORG) >= 0)
       return {tDel:0,tRej:0,val:'AED 0K',del:[0,0,0,0,0],rej:[0,0,0,0,0],reasons:[],custs:[],areas:[]};
-    if(rejType === 'nonfood' && FOOD_ORGS2.indexOf(rejORG) >= 0)
+    if(rejType === 'nonfood' && FOOD_ORGS2.indexOf(effectiveORG) >= 0)
       return {tDel:0,tRej:0,val:'AED 0K',del:[0,0,0,0,0],rej:[0,0,0,0,0],reasons:[],custs:[],areas:[]};
   }
 
-  // Step 1: Get base ORG data
-  var orgBase = JSON.parse(JSON.stringify(
-    ORG_DATA[rejORG] || ORG_DATA['all'] ||
-    {del:[],rej:[],tDel:0,tRej:0,val:'AED 0K',reasons:[],custs:[],areas:[],food_rej:0,nonfood_rej:0,ext_rej:0,int_rej:0,food_val:'AED 0K',nonfood_val:'AED 0K'}
-  ));
+  // Step 1: Get base ORG data (using effectiveORG from BU filter)
+  var orgBase;
+  if(effectiveORG === 'CONSUMER_DIC'){
+    // Consumer DIC = DCV + DCF + DGS + DSN (not DGC/Salon)
+    var consOrgs = ['DCV','DCF','DGS','DSN'];
+    var consData = {tDel:0,tRej:0,val:0,food_rej:0,food_del:0,nonfood_rej:0,nonfood_del:0,ext_rej:0,int_rej:0,del:[0,0,0,0,0,0,0,0,0,0,0,0],rej:[0,0,0,0,0,0,0,0,0,0,0,0],reasons:{},custs:{},areas:{}};
+    consOrgs.forEach(function(o){
+      var v=ORG_DATA[o]; if(!v)return;
+      consData.tDel+=v.tDel||0; consData.tRej+=v.tRej||0;
+      consData.food_rej+=(v.food_rej||0); consData.food_del+=(v.food_del||0);
+      consData.nonfood_rej+=(v.nonfood_rej||0); consData.nonfood_del+=(v.nonfood_del||0);
+      consData.ext_rej+=(v.ext_rej||0); consData.int_rej+=(v.int_rej||0);
+      var rv=parseFloat((v.val||'0').replace(/[^0-9.]/g,''))*((v.val||'').includes('M')?1000000:1000);
+      consData.val+=rv;
+      (v.del||[]).forEach(function(d,i){consData.del[i]+=d;});
+      (v.rej||[]).forEach(function(r,i){consData.rej[i]+=r;});
+      Object.keys(v.reasons||{}).forEach(function(k){consData.reasons[k]=(consData.reasons[k]||0)+(v.reasons[k]||0);});
+    });
+    var fmtConsVal=consData.val>=1000000?'AED '+(consData.val/1000000).toFixed(2)+'M':'AED '+Math.round(consData.val/1000)+'K';
+    consData.val=fmtConsVal;
+    orgBase = JSON.parse(JSON.stringify(consData));
+  } else {
+    orgBase = JSON.parse(JSON.stringify(
+      ORG_DATA[effectiveORG] || ORG_DATA['all'] ||
+      {del:[],rej:[],tDel:0,tRej:0,val:'AED 0K',reasons:[],custs:[],areas:[],food_rej:0,food_del:0,nonfood_rej:0,nonfood_del:0,ext_rej:0,int_rej:0,food_val:'AED 0K',nonfood_val:'AED 0K'}
+    ));
+  }
   while(orgBase.del.length < 12) orgBase.del.push(0);
   while(orgBase.rej.length < 12) orgBase.rej.push(0);
 
@@ -800,11 +830,10 @@ function getFilteredData(){
 
   if(rejType === 'food'){
     typeRatio = orgTotalRej > 0 ? (orgBase.food_rej||0) / orgTotalRej : 0;
-    // Use REAL food delivered count for correct rejection %
-    if(orgBase.food_del !== undefined){
-      var foodDelRatio = (orgBase.tDel||0) > 0 ? (orgBase.food_del||0)/(orgBase.tDel||1) : typeRatio;
-      base.tDel = Math.round((base.tDel||0) * foodDelRatio);
-    }
+    // Set tDel directly from real food delivered count
+    // Use ratio of food_del/tDel to scale the time-filtered base.tDel
+    var foodDelRatio = (orgBase.tDel||0) > 0 ? (orgBase.food_del||0)/(orgBase.tDel||1) : typeRatio;
+    base.tDel = Math.round((base.tDel||0) * foodDelRatio);
     // Update val to food val (proportional)
     var foodValNum = parseFloat((orgBase.food_val||'0').replace(/[^0-9.]/g,'')) * ((orgBase.food_val||'').includes('M')?1000000:1000);
     var baseValNum = parseFloat((base.val||'0').replace(/[^0-9.]/g,'')) * ((base.val||'').includes('M')?1000000:1000);
@@ -830,16 +859,20 @@ function getFilteredData(){
 
   var finalRatio = typeRatio * srcRatio;
 
+  // Apply finalRatio to rejection counts
   base.tRej = Math.round((base.tRej||0) * finalRatio);
-  // tDel already set correctly above for food/nonfood; only scale for src filter
-  if(rejType === 'all'){
-    base.tDel = Math.round((base.tDel||0) * finalRatio);
-  } else if(rejSrc !== 'all'){
-    // Further scale by source ratio
+  base.del  = base.del.map(function(v){return Math.round(v*finalRatio);});
+  base.rej  = base.rej.map(function(v){return Math.round(v*finalRatio);});
+  // tDel: only scale by srcRatio if source filter active
+  // (type-filtered tDel already set correctly above)
+  if(rejType === 'all' && rejSrc === 'all'){
+    base.tDel = Math.round((base.tDel||0));
+  } else if(rejType === 'all' && rejSrc !== 'all'){
+    base.tDel = Math.round((base.tDel||0) * srcRatio);
+  } else if(rejType !== 'all' && rejSrc !== 'all'){
     base.tDel = Math.round((base.tDel||0) * srcRatio);
   }
-  base.del   = base.del.map(function(v){return Math.round(v*finalRatio);});
-  base.rej   = base.rej.map(function(v){return Math.round(v*finalRatio);});
+  // else: rejType !== 'all' && rejSrc === 'all' -> tDel already set by type filter above
 
   if(rejSrc === 'internal' && base.tRej > 0){
     base.reasons = [{l:'AKI staff issue',n:Math.round(base.tRej*0.4)},{l:'Staff related reason',n:Math.round(base.tRej*0.35)},{l:'Receiving closed early',n:Math.round(base.tRej*0.25)}];
