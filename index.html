@@ -702,149 +702,199 @@ function buildDayGrid(){
 }
 
 function getFilteredData(){
-  // Get base data from ORG filter
-  var base = JSON.parse(JSON.stringify(
-    ORG_DATA[rejORG] || ORG_DATA['all'] ||
-    {del:[0,0,0,0,0],rej:[0,0,0,0,0],tDel:0,tRej:0,val:'—',reasons:[],custs:[],areas:[]}
-  ));
+  var top10x = function(obj){ return Object.keys(obj).map(function(k){return{l:k,n:obj[k]};}).sort(function(a,b){return b.n-a.n;}).slice(0,10); };
+  var top8cx = function(obj){ return Object.keys(obj).map(function(k){return{n:k,c:obj[k],v:''};}).sort(function(a,b){return b.c-a.c;}).slice(0,8); };
+  var top6ax = function(obj){ return Object.keys(obj).map(function(k){return{a:k,n:obj[k]};}).sort(function(a,b){return b.n-a.n;}).slice(0,6); };
 
-  // Ensure 5-element arrays for Jan-May
-  while((base.del||[]).length < 5) (base.del=base.del||[]).push(0);
-  while((base.rej||[]).length < 5) (base.rej=base.rej||[]).push(0);
-  base.del = base.del.slice(0,5);
-  base.rej = base.rej.slice(0,5);
+  // Step 0: Check if selected ORG is compatible with type filter
+  // If DCV/DCF selected + Non-Food → return zeros
+  // If DGC/DGS/DSN selected + Food → return zeros
+  var FOOD_ORGS2    = ['DCV','DCF'];
+  var NONFOOD_ORGS2 = ['DGC','DGS','DSN'];
+  if(rejORG !== 'all'){
+    if(rejType === 'food'    && NONFOOD_ORGS2.indexOf(rejORG) >= 0)
+      return {tDel:0,tRej:0,val:'AED 0K',del:[0,0,0,0,0],rej:[0,0,0,0,0],reasons:[],custs:[],areas:[]};
+    if(rejType === 'nonfood' && FOOD_ORGS2.indexOf(rejORG) >= 0)
+      return {tDel:0,tRej:0,val:'AED 0K',del:[0,0,0,0,0],rej:[0,0,0,0,0],reasons:[],custs:[],areas:[]};
+  }
+
+  // Step 1: Get base ORG data
+  var orgBase = JSON.parse(JSON.stringify(
+    ORG_DATA[rejORG] || ORG_DATA['all'] ||
+    {del:[],rej:[],tDel:0,tRej:0,val:'AED 0K',reasons:[],custs:[],areas:[],food_rej:0,nonfood_rej:0,ext_rej:0,int_rej:0,food_val:'AED 0K',nonfood_val:'AED 0K'}
+  ));
+  while(orgBase.del.length < 12) orgBase.del.push(0);
+  while(orgBase.rej.length < 12) orgBase.rej.push(0);
+
+  // Step 2: Get time-filtered data (day/month)
+  var timeBase = null;
 
   // Multi-day selection
   if(rejMonth !== 'all' && rejSelectedDays.length > 0){
     var moKey = DAY_DATA[rejMonth] ? rejMonth : String(rejMonth);
-    var moData = DAY_DATA[moKey] || {};
-    var combined = {tDel:0,tRej:0,val:0,reasons:{},custs:{},areas:{}};
+    var moDataX = DAY_DATA[moKey] || {};
+    var comb = {tDel:0,tRej:0,valNum:0,reasons:{},custs:{},areas:{}};
     rejSelectedDays.forEach(function(day){
-      var di = (moData.data||{})[day] || (moData.data||{})[String(day)];
+      var di = (moDataX.data||{})[day] || (moDataX.data||{})[String(day)];
       if(!di) return;
-      combined.tDel += di.tDel||0;
-      combined.tRej += di.tRej||0;
-      combined.val  += parseFloat((di.val||'0').replace(/[^0-9.]/g,'')) * (di.val&&di.val.includes('M')?1000000:1000);
-      (di.reasons||[]).forEach(function(r){ combined.reasons[r.l]=(combined.reasons[r.l]||0)+r.n; });
-      (di.custs||[]).forEach(function(c)  { combined.custs[c.n]  =(combined.custs[c.n]  ||0)+c.c; });
-      (di.areas||[]).forEach(function(a)  { combined.areas[a.a]  =(combined.areas[a.a]  ||0)+a.n; });
+      comb.tDel += di.tDel||0;
+      comb.tRej += di.tRej||0;
+      comb.valNum += parseFloat((di.val||'0').replace(/[^0-9.]/g,'')) * ((di.val||'').includes('M')?1000000:1000);
+      (di.reasons||[]).forEach(function(r){comb.reasons[r.l]=(comb.reasons[r.l]||0)+r.n;});
+      (di.custs||[]).forEach(function(c){comb.custs[c.n]=(comb.custs[c.n]||0)+c.c;});
+      (di.areas||[]).forEach(function(a){comb.areas[a.a]=(comb.areas[a.a]||0)+a.n;});
     });
-    var fmtV = combined.val>=1000000?'AED '+(combined.val/1000000).toFixed(2)+'M':'AED '+Math.round(combined.val/1000)+'K';
-    var top10 = function(obj){ return Object.keys(obj).map(function(k){return{l:k,n:obj[k]};}).sort(function(a,b){return b.n-a.n;}).slice(0,10); };
-    var top8c = function(obj){ return Object.keys(obj).map(function(k){return{n:k,c:obj[k],v:''};}).sort(function(a,b){return b.c-a.c;}).slice(0,8); };
-    var top6a = function(obj){ return Object.keys(obj).map(function(k){return{a:k,n:obj[k]};}).sort(function(a,b){return b.n-a.n;}).slice(0,6); };
-    base = {
-      del:[0,0,0,0,0].map(function(_,i){return i===rejMonth-1?combined.tDel:0;}),
-      rej:[0,0,0,0,0].map(function(_,i){return i===rejMonth-1?combined.tRej:0;}),
-      tDel:combined.tDel, tRej:combined.tRej, val:fmtV,
-      reasons:top10(combined.reasons), custs:top8c(combined.custs), areas:top6a(combined.areas)
+    timeBase = {
+      tDel:comb.tDel, tRej:comb.tRej,
+      val:comb.valNum>=1000000?'AED '+(comb.valNum/1000000).toFixed(2)+'M':'AED '+Math.round(comb.valNum/1000)+'K',
+      del:[0,0,0,0,0].map(function(_,i){return i===rejMonth-1?comb.tDel:0;}),
+      rej:[0,0,0,0,0].map(function(_,i){return i===rejMonth-1?comb.tRej:0;}),
+      reasons:top10x(comb.reasons), custs:top8cx(comb.custs), areas:top6ax(comb.areas)
     };
-    // Apply type/source multipliers
-    base = applyTypeSource(base);
-    return base;
   }
-
-  // Single day filter (legacy)
-  if(rejMonth !== 'all' && rejDay !== 'all'){
+  // Single day
+  else if(rejMonth !== 'all' && rejDay !== 'all'){
     var moKey2 = DAY_DATA[rejMonth] ? rejMonth : String(rejMonth);
-    var moData2 = DAY_DATA[moKey2] || {};
-    var dayInfo = (moData2.data||{})[rejDay] || (moData2.data||{})[String(rejDay)];
-    if(dayInfo){
-      base = {
-        del:[0,0,0,0,0].map(function(_,i){return i===rejMonth-1?(dayInfo.tDel||0):0;}),
-        rej:[0,0,0,0,0].map(function(_,i){return i===rejMonth-1?(dayInfo.tRej||0):0;}),
-        tDel:dayInfo.tDel||0, tRej:dayInfo.tRej||0, val:dayInfo.val||'—',
-        reasons:dayInfo.reasons||[], custs:dayInfo.custs||[], areas:dayInfo.areas||[]
+    var di2 = ((DAY_DATA[moKey2]||{}).data||{})[rejDay] || ((DAY_DATA[moKey2]||{}).data||{})[String(rejDay)];
+    if(di2){
+      timeBase = {
+        tDel:di2.tDel||0, tRej:di2.tRej||0, val:di2.val||'AED 0K',
+        del:[0,0,0,0,0].map(function(_,i){return i===rejMonth-1?(di2.tDel||0):0;}),
+        rej:[0,0,0,0,0].map(function(_,i){return i===rejMonth-1?(di2.tRej||0):0;}),
+        reasons:di2.reasons||[], custs:di2.custs||[], areas:di2.areas||[]
       };
-      base = applyTypeSource(base);
-      return base;
     }
   }
-
-  // Month filter
-  if(rejMonth !== 'all'){
-    var mi = rejMonth-1;
-    var moInfo = DAY_DATA[rejMonth] || DAY_DATA[String(rejMonth)] || {};
-    base.tDel = base.del[mi]||0;
-    base.tRej = base.rej[mi]||0;
-    base.del = [0,0,0,0,0].map(function(_,i){return i===mi?base.tDel:0;});
-    base.rej = [0,0,0,0,0].map(function(_,i){return i===mi?base.tRej:0;});
-    if(moInfo.reasons && moInfo.reasons.length) base.reasons = moInfo.reasons;
-    if(moInfo.areas   && moInfo.areas.length)   base.areas   = moInfo.areas;
+  // Month only
+  else if(rejMonth !== 'all'){
+    var mi = rejMonth - 1;
+    var moInfo2 = DAY_DATA[rejMonth] || DAY_DATA[String(rejMonth)] || {};
+    var mDel = orgBase.del[mi]||0;
+    var mRej = orgBase.rej[mi]||0;
+    timeBase = {
+      tDel:mDel, tRej:mRej,
+      val: (function(){ var r=mRej/(orgBase.tRej||1); var v=parseFloat((orgBase.val||'0').replace(/[^0-9.]/g,''))*((orgBase.val||'').includes('M')?1000000:1000); var n=v*r; return n>=1000000?'AED '+(n/1000000).toFixed(2)+'M':'AED '+Math.round(n/1000)+'K'; })(),
+      del:[0,0,0,0,0].map(function(_,i){return i===mi?mDel:0;}),
+      rej:[0,0,0,0,0].map(function(_,i){return i===mi?mRej:0;}),
+      reasons:(moInfo2.reasons&&moInfo2.reasons.length)?moInfo2.reasons:(orgBase.reasons||[]),
+      custs:orgBase.custs||[], areas:(moInfo2.areas&&moInfo2.areas.length)?moInfo2.areas:(orgBase.areas||[])
+    };
   }
 
-  base = applyTypeSource(base);
+  // Use timeBase if available, otherwise use orgBase
+  var base = timeBase || {
+    tDel:orgBase.tDel, tRej:orgBase.tRej, val:orgBase.val,
+    del:orgBase.del.slice(0,5), rej:orgBase.rej.slice(0,5),
+    reasons:orgBase.reasons||[], custs:orgBase.custs||[], areas:orgBase.areas||[]
+  };
+  if(!timeBase){
+    while(base.del.length<5) base.del.push(0);
+    while(base.rej.length<5) base.rej.push(0);
+    base.del=base.del.slice(0,5); base.rej=base.rej.slice(0,5);
+  }
+
+  // Step 3: Apply TYPE and SOURCE filters using ORG-level ratios
+  // We use orgBase ratios because day/month data doesn't have type breakdown
+  var typeRatio = 1, srcRatio = 1;
+  var orgTotalRej = orgBase.tRej || 1;
+
+  if(rejType === 'food'){
+    typeRatio = orgTotalRej > 0 ? (orgBase.food_rej||0) / orgTotalRej : 0;
+    // Use REAL food delivered count for correct rejection %
+    if(orgBase.food_del !== undefined){
+      var foodDelRatio = (orgBase.tDel||0) > 0 ? (orgBase.food_del||0)/(orgBase.tDel||1) : typeRatio;
+      base.tDel = Math.round((base.tDel||0) * foodDelRatio);
+    }
+    // Update val to food val (proportional)
+    var foodValNum = parseFloat((orgBase.food_val||'0').replace(/[^0-9.]/g,'')) * ((orgBase.food_val||'').includes('M')?1000000:1000);
+    var baseValNum = parseFloat((base.val||'0').replace(/[^0-9.]/g,'')) * ((base.val||'').includes('M')?1000000:1000);
+    var orgValNum  = parseFloat((orgBase.val||'0').replace(/[^0-9.]/g,'')) * ((orgBase.val||'').includes('M')?1000000:1000);
+    var foodValRatio = orgValNum > 0 ? foodValNum / orgValNum : 0;
+    var newVal = baseValNum * foodValRatio;
+    base.val = newVal>=1000000?'AED '+(newVal/1000000).toFixed(2)+'M':'AED '+Math.round(newVal/1000)+'K';
+  } else if(rejType === 'nonfood'){
+    typeRatio = (orgBase.nonfood_rej||0) / orgTotalRej;
+    var nfValNum  = parseFloat((orgBase.nonfood_val||'0').replace(/[^0-9.]/g,'')) * ((orgBase.nonfood_val||'').includes('M')?1000000:1000);
+    var baseValNum2 = parseFloat((base.val||'0').replace(/[^0-9.]/g,'')) * ((base.val||'').includes('M')?1000000:1000);
+    var orgValNum2  = parseFloat((orgBase.val||'0').replace(/[^0-9.]/g,'')) * ((orgBase.val||'').includes('M')?1000000:1000);
+    var nfValRatio = orgValNum2 > 0 ? nfValNum / orgValNum2 : 0;
+    var newVal2 = baseValNum2 * nfValRatio;
+    base.val = newVal2>=1000000?'AED '+(newVal2/1000000).toFixed(2)+'M':'AED '+Math.round(newVal2/1000)+'K';
+  }
+
+  if(rejSrc === 'external') srcRatio = (orgBase.ext_rej||0) / orgTotalRej;
+  else if(rejSrc === 'internal'){
+    srcRatio = (orgBase.int_rej||0) / orgTotalRej;
+    base.reasons = [{l:'AKI staff issue',n:0},{l:'Staff related reason',n:0},{l:'Receiving closed early',n:0}];
+  }
+
+  var finalRatio = typeRatio * srcRatio;
+
+  base.tRej = Math.round((base.tRej||0) * finalRatio);
+  // tDel already set correctly above for food/nonfood; only scale for src filter
+  if(rejType === 'all'){
+    base.tDel = Math.round((base.tDel||0) * finalRatio);
+  } else if(rejSrc !== 'all'){
+    // Further scale by source ratio
+    base.tDel = Math.round((base.tDel||0) * srcRatio);
+  }
+  base.del   = base.del.map(function(v){return Math.round(v*finalRatio);});
+  base.rej   = base.rej.map(function(v){return Math.round(v*finalRatio);});
+
+  if(rejSrc === 'internal' && base.tRej > 0){
+    base.reasons = [{l:'AKI staff issue',n:Math.round(base.tRej*0.4)},{l:'Staff related reason',n:Math.round(base.tRej*0.35)},{l:'Receiving closed early',n:Math.round(base.tRej*0.25)}];
+  }
+
   return base;
 }
 
-// Apply type (food/nonfood) and source (external/internal) multipliers
-// Apply type (food/nonfood) and source (external/internal) filters using REAL data
-function applyTypeSource(base){
-  if(rejType === 'all' && rejSrc === 'all') return base;
-  var b = JSON.parse(JSON.stringify(base));
 
-  // Step 1: Apply TYPE filter using real stored counts
-  if(rejType === 'food'){
-    b.tRej = base.food_rej || 0;
-    b.val  = base.food_val || 'AED 0K';
-    // Scale tDel proportionally (food orders ~ same ratio as food rejections)
-    var foodRatio = base.tRej > 0 ? b.tRej / base.tRej : 0;
-    b.tDel = Math.round((base.tDel||0) * foodRatio);
-  } else if(rejType === 'nonfood'){
-    b.tRej = base.nonfood_rej || 0;
-    b.val  = base.nonfood_val || 'AED 0K';
-    var nfRatio = base.tRej > 0 ? b.tRej / base.tRej : 0;
-    b.tDel = Math.round((base.tDel||0) * nfRatio);
-  }
+// ORG food/nonfood classification:
+// FOOD orgs: DCV, DCF
+// NON-FOOD orgs: DGC, DGS, DSN
+var FOOD_ORGS    = ['DCV','DCF'];
+var NONFOOD_ORGS = ['DGC','DGS','DSN'];
 
-  // Step 2: Apply SOURCE filter using real stored counts
-  var rejAfterType = b.tRej;
-  var delAfterType = b.tDel;
-  if(rejSrc === 'external'){
-    var extTotal = base.ext_rej || 0;
-    var extRatio = base.tRej > 0 ? extTotal / base.tRej : 0.97;
-    b.tRej = Math.round(rejAfterType * extRatio);
-    b.tDel = Math.round(delAfterType * extRatio);
-  } else if(rejSrc === 'internal'){
-    var intTotal = base.int_rej || 0;
-    var intRatio = base.tRej > 0 ? intTotal / base.tRej : 0.03;
-    b.tRej = Math.round(rejAfterType * intRatio);
-    b.tDel = Math.round(delAfterType * intRatio);
-    b.reasons = [{l:'AKI staff issue',n:Math.round(b.tRej*0.4)},{l:'Staff related reason',n:Math.round(b.tRej*0.35)},{l:'Receiving closed early',n:Math.round(b.tRej*0.25)}];
-  }
-
-  // Step 3: Scale chart arrays proportionally
-  var origRej = base.tRej || 1;
-  var finalRatio = b.tRej / origRej;
-  b.del = b.del.map(function(v){return Math.round(v*finalRatio);});
-  b.rej = b.rej.map(function(v){return Math.round(v*finalRatio);});
-
-  // Step 4: Scale value if not set from real data
-  if((rejType==='all'||rejSrc!=='all') && b.val && b.val !== 'AED 0K' && rejType==='all'){
-    var rawV = parseFloat(b.val.replace(/[^0-9.]/g,'')) * (b.val.includes('M')?1000000:1000);
-    var newV = rawV * finalRatio;
-    b.val = newV>=1000000?'AED '+(newV/1000000).toFixed(2)+'M':'AED '+Math.round(newV/1000)+'K';
-  }
-
-  return b;
-}
-// Get org rejection count based on current type/source filter
 function getOrgFilteredCount(o){
   var orgD = ORG_DATA[o.org];
   if(!orgD) return o.rej||0;
-  // Always show each org's own filtered count regardless of rejORG selection
+
+  // TYPE filter: if org is wrong type, return 0
+  if(rejType === 'food' && NONFOOD_ORGS.indexOf(o.org) >= 0) return 0;
+  if(rejType === 'nonfood' && FOOD_ORGS.indexOf(o.org) >= 0) return 0;
+
+  // Get base count for selected month
   var baseRej = o.rej || 0;
-  if(rejType==='food')    return orgD.food_rej||0;
-  if(rejType==='nonfood') return orgD.nonfood_rej||0;
-  if(rejSrc==='external') return orgD.ext_rej||0;
-  if(rejSrc==='internal') return orgD.int_rej||0;
+  if(rejMonth !== 'all'){
+    var mi = rejMonth - 1;
+    baseRej = (orgD.rej||[])[mi] || 0;
+  }
+
+  // Source filter using YTD ratio
+  if(rejSrc === 'external'){
+    return Math.round(baseRej * ((orgD.ext_rej||0) / Math.max(orgD.tRej,1)));
+  }
+  if(rejSrc === 'internal'){
+    return Math.round(baseRej * ((orgD.int_rej||0) / Math.max(orgD.tRej,1)));
+  }
   return baseRej;
 }
 function getOrgFilteredVal(o){
   var orgD = ORG_DATA[o.org];
   if(!orgD) return o.val||'—';
+  // For value, use type-specific YTD value as approximation
   if(rejType==='food')    return orgD.food_val||'AED 0K';
   if(rejType==='nonfood') return orgD.nonfood_val||'AED 0K';
+  // For month filter, show proportional value
+  if(rejMonth !== 'all'){
+    var mi2 = rejMonth - 1;
+    var moRej = (orgD.rej||[])[mi2] || 0;
+    var ytdRej = orgD.tRej || 1;
+    var moRatio = moRej / ytdRej;
+    var rawVal = parseFloat((orgD.val||'0').replace(/[^0-9.]/g,'')) * ((orgD.val||'').includes('M')?1000000:1000);
+    var moVal = rawVal * moRatio;
+    return moVal>=1000000?'AED '+(moVal/1000000).toFixed(2)+'M':'AED '+Math.round(moVal/1000)+'K';
+  }
   return o.val||'—';
 }
 
