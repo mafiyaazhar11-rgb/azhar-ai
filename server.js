@@ -412,11 +412,22 @@ app.post('/api/rejection/upload', upload.single('file'), function(req, res) {
           tDel:0, tRej:0, val:0,
           del: [0,0,0,0,0,0,0,0,0,0,0,0],
           rej: [0,0,0,0,0,0,0,0,0,0,0,0],
-          food_rej:0, nonfood_rej:0, ext_rej:0, int_rej:0,
+          food_rej:0, food_del:0, nonfood_rej:0, nonfood_del:0,
+          ext_rej:0, ext_del:0, int_rej:0, int_del:0,
           food_val:0, nonfood_val:0,
           reasons:{}, custs:{}, areas:{}
         };
-        if (del) { orgMap[org].tDel++; if(mo) orgMap[org].del[mo-1]++; }
+        if (del) {
+          orgMap[org].tDel++; if(mo) orgMap[org].del[mo-1]++;
+          var typeStrD = toStr(row[RC.type]||'').toUpperCase();
+          var isFoodD = typeStrD === 'FOOD' || typeStrD.startsWith('FOOD,');
+          var isNFD = typeStrD.includes('NON FOOD') || typeStrD.includes('NON-FOOD');
+          var srcStrD = toStr(row[RC.source]||'').toUpperCase();
+          if(isFoodD) orgMap[org].food_del++;
+          else if(isNFD) orgMap[org].nonfood_del++;
+          if(srcStrD === 'EXTERNAL') orgMap[org].ext_del++;
+          else if(srcStrD === 'INTERNAL') orgMap[org].int_del++;
+        }
         if (rej) {
           orgMap[org].tRej++; orgMap[org].val += val;
           if (mo) orgMap[org].rej[mo-1]++;
@@ -500,8 +511,10 @@ app.post('/api/rejection/upload', upload.single('file'), function(req, res) {
       var v = orgMap[org3];
       orgsOut[org3] = { 
         tDel:v.tDel, tRej:v.tRej, val:fmtVal(v.val), 
-        food_rej:v.food_rej||0, nonfood_rej:v.nonfood_rej||0,
-        ext_rej:v.ext_rej||0, int_rej:v.int_rej||0,
+        food_rej:v.food_rej||0, food_del:v.food_del||0,
+        nonfood_rej:v.nonfood_rej||0, nonfood_del:v.nonfood_del||0,
+        ext_rej:v.ext_rej||0, ext_del:v.ext_del||0,
+        int_rej:v.int_rej||0, int_del:v.int_del||0,
         food_val:fmtVal(v.food_val||0), nonfood_val:fmtVal(v.nonfood_val||0),
         del:v.del, rej:v.rej, 
         reasons:top10(v.reasons), custs:top8c(v.custs), areas:top6a(v.areas) 
