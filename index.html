@@ -783,35 +783,46 @@ function applyTypeSource(base){
   if(rejType === 'all' && rejSrc === 'all') return base;
   var b = JSON.parse(JSON.stringify(base));
 
-  // Use real stored counts if available
-  if(rejType === 'food' && base.food_rej !== undefined){
+  // Step 1: Apply TYPE filter using real stored counts
+  if(rejType === 'food'){
     b.tRej = base.food_rej || 0;
     b.val  = base.food_val || 'AED 0K';
-  } else if(rejType === 'nonfood' && base.nonfood_rej !== undefined){
+    // Scale tDel proportionally (food orders ~ same ratio as food rejections)
+    var foodRatio = base.tRej > 0 ? b.tRej / base.tRej : 0;
+    b.tDel = Math.round((base.tDel||0) * foodRatio);
+  } else if(rejType === 'nonfood'){
     b.tRej = base.nonfood_rej || 0;
     b.val  = base.nonfood_val || 'AED 0K';
+    var nfRatio = base.tRej > 0 ? b.tRej / base.tRej : 0;
+    b.tDel = Math.round((base.tDel||0) * nfRatio);
   }
 
-  if(rejSrc === 'external' && base.ext_rej !== undefined){
-    if(rejType !== 'all') b.tRej = Math.round(b.tRej * (base.ext_rej / Math.max(base.tRej,1)));
-    else { b.tRej = base.ext_rej || 0; }
-  } else if(rejSrc === 'internal' && base.int_rej !== undefined){
-    if(rejType !== 'all') b.tRej = Math.round(b.tRej * (base.int_rej / Math.max(base.tRej,1)));
-    else { b.tRej = base.int_rej || 0; }
-    b.reasons=[{l:'AKI staff issue',n:Math.round(b.tRej*0.4)},{l:'Staff related reason',n:Math.round(b.tRej*0.35)},{l:'Receiving closed early',n:Math.round(b.tRej*0.25)}];
+  // Step 2: Apply SOURCE filter using real stored counts
+  var rejAfterType = b.tRej;
+  var delAfterType = b.tDel;
+  if(rejSrc === 'external'){
+    var extTotal = base.ext_rej || 0;
+    var extRatio = base.tRej > 0 ? extTotal / base.tRej : 0.97;
+    b.tRej = Math.round(rejAfterType * extRatio);
+    b.tDel = Math.round(delAfterType * extRatio);
+  } else if(rejSrc === 'internal'){
+    var intTotal = base.int_rej || 0;
+    var intRatio = base.tRej > 0 ? intTotal / base.tRej : 0.03;
+    b.tRej = Math.round(rejAfterType * intRatio);
+    b.tDel = Math.round(delAfterType * intRatio);
+    b.reasons = [{l:'AKI staff issue',n:Math.round(b.tRej*0.4)},{l:'Staff related reason',n:Math.round(b.tRej*0.35)},{l:'Receiving closed early',n:Math.round(b.tRej*0.25)}];
   }
 
-  // Scale del and chart arrays proportionally
+  // Step 3: Scale chart arrays proportionally
   var origRej = base.tRej || 1;
-  var ratio = b.tRej / origRej;
-  b.del = b.del.map(function(v){return Math.round(v*ratio);});
-  b.rej = b.rej.map(function(v){return Math.round(v*ratio);});
-  b.tDel = Math.round((base.tDel||0) * ratio);
+  var finalRatio = b.tRej / origRej;
+  b.del = b.del.map(function(v){return Math.round(v*finalRatio);});
+  b.rej = b.rej.map(function(v){return Math.round(v*finalRatio);});
 
-  // Scale value if not already set from real data
-  if(rejType === 'all' && b.val && b.val !== 'AED 0K'){
+  // Step 4: Scale value if not set from real data
+  if((rejType==='all'||rejSrc!=='all') && b.val && b.val !== 'AED 0K' && rejType==='all'){
     var rawV = parseFloat(b.val.replace(/[^0-9.]/g,'')) * (b.val.includes('M')?1000000:1000);
-    var newV = rawV * ratio;
+    var newV = rawV * finalRatio;
     b.val = newV>=1000000?'AED '+(newV/1000000).toFixed(2)+'M':'AED '+Math.round(newV/1000)+'K';
   }
 
@@ -821,11 +832,13 @@ function applyTypeSource(base){
 function getOrgFilteredCount(o){
   var orgD = ORG_DATA[o.org];
   if(!orgD) return o.rej||0;
+  // Always show each org's own filtered count regardless of rejORG selection
+  var baseRej = o.rej || 0;
   if(rejType==='food')    return orgD.food_rej||0;
   if(rejType==='nonfood') return orgD.nonfood_rej||0;
   if(rejSrc==='external') return orgD.ext_rej||0;
   if(rejSrc==='internal') return orgD.int_rej||0;
-  return o.rej||0;
+  return baseRej;
 }
 function getOrgFilteredVal(o){
   var orgD = ORG_DATA[o.org];
