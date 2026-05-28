@@ -687,6 +687,45 @@ function buildDayGrid(){
   if(dayRow)dayRow.style.display='block';
 }
 
+function getFilteredData(){
+  var base = JSON.parse(JSON.stringify(ORG_DATA[rejORG] || ORG_DATA['all'] || {del:[0,0,0,0,0],rej:[0,0,0,0,0],tDel:0,tRej:0,val:'—',reasons:[],custs:[],areas:[]}));
+  // Ensure del/rej are at least 5 elements for Jan-May display
+  while((base.del||[]).length < 5) (base.del = base.del||[]).push(0);
+  while((base.rej||[]).length < 5) (base.rej = base.rej||[]).push(0);
+  base.del = base.del.slice(0,5);
+  base.rej = base.rej.slice(0,5);
+
+  // Day filter
+  if(rejMonth !== 'all' && rejDay !== 'all'){
+    var moKey = DAY_DATA[rejMonth] ? rejMonth : String(rejMonth);
+    var moData = DAY_DATA[moKey] || {};
+    var dayInfo = (moData.data||{})[rejDay] || (moData.data||{})[String(rejDay)];
+    if(dayInfo){
+      return {
+        del:[0,0,0,0,0].map(function(_,i){return i===rejMonth-1?Math.round((dayInfo.tDel||0)):0;}),
+        rej:[0,0,0,0,0].map(function(_,i){return i===rejMonth-1?Math.round((dayInfo.tRej||0)):0;}),
+        tDel:dayInfo.tDel||0, tRej:dayInfo.tRej||0,
+        val:dayInfo.val||'—',
+        reasons:dayInfo.reasons||[], custs:dayInfo.custs||[], areas:dayInfo.areas||[]
+      };
+    }
+  }
+
+  // Month filter
+  if(rejMonth !== 'all'){
+    var mi = rejMonth - 1;
+    var mDel = base.del[mi] || 0;
+    var mRej = base.rej[mi] || 0;
+    var moInfo = DAY_DATA[rejMonth] || DAY_DATA[String(rejMonth)] || {};
+    base.tDel = mDel; base.tRej = mRej;
+    base.del = [0,0,0,0,0].map(function(_,i){return i===mi?mDel:0;});
+    base.rej = [0,0,0,0,0].map(function(_,i){return i===mi?mRej:0;});
+    if(moInfo.reasons) base.reasons = moInfo.reasons;
+  }
+
+  return base;
+}
+
 function rejRender(){
   const d=getFilteredData(); if(!d)return;
 
