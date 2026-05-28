@@ -118,7 +118,7 @@ function parseDispatch(buffer) {
     driver: findCol('DRIVER CONTACT', 'DRIVER_CONTACT', 'DRIVER', 'DRIVERS NAME'),
     location: findCol('LOCATION_ID', 'LOCATION'),
     type: findCol('TYPE'),
-    org: findCol('ORGANIZATION', 'ORG-BU', 'ORG')
+    org: findCol('ORGANIZATION') || findCol('ORG-BU') || findCol('ORG')
   };
   console.log('Dispatch cols:', JSON.stringify(C));
 
@@ -347,7 +347,7 @@ app.post('/api/rejection/upload', upload.single('file'), function(req, res) {
 
     var RC = {
       status:    findC('FINAL STATUS', 'STATUS'),
-      org:       findC('ORGANIZATION', 'ORG-BU'),
+      org:       findC('ORGANIZATION') || findC('ORG-BU'),
       date:      findC('D DATE', 'DATE', 'DELIVERY DATE'),
       root:      findC('FINA- ROOT', 'ROOT CAUSE', 'ROOT_CAUSE', 'REASON-1'),
       cust:      findC('CUSTOMER NAME', 'CUSTOMER'),
