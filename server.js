@@ -354,7 +354,7 @@ app.post('/api/rejection/upload', upload.single('file'), function(req, res) {
       area:      findC('AREA', 'CITY'),
       value:     findC('VALUE', 'AMOUNT'),
       type:      findC('TYPE'),
-      source:    findC('REMAKE', 'INTERNAL/EXTERNAL', 'SOURCE')
+      source:    findC('REMAKE -3', 'REMAKE') || findC('INTERNAL/EXTERNAL')
     };
     console.log('Rejection cols:', JSON.stringify(RC));
 
@@ -412,6 +412,8 @@ app.post('/api/rejection/upload', upload.single('file'), function(req, res) {
           tDel:0, tRej:0, val:0,
           del: [0,0,0,0,0,0,0,0,0,0,0,0],
           rej: [0,0,0,0,0,0,0,0,0,0,0,0],
+          food_rej:0, nonfood_rej:0, ext_rej:0, int_rej:0,
+          food_val:0, nonfood_val:0,
           reasons:{}, custs:{}, areas:{}
         };
         if (del) { orgMap[org].tDel++; if(mo) orgMap[org].del[mo-1]++; }
@@ -421,6 +423,16 @@ app.post('/api/rejection/upload', upload.single('file'), function(req, res) {
           if (root) orgMap[org].reasons[root] = (orgMap[org].reasons[root]||0)+1;
           if (cust) orgMap[org].custs[cust]   = (orgMap[org].custs[cust]  ||0)+1;
           if (area) orgMap[org].areas[area]   = (orgMap[org].areas[area]  ||0)+1;
+          // Track type breakdown
+          var typeStr = toStr(row[RC.type]||'').toUpperCase();
+          var isFood = typeStr === 'FOOD' || typeStr.startsWith('FOOD,');
+          var isNonFood = typeStr.includes('NON FOOD') || typeStr.includes('NON-FOOD');
+          if (isFood) { orgMap[org].food_rej++; orgMap[org].food_val = (orgMap[org].food_val||0)+val; }
+          else if (isNonFood) { orgMap[org].nonfood_rej++; orgMap[org].nonfood_val = (orgMap[org].nonfood_val||0)+val; }
+          // Track source breakdown
+          var srcStr = toStr(row[RC.source]||'').toUpperCase();
+          if (srcStr === 'EXTERNAL') orgMap[org].ext_rej++;
+          else if (srcStr === 'INTERNAL') orgMap[org].int_rej++;
         }
       }
 
@@ -481,10 +493,19 @@ app.post('/api/rejection/upload', upload.single('file'), function(req, res) {
       monthsOut[mo2] = { days:Object.keys(md.days).map(Number).sort(function(a,b){return a-b;}), tDel:md.tDel, tRej:md.tRej, val:fmtVal(md.val), reasons:top10(md.reasons), data:dataOut };
     });
 
-    var orgsOut = { all:{ tDel:totalDel, tRej:totalRej, val:fmtVal(totalVal), del:allDel, rej:allRej, reasons:top10(allR), custs:top8c(allC), areas:top6a(allA) } };
+    var allFoodRej=0,allNonFoodRej=0,allExtRej=0,allIntRej=0,allFoodVal=0,allNonFoodVal=0;
+    Object.keys(orgMap).forEach(function(k){var v=orgMap[k];allFoodRej+=v.food_rej||0;allNonFoodRej+=v.nonfood_rej||0;allExtRej+=v.ext_rej||0;allIntRej+=v.int_rej||0;allFoodVal+=v.food_val||0;allNonFoodVal+=v.nonfood_val||0;});
+    var orgsOut = { all:{ tDel:totalDel, tRej:totalRej, val:fmtVal(totalVal), food_rej:allFoodRej, nonfood_rej:allNonFoodRej, ext_rej:allExtRej, int_rej:allIntRej, food_val:fmtVal(allFoodVal), nonfood_val:fmtVal(allNonFoodVal), del:allDel, rej:allRej, reasons:top10(allR), custs:top8c(allC), areas:top6a(allA) } };
     Object.keys(orgMap).forEach(function(org3) {
       var v = orgMap[org3];
-      orgsOut[org3] = { tDel:v.tDel, tRej:v.tRej, val:fmtVal(v.val), del:v.del, rej:v.rej, reasons:top10(v.reasons), custs:top8c(v.custs), areas:top6a(v.areas) };
+      orgsOut[org3] = { 
+        tDel:v.tDel, tRej:v.tRej, val:fmtVal(v.val), 
+        food_rej:v.food_rej||0, nonfood_rej:v.nonfood_rej||0,
+        ext_rej:v.ext_rej||0, int_rej:v.int_rej||0,
+        food_val:fmtVal(v.food_val||0), nonfood_val:fmtVal(v.nonfood_val||0),
+        del:v.del, rej:v.rej, 
+        reasons:top10(v.reasons), custs:top8c(v.custs), areas:top6a(v.areas) 
+      };
     });
 
     rejectionData = { uploadedAt:new Date().toISOString(), uploadedBy:req.body.uploadedBy||'Admin', fileName:req.file.originalname, totalOrders:totalRej+totalDel, orgs:orgsOut, months:monthsOut };
