@@ -15,7 +15,7 @@ app.use(express.urlencoded({ extended: true, limit: '150mb' }));
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-// ── DATA DIR ──────────────────────────────────────────────────
+//  DATA DIR 
 const DATA_DIR = path.join(__dirname, '.data');
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 const DISPATCH_FILE  = path.join(DATA_DIR, 'dispatch.json');
@@ -29,12 +29,12 @@ function loadJSON(fp) {
   return null;
 }
 
-// ── HEALTH ────────────────────────────────────────────────────
+//  HEALTH 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', time: new Date().toISOString() });
 });
 
-// ── HELPERS ───────────────────────────────────────────────────
+//  HELPERS 
 function toStr(v) { return String(v == null ? '' : v).trim(); }
 
 function normaliseType(raw) {
@@ -78,7 +78,7 @@ function stripBranch(name) {
   return base.replace(/,\s*(LLC|L\.L\.C|llc).*$/i, '').trim();
 }
 
-// ── DISPATCH PARSER ───────────────────────────────────────────
+//  DISPATCH PARSER 
 function parseDispatch(buffer) {
   const wb   = XLSX.read(buffer, { type: 'buffer' });
   const ws   = wb.Sheets[wb.SheetNames[0]];
@@ -151,7 +151,7 @@ function parseDispatch(buffer) {
     if (C.driver && row[C.driver]) driverSet.add(extractDriverName(row[C.driver]) || toStr(row[C.driver]));
   }
 
-  console.log('TYPE counts — food:'+foodOrders+' nonfood:'+nonFoodOrders+' 3pl:'+plOrders+' van:'+vanOrders+' total:'+totalOrders);
+  console.log('TYPE counts  food:'+foodOrders+' nonfood:'+nonFoodOrders+' 3pl:'+plOrders+' van:'+vanOrders+' total:'+totalOrders);
 
   const byCity = Object.entries(cities)
     .map(([city,v]) => ({ city, orders:v.orders, value:Math.round(v.value) }))
@@ -208,7 +208,7 @@ function parseDispatch(buffer) {
   };
 }
 
-// ── DISPATCH STORE ────────────────────────────────────────────
+//  DISPATCH STORE 
 let dispatchHistory = {};
 let currentDispatch = null;
 
@@ -273,13 +273,13 @@ app.post('/api/dispatch/ask', async (req, res) => {
   } catch(e) { res.status(500).json({ error:e.message }); }
 });
 
-// ── REJECTION STORE ───────────────────────────────────────────
+//  REJECTION STORE 
 let rejectionData = null;
 
 const savedRejection = loadJSON(REJECTION_FILE);
 if (savedRejection) {
   rejectionData = savedRejection;
-  console.log('Loaded rejection data — uploadedAt:', rejectionData.uploadedAt);
+  console.log('Loaded rejection data  uploadedAt:', rejectionData.uploadedAt);
 }
 
 app.post('/api/rejection/upload', upload.single('file'), async (req, res) => {
@@ -410,14 +410,14 @@ app.post('/api/rejection/upload', upload.single('file'), async (req, res) => {
   }
 });
 
-// !! CRITICAL — always returns JSON, never HTML !!
+// !! CRITICAL  always returns JSON, never HTML !!
 app.get('/api/rejection/status', (req, res) => {
   res.setHeader('Content-Type', 'application/json');
   if (!rejectionData) return res.json({ hasData:false });
   res.json({ hasData:true, uploadedAt:rejectionData.uploadedAt, uploadedBy:rejectionData.uploadedBy, fileName:rejectionData.fileName, totalOrders:rejectionData.totalOrders, orgs:rejectionData.orgs, months:rejectionData.months });
 });
 
-// ── CHAT ──────────────────────────────────────────────────────
+//  CHAT 
 app.post('/api/chat', async (req, res) => {
   try {
     const { prompt, history } = req.body;
@@ -429,7 +429,7 @@ app.post('/api/chat', async (req, res) => {
   } catch(e) { res.status(500).json({ error:e.message }); }
 });
 
-// ── EXCEL ─────────────────────────────────────────────────────
+//  EXCEL 
 app.post('/api/excel', upload.single('file'), async (req, res) => {
   try {
     let question = req.body.question || 'Analyse this data';
@@ -445,7 +445,7 @@ app.post('/api/excel', upload.single('file'), async (req, res) => {
   } catch(e) { res.status(500).json({ error:e.message }); }
 });
 
-// ── STATIC — MUST BE LAST ─────────────────────────────────────
+//  STATIC  MUST BE LAST 
 app.get('/', (req, res) => {
   const p1 = path.join(__dirname, 'public', 'index.html');
   const p2 = path.join(__dirname, 'index.html');
@@ -458,12 +458,12 @@ app.get('/', (req, res) => {
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.static(__dirname));
 
-// ── GLOBAL ERROR HANDLER — always returns JSON never HTML ────
+//  GLOBAL ERROR HANDLER  always returns JSON never HTML 
 app.use((err, req, res, next) => {
   console.error('Global error:', err.message, err.stack);
   res.status(500).json({ error: err.message || 'Internal server error' });
 });
 
-// ── START ─────────────────────────────────────────────────────
+//  START 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log('AZHAR-AI server running on port ' + PORT)
+app.listen(PORT, function() { console.log('AZHAR-AI server running on port ' + PORT); });
