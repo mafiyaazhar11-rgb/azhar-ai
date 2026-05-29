@@ -341,10 +341,12 @@ function parseDispatch(buffer) {
   var driverDrops = {};
   Object.keys(routes).forEach(function(route) {
     var v = routes[route]; if (!v.driver) return;
-    driverDrops[v.driver] = (driverDrops[v.driver]||0) + Object.keys(v.locs).length;
+    if (!driverDrops[v.driver]) driverDrops[v.driver] = {drops:0, value:0};
+    driverDrops[v.driver].drops += Object.keys(v.locs).length;
+    driverDrops[v.driver].value += v.value||0;
   });
   var topDrivers = Object.keys(driverDrops).map(function(name) {
-    return { name:name, orders:driverDrops[name] };
+    return { name:name, orders:driverDrops[name].drops, value:Math.round(driverDrops[name].value) };
   }).sort(function(a,b) { return b.orders-a.orders; }).slice(0,5);
 
   return {
