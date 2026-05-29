@@ -710,20 +710,38 @@ footer span{color:var(--gold);}
         <div class="panel" id="returns">
 
       <!-- SECRET STAR -->
-      <div style="text-align:right;padding:4px 0;">
+      <div id="ret-star-wrap" style="text-align:right;padding:4px 0;">
         <button onclick="retToggleUpload()" id="ret-star-btn" title="" style="background:transparent;border:none;cursor:pointer;font-size:22px;color:var(--gold);opacity:0.15;transition:all 0.3s;" onmouseover="this.style.opacity='1'" onmouseout="if(!retUploadVisible)this.style.opacity='0.15'">✦</button>
       </div>
 
       <!-- HIDDEN UPLOAD BOX -->
-      <div id="ret-upload-box" style="display:none;background:var(--surface);border:1px solid var(--gold);padding:14px 16px;margin-bottom:14px;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;">
-        <div>
-          <div style="font-size:10px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;">Daily Upload</div>
-          <div style="font-size:11px;color:var(--muted);">Upload your YTD Returns CSV file</div>
+      <div id="ret-upload-box" style="display:none;background:var(--surface);border:1px solid var(--gold);padding:14px 16px;margin-bottom:14px;">
+        <!-- Password step -->
+        <div id="ret-pwd-step" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <div style="flex:1;min-width:200px;">
+            <div style="font-size:10px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;">Admin Access Required</div>
+            <div style="font-size:11px;color:var(--muted);">Enter password to unlock file upload</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div style="position:relative;">
+              <input type="password" id="ret-pwd-input" placeholder="Enter password" onkeydown="if(event.keyCode===13)retPwdConfirm();" style="width:180px;padding:8px 36px 8px 12px;background:var(--black);border:1px solid var(--gold);color:var(--text);font-family:Montserrat,sans-serif;font-size:12px;outline:none;">
+              <span onclick="var i=document.getElementById('ret-pwd-input');i.type=i.type==='password'?'text':'password';" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);cursor:pointer;color:var(--muted);font-size:13px;">&#128065;</span>
+            </div>
+            <button onclick="retPwdConfirm()" style="padding:8px 16px;background:var(--glow);border:1px solid var(--gold);color:var(--gold);font-size:10px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;">UNLOCK</button>
+          </div>
+          <div id="ret-pwd-error" style="display:none;width:100%;font-size:11px;color:#e84b4b;margin-top:4px;">Incorrect password. Please try again.</div>
         </div>
-        <div style="display:flex;align-items:center;gap:10px;">
-          <div id="ret-status-badge" style="font-size:10px;color:var(--muted);display:none;">Last: <span id="ret-last-date">—</span></div>
-          <button onclick="document.getElementById('ret-file-input').click()" style="padding:8px 18px;background:var(--glow);border:1px solid var(--gold);color:var(--gold);font-size:10px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;">🔄 UPLOAD FILE</button>
-          <input type="file" id="ret-file-input" accept=".csv,.xlsx,.xls" style="display:none;" onchange="handleReturnsUpload(this)">
+        <!-- Upload step (shown after password) -->
+        <div id="ret-upload-step" style="display:none;align-items:center;gap:10px;flex-wrap:wrap;justify-content:space-between;">
+          <div>
+            <div style="font-size:10px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;">Daily Upload</div>
+            <div style="font-size:11px;color:var(--muted);">Upload your YTD Returns CSV file</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div id="ret-status-badge" style="font-size:10px;color:var(--muted);display:none;">Last: <span id="ret-last-date">—</span></div>
+            <button onclick="document.getElementById('ret-file-input').click()" style="padding:8px 18px;background:var(--glow);border:1px solid var(--gold);color:var(--gold);font-size:10px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;">🔄 UPLOAD FILE</button>
+            <input type="file" id="ret-file-input" accept=".csv,.xlsx,.xls" style="display:none;" onchange="handleReturnsUpload(this)">
+          </div>
         </div>
       </div>
 
@@ -772,12 +790,7 @@ footer span{color:var(--gold);}
           <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
             <span style="font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;min-width:50px;">CUSTOMER</span>
             <button class="ret-pill on" id="rcust-all" onclick="retFilter('cust','all')">All</button>
-            <button class="ret-pill" id="rcust-nesto" onclick="retFilter('cust','NESTO')">NESTO</button>
-            <button class="ret-pill" id="rcust-union" onclick="retFilter('cust','UNION')">Union Co-Op</button>
-            <button class="ret-pill" id="rcust-mair" onclick="retFilter('cust','MAIR')">MAIR Group</button>
-            <button class="ret-pill" id="rcust-spinneys" onclick="retFilter('cust','SPINNEYS')">Spinneys</button>
-            <button class="ret-pill" id="rcust-sharjahcoop" onclick="retFilter('cust','SHARJAH CO-OP')">Sharjah Co-Op</button>
-            <button class="ret-pill" id="rcust-gmg" onclick="retFilter('cust','GMG')">GMG</button>
+            <span id="ret-cust-pills"></span>
             <span style="width:1px;height:16px;background:var(--border);margin:0 4px;"></span>
             <span style="font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;">BU</span>
             <button class="ret-pill on" id="rbu-all" onclick="retFilter('bu','all')">All</button>
@@ -2262,20 +2275,21 @@ var MONTH_NAMES = ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct
 // Save/load returns data from server
 function saveReturnsToServer(fileName){
   if(!RET_RAW.length) return;
-  // Build summary to save
   var rows = getFilteredReturnsAll();
   var summary = buildReturnsSummary(rows);
-  var formData = new FormData();
-  formData.append('summary', JSON.stringify(summary));
-  formData.append('uploadedBy', 'Admin');
-  formData.append('fileName', fileName||'returns.csv');
-  formData.append('totalOrders', String(RET_RAW.length));
-  var dummy = new Blob([''], {type:'text/plain'});
-  formData.append('file', dummy, 'dummy.txt');
-  fetch('/api/returns/upload', {method:'POST', body:formData})
-    .then(function(r){ var ct=r.headers.get('content-type')||''; if(!ct.includes('json')) return null; return r.json(); })
-    .then(function(d){ if(d&&d.success) console.log('Returns saved to server'); })
-    .catch(function(e){ console.log('Save returns:', e.message); });
+  fetch('/api/returns/upload', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      summary: summary,
+      uploadedBy: 'Admin',
+      fileName: fileName||'returns.csv',
+      totalOrders: RET_RAW.length
+    })
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(d){ if(d&&d.success) console.log('Returns saved to server OK'); })
+  .catch(function(e){ console.log('Save returns error:', e.message); });
 }
 
 function getFilteredReturnsAll(){
@@ -2320,6 +2334,9 @@ function loadReturnsFromServer(){
 function renderReturnsFromSummary(s, fileName){
   document.getElementById('ret-nodata').style.display='none';
   document.getElementById('ret-dashboard').style.display='block';
+  // Hide star so manager doesn't see upload option
+  var sw=document.getElementById('ret-star-wrap');
+  if(sw)sw.style.display='none';
   var badge=document.getElementById('ret-status-badge');
   if(badge){ badge.style.display='block'; document.getElementById('ret-last-date').textContent=new Date().toLocaleDateString('en-AE'); }
 
@@ -2363,7 +2380,16 @@ function renderReturnsFromSummary(s, fileName){
   var buKeys=Object.keys(buMap).sort(function(a,b){return buMap[b]-buMap[a];}); var buC={Food:'#e84b4b','Non-Food':'#5b8dee',Salon:'#c9a84c',Zooz:'#4ecb8d',Other:'var(--muted)'};
   document.getElementById('ret-bu-list').innerHTML=buKeys.map(function(b){var pct=totalVal>0?Math.round(buMap[b]/totalVal*100):0;var col=buC[b]||'var(--muted)';return '<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);"><div><div style="font-size:12px;color:var(--text);">'+b+'</div><div style="font-size:10px;color:var(--muted);">'+fmtAEDR(buMap[b])+'</div></div><span style="font-size:10px;padding:2px 8px;background:rgba(0,0,0,0.2);color:'+col+';">'+pct+'%</span></div>';}).join('');
 
-  var topCusts=Object.keys(custMap).map(function(n){return{n:n,v:custMap[n]};}).sort(function(a,b){return b.v-a.v;}).slice(0,8); var cC=['#e84b4b','#e84b4b','#c9a84c','#c9a84c','#5b8dee','#5b8dee','#4ecb8d','#4ecb8d'];
+  var topCusts=Object.keys(custMap).map(function(n){return{n:n,v:custMap[n]};}).sort(function(a,b){return b.v-a.v;}).slice(0,10); var cC=['#e84b4b','#e84b4b','#c9a84c','#c9a84c','#5b8dee','#5b8dee','#4ecb8d','#4ecb8d','#9b59b6','#9b59b6'];
+  // Build dynamic customer filter pills
+  var pillsEl=document.getElementById('ret-cust-pills');
+  if(pillsEl){
+    pillsEl.innerHTML=topCusts.map(function(c){
+      var id='rcust-dyn-'+c.n.replace(/[^a-zA-Z0-9]/g,'_');
+      var safeName=c.n.replace(/&/g,'&amp;').replace(/"/g,'&quot;');
+      return '<button class="ret-pill" id="'+id+'" data-cust="'+safeName+'" onclick="retFilterCust(this)" style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+c.n+'</button>';
+    }).join('');
+  }
   document.getElementById('ret-top-customers').innerHTML=topCusts.map(function(c,i){var pct=totalVal>0?(c.v/totalVal*100).toFixed(1)+'%':'0%';var col=cC[i]||'var(--muted)';return '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);"><div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;"><span style="font-size:11px;font-weight:700;color:'+col+';width:18px;flex-shrink:0;">'+(i+1)+'</span><span style="font-size:12px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+c.n+'</span></div><div style="display:flex;align-items:center;gap:16px;flex-shrink:0;"><div style="text-align:right;min-width:70px;"><div style="font-size:12px;font-weight:700;color:var(--gold);">'+fmtAEDR(c.v)+'</div></div><div style="text-align:right;min-width:40px;"><div style="font-size:11px;color:#e84b4b;">'+pct+'</div><div style="font-size:9px;color:var(--muted);">of total</div></div></div></div>';}).join('');
 }
 
@@ -2371,18 +2397,44 @@ function retToggleUpload(){
   var box=document.getElementById('ret-upload-box');
   if(!box)return;
   if(!retUploadVisible){
-    var pwd=prompt('Admin access:');
-    if(pwd!=='azhar2026'){alert('Wrong password');return;}
     retUploadVisible=true;
-    box.style.display='flex';
+    box.style.display='block';
+    // Reset to password step each time
+    var pwdStep=document.getElementById('ret-pwd-step');
+    var upStep=document.getElementById('ret-upload-step');
+    if(pwdStep){pwdStep.style.display='flex';}
+    if(upStep){upStep.style.display='none';}
+    var inp=document.getElementById('ret-pwd-input');
+    if(inp){inp.value='';inp.style.borderColor='var(--gold)';}
+    var err=document.getElementById('ret-pwd-error');
+    if(err){err.style.display='none';}
     var btn=document.getElementById('ret-star-btn');
     if(btn){btn.style.opacity='1';btn.style.color='var(--gold)';}
+    setTimeout(function(){var i=document.getElementById('ret-pwd-input');if(i)i.focus();},100);
   } else {
     retUploadVisible=false;
     box.style.display='none';
     var btn=document.getElementById('ret-star-btn');
     if(btn){btn.style.opacity='0.15';btn.style.color='var(--gold)';}
   }
+}
+
+function retPwdConfirm(){
+  var inp=document.getElementById('ret-pwd-input');
+  var err=document.getElementById('ret-pwd-error');
+  if(!inp)return;
+  if(inp.value!=='azhar2026'){
+    inp.style.borderColor='#e84b4b';
+    if(err)err.style.display='block';
+    inp.value='';
+    setTimeout(function(){inp.style.borderColor='var(--gold)';},2000);
+    return;
+  }
+  // Correct password — show upload step, hide password step
+  var pwdStep=document.getElementById('ret-pwd-step');
+  var upStep=document.getElementById('ret-upload-step');
+  if(pwdStep)pwdStep.style.display='none';
+  if(upStep)upStep.style.display='flex';
 }
 
 function normalizeBU(bu){
@@ -2442,14 +2494,52 @@ function handleReturnsUpload(input){
       saveReturnsToServer(file.name);
       var badge=document.getElementById('ret-status-badge');
       if(badge){badge.style.display='block';document.getElementById('ret-last-date').textContent=new Date().toLocaleDateString('en-AE');}
+      // Hide upload box AND star after successful upload
+      var box=document.getElementById('ret-upload-box');
+      if(box)box.style.display='none';
+      retUploadVisible=false;
+      var starWrap=document.getElementById('ret-star-wrap');
+      if(starWrap)starWrap.style.display='none';
     } catch(err){alert('Error reading file: '+err.message);}
   };
   if(ext==='csv')reader.readAsText(file);
   else reader.readAsArrayBuffer(file);
 }
 
+function retFilterCust(btn){
+  var name=btn.getAttribute('data-cust');
+  if(name) retFilter('cust', name);
+}
+
 function retFilter(type, val){
   retFilters[type]=val;
+  // Auto-sync area when customer selected
+  if(type==='cust' && val!=='all' && RET_RAW.length){
+    var keys=Object.keys(RET_RAW[0]||{});
+    function _fc(){var names=Array.prototype.slice.call(arguments);return keys.find(function(k){return names.some(function(n){return k.toUpperCase().includes(n.toUpperCase());});})||null;}
+    var shipCol=_fc('SHIP TO'); var custCol=_fc('CUSTOMER NAME');
+    var areaCount={};
+    RET_RAW.forEach(function(r){
+      if(String(r[custCol]||'').trim()===val){
+        var a=extractArea(r[shipCol]);
+        if(a&&a!=='Other'){areaCount[a]=(areaCount[a]||0)+1;}
+      }
+    });
+    var topArea=Object.keys(areaCount).sort(function(a,b){return areaCount[b]-areaCount[a];})[0];
+    if(topArea){
+      retFilters.area=topArea;
+      // Update area pills
+      var areaIds=['rl-all','rl-dxb','rl-shj','rl-ajm','rl-ain','rl-rak','rl-fuj','rl-uaq'];
+      var areaVals=['all','DXB','SHJ','AJM','AIN','RAK','FUJ','UAQ'];
+      areaIds.forEach(function(id,i){var el=document.getElementById(id);if(el)el.className='ret-pill'+(areaVals[i]===topArea?' on':'');});
+    }
+  }
+  if(type==='cust' && val==='all'){
+    retFilters.area='all';
+    ['rl-all','rl-dxb','rl-shj','rl-ajm','rl-ain','rl-rak','rl-fuj','rl-uaq'].forEach(function(id,i){
+      var el=document.getElementById(id);if(el)el.className='ret-pill'+(i===0?' on':'');
+    });
+  }
   // Auto-set BU when warehouse selected
   if(type==='wh'){
     if(val==='DCV'||val==='DCF'){
@@ -2477,14 +2567,14 @@ function retFilter(type, val){
     wh:['rw-all','rw-dcv','rw-dgc','rw-dll','rw-dgs','rw-dcf','rw-dgn'],
     month:['retm-all','retm-1','retm-2','retm-3','retm-4','retm-5'],
     area:['rl-all','rl-dxb','rl-shj','rl-ajm','rl-ain','rl-rak','rl-fuj','rl-uaq'],
-    cust:['rcust-all','rcust-nesto','rcust-union','rcust-mair','rcust-spinneys','rcust-sharjahcoop','rcust-gmg'],
+    cust:['rcust-all'],
     bu:['rbu-all','rbu-food','rbu-nf']
   };
   var valMaps={
     wh:['all','DCV','DGC','DLL','DGS','DCF','DGN'],
     month:['all',1,2,3,4,5],
     area:['all','DXB','SHJ','AJM','AIN','RAK','FUJ','UAQ'],
-    cust:['all','NESTO','UNION','MAIR','SPINNEYS','SHARJAH CO-OP','GMG'],
+    cust:['all'],
     bu:['all','food','nonfood']
   };
   if(maps[type]){
@@ -2656,10 +2746,33 @@ function renderReturns(){
       +'</div>';
   }).join('');
 
+  // Build dynamic customer filter pills from top 10 customers (ALL data, unfiltered)
+  var allCustMap={};
+  RET_RAW.forEach(function(r){
+    var keys=Object.keys(r);
+    function fc(){var names=Array.prototype.slice.call(arguments);return keys.find(function(k){return names.some(function(n){return k.toUpperCase().includes(n.toUpperCase());});})||null;}
+    var C={cust:fc('CUSTOMER NAME')};
+    var cn=String(r[C.cust]||'').trim();
+    if(cn){if(!allCustMap[cn])allCustMap[cn]=0;allCustMap[cn]+=parseFloat(r[Object.keys(r).find(function(k){return k.toUpperCase().includes('TOTAL');})||''])||0;}
+  });
+  var top10Custs=Object.keys(allCustMap).map(function(n){return{n:n,v:allCustMap[n]};}).sort(function(a,b){return b.v-a.v;}).slice(0,10);
+  var pillsEl=document.getElementById('ret-cust-pills');
+  if(pillsEl){
+    pillsEl.innerHTML=top10Custs.map(function(c){
+      var id='rcust-dyn-'+c.n.replace(/[^a-zA-Z0-9]/g,'_');
+      var isActive=retFilters.cust===c.n;
+      var safeName=c.n.replace(/&/g,'&amp;').replace(/"/g,'&quot;');
+      return '<button class="ret-pill'+(isActive?' on':'')+'" id="'+id+'" data-cust="'+safeName+'" onclick="retFilterCust(this)" style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+c.n+'</button>';
+    }).join('');
+  }
+  // Update All pill active state
+  var allPill=document.getElementById('rcust-all');
+  if(allPill)allPill.className='ret-pill'+(retFilters.cust==='all'?' on':'');
+
   // Top customers
   var topCusts=Object.keys(custMap).map(function(n){return{n:n,v:custMap[n]};})
-    .sort(function(a,b){return b.v-a.v;}).slice(0,8);
-  var custColors=['#e84b4b','#e84b4b','#c9a84c','#c9a84c','#5b8dee','#5b8dee','#4ecb8d','#4ecb8d'];
+    .sort(function(a,b){return b.v-a.v;}).slice(0,10);
+  var custColors=['#e84b4b','#e84b4b','#c9a84c','#c9a84c','#5b8dee','#5b8dee','#4ecb8d','#4ecb8d','#9b59b6','#9b59b6'];
   document.getElementById('ret-top-customers').innerHTML=topCusts.map(function(c,i){
     var pct=totalVal>0?(c.v/totalVal*100).toFixed(1)+'%':'0%';
     var col=custColors[i]||'var(--muted)';
