@@ -434,6 +434,7 @@ footer span{color:var(--gold);}
       <div class="topbar-left"><h2 id="topbar-title"></h2><p id="topbar-sub">Operations &amp; Customer Service AI Command Centre</p></div>
     <div class="topbar-right">
       <div class="dot-live">System Active</div>
+      <button onclick="dsToggleUpload()" title="" style="background:transparent;border:none;cursor:pointer;font-size:18px;color:var(--gold);opacity:0.25;transition:opacity 0.3s;padding:4px;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.25'">✦</button>
       <div class="topbar-date"><strong id="tb-date">—</strong><span id="tb-time">—</span></div>
       <div class="sb-avatar" style="width:36px;height:36px;font-size:12px;">A</div>
     </div>
@@ -466,8 +467,8 @@ footer span{color:var(--gold);}
       <div class="box" id="ds-routes-box" style="display:none;margin-bottom:16px;"><div class="box-title">🗺️ Route Summary — Drops per Route</div><div style="overflow-x:auto;max-height:300px;overflow-y:auto;"><table class="route-table"><thead><tr><th>Route</th><th>Driver</th><th>Drops</th><th>Value (AED)</th></tr></thead><tbody id="ds-route-body"></tbody></table></div></div>
       <div class="box" id="ds-ask-box" style="display:none;margin-bottom:16px;"><div class="box-title">✦ Ask AI About Today's Dispatch</div><div class="qbtns" style="margin-bottom:12px;"><button class="qbtn cust" onclick="doAsk('All LULU orders today — total count, value, branches')">🟡 Lulu</button><button class="qbtn cust" onclick="doAsk('All CARREFOUR orders — count and value')">🔵 Carrefour</button><button class="qbtn cust" onclick="doAsk('All UNION COOP orders — count and value')">🟢 Union Coop</button><button class="qbtn cust" onclick="doAsk('All SPINNEYS orders — count and value')">🟣 Spinneys</button><button class="qbtn cust" onclick="doAsk('All WAITROSE orders — count and value')">⚪ Waitrose</button><button class="qbtn cust" onclick="doAsk('All CHOITHRAMS orders — count and value')">🟠 Choithrams</button><button class="qbtn city" onclick="doAsk('Total orders and value for DUBAI today')">📍 Dubai</button><button class="qbtn city" onclick="doAsk('Total orders and value for ABU DHABI today')">📍 Abu Dhabi</button><button class="qbtn city" onclick="doAsk('Total orders and value for SHARJAH today')">📍 Sharjah</button><button class="qbtn city" onclick="doAsk('Total orders and value for FUJAIRAH today')">📍 Fujairah</button><button class="qbtn city" onclick="doAsk('Total orders and value for AL AIN today')">📍 Al Ain</button><button class="qbtn stat" onclick="doAsk('Top 5 drivers by deliveries today')">🚚 Top Drivers</button><button class="qbtn stat" onclick="doAsk('Total food orders value and non food orders value')">📊 Food vs Non Food</button><button class="qbtn stat" onclick="doAsk('Summary of all routes with drops and values')">🗺️ All Routes</button></div><div class="ask-row"><textarea id="ds-ask" class="ask-inp" placeholder="Ask anything about today's dispatch..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();doAsk(this.value);this.value=''}" rows="2"></textarea><button class="send-btn" id="ds-send" onclick="doAsk(document.getElementById('ds-ask').value);document.getElementById('ds-ask').value=''">→</button></div><div class="out" id="ds-out" style="margin-top:12px;"><div class="out-head"><span class="out-lbl">✦ Dispatch Intelligence</span><button class="copy" onclick="doCopy('ds-answer')">Copy</button></div><div class="out-body" id="ds-answer"></div></div></div>
 
-      <!-- ADMIN UPLOAD — password azhar2026 -->
-      <div class="box"><div class="box-title">🔒 Admin — Upload Today's Dispatch File</div>
+      <!-- ADMIN UPLOAD — hidden, click ✦ star in topbar to reveal -->
+      <div class="box" id="ds-upload-box" style="display:none;"><div class="box-title">🔒 Admin — Upload Today's Dispatch File</div>
         <div id="admin-lock" style="display:flex;gap:8px;align-items:center;">
           <input type="password" id="admin-pwd" placeholder="Enter admin password..." style="flex:1;height:42px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:Montserrat,sans-serif;font-size:13px;outline:none;" onkeydown="if(event.key==='Enter')checkPwd()"/>
           <button onclick="checkPwd()" class="inv-btn" style="flex:0;white-space:nowrap;padding:10px 18px;margin:0;border:1px solid var(--gold);color:var(--gold);background:transparent;font-family:Montserrat,sans-serif;font-size:9px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;">Unlock</button>
@@ -493,7 +494,7 @@ footer span{color:var(--gold);}
             <div style="font-size:10px;color:var(--muted);background:var(--surface);padding:4px 12px;border:1px solid var(--border);" id="rej-total-badge">— total orders</div>
 
             <!-- Lock state -->
-            <div id="rej-lock-wrap" style="display:flex;gap:6px;align-items:center;">
+            <div id="rej-lock-wrap" style="display:none;gap:6px;align-items:center;">
               <button onclick="rejCheckPwd()" style="padding:6px 14px;background:transparent;border:1px solid var(--gold);color:var(--gold);font-family:Montserrat,sans-serif;font-size:9px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;white-space:nowrap;" onmouseover="this.style.background='var(--glow)'" onmouseout="this.style.background='transparent'">🔒 Upload File</button>
             </div>
             <!-- Password input state -->
@@ -508,7 +509,7 @@ footer span{color:var(--gold);}
               <button onclick="rejLock()" style="padding:6px 10px;background:transparent;border:1px solid var(--border);color:var(--muted);font-family:Montserrat,sans-serif;font-size:9px;cursor:pointer;">🔒 Lock</button>
             </div>
             <input type="file" id="rej-upload-input" accept=".xlsx,.xls" style="display:none" onchange="rejUploadFile(this)"/>
-            <span id="rej-upload-status" style="font-size:10px;color:var(--muted);max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
+            <button onclick="rejToggleUpload()" id="rej-star-btn" title="" style="background:transparent;border:none;cursor:pointer;font-size:16px;color:var(--gold);opacity:0.25;transition:opacity 0.3s;padding:2px 6px;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.25'">✦</button><span id="rej-upload-status" style="font-size:10px;color:var(--muted);max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
           </div>
         </div>
 
@@ -625,8 +626,12 @@ footer span{color:var(--gold);}
 
     <!-- ══ WH BACKLOG DASHBOARD ═══════════════════════════════ -->
     <div class="panel" id="backlog">
-      <!-- UPLOAD BOX -->
-      <div style="background:var(--surface);border:1px solid var(--border);padding:16px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+      <!-- SECRET STAR BUTTON - only admin knows -->
+      <div style="position:fixed;top:16px;right:16px;z-index:500;">
+        <button onclick="blToggleUpload()" id="bl-star-btn" title="Admin" style="background:transparent;border:none;cursor:pointer;font-size:22px;opacity:0.3;transition:opacity 0.3s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.3'">✦</button>
+      </div>
+      <!-- HIDDEN UPLOAD BOX -->
+      <div id="bl-upload-box" style="display:none;background:var(--surface);border:1px solid var(--gold);padding:16px;margin-bottom:16px;display:none;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
         <div>
           <div style="font-size:10px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;">Daily Upload</div>
           <div style="font-size:12px;color:var(--muted);">Upload your WH Back Log Order CSV/Excel file</div>
@@ -1705,6 +1710,62 @@ setCompany('aki');
 addInvItem();
 loadStatus();
 rejLoadFromServer();
+
+// Secret admin upload toggles
+var blUploadVisible = false;
+function blToggleUpload(){
+  var box = document.getElementById('bl-upload-box');
+  if(!box) return;
+  if(!blUploadVisible){
+    var pwd = prompt('Admin access:');
+    if(pwd !== 'azhar2026') return;
+    blUploadVisible = true;
+    box.style.display = 'flex';
+    document.getElementById('bl-star-btn').style.opacity = '1';
+    document.getElementById('bl-star-btn').style.color = 'var(--gold)';
+  } else {
+    blUploadVisible = false;
+    box.style.display = 'none';
+    document.getElementById('bl-star-btn').style.opacity = '0.3';
+    document.getElementById('bl-star-btn').style.color = '';
+  }
+}
+
+var rejUploadVisible = false;
+function rejToggleUpload(){
+  var lockWrap = document.getElementById('rej-lock-wrap');
+  if(!lockWrap) return;
+  if(!rejUploadVisible){
+    var pwd = prompt('Admin access:');
+    if(pwd !== 'azhar2026') return;
+    rejUploadVisible = true;
+    lockWrap.style.display = 'flex';
+    var btn = document.getElementById('rej-star-btn');
+    if(btn){ btn.style.opacity='1'; btn.style.color='var(--green)'; }
+  } else {
+    rejUploadVisible = false;
+    lockWrap.style.display = 'none';
+    document.getElementById('rej-pwd-wrap').style.display = 'none';
+    document.getElementById('rej-unlocked-wrap').style.display = 'none';
+    var btn = document.getElementById('rej-star-btn');
+    if(btn){ btn.style.opacity='0.25'; btn.style.color='var(--gold)'; }
+  }
+}
+
+var dsUploadVisible = false;
+function dsToggleUpload(){
+  var box = document.getElementById('ds-upload-box');
+  if(!box) return;
+  if(!dsUploadVisible){
+    var pwd = prompt('Admin access:');
+    if(pwd !== 'azhar2026') return;
+    dsUploadVisible = true;
+    box.style.display = 'block';
+  } else {
+    dsUploadVisible = false;
+    box.style.display = 'none';
+  }
+}
 
 // Mobile sidebar toggle
 function toggleSidebar(){
