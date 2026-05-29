@@ -2031,7 +2031,7 @@ spinLogo(); setInterval(spinLogo,60000);
     <div style="font-size:16px;font-weight:600;color:var(--white);margin-bottom:8px;">WH Backlog Upload</div>
     <div style="font-size:11px;color:var(--muted);margin-bottom:20px;">Enter admin password to upload file</div>
     <div style="position:relative;margin-bottom:8px;">
-      <input type="password" id="bl-pwd-input" placeholder="Enter password" onkeydown="if(event.key===String.fromCharCode(13))blPwdConfirm();" style="width:100%;padding:10px 40px 10px 12px;background:var(--black);border:1px solid var(--border);color:var(--text);font-family:Montserrat,sans-serif;font-size:13px;outline:none;box-sizing:border-box;" onfocus="this.style.borderColor=&apos;var(--gold)&apos;" onblur="this.style.borderColor=&apos;var(--border)&apos;">
+      <input type="password" id="bl-pwd-input" placeholder="Enter password" onkeydown="if(event.keyCode===13)blPwdConfirm();" style="width:100%;padding:10px 40px 10px 12px;background:var(--black);border:1px solid var(--gold);color:var(--text);font-family:Montserrat,sans-serif;font-size:13px;outline:none;box-sizing:border-box;">
       <span onclick="var i=document.getElementById(&apos;bl-pwd-input&apos;);i.type=i.type===&apos;password&apos;?&apos;text&apos;:&apos;password&apos;;" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);cursor:pointer;color:var(--muted);font-size:14px;">&#128065;</span>
     </div>
     <div id="bl-pwd-error" style="display:none;font-size:11px;color:#e84b4b;margin-bottom:12px;">Incorrect password. Please try again.</div>
