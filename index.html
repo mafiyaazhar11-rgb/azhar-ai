@@ -141,6 +141,9 @@ textarea{resize:vertical;min-height:100px;line-height:1.7;}
 .progress-fill{height:3px;border-radius:2px;}
 .rej-pill{padding:5px 14px;border-radius:20px;border:1px solid var(--border);background:transparent;font-size:10px;cursor:pointer;color:var(--muted);transition:all .2s;font-family:'Montserrat',sans-serif;letter-spacing:.5px;}
 .rej-pill.on{background:var(--gold);color:var(--black);border-color:var(--gold);font-weight:700;}
+.ret-pill{padding:5px 14px;border-radius:20px;border:1px solid var(--border);background:transparent;font-size:10px;cursor:pointer;color:var(--muted);transition:all 0.2s;font-family:'Montserrat',sans-serif;letter-spacing:1px;text-transform:uppercase;}
+.ret-pill:hover{border-color:var(--gold);color:var(--gold);}
+.ret-pill.on{background:var(--glow);border-color:var(--gold);color:var(--gold);}
 .rej-pill:hover:not(.on){border-color:var(--gold);color:var(--gold);}
 .org-card{background:var(--surface);border:1px solid var(--border);padding:10px 14px;display:flex;flex-direction:column;gap:4px;cursor:pointer;transition:all 0.2s;}
 .org-card:hover{border-color:var(--gold);}
@@ -755,17 +758,31 @@ footer span{color:var(--gold);}
             <button class="ret-pill" id="retm-4" onclick="retFilter('month',4)">Apr</button>
             <button class="ret-pill" id="retm-5" onclick="retFilter('month',5)">May</button>
           </div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px;align-items:center;">
+            <span style="font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;min-width:50px;">LOCATION</span>
+            <button class="ret-pill on" id="rl-all" onclick="retFilter('area','all')">All</button>
+            <button class="ret-pill" id="rl-dxb" onclick="retFilter('area','DXB')">Dubai</button>
+            <button class="ret-pill" id="rl-shj" onclick="retFilter('area','SHJ')">Sharjah</button>
+            <button class="ret-pill" id="rl-ajm" onclick="retFilter('area','AJM')">Ajman</button>
+            <button class="ret-pill" id="rl-ain" onclick="retFilter('area','AIN')">Al Ain</button>
+            <button class="ret-pill" id="rl-rak" onclick="retFilter('area','RAK')">RAK</button>
+            <button class="ret-pill" id="rl-fuj" onclick="retFilter('area','FUJ')">Fujairah</button>
+            <button class="ret-pill" id="rl-uaq" onclick="retFilter('area','UAQ')">UAQ</button>
+          </div>
           <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
-            <span style="font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;min-width:50px;">CATEGORY</span>
-            <button class="ret-pill on" id="rc-all" onclick="retFilter('cat','all')">All</button>
-            <button class="ret-pill" id="rc-inv" onclick="retFilter('cat','Invoice Cancellation')">Invoice Cancellation</button>
-            <button class="ret-pill" id="rc-grv" onclick="retFilter('cat','GRV-Return')">GRV Return</button>
+            <span style="font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;min-width:50px;">CUSTOMER</span>
+            <button class="ret-pill on" id="rcust-all" onclick="retFilter('cust','all')">All</button>
+            <button class="ret-pill" id="rcust-nesto" onclick="retFilter('cust','NESTO')">NESTO</button>
+            <button class="ret-pill" id="rcust-union" onclick="retFilter('cust','UNION')">Union Co-Op</button>
+            <button class="ret-pill" id="rcust-mair" onclick="retFilter('cust','MAIR')">MAIR Group</button>
+            <button class="ret-pill" id="rcust-spinneys" onclick="retFilter('cust','SPINNEYS')">Spinneys</button>
+            <button class="ret-pill" id="rcust-sharjahcoop" onclick="retFilter('cust','SHARJAH CO-OP')">Sharjah Co-Op</button>
+            <button class="ret-pill" id="rcust-gmg" onclick="retFilter('cust','GMG')">GMG</button>
             <span style="width:1px;height:16px;background:var(--border);margin:0 4px;"></span>
             <span style="font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;">BU</span>
             <button class="ret-pill on" id="rbu-all" onclick="retFilter('bu','all')">All</button>
             <button class="ret-pill" id="rbu-food" onclick="retFilter('bu','food')">Food</button>
             <button class="ret-pill" id="rbu-nf" onclick="retFilter('bu','nonfood')">Non-Food</button>
-            <button class="ret-pill" id="rbu-other" onclick="retFilter('bu','other')">Other</button>
           </div>
         </div>
 
@@ -855,6 +872,7 @@ function goTab(id,btn){
   document.getElementById('topbar-sub').textContent=t[1];
   if(id==='rejection') rejLoadFromServer();
   loadBacklogFromServer();
+  loadReturnsFromServer();
 }
 
 //  UTILS 
@@ -2237,9 +2255,117 @@ var RET_RAW = [];
 var RET_CHART_MONTH = null;
 var RET_CHART_CAT = null;
 var retUploadVisible = false;
-var retFilters = { wh:'all', month:'all', cat:'all', bu:'all' };
+var retFilters = { wh:'all', month:'all', area:'all', bu:'all', cust:'all' };
 var WH_COLORS = {DCV:'#e84b4b',DGC:'#5b8dee',DLL:'#c9a84c',DGS:'#4ecb8d',DCF:'#e8854b',DGN:'#9b59b6'};
 var MONTH_NAMES = ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+// Save/load returns data from server
+function saveReturnsToServer(fileName){
+  if(!RET_RAW.length) return;
+  // Build summary to save
+  var rows = getFilteredReturnsAll();
+  var summary = buildReturnsSummary(rows);
+  var formData = new FormData();
+  formData.append('summary', JSON.stringify(summary));
+  formData.append('uploadedBy', 'Admin');
+  formData.append('fileName', fileName||'returns.csv');
+  formData.append('totalOrders', String(RET_RAW.length));
+  var dummy = new Blob([''], {type:'text/plain'});
+  formData.append('file', dummy, 'dummy.txt');
+  fetch('/api/returns/upload', {method:'POST', body:formData})
+    .then(function(r){ var ct=r.headers.get('content-type')||''; if(!ct.includes('json')) return null; return r.json(); })
+    .then(function(d){ if(d&&d.success) console.log('Returns saved to server'); })
+    .catch(function(e){ console.log('Save returns:', e.message); });
+}
+
+function getFilteredReturnsAll(){
+  var saved = retFilters;
+  retFilters = {wh:'all',month:'all',cat:'all',bu:'all'};
+  var rows = getFilteredReturns();
+  retFilters = saved;
+  return rows;
+}
+
+function buildReturnsSummary(rows){
+  var totalVal=0,invCount=0,invVal=0,grvCount=0,grvVal=0;
+  var whMap={},catMap={},buMap={},monthMap={},areaMap={},custMap={};
+  rows.forEach(function(r){
+    totalVal+=r.tot;
+    if(r.cat==='Invoice Cancellation'){invCount++;invVal+=r.tot;}
+    else if(r.cat==='GRV-Return'){grvCount++;grvVal+=r.tot;}
+    if(r.wh){if(!whMap[r.wh])whMap[r.wh]=0;whMap[r.wh]+=r.tot;}
+    if(r.cat){if(!catMap[r.cat])catMap[r.cat]={c:0,v:0};catMap[r.cat].c++;catMap[r.cat].v+=r.tot;}
+    if(r.bu){if(!buMap[r.bu])buMap[r.bu]=0;buMap[r.bu]+=r.tot;}
+    if(r.month){if(!monthMap[r.month])monthMap[r.month]=0;monthMap[r.month]+=r.tot;}
+    if(r.area){if(!areaMap[r.area])areaMap[r.area]=0;areaMap[r.area]+=r.tot;}
+    if(r.cust){if(!custMap[r.cust])custMap[r.cust]=0;custMap[r.cust]+=r.tot;}
+  });
+  return {totalVal:totalVal,invCount:invCount,invVal:invVal,grvCount:grvCount,grvVal:grvVal,
+    whMap:whMap,catMap:catMap,buMap:buMap,monthMap:monthMap,areaMap:areaMap,custMap:custMap,
+    totalOrders:rows.length};
+}
+
+function loadReturnsFromServer(){
+  fetch('/api/returns/status')
+    .then(function(r){ var ct=r.headers.get('content-type')||''; if(!ct.includes('json')) return null; return r.json(); })
+    .then(function(d){
+      if(!d||!d.hasData) return;
+      var s=d.summary||{};
+      // Render from summary directly
+      renderReturnsFromSummary(s, d.fileName);
+    })
+    .catch(function(e){ console.log('Returns not available:', e.message); });
+}
+
+function renderReturnsFromSummary(s, fileName){
+  document.getElementById('ret-nodata').style.display='none';
+  document.getElementById('ret-dashboard').style.display='block';
+  var badge=document.getElementById('ret-status-badge');
+  if(badge){ badge.style.display='block'; document.getElementById('ret-last-date').textContent=new Date().toLocaleDateString('en-AE'); }
+
+  var totalVal=s.totalVal||0, rows=s.totalOrders||0;
+  var invCount=s.invCount||0, invVal=s.invVal||0;
+  var grvCount=s.grvCount||0, grvVal=s.grvVal||0;
+  var whMap=s.whMap||{}, catMap=s.catMap||{}, buMap=s.buMap||{};
+  var monthMap=s.monthMap||{}, areaMap=s.areaMap||{}, custMap=s.custMap||{};
+
+  var topWH=Object.keys(whMap).sort(function(a,b){return whMap[b]-whMap[a];})[0]||'—';
+  document.getElementById('ret-kpis').innerHTML=[
+    {lbl:'TOTAL RETURNS VALUE',val:fmtAEDR(totalVal),sub:rows.toLocaleString()+' return orders',col:'#e84b4b'},
+    {lbl:'INVOICE CANCELLATIONS',val:invCount.toLocaleString(),sub:fmtAEDR(invVal)+' · '+(totalVal>0?Math.round(invVal/totalVal*100):0)+'%',col:'var(--gold)'},
+    {lbl:'GRV RETURNS',val:grvCount.toLocaleString(),sub:fmtAEDR(grvVal)+' · '+(totalVal>0?Math.round(grvVal/totalVal*100):0)+'%',col:'var(--gold)'},
+    {lbl:'TOP WAREHOUSE',val:topWH,sub:fmtAEDR(whMap[topWH]||0)+' · '+(totalVal>0?Math.round((whMap[topWH]||0)/totalVal*100):0)+'%',col:'var(--text)'}
+  ].map(function(k){
+    return '<div style="background:var(--card);border:1px solid var(--border);padding:14px;">'
+      +'<div style="font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">'+k.lbl+'</div>'
+      +'<div style="font-family:Cormorant Garamond,serif;font-size:26px;font-weight:700;color:'+k.col+';">'+k.val+'</div>'
+      +'<div style="font-size:10px;color:var(--muted);margin-top:4px;">'+k.sub+'</div></div>';
+  }).join('');
+
+  // Charts + bars - same as renderReturns but from summary maps
+  var months=[1,2,3,4,5];
+  if(RET_CHART_MONTH){RET_CHART_MONTH.destroy();}
+  var ctx=document.getElementById('ret-month-chart');
+  if(ctx){RET_CHART_MONTH=new Chart(ctx,{type:'bar',data:{labels:months.map(function(m){return MONTH_NAMES[m];}),datasets:[{label:'Returns AED',data:months.map(function(m){return Math.round(monthMap[m]||0);}),backgroundColor:'#e84b4b',borderRadius:0,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return' '+fmtAEDR(c.raw);}}}},scales:{x:{ticks:{color:'#7a7660',font:{size:10}},grid:{display:false}},y:{ticks:{color:'#7a7660',font:{size:9},callback:function(v){return fmtAEDR(v);}},grid:{color:'rgba(122,118,96,0.15)'}}}}});}
+
+  var whKeys=Object.keys(whMap).sort(function(a,b){return whMap[b]-whMap[a];}); var maxWH=whMap[whKeys[0]]||1;
+  document.getElementById('ret-wh-bars').innerHTML=whKeys.map(function(wh){var pct=Math.round(whMap[wh]/maxWH*100);var col=WH_COLORS[wh]||'var(--muted)';return '<div style="margin-bottom:10px;"><div style="display:flex;justify-content:space-between;margin-bottom:3px;"><span style="font-size:12px;font-weight:700;color:'+col+';">'+wh+'</span><span style="font-size:11px;color:var(--text);">'+fmtAEDR(whMap[wh])+'</span></div><div style="height:6px;background:var(--border);"><div style="height:6px;width:'+pct+'%;background:'+col+';transition:width 0.8s;"></div></div></div>';}).join('');
+
+  var catKeys=Object.keys(catMap); var catColors=['#378add','#c9a84c'];
+  if(RET_CHART_CAT){RET_CHART_CAT.destroy();}
+  var ctx2=document.getElementById('ret-cat-chart');
+  if(ctx2){RET_CHART_CAT=new Chart(ctx2,{type:'doughnut',data:{labels:catKeys,datasets:[{data:catKeys.map(function(k){return catMap[k].c||catMap[k];}),backgroundColor:catColors,borderWidth:0,hoverOffset:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return' '+c.label+': '+c.raw.toLocaleString();}}}}}})}
+  document.getElementById('ret-cat-legend').innerHTML=catKeys.map(function(k,i){var cnt=catMap[k].c||catMap[k]||0;var pct=rows>0?Math.round(cnt/rows*100):0;return '<div style="display:flex;align-items:center;gap:5px;margin-bottom:4px;"><div style="width:8px;height:8px;border-radius:2px;background:'+catColors[i]+';flex-shrink:0;"></div><div style="font-size:10px;color:var(--muted);">'+k+' — '+cnt.toLocaleString()+' ('+pct+'%)</div></div>';}).join('');
+
+  var areaKeys=Object.keys(areaMap).sort(function(a,b){return areaMap[b]-areaMap[a];}).slice(0,6); var maxA=areaMap[areaKeys[0]]||1; var aC=['#e84b4b','#e84b4b','#c9a84c','#c9a84c','#5b8dee','#5b8dee'];
+  document.getElementById('ret-area-bars').innerHTML=areaKeys.map(function(a,i){var pct=Math.round(areaMap[a]/maxA*100);return '<div style="margin-bottom:8px;"><div style="display:flex;justify-content:space-between;margin-bottom:2px;"><span style="font-size:11px;color:var(--text);">'+a+'</span><span style="font-size:10px;color:var(--muted);">'+fmtAEDR(areaMap[a])+'</span></div><div style="height:5px;background:var(--border);"><div style="height:5px;width:'+pct+'%;background:'+aC[i]+';"></div></div></div>';}).join('');
+
+  var buKeys=Object.keys(buMap).sort(function(a,b){return buMap[b]-buMap[a];}); var buC={Food:'#e84b4b','Non-Food':'#5b8dee',Salon:'#c9a84c',Zooz:'#4ecb8d',Other:'var(--muted)'};
+  document.getElementById('ret-bu-list').innerHTML=buKeys.map(function(b){var pct=totalVal>0?Math.round(buMap[b]/totalVal*100):0;var col=buC[b]||'var(--muted)';return '<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);"><div><div style="font-size:12px;color:var(--text);">'+b+'</div><div style="font-size:10px;color:var(--muted);">'+fmtAEDR(buMap[b])+'</div></div><span style="font-size:10px;padding:2px 8px;background:rgba(0,0,0,0.2);color:'+col+';">'+pct+'%</span></div>';}).join('');
+
+  var topCusts=Object.keys(custMap).map(function(n){return{n:n,v:custMap[n]};}).sort(function(a,b){return b.v-a.v;}).slice(0,8); var cC=['#e84b4b','#e84b4b','#c9a84c','#c9a84c','#5b8dee','#5b8dee','#4ecb8d','#4ecb8d'];
+  document.getElementById('ret-top-customers').innerHTML=topCusts.map(function(c,i){var pct=totalVal>0?(c.v/totalVal*100).toFixed(1)+'%':'0%';var col=cC[i]||'var(--muted)';return '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);"><div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;"><span style="font-size:11px;font-weight:700;color:'+col+';width:18px;flex-shrink:0;">'+(i+1)+'</span><span style="font-size:12px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+c.n+'</span></div><div style="display:flex;align-items:center;gap:16px;flex-shrink:0;"><div style="text-align:right;min-width:70px;"><div style="font-size:12px;font-weight:700;color:var(--gold);">'+fmtAEDR(c.v)+'</div></div><div style="text-align:right;min-width:40px;"><div style="font-size:11px;color:#e84b4b;">'+pct+'</div><div style="font-size:9px;color:var(--muted);">of total</div></div></div></div>';}).join('');
+}
 
 function retToggleUpload(){
   var box=document.getElementById('ret-upload-box');
@@ -2313,6 +2439,7 @@ function handleReturnsUpload(input){
       if(!rows.length){alert('No data found');return;}
       RET_RAW=rows;
       renderReturns();
+      saveReturnsToServer(file.name);
       var badge=document.getElementById('ret-status-badge');
       if(badge){badge.style.display='block';document.getElementById('ret-last-date').textContent=new Date().toLocaleDateString('en-AE');}
     } catch(err){alert('Error reading file: '+err.message);}
@@ -2346,8 +2473,20 @@ function retFilter(type, val){
     }
   }
   // Update pill active states
-  var maps={wh:['rw-all','rw-dcv','rw-dgc','rw-dll','rw-dgs','rw-dcf','rw-dgn'],month:['retm-all','retm-1','retm-2','retm-3','retm-4','retm-5'],cat:['rc-all','rc-inv','rc-grv'],bu:['rbu-all','rbu-food','rbu-nf','rbu-other']};
-  var valMaps={wh:['all','DCV','DGC','DLL','DGS','DCF','DGN'],month:['all',1,2,3,4,5],cat:['all','Invoice Cancellation','GRV-Return'],bu:['all','food','nonfood','other']};
+  var maps={
+    wh:['rw-all','rw-dcv','rw-dgc','rw-dll','rw-dgs','rw-dcf','rw-dgn'],
+    month:['retm-all','retm-1','retm-2','retm-3','retm-4','retm-5'],
+    area:['rl-all','rl-dxb','rl-shj','rl-ajm','rl-ain','rl-rak','rl-fuj','rl-uaq'],
+    cust:['rcust-all','rcust-nesto','rcust-union','rcust-mair','rcust-spinneys','rcust-sharjahcoop','rcust-gmg'],
+    bu:['rbu-all','rbu-food','rbu-nf']
+  };
+  var valMaps={
+    wh:['all','DCV','DGC','DLL','DGS','DCF','DGN'],
+    month:['all',1,2,3,4,5],
+    area:['all','DXB','SHJ','AJM','AIN','RAK','FUJ','UAQ'],
+    cust:['all','NESTO','UNION','MAIR','SPINNEYS','SHARJAH CO-OP','GMG'],
+    bu:['all','food','nonfood']
+  };
   if(maps[type]){
     maps[type].forEach(function(id,i){
       var el=document.getElementById(id);
@@ -2374,12 +2513,14 @@ function getFilteredReturns(){
     if(dt){var p=dt.split('/');month=parseInt(p[0])||0;}
     if(retFilters.wh!=='all'&&wh!==retFilters.wh)return false;
     if(retFilters.month!=='all'&&month!==retFilters.month)return false;
-    if(retFilters.cat!=='all'&&cat!==retFilters.cat)return false;
     if(retFilters.bu!=='all'){
       if(retFilters.bu==='food'&&bu!=='Food')return false;
       if(retFilters.bu==='nonfood'&&bu!=='Non-Food')return false;
-      if(retFilters.bu==='other'&&(bu==='Food'||bu==='Non-Food'))return false;
     }
+    var area=extractArea(row[C.shipTo]);
+    if(retFilters.area!=='all'&&area!==retFilters.area)return false;
+    var custName=String(row[C.cust]||'').toUpperCase();
+    if(retFilters.cust!=='all'&&!custName.includes(retFilters.cust))return false;
     return true;
   }).map(function(row){
     var dt=String(row[C.date]||'').split(' ')[0];
