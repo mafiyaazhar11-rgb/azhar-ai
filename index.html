@@ -422,6 +422,7 @@ footer span{color:var(--gold);}
   <button class="sb-item" onclick="goTab('email',this)"><span class="icon">✉️</span> Email Writer</button>
   <button class="sb-item" onclick="goTab('invoice',this)"><span class="icon">💼</span> Proforma Invoice</button>
   <button class="sb-item" onclick="goTab('excel',this)"><span class="icon">📐</span> Excel Support</button>
+  <button class="sb-item" onclick="goTab('backlog',this)"><span class="icon">📦</span> WH Backlog</button>
   <button class="sb-item" onclick="goTab('returns',this)"><span class="icon">🔄</span> Daily Returns</button>
   <div class="sb-footer"><div class="sb-user"><div class="sb-avatar">A</div><div><div class="sb-user-name">Azhar</div><div class="sb-user-role">Administrator</div></div></div></div>
 </aside>
@@ -620,6 +621,82 @@ footer span{color:var(--gold);}
     <!-- ══ PROFORMA INVOICE ═════════════════════════════ -->
     <div class="panel" id="invoice"><div class="box"><div class="box-title">💼 Proforma Invoice Generator</div><label class="lbl">Select Company Letterhead</label><div class="pills" id="inv-co" style="margin-bottom:18px;"><div class="pill on" onclick="setPill(this,'inv-co');setCompany('aki')" style="padding:10px 18px;">🏢 AKI — Al Khayyat Investments</div><div class="pill" onclick="setPill(this,'inv-co');setCompany('alphamed')" style="padding:10px 18px;">🏥 Alphamed General Trading</div></div><div class="inv-grid"><div><div style="font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">From (Your Company)</div><input type="text" id="inv-from" class="inv-inp" placeholder="Company name" style="margin-bottom:6px;"/><textarea id="inv-addr" class="inv-inp" style="height:64px;margin-bottom:6px;resize:none;" placeholder="Address"></textarea><input type="text" id="inv-contact" class="inv-inp" placeholder="Tel / Email"/></div><div><div style="font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">Bill To (Client)</div><input type="text" id="inv-client" class="inv-inp" placeholder="Client name" style="margin-bottom:6px;"/><textarea id="inv-client-addr" class="inv-inp" style="height:64px;resize:none;" placeholder="Client address"></textarea></div><div><div style="font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">Invoice Details</div><input type="text" id="inv-ref" class="inv-inp" placeholder="Reference No" style="margin-bottom:6px;"/><input type="text" id="inv-date" class="inv-inp" placeholder="Date" style="margin-bottom:6px;"/><input type="text" id="inv-valid" class="inv-inp" placeholder="Valid Until" style="margin-bottom:6px;"/><input type="text" id="inv-terms" class="inv-inp" placeholder="Payment Terms"/></div></div><label class="lbl" style="margin-top:18px;">Line Items</label><div id="inv-items" style="margin-bottom:10px;width:100%;"></div><button type="button" onclick="addInvItem()" style="padding:9px 18px;background:transparent;border:1px solid var(--border);color:var(--muted);font-family:'Montserrat',sans-serif;font-size:9px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all 0.2s;margin-bottom:16px;" onmouseover="this.style.borderColor='var(--gold)';this.style.color='var(--gold)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">+ Add Line Item</button><div class="inv-totals"><div class="inv-total-row"><span style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Subtotal (excl. VAT)</span><span style="font-size:13px;color:var(--text);" id="inv-subtotal">AED 0.00</span></div><div class="inv-total-row"><span style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">VAT (5%)</span><span style="font-size:13px;color:var(--green);" id="inv-vat">AED 0.00</span></div><div class="inv-total-row" style="border-top:1px solid var(--border);padding-top:10px;margin-top:4px;"><span style="font-size:12px;color:var(--gold);font-weight:700;text-transform:uppercase;letter-spacing:1px;">Net Total (incl. VAT)</span><span style="font-size:20px;color:var(--gold);font-weight:700;font-family:'Cormorant Garamond',serif;" id="inv-total">AED 0.00</span></div></div><label class="lbl">Special Notes / Terms &amp; Conditions</label><textarea id="inv-notes" class="inv-inp" style="height:60px;margin-bottom:14px;" placeholder="e.g. All prices in AED. VAT 5% applicable."></textarea><div class="inv-btns"><button class="inv-btn" onclick="previewInv()">👁 Preview &amp; Print PDF</button><button class="inv-btn blue" onclick="downloadInvWord()">⬇ Download Word</button></div></div></div>
 
+    <!-- ══ WH BACKLOG DASHBOARD ═══════════════════════════════ -->
+    <div class="panel" id="backlog">
+      <!-- UPLOAD BOX -->
+      <div style="background:var(--surface);border:1px solid var(--border);padding:16px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+        <div>
+          <div style="font-size:10px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;">Daily Upload</div>
+          <div style="font-size:12px;color:var(--muted);">Upload your WH Back Log Order CSV/Excel file</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div id="bl-status-badge" style="font-size:10px;color:var(--muted);display:none;">Last: <span id="bl-last-date">—</span></div>
+          <label id="bl-upload-btn" style="padding:8px 18px;background:var(--glow);border:1px solid var(--gold);color:var(--gold);font-size:10px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;display:flex;align-items:center;gap:6px;">
+            <span>📦</span> UPLOAD FILE
+            <input type="file" id="bl-file-input" accept=".xlsx,.xls,.csv" style="display:none;" onchange="handleBacklogUpload(this)">
+          </label>
+        </div>
+      </div>
+
+      <!-- NO DATA STATE -->
+      <div id="bl-nodata" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:300px;text-align:center;padding:40px;">
+        <div style="font-size:48px;margin-bottom:16px;opacity:0.4;">📦</div>
+        <div style="font-size:16px;color:var(--muted);margin-bottom:8px;">No backlog data loaded</div>
+        <div style="font-size:11px;color:var(--muted);">Upload your WH Back Log Order file to see the dashboard</div>
+      </div>
+
+      <!-- DASHBOARD DATA -->
+      <div id="bl-dashboard" style="display:none;">
+
+        <!-- KPI CARDS -->
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;" id="bl-kpis"></div>
+
+        <!-- ROW 2: ORG + CATEGORY -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;">
+
+          <!-- ORG BREAKDOWN -->
+          <div style="background:var(--surface);border:1px solid var(--border);padding:16px;">
+            <div style="font-size:9px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:14px;">Orders &amp; Value by ORG</div>
+            <div id="bl-org-bars"></div>
+          </div>
+
+          <!-- CATEGORY CHART -->
+          <div style="background:var(--surface);border:1px solid var(--border);padding:16px;">
+            <div style="font-size:9px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:14px;">Backlog by Category</div>
+            <div style="position:relative;height:200px;">
+              <canvas id="bl-cat-chart" role="img" aria-label="Backlog orders by category"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- DETAIL TABLE -->
+        <div style="background:var(--surface);border:1px solid var(--border);padding:16px;margin-bottom:16px;">
+          <div style="font-size:9px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:14px;">Detailed Backlog Breakdown</div>
+          <div style="overflow-x:auto;">
+            <table style="width:100%;border-collapse:collapse;font-size:11px;" id="bl-detail-table">
+              <thead>
+                <tr style="border-bottom:1px solid var(--border);">
+                  <th style="text-align:left;padding:8px 10px;font-size:9px;color:var(--gold);letter-spacing:1px;font-weight:600;text-transform:uppercase;">Category</th>
+                  <th style="text-align:center;padding:8px 10px;font-size:9px;color:var(--gold);letter-spacing:1px;font-weight:600;text-transform:uppercase;">ORG</th>
+                  <th style="text-align:right;padding:8px 10px;font-size:9px;color:var(--gold);letter-spacing:1px;font-weight:600;text-transform:uppercase;">Orders</th>
+                  <th style="text-align:right;padding:8px 10px;font-size:9px;color:var(--gold);letter-spacing:1px;font-weight:600;text-transform:uppercase;">Value (AED)</th>
+                  <th style="text-align:center;padding:8px 10px;font-size:9px;color:var(--gold);letter-spacing:1px;font-weight:600;text-transform:uppercase;">Status</th>
+                </tr>
+              </thead>
+              <tbody id="bl-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- TOP CUSTOMERS -->
+        <div style="background:var(--surface);border:1px solid var(--border);padding:16px;">
+          <div style="font-size:9px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:14px;">Top Customers by Backlog Value</div>
+          <div id="bl-top-customers"></div>
+        </div>
+
+      </div>
+    </div>
+
     <!-- ══ DAILY RETURNS ═══════════════════════════════ -->
     <div class="panel" id="returns">
       <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;text-align:center;padding:40px;">
@@ -694,7 +771,8 @@ const TITLES={
   email:     ['Professional Email Writer','Write and refine business correspondence'],
   invoice:   ['Proforma Invoice Generator','Create professional invoices with letterhead'],
   excel:     ['Excel Support & Data Analysis','Fix formulas and analyse spreadsheet data'],
-  returns:   ['Daily Returns Dashboard','Invoice Cancellations - GRV Returns - BU-wise Analysis']
+  returns:   ['Daily Returns Dashboard','Invoice Cancellations - GRV Returns - BU-wise Analysis'],
+  backlog:   ['WH Backlog Order Dashboard','Advance Orders - Credit Holds - Frozen - Daily Pool Report']
 };
 function goTab(id,btn){
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
@@ -1646,6 +1724,246 @@ function setWelcomeMessage(){
   }
 }
 setWelcomeMessage();
+
+// ── WH BACKLOG DASHBOARD ──────────────────────────────────
+var BL_DATA = null;
+var BL_CHART = null;
+var ORG_COLORS = {DCV:'#e84b4b', DGC:'#5b8dee', DSN:'#c9a84c', DGS:'#4ecb8d', DCF:'#e8854b'};
+
+// Robust category normalizer - handles typos, spacing, case variations
+function normalizeStr(s){ return String(s||'').toUpperCase().replace(/[^A-Z0-9]/g,''); }
+function shortCat(cat){
+  var c = String(cat||'');
+  var u = c.toUpperCase();
+  var n = normalizeStr(c);
+  // RSD >30 Advance Orders - catches: RSD>30, RSD >30, RSD > 30, rsd30, advance order etc
+  if(n.includes('RSD30')||n.includes('RSD3O')||(n.includes('RSD')&&(n.includes('30')||n.includes('3O')))||u.includes('ADVANCE ORDER')) return 'RSD >30 Advance';
+  // Unplanned Frozen - catches: UNPLANED, UNPLAN, unplanned etc
+  if(u.includes('UNPLAN')||u.includes('UNPLANED')||u.includes('UN PLAN')) return 'Unplanned Frozen';
+  // Cut-Off Frozen - catches: FROZEN, FREEZ, FROZ, Cut Off, Cutoff etc
+  if((u.includes('FROZ')||u.includes('FREEZ')||u.includes('FROZEN'))&&(u.includes('CUT')||u.includes('AFTER')||u.includes('AUTO'))) return 'Cut-Off Frozen';
+  // Credit Hold - catches: CREDIT HOLD, CREDIT HELD, CRADIT, credit, hold, late release
+  if(u.includes('CREDIT')||u.includes('CRADIT')||u.includes('CRDIT')||(u.includes('HOLD')&&u.includes('LATE'))) return 'Credit Hold';
+  // Before Cut-Off - catches: BEFORE, BEFOR, BEFR, BFR
+  if(u.includes('BEFOR')||u.includes('BEFR')||u.includes('BEF CUT')||(u.includes('BEFORE')&&u.includes('CUT'))) return 'Before Cut-Off';
+  // Fallback - clean up common typos in display
+  return c.replace(/  +/g,' ').replace(/- -/g,'-').trim().substring(0,35);
+}
+
+// Robust ORG normalizer - handles lowercase, spaces, typos
+function normalizeORG(org){
+  var o = String(org||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+  if(o==='DCV'||o.includes('DCV')) return 'DCV';
+  if(o==='DGC'||o.includes('DGC')) return 'DGC';
+  if(o==='DSN'||o.includes('DSN')) return 'DSN';
+  if(o==='DGS'||o.includes('DGS')) return 'DGS';
+  if(o==='DCF'||o.includes('DCF')) return 'DCF';
+  if(o==='DPS'||o.includes('DPS')) return 'DPS';
+  if(o==='HCP'||o.includes('HCP')) return 'HCP';
+  if(o==='3PL'||o.includes('3PL')) return '3PL';
+  return String(org||'').toUpperCase().trim();
+}
+
+// Clean customer name - fix common typos and formatting
+function cleanCustName(name){
+  var n = String(name||'').trim();
+  // Fix common patterns: LLC., L.L.C, llc, L L C -> LLC
+  n = n.replace(/L\.L\.C\.?/gi,'LLC').replace(/llc/gi,'LLC');
+  // Fix double spaces
+  n = n.replace(/  +/g,' ');
+  // Fix trailing punctuation
+  n = n.replace(/[.,;]+$/,'').trim();
+  return n;
+}
+
+function catStatus(cat){
+  var c = String(cat||'');
+  var statusMap = {
+    'RSD >30 Advance':'<span style="font-size:9px;padding:2px 8px;background:rgba(232,75,75,0.15);color:#e84b4b;letter-spacing:1px;">CRITICAL</span>',
+    'Credit Hold':'<span style="font-size:9px;padding:2px 8px;background:rgba(201,168,76,0.15);color:var(--gold);letter-spacing:1px;">ON HOLD</span>',
+    'Cut-Off Frozen':'<span style="font-size:9px;padding:2px 8px;background:rgba(91,141,238,0.15);color:#5b8dee;letter-spacing:1px;">FROZEN</span>',
+    'Unplanned Frozen':'<span style="font-size:9px;padding:2px 8px;background:rgba(91,141,238,0.15);color:#5b8dee;letter-spacing:1px;">FROZEN</span>',
+    'Before Cut-Off':'<span style="font-size:9px;padding:2px 8px;background:rgba(78,203,141,0.15);color:#4ecb8d;letter-spacing:1px;">PENDING</span>'
+  };
+  return statusMap[shortCat(cat)] || '';
+}
+
+function fmtAED(v){
+  if(v>=1000000) return 'AED '+(v/1000000).toFixed(2)+'M';
+  if(v>=1000) return 'AED '+Math.round(v/1000)+'K';
+  return 'AED '+Math.round(v);
+}
+
+function handleBacklogUpload(input){
+  var file = input.files[0];
+  if(!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e){
+    try {
+      var data = new Uint8Array(e.target.result);
+      var wb = XLSX.read(data, {type:'array'});
+      // Prefer POOL REPORT sheet, else first sheet
+      var sheetName = wb.SheetNames.includes('POOL REPORT') ? 'POOL REPORT' : wb.SheetNames[0];
+      var rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], {defval:''});
+      if(!rows.length){ alert('No data found in file'); return; }
+      parseBacklogData(rows, file.name);
+    } catch(err){ alert('Error reading file: '+err.message); }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function parseBacklogData(rows, fileName){
+  // Detect columns
+  var keys = Object.keys(rows[0]);
+  function fc(){ var names=Array.prototype.slice.call(arguments); return keys.find(function(k){return names.some(function(n){return k.toUpperCase().includes(n.toUpperCase());});})||null; }
+  var C = {
+    org:      fc('ORG','ORGNIZATION','ORGNISATION','ORGNAIZATION','BU'),
+    val:      fc('VALUE','SUM OF VALUE','AMOUNT','AMT','TOTAL_VALUE','TOTAL VALUE'),
+    cat:      fc('COMMENTS','COMMENT','CATEGORY','CATERGORY','ROW LABELS','ROW LABEL','REMARK','REMARKS'),
+    customer: fc('CUSTOMER_NAME','CUSTOMER NAME','CUSTOMERNAME','CUSTUMER','CUSTMER','CUSTOMER','CUST'),
+    shipment: fc('SHIPMENT_ID','SHIPMENTID','SHIPMENT ID','SHIPMENT','COUNT OF SHIPMENT','SHIP ID')
+  };
+
+  var orgMap={}, catMap={}, custMap={};
+  var totalOrders=0, totalVal=0;
+
+  rows.forEach(function(row){
+    var org = normalizeORG(row[C.org]);
+    var val = parseFloat(row[C.val])||0;
+    var cat = shortCat(String(row[C.cat]||'').trim());
+    var cust = cleanCustName(row[C.customer]);
+    totalOrders++; totalVal+=val;
+    if(org){ if(!orgMap[org])orgMap[org]={count:0,val:0}; orgMap[org].count++; orgMap[org].val+=val; }
+    if(cat){ if(!catMap[cat])catMap[cat]={count:0,val:0}; catMap[cat].count++; catMap[cat].val+=val; }
+    if(cust){ if(!custMap[cust])custMap[cust]={count:0,val:0}; custMap[cust].count++; custMap[cust].val+=val; }
+  });
+
+  var advance = catMap['RSD >30 Advance']||{count:0,val:0};
+  var critical = (catMap['Credit Hold']||{count:0}).count + (catMap['Cut-Off Frozen']||{count:0}).count + (catMap['Unplanned Frozen']||{count:0}).count;
+
+  BL_DATA = { totalOrders:totalOrders, totalVal:totalVal, advance:advance, critical:critical, orgMap:orgMap, catMap:catMap, custMap:custMap, fileName:fileName, date:new Date().toLocaleDateString('en-AE') };
+  renderBacklog();
+}
+
+function renderBacklog(){
+  if(!BL_DATA) return;
+  var d = BL_DATA;
+  document.getElementById('bl-nodata').style.display='none';
+  document.getElementById('bl-dashboard').style.display='block';
+  var badge=document.getElementById('bl-status-badge');
+  if(badge){ badge.style.display='block'; document.getElementById('bl-last-date').textContent=d.date; }
+
+  // KPIs
+  var kpis=[
+    {label:'TOTAL BACKLOG',val:d.totalOrders.toLocaleString(),sub:'orders in pool',color:'var(--gold)'},
+    {label:'TOTAL VALUE AT RISK',val:fmtAED(d.totalVal),sub:'all categories',color:'#e84b4b'},
+    {label:'RSD >30 ADVANCE',val:d.advance.count.toLocaleString(),sub:fmtAED(d.advance.val),color:'#e84b4b'},
+    {label:'CRITICAL HOLDS',val:d.critical.toLocaleString(),sub:'frozen + credit hold',color:'var(--gold)'}
+  ];
+  document.getElementById('bl-kpis').innerHTML=kpis.map(function(k){
+    return '<div style="background:var(--card);border:1px solid var(--border);padding:14px;">'
+      +'<div style="font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">'+k.label+'</div>'
+      +'<div style="font-family:\'Cormorant Garamond\',serif;font-size:26px;font-weight:700;color:'+k.color+';">'+k.val+'</div>'
+      +'<div style="font-size:10px;color:var(--muted);margin-top:4px;">'+k.sub+'</div>'
+      +'</div>';
+  }).join('');
+
+  // ORG bars
+  var orgs = Object.keys(d.orgMap).sort(function(a,b){return d.orgMap[b].val-d.orgMap[a].val;});
+  var maxVal = Math.max.apply(null, orgs.map(function(o){return d.orgMap[o].val;}));
+  document.getElementById('bl-org-bars').innerHTML = orgs.map(function(org){
+    var v=d.orgMap[org];
+    var pct=maxVal>0?Math.round(v.val/maxVal*100):0;
+    var col=ORG_COLORS[org]||'var(--gold)';
+    return '<div style="margin-bottom:12px;">'
+      +'<div style="display:flex;justify-content:space-between;margin-bottom:4px;">'
+      +'<span style="font-size:12px;font-weight:700;color:'+col+';">'+org+'</span>'
+      +'<span style="font-size:11px;color:var(--text);">'+v.count+' orders &nbsp;|&nbsp; <span style="color:var(--gold);">'+fmtAED(v.val)+'</span></span>'
+      +'</div>'
+      +'<div style="height:6px;background:var(--border);border-radius:0;">'
+      +'<div style="height:6px;width:'+pct+'%;background:'+col+';transition:width 0.8s ease;"></div>'
+      +'</div></div>';
+  }).join('');
+
+  // Category chart
+  var catKeys = Object.keys(d.catMap);
+  var catLabels = catKeys;
+  var catData = catKeys.map(function(k){return d.catMap[k].count;});
+  var catColors = ['#e84b4b','#c9a84c','#5b8dee','#4ecb8d','#e8854b'];
+  if(BL_CHART){ BL_CHART.destroy(); }
+  var ctx = document.getElementById('bl-cat-chart');
+  if(ctx){
+    BL_CHART = new Chart(ctx, {
+      type:'bar',
+      data:{
+        labels:catLabels,
+        datasets:[{label:'Orders',data:catData,backgroundColor:catColors,borderRadius:0,borderSkipped:false}]
+      },
+      options:{
+        responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return ' '+c.raw+' orders';}}}},
+        scales:{
+          x:{ticks:{color:'#7a7660',font:{size:9},maxRotation:20},grid:{display:false},border:{color:'var(--border)'}},
+          y:{ticks:{color:'#7a7660',font:{size:9}},grid:{color:'rgba(122,118,96,0.15)'},border:{color:'var(--border)'}}
+        }
+      }
+    });
+  }
+
+  // Detail table
+  var tbody = document.getElementById('bl-table-body');
+  if(tbody){
+    var rows2='';
+    catKeys.forEach(function(cat){
+      var v=d.catMap[cat];
+      rows2+='<tr style="border-bottom:1px solid var(--border);">'
+        +'<td style="padding:8px 10px;color:var(--text);font-size:11px;">'+cat+'</td>'
+        +'<td style="padding:8px 10px;text-align:center;">'
+        +(function(){
+          var orgsInCat={};
+          return Object.keys(d.orgMap).filter(function(o){
+            return true;
+          }).map(function(o){
+            var col=ORG_COLORS[o]||'var(--gold)';
+            return '<span style="font-size:9px;padding:1px 6px;background:rgba(0,0,0,0.2);color:'+col+';margin:1px;display:inline-block;">'+o+'</span>';
+          }).join('');
+        }())
+        +'</td>'
+        +'<td style="padding:8px 10px;text-align:right;font-weight:700;color:var(--text);">'+v.count.toLocaleString()+'</td>'
+        +'<td style="padding:8px 10px;text-align:right;color:var(--gold);">'+fmtAED(v.val)+'</td>'
+        +'<td style="padding:8px 10px;text-align:center;">'+catStatus(cat)+'</td>'
+        +'</tr>';
+    });
+    // Grand total row
+    rows2+='<tr style="background:var(--glow);border-top:1px solid var(--gold);">'
+      +'<td style="padding:10px;font-weight:700;color:var(--gold);font-size:11px;letter-spacing:1px;text-transform:uppercase;">GRAND TOTAL</td>'
+      +'<td></td>'
+      +'<td style="padding:10px;text-align:right;font-weight:700;color:var(--white);font-size:13px;">'+d.totalOrders.toLocaleString()+'</td>'
+      +'<td style="padding:10px;text-align:right;font-weight:700;color:var(--gold);font-size:13px;">'+fmtAED(d.totalVal)+'</td>'
+      +'<td></td>'
+      +'</tr>';
+    tbody.innerHTML=rows2;
+  }
+
+  // Top customers
+  var topCusts = Object.keys(d.custMap).map(function(n){return{n:n,c:d.custMap[n].count,v:d.custMap[n].val};})
+    .sort(function(a,b){return b.v-a.v;}).slice(0,8);
+  var custColors=['#e84b4b','#e84b4b','#c9a84c','#c9a84c','#5b8dee','#5b8dee','#4ecb8d','#4ecb8d'];
+  document.getElementById('bl-top-customers').innerHTML = topCusts.map(function(c,i){
+    var pct=d.totalVal>0?(c.v/d.totalVal*100).toFixed(1)+'%':'0%';
+    var col=custColors[i]||'var(--muted)';
+    return '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);">'
+      +'<div style="display:flex;align-items:center;gap:8px;min-width:0;flex:1;">'
+      +'<span style="font-size:11px;font-weight:700;color:'+col+';width:18px;flex-shrink:0;">'+(i+1)+'</span>'
+      +'<span style="font-size:12px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+c.n+'</span>'
+      +'</div>'
+      +'<div style="display:flex;align-items:center;gap:16px;flex-shrink:0;">'
+      +'<div style="text-align:right;"><div style="font-size:12px;font-weight:700;color:var(--text);">'+c.c+' orders</div></div>'
+      +'<div style="text-align:right;min-width:70px;"><div style="font-size:12px;font-weight:700;color:var(--gold);">'+fmtAED(c.v)+'</div></div>'
+      +'<div style="text-align:right;min-width:40px;"><div style="font-size:11px;color:#e84b4b;">'+pct+'</div><div style="font-size:9px;color:var(--muted);">of total</div></div>'
+      +'</div></div>';
+  }).join('');
+}
 
 // Logo spin
 function spinLogo(){const box=document.querySelector('.sb-logo-box');if(!box)return;box.classList.add('spinning');setTimeout(()=>box.classList.remove('spinning'),1000);}
