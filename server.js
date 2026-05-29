@@ -162,7 +162,7 @@ loadBacklogFromDB();
 app.post('/api/backlog/upload', upload.single('file'), async function(req, res) {
   try {
     if (!req.file) return res.status(400).json({ error: 'No file received' });
-    var summary = JSON.parse(req.body.summary || '{}');
+    var summary = (typeof req.body.summary === 'object') ? req.body.summary : JSON.parse(req.body.summary || '{}');
     var uploadedBy = req.body.uploadedBy || 'Admin';
     var fileName = req.file.originalname || 'backlog.xlsx';
     var totalOrders = parseInt(req.body.totalOrders) || 0;
@@ -739,7 +739,7 @@ async function loadReturnsFromDB() {
 }
 loadReturnsFromDB();
 
-app.post('/api/returns/upload', upload.single('file'), async function(req, res) {
+app.post('/api/returns/upload', async function(req, res) {
   try {
     var summary = JSON.parse(req.body.summary || '{}');
     var uploadedBy = req.body.uploadedBy || 'Admin';
