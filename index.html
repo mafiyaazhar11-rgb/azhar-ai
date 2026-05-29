@@ -2437,6 +2437,53 @@ function retPwdConfirm(){
   if(upStep)upStep.style.display='flex';
 }
 
+function normalizeCustomer(raw){
+  var s=String(raw||'').toUpperCase().trim();
+  if(!s)return'';
+  // NESTO Group
+  if(s.includes('NESTO'))return'NESTO';
+  // Union Co-Op
+  if(s.includes('UNION CO')||s.includes('UNION COOP')||s.includes('UNION CO-OP'))return'Union Co-Op';
+  // Spinneys
+  if(s.includes('SPINNEYS'))return'Spinneys';
+  // Sharjah Co-Op
+  if(s.includes('SHARJAH CO')||s.includes('SHARJAH COOP'))return'Sharjah Co-Op';
+  // GMG (Gulf Marketing Group)
+  if(s.includes('GMG')||s.includes('GULF MARKETING'))return'GMG';
+  // MAIR Group
+  if(s.includes('MAIR'))return'MAIR Group';
+  // Lulu
+  if(s.includes('LULU')||s.includes('LuLu'))return'Lulu';
+  // Carrefour
+  if(s.includes('CARREFOUR')||s.includes('MAF'))return'Carrefour';
+  // Choithrams
+  if(s.includes('CHOITHRAM'))return'Choithrams';
+  // West Zone
+  if(s.includes('WEST ZONE'))return'West Zone';
+  // Al Maya
+  if(s.includes('AL MAYA'))return'Al Maya';
+  // Waitrose
+  if(s.includes('WAITROSE'))return'Waitrose';
+  // Amazon / Noon
+  if(s.includes('AMAZON'))return'Amazon';
+  if(s.includes('NOON'))return'Noon';
+  // Geant
+  if(s.includes('GEANT'))return'Geant';
+  // Abbass / Al Madina — common salon/pharma chains
+  if(s.includes('AL MADINA')||s.includes('AL MADIN'))return'Al Madina Group';
+  if(s.includes('ABBASS'))return'Abbass';
+  // Aster
+  if(s.includes('ASTER'))return'Aster';
+  // Life Pharmacy
+  if(s.includes('LIFE PHARM'))return'Life Pharmacy';
+  // Boots
+  if(s.includes('BOOTS'))return'Boots';
+  // Raw name — strip branch suffix and title-case
+  var clean=raw.trim().replace(/,?\s*(LLC|L\.L\.C|llc|BRANCH|BR\.|CPD).*$/i,'').trim();
+  // Truncate very long names for pills display
+  return clean.length>22?clean.substring(0,22)+'...':clean;
+}
+
 function normalizeBU(bu){
   var b=String(bu||'').toLowerCase().replace(/[^a-z]/g,'');
   if(b.includes('food')&&(b.includes('dcf')||b.includes('dcv')||!b.includes('non')))return'Food';
@@ -2609,8 +2656,8 @@ function getFilteredReturns(){
     }
     var area=extractArea(row[C.shipTo]);
     if(retFilters.area!=='all'&&area!==retFilters.area)return false;
-    var custName=String(row[C.cust]||'').toUpperCase();
-    if(retFilters.cust!=='all'&&!custName.includes(retFilters.cust))return false;
+    var custName=normalizeCustomer(row[C.cust]||'');
+    if(retFilters.cust!=='all'&&custName!==retFilters.cust)return false;
     return true;
   }).map(function(row){
     var dt=String(row[C.date]||'').split(' ')[0];
@@ -2621,7 +2668,7 @@ function getFilteredReturns(){
       bu:normalizeBU(row[C.bu]),
       tot:Math.abs(parseFloat(row[C.tot])||0),
       month:parseInt(p[0])||0,
-      cust:String(row[C.cust]||'').trim(),
+      cust:normalizeCustomer(row[C.cust]||''),
       area:extractArea(row[C.shipTo]),
       orderNo:String(row[C.orderNo]||'').trim()
     };
@@ -2752,7 +2799,7 @@ function renderReturns(){
     var keys=Object.keys(r);
     function fc(){var names=Array.prototype.slice.call(arguments);return keys.find(function(k){return names.some(function(n){return k.toUpperCase().includes(n.toUpperCase());});})||null;}
     var C={cust:fc('CUSTOMER NAME')};
-    var cn=String(r[C.cust]||'').trim();
+    var cn=normalizeCustomer(r[C.cust]||'');
     if(cn){if(!allCustMap[cn])allCustMap[cn]=0;allCustMap[cn]+=parseFloat(r[Object.keys(r).find(function(k){return k.toUpperCase().includes('TOTAL');})||''])||0;}
   });
   var top10Custs=Object.keys(allCustMap).map(function(n){return{n:n,v:allCustMap[n]};}).sort(function(a,b){return b.v-a.v;}).slice(0,10);
