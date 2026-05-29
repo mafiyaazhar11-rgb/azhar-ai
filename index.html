@@ -155,11 +155,178 @@ footer span{color:var(--gold);}
 .sb-logo-box svg{width:18px;height:18px;transition:transform 0.5s;}
 .sb-logo-box.spinning svg{animation:logoSpin 1s ease-in-out;}
 #sb-star{animation:starGlow 2s ease-in-out infinite;}
+
+/* ═══════════════════════════════════════════════════════════
+   MOBILE RESPONSIVE — max-width 768px
+   Desktop layout unchanged. Mobile only.
+═══════════════════════════════════════════════════════════ */
+
+/* Hamburger button - hidden on desktop */
+.hamburger {
+  display: none;
+  position: fixed;
+  top: 14px;
+  left: 14px;
+  z-index: 200;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 8px 10px;
+  cursor: pointer;
+  flex-direction: column;
+  gap: 5px;
+}
+.hamburger span {
+  display: block;
+  width: 22px;
+  height: 2px;
+  background: var(--gold);
+  transition: all 0.3s;
+}
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  z-index: 98;
+}
+
+@media (max-width: 768px) {
+
+  /* Show hamburger */
+  .hamburger { display: flex; }
+
+  /* Sidebar slides in/out */
+  .sidebar {
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    z-index: 99;
+    width: 240px;
+  }
+  .sidebar.open { transform: translateX(0); }
+  .sidebar-overlay.open { display: block; }
+
+  /* Main content takes full width */
+  .main { margin-left: 0; }
+
+  /* Topbar adjustments */
+  .topbar { padding: 0 14px 0 56px; height: 56px; }
+  .topbar-left h2 { font-size: 15px; }
+  .topbar-left p { display: none; }
+  .topbar-right { gap: 10px; }
+  .topbar-date strong { font-size: 11px; }
+  .topbar-date span { display: none; }
+  .dot-live { font-size: 9px; }
+
+  /* Content padding */
+  .content { padding: 14px; }
+
+  /* KPI row - stack vertically */
+  .kpi-row {
+    grid-template-columns: 1fr !important;
+    gap: 10px;
+  }
+
+  /* Grid layouts - stack vertically */
+  .grid-2 {
+    grid-template-columns: 1fr !important;
+    gap: 10px;
+  }
+  .grid-3-1 {
+    grid-template-columns: 1fr !important;
+    gap: 10px;
+  }
+
+  /* KPI cards */
+  .kpi-card { padding: 14px; }
+  .kpi-value { font-size: 24px; }
+  .kpi-label { font-size: 8px; }
+
+  /* The food/nonfood/3pl breakdown grid */
+  .kpi-card > div[style*="grid-template-columns:1fr 1fr 1fr"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Charts */
+  .chart-bars { height: 90px !important; }
+  canvas { max-height: 160px !important; }
+
+  /* Tables - scrollable */
+  .data-table, .route-table {
+    font-size: 11px;
+  }
+  .data-table th, .route-table th { padding: 6px 8px; font-size: 8px; }
+  .data-table td, .route-table td { padding: 7px 8px; }
+
+  /* Box padding */
+  .box { padding: 14px; }
+  .box-title { font-size: 9px; }
+
+  /* ORG cards - 2 per row on mobile */
+  #rej-org-cards {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px;
+  }
+
+  /* KPI rejection cards - 2x2 */
+  #rej-kpis {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px;
+  }
+
+  /* Day grid cells smaller */
+  .day-cell {
+    width: 36px !important;
+    height: 36px !important;
+  }
+
+  /* Pills wrap nicely */
+  .rej-pill { padding: 4px 10px; font-size: 9px; }
+  .dpill { padding: 4px 8px; font-size: 9px; }
+
+  /* Quick buttons wrap */
+  .qbtns { gap: 4px; }
+  .qbtn { padding: 5px 8px; font-size: 8px; }
+
+  /* Invoice grid - stack */
+  .inv-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Remove horizontal overflow */
+  body { overflow-x: hidden; }
+  .content { overflow-x: hidden; }
+
+  /* Route table - horizontal scroll only that box */
+  #ds-routes-box > div { overflow-x: auto; }
+
+  /* Donut chart wrap */
+  .donut-wrap { flex-direction: column; align-items: center; gap: 12px; }
+
+  /* Footer */
+  footer { font-size: 8px; padding: 10px 14px; }
+}
+
+@media (max-width: 480px) {
+  /* Very small phones */
+  .topbar-left h2 { font-size: 13px; }
+  .kpi-value { font-size: 20px; }
+  #rej-org-cards { grid-template-columns: repeat(2, 1fr) !important; }
+  #rej-kpis { grid-template-columns: 1fr 1fr !important; }
+  .day-cell { width: 30px !important; height: 30px !important; font-size: 10px !important; }
+}
+
 </style>
 </head>
 <body>
 
-<aside class="sidebar">
+<!-- Hamburger button for mobile -->
+<button class="hamburger" id="hamburger" onclick="toggleSidebar()" aria-label="Menu">
+  <span></span><span></span><span></span>
+</button>
+<!-- Overlay to close sidebar on mobile -->
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+<aside class="sidebar" id="sidebar">
   <div class="sb-logo">
     <div class="sb-logo-box"><svg viewBox="0 0 22 22" fill="none"><path d="M11 2L13.5 8.5H20L14.5 12.5L16.5 19L11 15L5.5 19L7.5 12.5L2 8.5H8.5L11 2Z" stroke="#c9a84c" stroke-width="1"/><circle cx="11" cy="11" r="3" stroke="#c9a84c" stroke-width="0.5" fill="rgba(201,168,76,0.1)"/></svg></div>
     <div class="sb-brand"><div class="sb-name">AZHAR-AI <span id="sb-star" style="font-size:14px;vertical-align:middle;">✦</span></div><div class="sb-sub">Operations Intelligence</div></div>
@@ -175,7 +342,7 @@ footer span{color:var(--gold);}
   <div class="sb-footer"><div class="sb-user"><div class="sb-avatar">A</div><div><div class="sb-user-name">Azhar</div><div class="sb-user-role">Administrator</div></div></div></div>
 </aside>
 
-<div class="main">
+<div class="main" id="mainContent">
   <div class="topbar">
     <div class="topbar-left"><h2 id="topbar-title">Welcome back, Azhar</h2><p id="topbar-sub">Operations & Customer Service AI Command Centre</p></div>
     <div class="topbar-right">
@@ -1345,6 +1512,27 @@ setCompany('aki');
 addInvItem();
 loadStatus();
 rejLoadFromServer();
+
+// Mobile sidebar toggle
+function toggleSidebar(){
+  var sb=document.getElementById('sidebar');
+  var ov=document.getElementById('sidebarOverlay');
+  var hb=document.getElementById('hamburger');
+  sb.classList.toggle('open');
+  ov.classList.toggle('open');
+}
+function closeSidebar(){
+  var sb=document.getElementById('sidebar');
+  var ov=document.getElementById('sidebarOverlay');
+  sb.classList.remove('open');
+  ov.classList.remove('open');
+}
+// Close sidebar when nav item clicked on mobile
+document.querySelectorAll('.sb-item').forEach(function(btn){
+  btn.addEventListener('click', function(){
+    if(window.innerWidth <= 768) closeSidebar();
+  });
+});
 
 // Logo spin
 function spinLogo(){const box=document.querySelector('.sb-logo-box');if(!box)return;box.classList.add('spinning');setTimeout(()=>box.classList.remove('spinning'),1000);}
