@@ -631,7 +631,7 @@ footer span{color:var(--gold);}
         <button onclick="blToggleUpload()" id="bl-star-btn" title="Admin" style="background:transparent;border:none;cursor:pointer;font-size:22px;opacity:0.3;transition:opacity 0.3s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.3'">✦</button>
       </div>
       <!-- HIDDEN UPLOAD BOX -->
-      <div id="bl-upload-box" style="display:none;background:var(--surface);border:1px solid var(--gold);padding:16px;margin-bottom:16px;display:none;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+      <div id="bl-upload-box" style="display:none;background:var(--surface);border:1px solid var(--gold);padding:16px;margin-bottom:16px;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
         <div>
           <div style="font-size:10px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;">Daily Upload</div>
           <div style="font-size:12px;color:var(--muted);">Upload your WH Back Log Order CSV/Excel file</div>
@@ -1718,16 +1718,17 @@ function blToggleUpload(){
   if(!box) return;
   if(!blUploadVisible){
     var pwd = prompt('Admin access:');
-    if(pwd !== 'azhar2026') return;
+    if(pwd !== 'azhar2026'){ alert('Wrong password'); return; }
     blUploadVisible = true;
     box.style.display = 'flex';
-    document.getElementById('bl-star-btn').style.opacity = '1';
-    document.getElementById('bl-star-btn').style.color = 'var(--gold)';
+    box.style.flexWrap = 'wrap';
+    var btn = document.getElementById('bl-star-btn');
+    if(btn){ btn.style.opacity='1'; btn.style.color='var(--gold)'; }
   } else {
     blUploadVisible = false;
     box.style.display = 'none';
-    document.getElementById('bl-star-btn').style.opacity = '0.3';
-    document.getElementById('bl-star-btn').style.color = '';
+    var btn = document.getElementById('bl-star-btn');
+    if(btn){ btn.style.opacity='0.3'; btn.style.color=''; }
   }
 }
 
@@ -1911,9 +1912,14 @@ function saveBacklogToServer(fileName, totalOrders){
 // Load backlog from server on startup
 function loadBacklogFromServer(){
   fetch('/api/backlog/status')
-    .then(function(r){return r.json();})
+    .then(function(r){
+      // If server returns HTML (route not found), skip silently
+      var ct = r.headers.get('content-type')||'';
+      if(!ct.includes('json')) return null;
+      return r.json();
+    })
     .then(function(d){
-      if(!d.hasData) return;
+      if(!d || !d.hasData) return;
       var s = d.summary || {};
       BL_DATA = {
         totalOrders: s.totalOrders||0, totalVal: s.totalVal||0,
@@ -1926,7 +1932,7 @@ function loadBacklogFromServer(){
       if(badge){ badge.style.display='block'; document.getElementById('bl-last-date').textContent=BL_DATA.date; }
       console.log('Backlog loaded from server:', d.fileName);
     })
-    .catch(function(e){console.error('Load backlog error:', e);});
+    .catch(function(e){ console.log('Backlog not available yet:', e.message); });
 }
 
 function blAuthUpload(e){
