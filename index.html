@@ -632,10 +632,10 @@ footer span{color:var(--gold);}
         </div>
         <div style="display:flex;align-items:center;gap:10px;">
           <div id="bl-status-badge" style="font-size:10px;color:var(--muted);display:none;">Last: <span id="bl-last-date">—</span></div>
-          <label id="bl-upload-btn" style="padding:8px 18px;background:var(--glow);border:1px solid var(--gold);color:var(--gold);font-size:10px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;display:flex;align-items:center;gap:6px;" onclick="blAuthUpload(event)">
+          <button onclick="blAuthUpload(event)" style="padding:8px 18px;background:var(--glow);border:1px solid var(--gold);color:var(--gold);font-size:10px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;display:flex;align-items:center;gap:6px;">
             <span>📦</span> UPLOAD FILE
-            <input type="file" id="bl-file-input" accept=".xlsx,.xls,.csv" style="display:none;" onchange="handleBacklogUpload(this)">
-          </label>
+          </button>
+          <input type="file" id="bl-file-input" accept=".xlsx,.xls,.csv" style="display:none;position:absolute;" onchange="handleBacklogUpload(this)">
         </div>
       </div>
 
@@ -1795,8 +1795,10 @@ function fmtAED(v){
   return 'AED '+Math.round(v);
 }
 
+var blAuthDone = false;
 function blAuthUpload(e){
   e.preventDefault();
+  if(blAuthDone){ blAuthDone=false; return; }
   document.getElementById('bl-pwd-modal').style.display='flex';
   setTimeout(function(){ document.getElementById('bl-pwd-input').focus(); }, 100);
 }
@@ -1806,7 +1808,13 @@ function blPwdConfirm(){
     document.getElementById('bl-pwd-modal').style.display='none';
     document.getElementById('bl-pwd-input').value='';
     document.getElementById('bl-pwd-error').style.display='none';
-    document.getElementById('bl-file-input').click();
+    // Small delay to ensure modal is closed before file picker opens
+    blAuthDone = true;
+    setTimeout(function(){
+      var fi = document.getElementById('bl-file-input');
+      fi.value = '';
+      fi.click();
+    }, 150);
   } else {
     document.getElementById('bl-pwd-error').style.display='block';
     document.getElementById('bl-pwd-input').value='';
