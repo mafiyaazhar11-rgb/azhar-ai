@@ -562,6 +562,11 @@ footer span{color:var(--gold);}
           <button class="rej-pill on" id="rt-all" onclick="rejFilter('type','all')">All</button>
           <button class="rej-pill" id="rt-food" onclick="rejFilter('type','food')">Food</button>
           <button class="rej-pill" id="rt-nf" onclick="rejFilter('type','nonfood')">Non-Food</button>
+          <span style="width:1px;height:16px;background:var(--border);margin:0 6px;"></span>
+          <span style="font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;min-width:40px;">SOURCE</span>
+          <button class="rej-pill on" id="rs-all" onclick="rejFilter('src','all')">All</button>
+          <button class="rej-pill" id="rs-ext" onclick="rejFilter('src','external')">External</button>
+          <button class="rej-pill" id="rs-int" onclick="rejFilter('src','internal')">Internal</button>
         </div>
 
       <!-- ORG SUMMARY CARDS -->
@@ -788,9 +793,7 @@ footer span{color:var(--gold);}
             <button class="ret-pill" id="rl-uaq" onclick="retFilter('area','UAQ')">UAQ</button>
           </div>
           <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
-            <span id="ret-cust-pills" style="display:none;"></span>
-            <span style="width:1px;height:16px;background:var(--border);margin:0 4px;"></span>
-            <span style="font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;">BU</span>
+            <span style="font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;min-width:20px;">BU</span>
             <button class="ret-pill on" id="rbu-all" onclick="retFilter('bu','all')">All</button>
             <button class="ret-pill" id="rbu-food" onclick="retFilter('bu','food')">Food</button>
             <button class="ret-pill" id="rbu-nf" onclick="retFilter('bu','nonfood')">Non-Food</button>
