@@ -689,6 +689,91 @@ app.post('/api/excel', upload.single('file'), function(req, res) {
   } catch(e){if(!res.headersSent)res.status(500).json({error:e.message});}
 });
 
+
+// ─────────────────────────────────────────────
+//  RETURNS DATA  (DB + file fallback)
+// ─────────────────────────────────────────────
+var returnsData = null;
+var RETURNS_FILE = path.join(DATA_DIR, 'returns.json');
+
+async function dbSaveReturns(uploadedBy, fileName, totalOrders, summary) {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS returns_data (
+        id SERIAL PRIMARY KEY,
+        uploaded_at TIMESTAMPTZ DEFAULT NOW(),
+        uploaded_by TEXT,
+        file_name TEXT,
+        total_orders INT,
+        summary JSONB
+      );
+      DELETE FROM returns_data;
+      INSERT INTO returns_data (uploaded_by, file_name, total_orders, summary)
+      VALUES ($1, $2, $3, $4);
+    `, [uploadedBy, fileName, totalOrders, JSON.stringify(summary)]);
+    return true;
+  } catch(e) {
+    console.error('DB save returns error:', e.message);
+    return false;
+  }
+}
+
+async function loadReturnsFromDB() {
+  try {
+    var res = await pool.query('SELECT * FROM returns_data ORDER BY uploaded_at DESC LIMIT 1');
+    if (res.rows[0]) {
+      returnsData = {
+        uploadedAt: res.rows[0].uploaded_at,
+        uploadedBy: res.rows[0].uploaded_by,
+        fileName: res.rows[0].file_name,
+        totalOrders: res.rows[0].total_orders,
+        summary: res.rows[0].summary
+      };
+      console.log('Loaded returns from DB');
+      return true;
+    }
+  } catch(e) { console.error('DB load returns:', e.message); }
+  var saved = loadJSON(RETURNS_FILE);
+  if (saved) { returnsData = saved; console.log('Loaded returns from file'); }
+  return false;
+}
+loadReturnsFromDB();
+
+app.post('/api/returns/upload', upload.single('file'), async function(req, res) {
+  try {
+    var summary = JSON.parse(req.body.summary || '{}');
+    var uploadedBy = req.body.uploadedBy || 'Admin';
+    var fileName = req.body.fileName || (req.file && req.file.originalname) || 'returns.csv';
+    var totalOrders = parseInt(req.body.totalOrders) || 0;
+    returnsData = {
+      uploadedAt: new Date().toISOString(),
+      uploadedBy: uploadedBy,
+      fileName: fileName,
+      totalOrders: totalOrders,
+      summary: summary
+    };
+    var dbOk = await dbSaveReturns(uploadedBy, fileName, totalOrders, summary);
+    saveJSON(RETURNS_FILE, returnsData);
+    console.log('Returns saved:', totalOrders, 'orders', dbOk ? '(DB+file)' : '(file only)');
+    res.json({ success: true });
+  } catch(e) {
+    console.error('Returns upload error:', e.message);
+    if (!res.headersSent) res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/api/returns/status', function(req, res) {
+  if (!returnsData) return res.json({ hasData: false });
+  res.json({
+    hasData: true,
+    uploadedAt: returnsData.uploadedAt,
+    uploadedBy: returnsData.uploadedBy,
+    fileName: returnsData.fileName,
+    totalOrders: returnsData.totalOrders,
+    summary: returnsData.summary
+  });
+});
+
 // STATIC - MUST BE LAST
 app.get('/', function(req, res) {
   var p1=path.join(__dirname,'public','index.html'), p2=path.join(__dirname,'index.html'), p3=path.join(__dirname,'azhar-ai-v4.html');
