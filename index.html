@@ -784,6 +784,7 @@ function goTab(id,btn){
   document.getElementById('topbar-title').textContent=t[0];
   document.getElementById('topbar-sub').textContent=t[1];
   if(id==='rejection') rejLoadFromServer();
+  loadBacklogFromServer();
 }
 
 //  UTILS 
@@ -1796,6 +1797,53 @@ function fmtAED(v){
 }
 
 var blAuthDone = false;
+// Save backlog summary to server
+function saveBacklogToServer(fileName, totalOrders){
+  if(!BL_DATA) return;
+  var formData = new FormData();
+  formData.append('summary', JSON.stringify({
+    totalOrders: BL_DATA.totalOrders,
+    totalVal: BL_DATA.totalVal,
+    advance: BL_DATA.advance,
+    critical: BL_DATA.critical,
+    orgMap: BL_DATA.orgMap,
+    catMap: BL_DATA.catMap,
+    custMap: BL_DATA.custMap,
+    date: BL_DATA.date
+  }));
+  formData.append('uploadedBy', 'Admin');
+  formData.append('fileName', fileName||'backlog.xlsx');
+  formData.append('totalOrders', String(totalOrders||0));
+  // Dummy file to satisfy multer
+  var dummy = new Blob([''], {type:'text/plain'});
+  formData.append('file', dummy, 'dummy.txt');
+  fetch('/api/backlog/upload', {method:'POST', body:formData})
+    .then(function(r){return r.json();})
+    .then(function(d){if(d.success)console.log('Backlog saved to server');})
+    .catch(function(e){console.error('Save backlog error:', e);});
+}
+
+// Load backlog from server on startup
+function loadBacklogFromServer(){
+  fetch('/api/backlog/status')
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(!d.hasData) return;
+      var s = d.summary || {};
+      BL_DATA = {
+        totalOrders: s.totalOrders||0, totalVal: s.totalVal||0,
+        advance: s.advance||{count:0,val:0}, critical: s.critical||0,
+        orgMap: s.orgMap||{}, catMap: s.catMap||{}, custMap: s.custMap||{},
+        fileName: d.fileName, date: s.date||new Date().toLocaleDateString('en-AE')
+      };
+      renderBacklog();
+      var badge=document.getElementById('bl-status-badge');
+      if(badge){ badge.style.display='block'; document.getElementById('bl-last-date').textContent=BL_DATA.date; }
+      console.log('Backlog loaded from server:', d.fileName);
+    })
+    .catch(function(e){console.error('Load backlog error:', e);});
+}
+
 function blAuthUpload(e){
   e.preventDefault();
   if(blAuthDone){ blAuthDone=false; return; }
@@ -1905,6 +1953,8 @@ function parseBacklogData(rows, fileName){
 
   BL_DATA = { totalOrders:totalOrders, totalVal:totalVal, advance:advance, critical:critical, orgMap:orgMap, catMap:catMap, custMap:custMap, fileName:fileName, date:new Date().toLocaleDateString('en-AE') };
   renderBacklog();
+  // Save to server so data persists after refresh
+  saveBacklogToServer(fileName, totalOrders);
 }
 
 function renderBacklog(){
