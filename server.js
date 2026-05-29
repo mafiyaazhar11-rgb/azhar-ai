@@ -39,27 +39,41 @@ function loadJSON(fp) {
 //  Init DB tables 
 async function initDB() {
   try {
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS dispatch_data (
-        id SERIAL PRIMARY KEY,
-        date_key DATE NOT NULL UNIQUE,
-        uploaded_at TIMESTAMPTZ DEFAULT NOW(),
-        uploaded_by TEXT DEFAULT 'Admin',
-        summary JSONB NOT NULL,
-        csv_text TEXT,
-        created_at TIMESTAMPTZ DEFAULT NOW()
-      );
-      CREATE TABLE IF NOT EXISTS rejection_data (
-        id SERIAL PRIMARY KEY,
-        uploaded_at TIMESTAMPTZ DEFAULT NOW(),
-        uploaded_by TEXT DEFAULT 'Admin',
-        file_name TEXT,
-        total_orders INT,
-        orgs JSONB,
-        months JSONB,
-        created_at TIMESTAMPTZ DEFAULT NOW()
-      );
-    `);
+    await pool.query(`CREATE TABLE IF NOT EXISTS dispatch_data (
+      id SERIAL PRIMARY KEY,
+      date_key DATE NOT NULL UNIQUE,
+      uploaded_at TIMESTAMPTZ DEFAULT NOW(),
+      uploaded_by TEXT DEFAULT 'Admin',
+      summary JSONB NOT NULL,
+      csv_text TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )`);
+    await pool.query(`CREATE TABLE IF NOT EXISTS rejection_data (
+      id SERIAL PRIMARY KEY,
+      uploaded_at TIMESTAMPTZ DEFAULT NOW(),
+      uploaded_by TEXT DEFAULT 'Admin',
+      file_name TEXT,
+      total_orders INT,
+      orgs JSONB,
+      months JSONB,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )`);
+    await pool.query(`CREATE TABLE IF NOT EXISTS backlog_data (
+      id SERIAL PRIMARY KEY,
+      uploaded_at TIMESTAMPTZ DEFAULT NOW(),
+      uploaded_by TEXT,
+      file_name TEXT,
+      total_orders INT,
+      summary JSONB
+    )`);
+    await pool.query(`CREATE TABLE IF NOT EXISTS returns_data (
+      id SERIAL PRIMARY KEY,
+      uploaded_at TIMESTAMPTZ DEFAULT NOW(),
+      uploaded_by TEXT,
+      file_name TEXT,
+      total_orders INT,
+      summary JSONB
+    )`);
     console.log('DB tables ready');
   } catch(e) {
     console.error('DB init error:', e.message);
@@ -124,19 +138,11 @@ var BACKLOG_FILE = path.join(DATA_DIR, 'backlog.json');
 
 async function dbSaveBacklog(uploadedBy, fileName, totalOrders, summary) {
   try {
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS backlog_data (
-        id SERIAL PRIMARY KEY,
-        uploaded_at TIMESTAMPTZ DEFAULT NOW(),
-        uploaded_by TEXT,
-        file_name TEXT,
-        total_orders INT,
-        summary JSONB
-      );
-      DELETE FROM backlog_data;
-      INSERT INTO backlog_data (uploaded_by, file_name, total_orders, summary)
-      VALUES ($1, $2, $3, $4);
-    `, [uploadedBy, fileName, totalOrders, JSON.stringify(summary)]);
+    await pool.query('DELETE FROM backlog_data');
+    await pool.query(
+      'INSERT INTO backlog_data (uploaded_by, file_name, total_orders, summary) VALUES ($1, $2, $3, $4)',
+      [uploadedBy, fileName, totalOrders, JSON.stringify(summary)]
+    );
     return true;
   } catch(e) {
     console.error('DB save backlog error:', e.message);
@@ -698,19 +704,11 @@ var RETURNS_FILE = path.join(DATA_DIR, 'returns.json');
 
 async function dbSaveReturns(uploadedBy, fileName, totalOrders, summary) {
   try {
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS returns_data (
-        id SERIAL PRIMARY KEY,
-        uploaded_at TIMESTAMPTZ DEFAULT NOW(),
-        uploaded_by TEXT,
-        file_name TEXT,
-        total_orders INT,
-        summary JSONB
-      );
-      DELETE FROM returns_data;
-      INSERT INTO returns_data (uploaded_by, file_name, total_orders, summary)
-      VALUES ($1, $2, $3, $4);
-    `, [uploadedBy, fileName, totalOrders, JSON.stringify(summary)]);
+    await pool.query('DELETE FROM returns_data');
+    await pool.query(
+      'INSERT INTO returns_data (uploaded_by, file_name, total_orders, summary) VALUES ($1, $2, $3, $4)',
+      [uploadedBy, fileName, totalOrders, JSON.stringify(summary)]
+    );
     return true;
   } catch(e) {
     console.error('DB save returns error:', e.message);
