@@ -531,7 +531,7 @@ app.post('/api/rejection/upload', upload.single('file'), async function(req, res
       value:   findC('VALUE', 'AMOUNT'),
       type:    findC('TYPE'),
       source:  findC('REMAKE -3', 'REMAKE') || findC('INTERNAL/EXTERNAL'),
-      orderNo: findC('ORDER NO', 'ORDER_NO', 'ORDERNO', 'SHIPMENT_ID', 'SHIPMENT ID')
+      orderNo: findC('ORDER NO', 'ORDER_NO', 'ORDERNO', 'SHIPMENT_ID')
     };
     console.log('Rejection cols:', JSON.stringify(RC));
 
@@ -556,7 +556,7 @@ app.post('/api/rejection/upload', upload.single('file'), async function(req, res
 
     var orgMap={}, monthMap={};
     var totalRej=0, totalDel=0, totalVal=0;
-    var seenOrderVals = {}; // Track unique order values to avoid double-counting
+    var seenOrderVals={};
 
     for (var i=0; i<rows.length; i++) {
       var row=rows[i];
@@ -570,9 +570,8 @@ app.post('/api/rejection/upload', upload.single('file'), async function(req, res
       var area=toStr(row[RC.area]);
       var orderNo=RC.orderNo?toStr(row[RC.orderNo]):'';
       var rawVal=parseFloat(row[RC.value])||0;
-      // Deduplicate: count rows but value only once per unique ORDER NO
-      var val=(rej && orderNo && seenOrderVals[orderNo])?0:rawVal;
-      if(rej && orderNo && !seenOrderVals[orderNo]) seenOrderVals[orderNo]=rawVal;
+      var val=(rej&&orderNo&&seenOrderVals[orderNo])?0:rawVal;
+      if(rej&&orderNo&&!seenOrderVals[orderNo])seenOrderVals[orderNo]=rawVal;
       var typeStr=toStr(row[RC.type]||'').toUpperCase();
       var isFood=typeStr==='FOOD'||typeStr.startsWith('FOOD,');
       var isNF=typeStr.includes('NON FOOD')||typeStr.includes('NON-FOOD');
