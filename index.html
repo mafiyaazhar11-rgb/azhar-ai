@@ -626,11 +626,12 @@ footer span{color:var(--gold);}
 
     <!-- ══ WH BACKLOG DASHBOARD ═══════════════════════════════ -->
     <div class="panel" id="backlog">
-      <!-- Secret admin star - click to upload -->
-      <div style="position:absolute;top:18px;right:80px;z-index:100;">
-        <button onclick="blToggleUpload()" id="bl-star-btn" title="" style="background:transparent;border:none;cursor:pointer;font-size:20px;color:var(--gold);opacity:0.2;transition:all 0.3s;" onmouseover="this.style.opacity='1'" onmouseout="if(!blUploadVisible)this.style.opacity='0.2'">✦</button>
-      </div>
 
+
+      <!-- SECRET STAR -->
+      <div style="text-align:right;padding:4px 0;">
+        <button onclick="blToggleUpload()" id="bl-star-btn" title="" style="background:transparent;border:none;cursor:pointer;font-size:22px;color:var(--gold);opacity:0.15;transition:all 0.3s;" onmouseover="this.style.opacity='1'" onmouseout="if(!blUploadVisible)this.style.opacity='0.15'">✦</button>
+      </div>
       <!-- HIDDEN UPLOAD BOX -->
       <div id="bl-upload-box" style="display:none;background:var(--surface);border:1px solid var(--gold);padding:16px;margin-bottom:16px;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
         <div>
