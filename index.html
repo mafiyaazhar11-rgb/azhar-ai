@@ -788,9 +788,7 @@ footer span{color:var(--gold);}
             <button class="ret-pill" id="rl-uaq" onclick="retFilter('area','UAQ')">UAQ</button>
           </div>
           <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
-            <span style="font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;min-width:50px;">CUSTOMER</span>
-            <button class="ret-pill on" id="rcust-all" onclick="retFilter('cust','all')">All</button>
-            <span id="ret-cust-pills"></span>
+            <span id="ret-cust-pills" style="display:none;"></span>
             <span style="width:1px;height:16px;background:var(--border);margin:0 4px;"></span>
             <span style="font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;">BU</span>
             <button class="ret-pill on" id="rbu-all" onclick="retFilter('bu','all')">All</button>
@@ -1907,6 +1905,11 @@ function setWelcomeMessage(){
 setWelcomeMessage();
 // Also set on DOM ready in case element not ready
 document.addEventListener('DOMContentLoaded', setWelcomeMessage);
+// Load persistent data on startup
+document.addEventListener('DOMContentLoaded', function(){
+  loadBacklogFromServer();
+  loadReturnsFromServer();
+});
 
 // ── WH BACKLOG DASHBOARD ──────────────────────────────────
 var BL_DATA = null;
@@ -2268,7 +2271,7 @@ var RET_RAW = [];
 var RET_CHART_MONTH = null;
 var RET_CHART_CAT = null;
 var retUploadVisible = false;
-var retFilters = { wh:'all', month:'all', area:'all', bu:'all', cust:'all' };
+var retFilters = { wh:'all', month:'all', area:'all', bu:'all' };
 var WH_COLORS = {DCV:'#e84b4b',DGC:'#5b8dee',DLL:'#c9a84c',DGS:'#4ecb8d',DCF:'#e8854b',DGN:'#9b59b6'};
 var MONTH_NAMES = ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
@@ -2381,15 +2384,6 @@ function renderReturnsFromSummary(s, fileName){
   document.getElementById('ret-bu-list').innerHTML=buKeys.map(function(b){var pct=totalVal>0?Math.round(buMap[b]/totalVal*100):0;var col=buC[b]||'var(--muted)';return '<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);"><div><div style="font-size:12px;color:var(--text);">'+b+'</div><div style="font-size:10px;color:var(--muted);">'+fmtAEDR(buMap[b])+'</div></div><span style="font-size:10px;padding:2px 8px;background:rgba(0,0,0,0.2);color:'+col+';">'+pct+'%</span></div>';}).join('');
 
   var topCusts=Object.keys(custMap).map(function(n){return{n:n,v:custMap[n]};}).sort(function(a,b){return b.v-a.v;}).slice(0,10); var cC=['#e84b4b','#e84b4b','#c9a84c','#c9a84c','#5b8dee','#5b8dee','#4ecb8d','#4ecb8d','#9b59b6','#9b59b6'];
-  // Build dynamic customer filter pills
-  var pillsEl=document.getElementById('ret-cust-pills');
-  if(pillsEl){
-    pillsEl.innerHTML=topCusts.map(function(c){
-      var id='rcust-dyn-'+c.n.replace(/[^a-zA-Z0-9]/g,'_');
-      var safeName=c.n.replace(/&/g,'&amp;').replace(/"/g,'&quot;');
-      return '<button class="ret-pill" id="'+id+'" data-cust="'+safeName+'" onclick="retFilterCust(this)" style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+c.n+'</button>';
-    }).join('');
-  }
   document.getElementById('ret-top-customers').innerHTML=topCusts.map(function(c,i){var pct=totalVal>0?(c.v/totalVal*100).toFixed(1)+'%':'0%';var col=cC[i]||'var(--muted)';return '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);"><div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;"><span style="font-size:11px;font-weight:700;color:'+col+';width:18px;flex-shrink:0;">'+(i+1)+'</span><span style="font-size:12px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+c.n+'</span></div><div style="display:flex;align-items:center;gap:16px;flex-shrink:0;"><div style="text-align:right;min-width:70px;"><div style="font-size:12px;font-weight:700;color:var(--gold);">'+fmtAEDR(c.v)+'</div></div><div style="text-align:right;min-width:40px;"><div style="font-size:11px;color:#e84b4b;">'+pct+'</div><div style="font-size:9px;color:var(--muted);">of total</div></div></div></div>';}).join('');
 }
 
@@ -2553,40 +2547,8 @@ function handleReturnsUpload(input){
   else reader.readAsArrayBuffer(file);
 }
 
-function retFilterCust(btn){
-  var name=btn.getAttribute('data-cust');
-  if(name) retFilter('cust', name);
-}
-
 function retFilter(type, val){
   retFilters[type]=val;
-  // Auto-sync area when customer selected
-  if(type==='cust' && val!=='all' && RET_RAW.length){
-    var keys=Object.keys(RET_RAW[0]||{});
-    function _fc(){var names=Array.prototype.slice.call(arguments);return keys.find(function(k){return names.some(function(n){return k.toUpperCase().includes(n.toUpperCase());});})||null;}
-    var shipCol=_fc('SHIP TO'); var custCol=_fc('CUSTOMER NAME');
-    var areaCount={};
-    RET_RAW.forEach(function(r){
-      if(String(r[custCol]||'').trim()===val){
-        var a=extractArea(r[shipCol]);
-        if(a&&a!=='Other'){areaCount[a]=(areaCount[a]||0)+1;}
-      }
-    });
-    var topArea=Object.keys(areaCount).sort(function(a,b){return areaCount[b]-areaCount[a];})[0];
-    if(topArea){
-      retFilters.area=topArea;
-      // Update area pills
-      var areaIds=['rl-all','rl-dxb','rl-shj','rl-ajm','rl-ain','rl-rak','rl-fuj','rl-uaq'];
-      var areaVals=['all','DXB','SHJ','AJM','AIN','RAK','FUJ','UAQ'];
-      areaIds.forEach(function(id,i){var el=document.getElementById(id);if(el)el.className='ret-pill'+(areaVals[i]===topArea?' on':'');});
-    }
-  }
-  if(type==='cust' && val==='all'){
-    retFilters.area='all';
-    ['rl-all','rl-dxb','rl-shj','rl-ajm','rl-ain','rl-rak','rl-fuj','rl-uaq'].forEach(function(id,i){
-      var el=document.getElementById(id);if(el)el.className='ret-pill'+(i===0?' on':'');
-    });
-  }
   // Auto-set BU when warehouse selected
   if(type==='wh'){
     if(val==='DCV'||val==='DCF'){
@@ -2614,14 +2576,12 @@ function retFilter(type, val){
     wh:['rw-all','rw-dcv','rw-dgc','rw-dll','rw-dgs','rw-dcf','rw-dgn'],
     month:['retm-all','retm-1','retm-2','retm-3','retm-4','retm-5'],
     area:['rl-all','rl-dxb','rl-shj','rl-ajm','rl-ain','rl-rak','rl-fuj','rl-uaq'],
-    cust:['rcust-all'],
     bu:['rbu-all','rbu-food','rbu-nf']
   };
   var valMaps={
     wh:['all','DCV','DGC','DLL','DGS','DCF','DGN'],
     month:['all',1,2,3,4,5],
     area:['all','DXB','SHJ','AJM','AIN','RAK','FUJ','UAQ'],
-    cust:['all'],
     bu:['all','food','nonfood']
   };
   if(maps[type]){
@@ -2656,8 +2616,7 @@ function getFilteredReturns(){
     }
     var area=extractArea(row[C.shipTo]);
     if(retFilters.area!=='all'&&area!==retFilters.area)return false;
-    var custName=normalizeCustomer(row[C.cust]||'');
-    if(retFilters.cust!=='all'&&custName!==retFilters.cust)return false;
+
     return true;
   }).map(function(row){
     var dt=String(row[C.date]||'').split(' ')[0];
@@ -2792,29 +2751,6 @@ function renderReturns(){
       +'<span style="font-size:10px;padding:2px 8px;background:rgba(0,0,0,0.2);color:'+col+';">'+pct+'%</span>'
       +'</div>';
   }).join('');
-
-  // Build dynamic customer filter pills from top 10 customers (ALL data, unfiltered)
-  var allCustMap={};
-  RET_RAW.forEach(function(r){
-    var keys=Object.keys(r);
-    function fc(){var names=Array.prototype.slice.call(arguments);return keys.find(function(k){return names.some(function(n){return k.toUpperCase().includes(n.toUpperCase());});})||null;}
-    var C={cust:fc('CUSTOMER NAME')};
-    var cn=normalizeCustomer(r[C.cust]||'');
-    if(cn){if(!allCustMap[cn])allCustMap[cn]=0;allCustMap[cn]+=parseFloat(r[Object.keys(r).find(function(k){return k.toUpperCase().includes('TOTAL');})||''])||0;}
-  });
-  var top10Custs=Object.keys(allCustMap).map(function(n){return{n:n,v:allCustMap[n]};}).sort(function(a,b){return b.v-a.v;}).slice(0,10);
-  var pillsEl=document.getElementById('ret-cust-pills');
-  if(pillsEl){
-    pillsEl.innerHTML=top10Custs.map(function(c){
-      var id='rcust-dyn-'+c.n.replace(/[^a-zA-Z0-9]/g,'_');
-      var isActive=retFilters.cust===c.n;
-      var safeName=c.n.replace(/&/g,'&amp;').replace(/"/g,'&quot;');
-      return '<button class="ret-pill'+(isActive?' on':'')+'" id="'+id+'" data-cust="'+safeName+'" onclick="retFilterCust(this)" style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+c.n+'</button>';
-    }).join('');
-  }
-  // Update All pill active state
-  var allPill=document.getElementById('rcust-all');
-  if(allPill)allPill.className='ret-pill'+(retFilters.cust==='all'?' on':'');
 
   // Top customers
   var topCusts=Object.keys(custMap).map(function(n){return{n:n,v:custMap[n]};})
