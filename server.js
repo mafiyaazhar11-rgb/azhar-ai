@@ -381,27 +381,31 @@ var dispatchHistory = {};
 var currentDispatch = null;
 
 async function loadDispatchFromDB() {
-  var rows = await dbLoadDispatch();
-  if (rows.length > 0) {
-    rows.forEach(function(r) {
-      dispatchHistory[r.date_key] = {
-        uploadedAt: r.uploaded_at, uploadedBy: r.uploaded_by,
-        summary: r.summary, csvText: r.csv_text, date: r.date_key
-      };
-    });
-    var latest = rows[0];
-    currentDispatch = dispatchHistory[latest.date_key];
-    console.log('Loaded', rows.length, 'dispatch dates from DB');
-    return true;
-  }
+  try {
+    var rows = await dbLoadDispatch();
+    if (rows.length > 0) {
+      rows.forEach(function(r) {
+        dispatchHistory[r.date_key] = {
+          uploadedAt: r.uploaded_at, uploadedBy: r.uploaded_by,
+          summary: r.summary, csvText: r.csv_text, date: r.date_key
+        };
+      });
+      var latest = rows[0];
+      currentDispatch = dispatchHistory[latest.date_key];
+      console.log('Loaded', rows.length, 'dispatch dates from DB');
+      return true;
+    }
+  } catch(e) { console.error('loadDispatchFromDB error:', e.message); }
   // Fallback to file
-  var saved = loadJSON(DISPATCH_FILE);
-  if (saved) {
-    dispatchHistory = saved.history || {};
-    var keys = Object.keys(dispatchHistory).sort().reverse();
-    if (keys.length) currentDispatch = dispatchHistory[keys[0]];
-    console.log('Loaded dispatch from file:', keys.length, 'dates');
-  }
+  try {
+    var saved = loadJSON(DISPATCH_FILE);
+    if (saved) {
+      dispatchHistory = saved.history || {};
+      var keys = Object.keys(dispatchHistory).sort().reverse();
+      if (keys.length) currentDispatch = dispatchHistory[keys[0]];
+      console.log('Loaded dispatch from file:', keys.length, 'dates');
+    }
+  } catch(e) { console.error('loadDispatchFromDB file fallback error:', e.message); }
   return false;
 }
 loadDispatchFromDB();
@@ -462,18 +466,22 @@ app.post('/api/dispatch/ask', function(req, res) {
 var rejectionData = null;
 
 async function loadRejectionFromDB() {
-  var row = await dbLoadRejection();
-  if (row) {
-    rejectionData = {
-      uploadedAt: row.uploaded_at, uploadedBy: row.uploaded_by,
-      fileName: row.file_name, totalOrders: row.total_orders,
-      orgs: row.orgs, months: row.months
-    };
-    console.log('Loaded rejection from DB uploadedAt:', rejectionData.uploadedAt);
-    return true;
-  }
-  var saved = loadJSON(REJECTION_FILE);
-  if (saved) { rejectionData = saved; console.log('Loaded rejection from file'); }
+  try {
+    var row = await dbLoadRejection();
+    if (row) {
+      rejectionData = {
+        uploadedAt: row.uploaded_at, uploadedBy: row.uploaded_by,
+        fileName: row.file_name, totalOrders: row.total_orders,
+        orgs: row.orgs, months: row.months
+      };
+      console.log('Loaded rejection from DB uploadedAt:', rejectionData.uploadedAt);
+      return true;
+    }
+  } catch(e) { console.error('loadRejectionFromDB error:', e.message); }
+  try {
+    var saved = loadJSON(REJECTION_FILE);
+    if (saved) { rejectionData = saved; console.log('Loaded rejection from file'); }
+  } catch(e) { console.error('loadRejectionFromDB file fallback error:', e.message); }
   return false;
 }
 loadRejectionFromDB();
