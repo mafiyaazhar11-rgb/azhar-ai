@@ -315,6 +315,84 @@ footer span{color:var(--gold);}
   .day-cell { width: 30px !important; height: 30px !important; font-size: 10px !important; }
 }
 
+
+/* ═══════════════════════════════════════════
+   AZHAR-AI LOGO — Animated Gold/Red Letters
+═══════════════════════════════════════════ */
+.logo-letter {
+  display: inline-block;
+  font-weight: 700;
+  font-size: 16px;
+  letter-spacing: 1px;
+  background: linear-gradient(135deg, #c9a84c 0%, #e84b4b 40%, #c9a84c 60%, #ffd700 80%, #e84b4b 100%);
+  background-size: 300% 300%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: logoShine 3s ease-in-out infinite, logoFloat 2s ease-in-out infinite alternate;
+  animation-delay: calc(var(--i) * 0.15s), calc(var(--i) * 0.2s);
+  position: relative;
+}
+.logo-letter:hover {
+  animation: logoSpin 0.5s ease forwards, logoShine 0.5s linear infinite;
+  transform-origin: center;
+}
+.logo-dash {
+  color: var(--gold);
+  font-weight: 700;
+  font-size: 16px;
+  -webkit-text-fill-color: var(--gold);
+}
+.ai-letter {
+  background: linear-gradient(135deg, #e84b4b 0%, #ff6b6b 50%, #c9a84c 100%);
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-style: italic;
+}
+@keyframes logoShine {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+@keyframes logoFloat {
+  0%   { transform: translateY(0px); }
+  100% { transform: translateY(-2px); }
+}
+@keyframes logoSpin {
+  0%   { transform: rotateY(0deg) scale(1.3); }
+  100% { transform: rotateY(360deg) scale(1); }
+}
+/* Pulsing star */
+#sb-star {
+  animation: starPulse 2s ease-in-out infinite;
+  display: inline-block;
+  color: var(--gold);
+}
+@keyframes starPulse {
+  0%, 100% { transform: scale(1) rotate(0deg); opacity: 1; }
+  50% { transform: scale(1.4) rotate(180deg); opacity: 0.7; }
+}
+
+/* Welcome message typing animation */
+#topbar-title {
+  overflow: hidden;
+  white-space: nowrap;
+}
+.welcome-glow {
+  background: linear-gradient(90deg, var(--white) 0%, var(--gold) 50%, var(--white) 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: welcomeShine 3s linear infinite;
+}
+@keyframes welcomeShine {
+  0%   { background-position: 0% center; }
+  100% { background-position: 200% center; }
+}
+
 </style>
 </head>
 <body>
@@ -329,7 +407,13 @@ footer span{color:var(--gold);}
 <aside class="sidebar" id="sidebar">
   <div class="sb-logo">
     <div class="sb-logo-box"><svg viewBox="0 0 22 22" fill="none"><path d="M11 2L13.5 8.5H20L14.5 12.5L16.5 19L11 15L5.5 19L7.5 12.5L2 8.5H8.5L11 2Z" stroke="#c9a84c" stroke-width="1"/><circle cx="11" cy="11" r="3" stroke="#c9a84c" stroke-width="0.5" fill="rgba(201,168,76,0.1)"/></svg></div>
-    <div class="sb-brand"><div class="sb-name">AZHAR-AI <span id="sb-star" style="font-size:14px;vertical-align:middle;">✦</span></div><div class="sb-sub">Operations Intelligence</div></div>
+    <div class="sb-brand">
+  <div class="sb-name" id="animated-logo">
+    <span class="logo-letter" style="--i:0">A</span><span class="logo-letter" style="--i:1">Z</span><span class="logo-letter" style="--i:2">H</span><span class="logo-letter" style="--i:3">A</span><span class="logo-letter" style="--i:4">R</span><span class="logo-dash">-</span><span class="logo-letter" style="--i:5">A</span><span class="logo-letter ai-letter" style="--i:6">I</span>
+    <span id="sb-star" style="font-size:12px;vertical-align:middle;margin-left:3px;">✦</span>
+  </div>
+  <div class="sb-sub">Operations Intelligence</div>
+</div>
   </div>
   <div class="sb-section">AI Command Centre</div>
   <button class="sb-item on" onclick="goTab('dispatch',this)"><span class="icon">🚚</span> Daily Dispatch</button>
@@ -344,7 +428,7 @@ footer span{color:var(--gold);}
 
 <div class="main" id="mainContent">
   <div class="topbar">
-    <div class="topbar-left"><h2 id="topbar-title">Welcome back, Azhar</h2><p id="topbar-sub">Operations & Customer Service AI Command Centre</p></div>
+    <div class="topbar-left"><h2 id="topbar-title"></h2><p id="topbar-sub">Operations & Customer Service AI Command Centre</p></div>
     <div class="topbar-right">
       <div class="dot-live">System Active</div>
       <div class="topbar-date"><strong id="tb-date">—</strong><span id="tb-time">—</span></div>
@@ -1540,6 +1624,28 @@ document.querySelectorAll('.sb-item').forEach(function(btn){
     if(window.innerWidth <= 768) closeSidebar();
   });
 });
+
+// Dynamic welcome message
+var welcomeMessages = [
+  'Good Morning, Azhar!',
+  'Welcome Back, Azhar!',
+  'Ready to Analyse, Azhar!',
+  'Operations Command, Azhar!',
+  'Lets Drive Excellence, Azhar!'
+];
+function setWelcomeMessage(){
+  var h = new Date().getHours();
+  var greeting = h < 12
+    ? 'Rise & Deliver — Good Morning, Team! '
+    : h < 17
+    ? 'Keep Pushing — Good Afternoon, Team! '
+    : 'Great Work Today — Good Evening, Team! ';
+  var title = document.getElementById('topbar-title');
+  if(title){
+    title.innerHTML = '<span class="welcome-glow">'+greeting+'</span>';
+  }
+}
+setWelcomeMessage();
 
 // Logo spin
 function spinLogo(){const box=document.querySelector('.sb-logo-box');if(!box)return;box.classList.add('spinning');setTimeout(()=>box.classList.remove('spinning'),1000);}
