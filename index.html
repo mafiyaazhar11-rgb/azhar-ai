@@ -551,18 +551,15 @@ footer span{color:var(--gold);}
             <button onclick="rejFilter('day','all')" style="background:transparent;border:1px solid var(--border);color:var(--muted);font-size:9px;padding:3px 10px;cursor:pointer;font-family:Montserrat,sans-serif;letter-spacing:1px;text-transform:uppercase;">✕ Clear Day</button>
           </div>
         </div>
-        <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
+        
+      </div>
+
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;align-items:center;">
           <span style="font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;min-width:24px;">TYPE</span>
           <button class="rej-pill on" id="rt-all" onclick="rejFilter('type','all')">All</button>
           <button class="rej-pill" id="rt-food" onclick="rejFilter('type','food')">Food</button>
           <button class="rej-pill" id="rt-nf" onclick="rejFilter('type','nonfood')">Non-Food</button>
-          <span style="width:1px;height:18px;background:var(--border);margin:0 4px;"></span>
-          <span style="font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;">SOURCE</span>
-          <button class="rej-pill on" id="rs-all" onclick="rejFilter('src','all')">All</button>
-          <button class="rej-pill" id="rs-ext" onclick="rejFilter('src','external')">External</button>
-          <button class="rej-pill" id="rs-int" onclick="rejFilter('src','internal')">Internal</button>
         </div>
-      </div>
 
       <!-- ORG SUMMARY CARDS -->
       <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px;" id="rej-org-cards"></div>
@@ -707,48 +704,112 @@ footer span{color:var(--gold);}
     </div>
 
     <!-- ══ DAILY RETURNS ═══════════════════════════════ -->
-    <div class="panel" id="returns">
-      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;text-align:center;padding:40px;">
-        <!-- Coming Soon Badge -->
-        <div style="background:rgba(201,168,76,0.1);border:1px solid var(--gold);padding:8px 20px;font-size:9px;letter-spacing:3px;color:var(--gold);text-transform:uppercase;margin-bottom:32px;">Coming Soon</div>
-        <!-- Icon -->
-        <div style="font-size:64px;margin-bottom:24px;filter:drop-shadow(0 0 20px rgba(201,168,76,0.3));">🔄</div>
-        <!-- Title -->
-        <div style="font-family:'Cormorant Garamond',serif;font-size:36px;font-weight:700;color:var(--white);margin-bottom:12px;">Daily Returns Dashboard</div>
-        <div style="font-size:12px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:40px;">Invoice Cancellations - GRV Returns - BU-wise Analysis</div>
-        <!-- Feature Cards -->
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;max-width:800px;width:100%;margin-bottom:40px;">
-          <div style="background:var(--card);border:1px solid var(--border);padding:24px;position:relative;">
-            <div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:0.4;"></div>
-            <div style="font-size:28px;margin-bottom:12px;">📄</div>
-            <div style="font-size:11px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;">Invoice Cancellations</div>
-            <div style="font-size:11px;color:var(--muted);line-height:1.6;">Track daily cancelled invoices by BU, customer and value</div>
-          </div>
-          <div style="background:var(--card);border:1px solid var(--border);padding:24px;position:relative;">
-            <div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:0.4;"></div>
-            <div style="font-size:28px;margin-bottom:12px;">📦</div>
-            <div style="font-size:11px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;">GRV Returns</div>
-            <div style="font-size:11px;color:var(--muted);line-height:1.6;">Goods Return Voucher analysis with root cause breakdown</div>
-          </div>
-          <div style="background:var(--card);border:1px solid var(--border);padding:24px;position:relative;">
-            <div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:0.4;"></div>
-            <div style="font-size:28px;margin-bottom:12px;">📊</div>
-            <div style="font-size:11px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;">BU-wise Dashboard</div>
-            <div style="font-size:11px;color:var(--muted);line-height:1.6;">DCV - DGC - DSN - DGS - DCF breakdown with trends</div>
-          </div>
+        <div class="panel" id="returns">
+
+      <!-- SECRET STAR -->
+      <div style="text-align:right;padding:4px 0;">
+        <button onclick="retToggleUpload()" id="ret-star-btn" title="" style="background:transparent;border:none;cursor:pointer;font-size:22px;color:var(--gold);opacity:0.15;transition:all 0.3s;" onmouseover="this.style.opacity='1'" onmouseout="if(!retUploadVisible)this.style.opacity='0.15'">✦</button>
+      </div>
+
+      <!-- HIDDEN UPLOAD BOX -->
+      <div id="ret-upload-box" style="display:none;background:var(--surface);border:1px solid var(--gold);padding:14px 16px;margin-bottom:14px;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;">
+        <div>
+          <div style="font-size:10px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;">Daily Upload</div>
+          <div style="font-size:11px;color:var(--muted);">Upload your YTD Returns CSV file</div>
         </div>
-        <!-- Progress bar -->
-        <div style="max-width:400px;width:100%;">
-          <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-bottom:8px;letter-spacing:1px;">
-            <span>DEVELOPMENT PROGRESS</span>
-            <span style="color:var(--gold);">65%</span>
-          </div>
-          <div style="height:3px;background:var(--border);border-radius:2px;">
-            <div style="height:3px;width:65%;background:linear-gradient(90deg,var(--gold),var(--gold2));border-radius:2px;"></div>
-          </div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div id="ret-status-badge" style="font-size:10px;color:var(--muted);display:none;">Last: <span id="ret-last-date">—</span></div>
+          <button onclick="document.getElementById('ret-file-input').click()" style="padding:8px 18px;background:var(--glow);border:1px solid var(--gold);color:var(--gold);font-size:10px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;">🔄 UPLOAD FILE</button>
+          <input type="file" id="ret-file-input" accept=".csv,.xlsx,.xls" style="display:none;" onchange="handleReturnsUpload(this)">
         </div>
       </div>
+
+      <!-- NO DATA -->
+      <div id="ret-nodata" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:300px;text-align:center;padding:40px;">
+        <div style="font-size:48px;margin-bottom:16px;opacity:0.4;">🔄</div>
+        <div style="font-size:16px;color:var(--muted);margin-bottom:8px;">No returns data loaded</div>
+        <div style="font-size:11px;color:var(--muted);">Upload your YTD Returns CSV file to see the dashboard</div>
+      </div>
+
+      <!-- DASHBOARD -->
+      <div id="ret-dashboard" style="display:none;">
+
+        <!-- FILTERS -->
+        <div style="background:var(--surface);border:1px solid var(--border);padding:10px 14px;margin-bottom:14px;">
+          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px;align-items:center;">
+            <span style="font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;min-width:50px;">WAREHOUSE</span>
+            <button class="ret-pill on" id="rw-all" onclick="retFilter('wh','all')">All</button>
+            <button class="ret-pill" id="rw-dcv" onclick="retFilter('wh','DCV')">DCV</button>
+            <button class="ret-pill" id="rw-dgc" onclick="retFilter('wh','DGC')">DGC</button>
+            <button class="ret-pill" id="rw-dll" onclick="retFilter('wh','DLL')">DLL</button>
+            <button class="ret-pill" id="rw-dgs" onclick="retFilter('wh','DGS')">DGS</button>
+            <button class="ret-pill" id="rw-dcf" onclick="retFilter('wh','DCF')">DCF</button>
+            <button class="ret-pill" id="rw-dgn" onclick="retFilter('wh','DGN')">DGN</button>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px;align-items:center;">
+            <span style="font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;min-width:50px;">MONTH</span>
+            <button class="ret-pill on" id="retm-all" onclick="retFilter('month','all')">All</button>
+            <button class="ret-pill" id="retm-1" onclick="retFilter('month',1)">Jan</button>
+            <button class="ret-pill" id="retm-2" onclick="retFilter('month',2)">Feb</button>
+            <button class="ret-pill" id="retm-3" onclick="retFilter('month',3)">Mar</button>
+            <button class="ret-pill" id="retm-4" onclick="retFilter('month',4)">Apr</button>
+            <button class="ret-pill" id="retm-5" onclick="retFilter('month',5)">May</button>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
+            <span style="font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;min-width:50px;">CATEGORY</span>
+            <button class="ret-pill on" id="rc-all" onclick="retFilter('cat','all')">All</button>
+            <button class="ret-pill" id="rc-inv" onclick="retFilter('cat','Invoice Cancellation')">Invoice Cancellation</button>
+            <button class="ret-pill" id="rc-grv" onclick="retFilter('cat','GRV-Return')">GRV Return</button>
+            <span style="width:1px;height:16px;background:var(--border);margin:0 4px;"></span>
+            <span style="font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;">BU</span>
+            <button class="ret-pill on" id="rbu-all" onclick="retFilter('bu','all')">All</button>
+            <button class="ret-pill" id="rbu-food" onclick="retFilter('bu','food')">Food</button>
+            <button class="ret-pill" id="rbu-nf" onclick="retFilter('bu','nonfood')">Non-Food</button>
+            <button class="ret-pill" id="rbu-other" onclick="retFilter('bu','other')">Other</button>
+          </div>
+        </div>
+
+        <!-- KPI CARDS -->
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px;" id="ret-kpis"></div>
+
+        <!-- ROW 2: Monthly trend + Warehouse bars -->
+        <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:14px;margin-bottom:14px;">
+          <div style="background:var(--surface);border:1px solid var(--border);padding:14px 16px;">
+            <div style="font-size:9px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;">Monthly Returns Trend</div>
+            <div style="position:relative;height:180px;"><canvas id="ret-month-chart" role="img" aria-label="Monthly returns trend"></canvas></div>
+          </div>
+          <div style="background:var(--surface);border:1px solid var(--border);padding:14px 16px;">
+            <div style="font-size:9px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;">Returns by Warehouse</div>
+            <div id="ret-wh-bars"></div>
+          </div>
+        </div>
+
+        <!-- ROW 3: Category donut + Area/City + BU -->
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px;">
+          <div style="background:var(--surface);border:1px solid var(--border);padding:14px 16px;">
+            <div style="font-size:9px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;">Credit Note Category</div>
+            <div style="position:relative;height:150px;"><canvas id="ret-cat-chart" role="img" aria-label="Credit note category split"></canvas></div>
+            <div id="ret-cat-legend" style="margin-top:8px;"></div>
+          </div>
+          <div style="background:var(--surface);border:1px solid var(--border);padding:14px 16px;">
+            <div style="font-size:9px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;">Returns by Area / City</div>
+            <div id="ret-area-bars"></div>
+          </div>
+          <div style="background:var(--surface);border:1px solid var(--border);padding:14px 16px;">
+            <div style="font-size:9px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;">Business Unit Split</div>
+            <div id="ret-bu-list"></div>
+          </div>
+        </div>
+
+        <!-- TOP CUSTOMERS -->
+        <div style="background:var(--surface);border:1px solid var(--border);padding:14px 16px;">
+          <div style="font-size:9px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;">Top Customers by Return Value</div>
+          <div id="ret-top-customers"></div>
+        </div>
+
+      </div>
     </div>
+
 
     <!-- ══ EXCEL SUPPORT ════════════════════════════════ -->
     <div class="panel" id="excel"><div class="box"><div class="box-title">📐 Excel Support &amp; Data Analysis</div><div class="upload" onclick="document.getElementById('xl-file').click()"><div style="font-size:22px;margin-bottom:6px;">📊</div><div style="font-size:11px;color:var(--muted);">Upload .csv or .xlsx file</div><div style="font-size:10px;color:var(--muted);margin-top:3px;" id="xl-file-name">File → Save As → CSV first</div></div><input type="file" id="xl-file" accept=".csv,.txt,.xlsx" style="display:none" onchange="loadFileExcel(this)"/><label class="lbl">Your Formula or Question</label><textarea id="xl-q" placeholder="e.g. Fix my VLOOKUP returning #N/A&#10;e.g. Analyse this data and give key insights"></textarea><label class="lbl">Context (Optional)</label><textarea id="xl-ctx" style="min-height:55px;" placeholder="e.g. Column A = Date, Column B = Customer, Column C = Amount..."></textarea><button class="btn" id="xl-btn" onclick="doExcel()"><span>Analyse &amp; Fix Excel</span></button><div class="loader" id="xl-loader"><div class="ring"></div><div class="ring-txt">Analysing your data...</div></div><div class="out" id="xl-out"><div class="out-head"><span class="out-lbl">✦ Excel Analysis</span><button class="copy" onclick="doCopy('xl-answer')">Copy</button></div><div class="out-body" id="xl-answer"></div></div></div></div>
@@ -781,7 +842,8 @@ const TITLES={
   invoice:   ['Proforma Invoice Generator','Create professional invoices with letterhead'],
   excel:     ['Excel Support & Data Analysis','Fix formulas and analyse spreadsheet data'],
   returns:   ['Daily Returns Dashboard','Invoice Cancellations - GRV Returns - BU-wise Analysis'],
-  backlog:   ['WH Backlog Order Dashboard','Advance Orders - Credit Holds - Frozen - Daily Pool Report']
+  backlog:   ['WH Backlog Order Dashboard','Advance Orders - Credit Holds - Frozen - Daily Pool Report'],
+  returns:   ['Daily Returns Dashboard','Invoice Cancellations - GRV Returns - BU-wise Analysis']
 };
 function goTab(id,btn){
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
@@ -2169,6 +2231,309 @@ function renderBacklog(){
       +'</div></div>';
   }).join('');
 }
+
+// ── DAILY RETURNS DASHBOARD ──────────────────────────────
+var RET_RAW = [];
+var RET_CHART_MONTH = null;
+var RET_CHART_CAT = null;
+var retUploadVisible = false;
+var retFilters = { wh:'all', month:'all', cat:'all', bu:'all' };
+var WH_COLORS = {DCV:'#e84b4b',DGC:'#5b8dee',DLL:'#c9a84c',DGS:'#4ecb8d',DCF:'#e8854b',DGN:'#9b59b6'};
+var MONTH_NAMES = ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+function retToggleUpload(){
+  var box=document.getElementById('ret-upload-box');
+  if(!box)return;
+  if(!retUploadVisible){
+    var pwd=prompt('Admin access:');
+    if(pwd!=='azhar2026'){alert('Wrong password');return;}
+    retUploadVisible=true;
+    box.style.display='flex';
+    var btn=document.getElementById('ret-star-btn');
+    if(btn){btn.style.opacity='1';btn.style.color='var(--gold)';}
+  } else {
+    retUploadVisible=false;
+    box.style.display='none';
+    var btn=document.getElementById('ret-star-btn');
+    if(btn){btn.style.opacity='0.15';btn.style.color='var(--gold)';}
+  }
+}
+
+function normalizeBU(bu){
+  var b=String(bu||'').toLowerCase().replace(/[^a-z]/g,'');
+  if(b.includes('food')&&(b.includes('dcf')||b.includes('dcv')||!b.includes('non')))return'Food';
+  if(b.includes('nonfood')||b.includes('nonf')||b.includes('dgc')||b.includes('dgs')||b.includes('dll'))return'Non-Food';
+  if(b.includes('salon'))return'Salon';
+  if(b.includes('zooz'))return'Zooz';
+  if(b.includes('food')&&!b.includes('non'))return'Food';
+  return'Other';
+}
+
+function extractArea(shipTo){
+  var s=String(shipTo||'');
+  var m=s.match(/^([A-Z]{2,4})-/);
+  if(m)return m[1];
+  if(s.toLowerCase().includes('dubai')||s.toLowerCase().includes('dxb'))return'DXB';
+  if(s.toLowerCase().includes('abu dhabi')||s.toLowerCase().includes('auh'))return'AUH';
+  if(s.toLowerCase().includes('sharjah')||s.toLowerCase().includes('shj'))return'SHJ';
+  if(s.toLowerCase().includes('ajman'))return'AJM';
+  if(s.toLowerCase().includes('rak'))return'RAK';
+  if(s.toLowerCase().includes('ain'))return'AIN';
+  if(s.toLowerCase().includes('fujairah'))return'FUJ';
+  return'Other';
+}
+
+function handleReturnsUpload(input){
+  var file=input.files[0]; if(!file)return;
+  var ext=file.name.split('.').pop().toLowerCase();
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var rows=[];
+      if(ext==='csv'){
+        var text=e.target.result;
+        var lines=text.split('\n').filter(function(l){return l.trim();});
+        function parseCSVLine(line){
+          var r=[],c='',q=false;
+          for(var i=0;i<line.length;i++){var ch=line[i];if(ch==='"'){q=!q;}else if(ch===','&&!q){r.push(c.trim());c='';}else{c+=ch;}}
+          r.push(c.trim());return r;
+        }
+        var hdrs=parseCSVLine(lines[0]).map(function(h){return h.replace(/"/g,'').trim();});
+        for(var i=1;i<lines.length;i++){
+          if(!lines[i].trim())continue;
+          var vals=parseCSVLine(lines[i]);
+          var obj={};hdrs.forEach(function(h,j){obj[h]=(vals[j]||'').replace(/"/g,'').trim();});
+          rows.push(obj);
+        }
+      } else {
+        var data=new Uint8Array(e.target.result);
+        var wb=XLSX.read(data,{type:'array'});
+        rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:''});
+      }
+      if(!rows.length){alert('No data found');return;}
+      RET_RAW=rows;
+      renderReturns();
+      var badge=document.getElementById('ret-status-badge');
+      if(badge){badge.style.display='block';document.getElementById('ret-last-date').textContent=new Date().toLocaleDateString('en-AE');}
+    } catch(err){alert('Error reading file: '+err.message);}
+  };
+  if(ext==='csv')reader.readAsText(file);
+  else reader.readAsArrayBuffer(file);
+}
+
+function retFilter(type, val){
+  retFilters[type]=val;
+  // Auto-set BU when warehouse selected
+  if(type==='wh'){
+    if(val==='DCV'||val==='DCF'){
+      retFilters.bu='food';
+      ['rbu-all','rbu-food','rbu-nf','rbu-other'].forEach(function(id,i){
+        var el=document.getElementById(id);
+        if(el)el.className='ret-pill'+(i===1?' on':'');
+      });
+    } else if(val==='DGC'||val==='DGS'||val==='DGN'||val==='DLL'){
+      retFilters.bu='nonfood';
+      ['rbu-all','rbu-food','rbu-nf','rbu-other'].forEach(function(id,i){
+        var el=document.getElementById(id);
+        if(el)el.className='ret-pill'+(i===2?' on':'');
+      });
+    } else if(val==='all'){
+      retFilters.bu='all';
+      ['rbu-all','rbu-food','rbu-nf','rbu-other'].forEach(function(id,i){
+        var el=document.getElementById(id);
+        if(el)el.className='ret-pill'+(i===0?' on':'');
+      });
+    }
+  }
+  // Update pill active states
+  var maps={wh:['rw-all','rw-dcv','rw-dgc','rw-dll','rw-dgs','rw-dcf','rw-dgn'],month:['retm-all','retm-1','retm-2','retm-3','retm-4','retm-5'],cat:['rc-all','rc-inv','rc-grv'],bu:['rbu-all','rbu-food','rbu-nf','rbu-other']};
+  var valMaps={wh:['all','DCV','DGC','DLL','DGS','DCF','DGN'],month:['all',1,2,3,4,5],cat:['all','Invoice Cancellation','GRV-Return'],bu:['all','food','nonfood','other']};
+  if(maps[type]){
+    maps[type].forEach(function(id,i){
+      var el=document.getElementById(id);
+      if(el)el.className='ret-pill'+(String(valMaps[type][i])===String(val)?' on':'');
+    });
+  }
+  renderReturns();
+}
+
+function getFilteredReturns(){
+  var keys=Object.keys(RET_RAW[0]||{});
+  function fc(){var names=Array.prototype.slice.call(arguments);return keys.find(function(k){return names.some(function(n){return k.toUpperCase().includes(n.toUpperCase());});})||null;}
+  var C={
+    wh:fc('WAREHOUSE'),cat:fc('CREDIT NOTE CAT','CATEGORY'),bu:fc('BUSINESS UNIT','BUSINESS NITS'),
+    tot:fc('TOTAL'),date:fc('RETURN ORDERED DATE','RETURN DATE','BOOKED DATE'),
+    cust:fc('CUSTOMER NAME'),shipTo:fc('SHIP TO'),orderNo:fc('ORDER NUMBER','ORDER NO')
+  };
+  return RET_RAW.filter(function(row){
+    var wh=String(row[C.wh]||'').trim().toUpperCase();
+    var cat=String(row[C.cat]||'').trim();
+    var bu=normalizeBU(row[C.bu]);
+    var dt=String(row[C.date]||'').split(' ')[0];
+    var month=0;
+    if(dt){var p=dt.split('/');month=parseInt(p[0])||0;}
+    if(retFilters.wh!=='all'&&wh!==retFilters.wh)return false;
+    if(retFilters.month!=='all'&&month!==retFilters.month)return false;
+    if(retFilters.cat!=='all'&&cat!==retFilters.cat)return false;
+    if(retFilters.bu!=='all'){
+      if(retFilters.bu==='food'&&bu!=='Food')return false;
+      if(retFilters.bu==='nonfood'&&bu!=='Non-Food')return false;
+      if(retFilters.bu==='other'&&(bu==='Food'||bu==='Non-Food'))return false;
+    }
+    return true;
+  }).map(function(row){
+    var dt=String(row[C.date]||'').split(' ')[0];
+    var p=dt.split('/');
+    return{
+      wh:String(row[C.wh]||'').trim().toUpperCase(),
+      cat:String(row[C.cat]||'').trim(),
+      bu:normalizeBU(row[C.bu]),
+      tot:Math.abs(parseFloat(row[C.tot])||0),
+      month:parseInt(p[0])||0,
+      cust:String(row[C.cust]||'').trim(),
+      area:extractArea(row[C.shipTo]),
+      orderNo:String(row[C.orderNo]||'').trim()
+    };
+  });
+}
+
+function fmtAEDR(v){if(v>=1000000)return'AED '+(v/1000000).toFixed(2)+'M';if(v>=1000)return'AED '+Math.round(v/1000)+'K';return'AED '+Math.round(v);}
+
+function renderReturns(){
+  if(!RET_RAW.length)return;
+  document.getElementById('ret-nodata').style.display='none';
+  document.getElementById('ret-dashboard').style.display='block';
+  var rows=getFilteredReturns();
+
+  // Aggregate
+  var totalVal=0,invCount=0,invVal=0,grvCount=0,grvVal=0;
+  var whMap={},catMap={},buMap={},monthMap={},areaMap={},custMap={};
+  rows.forEach(function(r){
+    totalVal+=r.tot;
+    if(r.cat==='Invoice Cancellation'){invCount++;invVal+=r.tot;}
+    else if(r.cat==='GRV-Return'){grvCount++;grvVal+=r.tot;}
+    if(r.wh){if(!whMap[r.wh])whMap[r.wh]=0;whMap[r.wh]+=r.tot;}
+    if(r.cat){if(!catMap[r.cat])catMap[r.cat]={c:0,v:0};catMap[r.cat].c++;catMap[r.cat].v+=r.tot;}
+    if(r.bu){if(!buMap[r.bu])buMap[r.bu]=0;buMap[r.bu]+=r.tot;}
+    if(r.month){if(!monthMap[r.month])monthMap[r.month]=0;monthMap[r.month]+=r.tot;}
+    if(r.area){if(!areaMap[r.area])areaMap[r.area]=0;areaMap[r.area]+=r.tot;}
+    if(r.cust){if(!custMap[r.cust])custMap[r.cust]=0;custMap[r.cust]+=r.tot;}
+  });
+
+  // KPIs
+  var topWH=Object.keys(whMap).sort(function(a,b){return whMap[b]-whMap[a];})[0]||'—';
+  document.getElementById('ret-kpis').innerHTML=[
+    {lbl:'TOTAL RETURNS VALUE',val:fmtAEDR(totalVal),sub:rows.length.toLocaleString()+' return orders',col:'#e84b4b'},
+    {lbl:'INVOICE CANCELLATIONS',val:invCount.toLocaleString(),sub:fmtAEDR(invVal)+' · '+(totalVal>0?Math.round(invVal/totalVal*100):0)+'%',col:'var(--gold)'},
+    {lbl:'GRV RETURNS',val:grvCount.toLocaleString(),sub:fmtAEDR(grvVal)+' · '+(totalVal>0?Math.round(grvVal/totalVal*100):0)+'%',col:'var(--gold)'},
+    {lbl:'TOP WAREHOUSE',val:topWH,sub:fmtAEDR(whMap[topWH]||0)+' · '+(totalVal>0?Math.round((whMap[topWH]||0)/totalVal*100):0)+'%',col:'var(--text)'}
+  ].map(function(k){
+    return '<div style="background:var(--card);border:1px solid var(--border);padding:14px;">'
+      +'<div style="font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">'+k.lbl+'</div>'
+      +'<div style="font-family:\'Cormorant Garamond\',serif;font-size:26px;font-weight:700;color:'+k.col+';">'+k.val+'</div>'
+      +'<div style="font-size:10px;color:var(--muted);margin-top:4px;">'+k.sub+'</div>'
+      +'</div>';
+  }).join('');
+
+  // Monthly chart
+  var months=[1,2,3,4,5];
+  var monthData=months.map(function(m){return Math.round(monthMap[m]||0);});
+  if(RET_CHART_MONTH){RET_CHART_MONTH.destroy();}
+  var ctx=document.getElementById('ret-month-chart');
+  if(ctx){
+    RET_CHART_MONTH=new Chart(ctx,{
+      type:'bar',
+      data:{labels:months.map(function(m){return MONTH_NAMES[m];}),datasets:[{label:'Returns AED',data:monthData,backgroundColor:'#e84b4b',borderRadius:0,borderSkipped:false}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return' '+fmtAEDR(c.raw);}}}},
+        scales:{x:{ticks:{color:'#7a7660',font:{size:10}},grid:{display:false},border:{color:'var(--border)'}},
+          y:{ticks:{color:'#7a7660',font:{size:9},callback:function(v){return fmtAEDR(v);}},grid:{color:'rgba(122,118,96,0.15)'},border:{color:'var(--border)'}}}}
+    });
+  }
+
+  // WH bars
+  var whKeys=Object.keys(whMap).sort(function(a,b){return whMap[b]-whMap[a];});
+  var maxWH=whMap[whKeys[0]]||1;
+  document.getElementById('ret-wh-bars').innerHTML=whKeys.map(function(wh){
+    var pct=Math.round(whMap[wh]/maxWH*100);
+    var col=WH_COLORS[wh]||'var(--muted)';
+    return '<div style="margin-bottom:10px;">'
+      +'<div style="display:flex;justify-content:space-between;margin-bottom:3px;">'
+      +'<span style="font-size:12px;font-weight:700;color:'+col+';">'+wh+'</span>'
+      +'<span style="font-size:11px;color:var(--text);">'+fmtAEDR(whMap[wh])+'</span>'
+      +'</div>'
+      +'<div style="height:6px;background:var(--border);border-radius:0;">'
+      +'<div style="height:6px;width:'+pct+'%;background:'+col+';transition:width 0.8s;"></div>'
+      +'</div></div>';
+  }).join('');
+
+  // Category donut
+  var catKeys=Object.keys(catMap);
+  var catColors=['#378add','#c9a84c','#4ecb8d'];
+  if(RET_CHART_CAT){RET_CHART_CAT.destroy();}
+  var ctx2=document.getElementById('ret-cat-chart');
+  if(ctx2){
+    RET_CHART_CAT=new Chart(ctx2,{
+      type:'doughnut',
+      data:{labels:catKeys,datasets:[{data:catKeys.map(function(k){return catMap[k].c;}),backgroundColor:catColors,borderWidth:0,hoverOffset:4}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return' '+c.label+': '+c.raw.toLocaleString();}}}}}
+    });
+  }
+  document.getElementById('ret-cat-legend').innerHTML=catKeys.map(function(k,i){
+    var pct=rows.length>0?Math.round(catMap[k].c/rows.length*100):0;
+    return '<div style="display:flex;align-items:center;gap:5px;margin-bottom:4px;">'
+      +'<div style="width:8px;height:8px;border-radius:2px;background:'+catColors[i]+';flex-shrink:0;"></div>'
+      +'<div style="font-size:10px;color:var(--muted);">'+k+' — '+catMap[k].c.toLocaleString()+' ('+pct+'%)</div>'
+      +'</div>';
+  }).join('');
+
+  // Area bars
+  var areaKeys=Object.keys(areaMap).sort(function(a,b){return areaMap[b]-areaMap[a];}).slice(0,6);
+  var maxA=areaMap[areaKeys[0]]||1;
+  var areaColors=['#e84b4b','#e84b4b','#c9a84c','#c9a84c','#5b8dee','#5b8dee'];
+  document.getElementById('ret-area-bars').innerHTML=areaKeys.map(function(a,i){
+    var pct=Math.round(areaMap[a]/maxA*100);
+    return '<div style="margin-bottom:8px;">'
+      +'<div style="display:flex;justify-content:space-between;margin-bottom:2px;">'
+      +'<span style="font-size:11px;color:var(--text);">'+a+'</span>'
+      +'<span style="font-size:10px;color:var(--muted);">'+fmtAEDR(areaMap[a])+'</span>'
+      +'</div>'
+      +'<div style="height:5px;background:var(--border);border-radius:0;">'
+      +'<div style="height:5px;width:'+pct+'%;background:'+areaColors[i]+';transition:width 0.8s;"></div>'
+      +'</div></div>';
+  }).join('');
+
+  // BU list
+  var buKeys=Object.keys(buMap).sort(function(a,b){return buMap[b]-buMap[a];});
+  var buColors={Food:'#e84b4b','Non-Food':'#5b8dee',Salon:'#c9a84c',Zooz:'#4ecb8d',Other:'var(--muted)'};
+  document.getElementById('ret-bu-list').innerHTML=buKeys.map(function(b){
+    var pct=totalVal>0?Math.round(buMap[b]/totalVal*100):0;
+    var col=buColors[b]||'var(--muted)';
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);">'
+      +'<div><div style="font-size:12px;color:var(--text);">'+b+'</div>'
+      +'<div style="font-size:10px;color:var(--muted);">'+fmtAEDR(buMap[b])+'</div></div>'
+      +'<span style="font-size:10px;padding:2px 8px;background:rgba(0,0,0,0.2);color:'+col+';">'+pct+'%</span>'
+      +'</div>';
+  }).join('');
+
+  // Top customers
+  var topCusts=Object.keys(custMap).map(function(n){return{n:n,v:custMap[n]};})
+    .sort(function(a,b){return b.v-a.v;}).slice(0,8);
+  var custColors=['#e84b4b','#e84b4b','#c9a84c','#c9a84c','#5b8dee','#5b8dee','#4ecb8d','#4ecb8d'];
+  document.getElementById('ret-top-customers').innerHTML=topCusts.map(function(c,i){
+    var pct=totalVal>0?(c.v/totalVal*100).toFixed(1)+'%':'0%';
+    var col=custColors[i]||'var(--muted)';
+    return '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);">'
+      +'<div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;">'
+      +'<span style="font-size:11px;font-weight:700;color:'+col+';width:18px;flex-shrink:0;">'+(i+1)+'</span>'
+      +'<span style="font-size:12px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+c.n+'</span>'
+      +'</div>'
+      +'<div style="display:flex;align-items:center;gap:16px;flex-shrink:0;">'
+      +'<div style="text-align:right;min-width:70px;"><div style="font-size:12px;font-weight:700;color:var(--gold);">'+fmtAEDR(c.v)+'</div></div>'
+      +'<div style="text-align:right;min-width:40px;"><div style="font-size:11px;color:#e84b4b;">'+pct+'</div><div style="font-size:9px;color:var(--muted);">of total</div></div>'
+      +'</div></div>';
+  }).join('');
+}
+
 
 // Logo spin
 function spinLogo(){const box=document.querySelector('.sb-logo-box');if(!box)return;box.classList.add('spinning');setTimeout(()=>box.classList.remove('spinning'),1000);}
