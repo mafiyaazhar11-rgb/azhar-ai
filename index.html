@@ -394,6 +394,7 @@ footer span{color:var(--gold);}
 }
 
 </style>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body>
 
@@ -631,7 +632,7 @@ footer span{color:var(--gold);}
         </div>
         <div style="display:flex;align-items:center;gap:10px;">
           <div id="bl-status-badge" style="font-size:10px;color:var(--muted);display:none;">Last: <span id="bl-last-date">—</span></div>
-          <label id="bl-upload-btn" style="padding:8px 18px;background:var(--glow);border:1px solid var(--gold);color:var(--gold);font-size:10px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;display:flex;align-items:center;gap:6px;">
+          <label id="bl-upload-btn" style="padding:8px 18px;background:var(--glow);border:1px solid var(--gold);color:var(--gold);font-size:10px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;display:flex;align-items:center;gap:6px;" onclick="blAuthUpload(event)">
             <span>📦</span> UPLOAD FILE
             <input type="file" id="bl-file-input" accept=".xlsx,.xls,.csv" style="display:none;" onchange="handleBacklogUpload(this)">
           </label>
@@ -1794,22 +1795,59 @@ function fmtAED(v){
   return 'AED '+Math.round(v);
 }
 
+function blAuthUpload(e){
+  e.preventDefault();
+  var pwd = prompt('Enter admin password to upload WH Backlog file:');
+  if(pwd === null) return;
+  if(pwd !== 'azhar2026'){ alert('Incorrect password. Access denied.'); return; }
+  document.getElementById('bl-file-input').click();
+}
+
 function handleBacklogUpload(input){
   var file = input.files[0];
   if(!file) return;
   var reader = new FileReader();
+  var ext = file.name.split('.').pop().toLowerCase();
   reader.onload = function(e){
     try {
-      var data = new Uint8Array(e.target.result);
-      var wb = XLSX.read(data, {type:'array'});
-      // Prefer POOL REPORT sheet, else first sheet
-      var sheetName = wb.SheetNames.includes('POOL REPORT') ? 'POOL REPORT' : wb.SheetNames[0];
-      var rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], {defval:''});
+      var rows = [];
+      if(ext === 'csv'){
+        // Parse CSV
+        var csvText = e.target.result;
+        var lines = csvText.split('\n').filter(function(l){return l.trim();});
+        if(lines.length < 2){ alert('CSV file is empty'); return; }
+        function parseCSVLine(line){
+          var result=[],cell='',inQ=false;
+          for(var i=0;i<line.length;i++){
+            var ch=line[i];
+            if(ch==='"'){inQ=!inQ;}
+            else if(ch===','&&!inQ){result.push(cell.trim());cell='';}
+            else{cell+=ch;}
+          }
+          result.push(cell.trim());
+          return result;
+        }
+        var headers = parseCSVLine(lines[0]).map(function(h){return h.replace(/"/g,'').trim();});
+        for(var i=1;i<lines.length;i++){
+          if(!lines[i].trim()) continue;
+          var vals = parseCSVLine(lines[i]);
+          var rowObj = {};
+          headers.forEach(function(h,hi){ rowObj[h]=(vals[hi]||'').replace(/"/g,'').trim(); });
+          rows.push(rowObj);
+        }
+      } else {
+        // Parse Excel
+        var data = new Uint8Array(e.target.result);
+        var wb = XLSX.read(data, {type:'array'});
+        var sheetName = wb.SheetNames.indexOf('POOL REPORT') >= 0 ? 'POOL REPORT' : wb.SheetNames[0];
+        rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], {defval:''});
+      }
       if(!rows.length){ alert('No data found in file'); return; }
       parseBacklogData(rows, file.name);
     } catch(err){ alert('Error reading file: '+err.message); }
   };
-  reader.readAsArrayBuffer(file);
+  if(ext === 'csv') reader.readAsText(file);
+  else reader.readAsArrayBuffer(file);
 }
 
 function parseBacklogData(rows, fileName){
