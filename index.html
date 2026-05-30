@@ -662,59 +662,80 @@ footer span{color:var(--gold);}
       <!-- DASHBOARD DATA -->
       <div id="bl-dashboard" style="display:none;">
 
-        <!-- ROW 1: 4 KPI CARDS -->
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px;" id="bl-kpis"></div>
+        <!-- ROW 1: 5 KPI CARDS -->
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px;" id="bl-kpis"></div>
 
-        <!-- ROW 2: ORG BARS + CATEGORY DONUT -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
-          <div style="background:var(--surface);border:1px solid var(--border);padding:16px;">
-            <div style="font-size:9px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:14px;">📦 Orders &amp; Value by ORG</div>
-            <div id="bl-org-bars"></div>
+        <!-- ROW 2: 3 COLUMNS - ORG + CATEGORY + RSD AGING -->
+        <div style="display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:12px;margin-bottom:12px;">
+
+          <!-- 1. ORG WISE EXPOSURE -->
+          <div style="background:var(--surface);border:1px solid var(--border);padding:14px;">
+            <div style="font-size:9px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;">1. ORG Wise Exposure</div>
+            <div style="display:grid;grid-template-columns:70px 60px 70px 1fr 80px;gap:4px;margin-bottom:8px;">
+              <span style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">ORG</span>
+              <span style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Orders</span>
+              <span style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Value</span>
+              <span style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Share</span>
+              <span style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Risk</span>
+            </div>
+            <div id="bl-org-table"></div>
+            <div id="bl-org-grand"></div>
           </div>
-          <div style="background:var(--surface);border:1px solid var(--border);padding:16px;">
-            <div style="font-size:9px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;">🔄 Pool Category Split</div>
-            <div style="display:flex;align-items:center;gap:16px;">
-              <div style="position:relative;width:130px;height:130px;flex-shrink:0;">
-                <canvas id="bl-cat-chart" width="130" height="130"></canvas>
-              </div>
-              <div id="bl-cat-legend" style="flex:1;"></div>
+
+          <!-- 2. BACKLOG BY CATEGORY CHART -->
+          <div style="background:var(--surface);border:1px solid var(--border);padding:14px;">
+            <div style="font-size:9px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;">2. Backlog by Category</div>
+            <div style="position:relative;height:160px;">
+              <canvas id="bl-cat-chart"></canvas>
+            </div>
+          </div>
+
+          <!-- 3. RSD AGING VIEW -->
+          <div style="background:var(--surface);border:1px solid var(--border);padding:14px;">
+            <div style="font-size:9px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;">3. RSD Aging View</div>
+            <div style="position:relative;height:160px;">
+              <canvas id="bl-rsd-chart"></canvas>
             </div>
           </div>
         </div>
 
-        <!-- ROW 3: TOP ACCOUNTS + ACCOUNT TYPE -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
-          <div style="background:var(--surface);border:1px solid var(--border);padding:16px;">
-            <div style="font-size:9px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;">🏆 Top Accounts by Value</div>
-            <div id="bl-top-accounts"></div>
+        <!-- ROW 3: TOP CUSTOMERS + ACTION TABLE -->
+        <div style="display:grid;grid-template-columns:1fr 1.6fr;gap:12px;margin-bottom:12px;">
+
+          <!-- 4. TOP CUSTOMER RISK -->
+          <div style="background:var(--surface);border:1px solid var(--border);padding:14px;">
+            <div style="font-size:9px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;">4. Top Customer Risk (by Value)</div>
+            <div style="display:grid;grid-template-columns:1fr 55px 60px 45px 70px;gap:4px;margin-bottom:6px;">
+              <span style="font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;">Customer</span>
+              <span style="font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;">Orders</span>
+              <span style="font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;">Value</span>
+              <span style="font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;">ORG</span>
+              <span style="font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;">Risk</span>
+            </div>
+            <div id="bl-top-customers"></div>
           </div>
-          <div style="background:var(--surface);border:1px solid var(--border);padding:16px;">
-            <div style="font-size:9px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;">👥 Account Type Breakdown</div>
-            <div id="bl-acc-types"></div>
+
+          <!-- 5. OPERATIONAL ACTION TABLE -->
+          <div style="background:var(--surface);border:1px solid var(--border);padding:14px;">
+            <div style="font-size:9px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;">5. Operational Action Table</div>
+            <div style="overflow-x:auto;">
+              <table style="width:100%;border-collapse:collapse;font-size:10px;">
+                <thead>
+                  <tr style="border-bottom:1px solid var(--border);">
+                    <th style="padding:5px 6px;text-align:left;font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;font-weight:600;">ORG</th>
+                    <th style="padding:5px 6px;text-align:left;font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;font-weight:600;">Customer</th>
+                    <th style="padding:5px 6px;text-align:left;font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;font-weight:600;">Shipment</th>
+                    <th style="padding:5px 6px;text-align:left;font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;font-weight:600;">RSD</th>
+                    <th style="padding:5px 6px;text-align:right;font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;font-weight:600;">Value</th>
+                    <th style="padding:5px 6px;text-align:left;font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;font-weight:600;">Category</th>
+                    <th style="padding:5px 6px;text-align:center;font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;font-weight:600;">Action</th>
+                  </tr>
+                </thead>
+                <tbody id="bl-action-table"></tbody>
+              </table>
+            </div>
           </div>
         </div>
-
-        <!-- ROW 4: FULL WIDTH DETAIL TABLE -->
-        <div style="background:var(--surface);border:1px solid var(--border);padding:16px;margin-bottom:14px;">
-          <div style="font-size:9px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:14px;">📋 Detailed Backlog Breakdown</div>
-          <div style="overflow-x:auto;">
-            <table style="width:100%;border-collapse:collapse;font-size:11px;" id="bl-detail-table">
-              <thead>
-                <tr style="border-bottom:1px solid var(--border);">
-                  <th style="text-align:left;padding:8px 10px;font-size:9px;color:var(--gold);letter-spacing:1px;font-weight:600;text-transform:uppercase;">Category</th>
-                  <th style="text-align:center;padding:8px 10px;font-size:9px;color:var(--gold);letter-spacing:1px;font-weight:600;text-transform:uppercase;">ORG</th>
-                  <th style="text-align:left;padding:8px 10px;font-size:9px;color:var(--gold);letter-spacing:1px;font-weight:600;text-transform:uppercase;">Account</th>
-                  <th style="text-align:right;padding:8px 10px;font-size:9px;color:var(--gold);letter-spacing:1px;font-weight:600;text-transform:uppercase;">Orders</th>
-                  <th style="text-align:right;padding:8px 10px;font-size:9px;color:var(--gold);letter-spacing:1px;font-weight:600;text-transform:uppercase;">Value (AED)</th>
-                  <th style="text-align:center;padding:8px 10px;font-size:9px;color:var(--gold);letter-spacing:1px;font-weight:600;text-transform:uppercase;">Status</th>
-                </tr>
-              </thead>
-              <tbody id="bl-table-body"></tbody>
-            </table>
-          </div>
-        </div>
-
-
 
       </div>
     </div>
@@ -888,7 +909,7 @@ const TITLES={
   invoice:   ['Proforma Invoice Generator','Create professional invoices with letterhead'],
   excel:     ['Excel Support & Data Analysis','Fix formulas and analyse spreadsheet data'],
   returns:   ['Daily Returns Dashboard','Invoice Cancellations - GRV Returns - BU-wise Analysis'],
-  backlog:   ['WH Backlog Order Dashboard','WH Backlog Risk · Advance Orders · Credit Holds · Frozen Pool'],
+  backlog:   ['WH Backlog Risk Command Center','Pure Risk · Advance Orders · Credit Hold · Frozen Pool · BU Ownership'],
   returns:   ['Daily Returns Dashboard','Invoice Cancellations - GRV Returns - BU-wise Analysis']
 };
 function goTab(id,btn){
@@ -1932,6 +1953,7 @@ document.addEventListener('DOMContentLoaded', function(){
 // ── WH BACKLOG DASHBOARD ──────────────────────────────────
 var BL_DATA = null;
 var BL_CHART = null;
+var BL_RSD_CHART = null;
 var ORG_COLORS = {DCV:'#e84b4b', DGC:'#5b8dee', DSN:'#c9a84c', DGS:'#4ecb8d', DCF:'#e8854b'};
 
 // Robust category normalizer - handles typos, spacing, case variations
@@ -2009,6 +2031,8 @@ function saveBacklogToServer(fileName, totalOrders){
     advance: BL_DATA.advance,
     whBacklog: BL_DATA.whBacklog||{count:0,val:0},
     accTypeMap: BL_DATA.accTypeMap||{},
+    rsdAging: BL_DATA.rsdAging||{},
+    actionRows: BL_DATA.actionRows||[],
     creditHold: BL_DATA.creditHold||{count:0,val:0},
     cutOffFrozen: BL_DATA.cutOffFrozen||{count:0,val:0},
     unplannedFrozen: BL_DATA.unplannedFrozen||{count:0,val:0},
@@ -2050,7 +2074,7 @@ function loadBacklogFromServer(){
         cutOffFrozen: s.cutOffFrozen||{count:0,val:0},
         unplannedFrozen: s.unplannedFrozen||{count:0,val:0},
         critical: s.critical||0,
-        orgMap: s.orgMap||{}, catMap: s.catMap||{}, custMap: s.custMap||{}, accTypeMap: s.accTypeMap||{},
+        orgMap: s.orgMap||{}, catMap: s.catMap||{}, custMap: s.custMap||{}, accTypeMap: s.accTypeMap||{}, rsdAging: s.rsdAging||{}, actionRows: s.actionRows||[],
         fileName: d.fileName, date: s.date||new Date().toLocaleDateString('en-AE')
       };
       renderBacklog();
@@ -2153,7 +2177,7 @@ function parseBacklogData(rows, fileName){
     shipment: fc('SHIPMENT_ID','SHIPMENTID','SHIPMENT ID','SHIPMENT','COUNT OF SHIPMENT','SHIP ID')
   };
 
-  var orgMap={}, catMap={}, custMap={}, accTypeMap={};
+  var orgMap={}, catMap={}, custMap={}, accTypeMap={}, rsdAging={}, actionRows=[];
   var totalOrders=0, totalVal=0;
 
   rows.forEach(function(row){
@@ -2169,10 +2193,31 @@ function parseBacklogData(rows, fileName){
       if(org && catMap[cat].orgs.indexOf(org)===-1) catMap[cat].orgs.push(org);
       if(cust && catMap[cat].accounts.indexOf(cust)===-1) catMap[cat].accounts.push(cust);
     }
-    if(cust){ if(!custMap[cust])custMap[cust]={count:0,val:0}; custMap[cust].count++; custMap[cust].val+=val; }
+    if(cust){
+      if(!custMap[cust])custMap[cust]={count:0,val:0,org:org,oldestRSD:''};
+      custMap[cust].count++; custMap[cust].val+=val;
+      if(!custMap[cust].oldestRSD || row[C.date]<custMap[cust].oldestRSD) custMap[cust].oldestRSD=row[C.date];
+      custMap[cust].org=org;
+    }
     // Account type tracking
     var accType = row[C.accType]||'Unknown';
     if(accType){ if(!accTypeMap[accType])accTypeMap[accType]={count:0,val:0}; accTypeMap[accType].count++; accTypeMap[accType].val+=val; }
+    // RSD aging
+    var rsdRaw=row[C.date]||''; var rsdBucket='Unknown';
+    try{
+      var rsdParts=rsdRaw.split(' ')[0].split(/[-\/]/);
+      var rsdDate=new Date(rsdParts[0],rsdParts[1]-1,rsdParts[2]);
+      var today2=new Date(); today2.setHours(0,0,0,0);
+      var diff=Math.round((rsdDate-today2)/(1000*60*60*24));
+      if(diff<=0)rsdBucket='RSD Today';
+      else if(diff<=3)rsdBucket='RSD +1 to +3';
+      else if(diff<=7)rsdBucket='RSD +4 to +7';
+      else if(diff<=15)rsdBucket='RSD +8 to +15';
+      else rsdBucket='RSD >30';
+    }catch(e){}
+    if(!rsdAging[rsdBucket])rsdAging[rsdBucket]=0; rsdAging[rsdBucket]++;
+    // Action rows
+    actionRows.push({org:org,cust:cust,ship:row[C.orderNo]||'',rsd:rsdRaw.split(' ')[0],val:val,cat:cat});
   });
 
   var advance = catMap['RSD >30 Advance']||{count:0,val:0};
@@ -2182,7 +2227,7 @@ function parseBacklogData(rows, fileName){
   var unplannedFrozen = (catMap['Unplanned Frozen']||{count:0,val:0});
   var critical = creditHold.count + cutOffFrozen.count + unplannedFrozen.count;
 
-  BL_DATA = { totalOrders:totalOrders, totalVal:totalVal, advance:advance, whBacklog:whBacklog, creditHold:creditHold, cutOffFrozen:cutOffFrozen, unplannedFrozen:unplannedFrozen, critical:critical, orgMap:orgMap, catMap:catMap, custMap:custMap, accTypeMap:accTypeMap, fileName:fileName, date:new Date().toLocaleDateString('en-AE') };
+  BL_DATA = { totalOrders:totalOrders, totalVal:totalVal, advance:advance, whBacklog:whBacklog, creditHold:creditHold, cutOffFrozen:cutOffFrozen, unplannedFrozen:unplannedFrozen, critical:critical, orgMap:orgMap, catMap:catMap, custMap:custMap, accTypeMap:accTypeMap, rsdAging:rsdAging, actionRows:actionRows, fileName:fileName, date:new Date().toLocaleDateString('en-AE') };
   renderBacklog();
   // Save to server so data persists after refresh
   saveBacklogToServer(fileName, totalOrders);
@@ -2196,163 +2241,136 @@ function renderBacklog(){
   var badge=document.getElementById('bl-status-badge');
   if(badge){ badge.style.display='block'; document.getElementById('bl-last-date').textContent=d.date; }
 
-  // ── ROW 1: KPI CARDS ──
-  var whBL = d.whBacklog||{count:0,val:0};
-  var afterCut = (d.cutOffFrozen||{count:0,val:0}).count + (d.unplannedFrozen||{count:0,val:0}).count;
-  var afterCutVal = (d.cutOffFrozen||{count:0,val:0}).val + (d.unplannedFrozen||{count:0,val:0}).val;
+  var whBL=d.whBacklog||{count:0,val:0};
+  var afterCutCount=(d.cutOffFrozen||{count:0}).count+(d.unplannedFrozen||{count:0}).count;
+  var afterCutVal=(d.cutOffFrozen||{val:0}).val+(d.unplannedFrozen||{val:0}).val;
+  var actionNeeded=(d.catMap&&d.catMap['Pure WH Backlog'])?d.catMap['Pure WH Backlog'].count:0;
+
+  // ── ROW 1: 5 KPI CARDS ──
   var kpis=[
-    {label:'TOTAL POOL ORDERS',val:d.totalOrders.toLocaleString(),sub:fmtAED(d.totalVal)+' total value',color:'var(--gold)',border:'var(--border)'},
-    {label:'WH BACKLOG · PURE RISK',val:whBL.count.toLocaleString(),sub:fmtAED(whBL.val)+' · before cut-off',color:'#e84b4b',border:'rgba(232,75,75,0.4)'},
-    {label:'ADVANCE ORDERS · RSD >30',val:d.advance.count.toLocaleString(),sub:fmtAED(d.advance.val)+' · scheduled future',color:'var(--muted)',border:'var(--border)'},
-    {label:'AFTER CUT-OFF + FROZEN',val:afterCut.toLocaleString(),sub:fmtAED(afterCutVal)+' · operational holds',color:'#c9a84c',border:'rgba(201,168,76,0.4)'}
+    {icon:'📋',label:'TOTAL POOL ORDERS',val:d.totalOrders.toLocaleString(),sub:'AED '+fmtAED(d.totalVal)+' Total Orders in Pool',color:'var(--gold)',border:'var(--border)'},
+    {icon:'🛡',label:'WH BACKLOG PURE RISK',val:whBL.count.toLocaleString(),sub:'Before Cut-Off Risk\nAED '+fmtAED(whBL.val),color:'#e84b4b',border:'rgba(232,75,75,0.5)'},
+    {icon:'📅',label:'ADVANCE ORDERS',val:d.advance.count.toLocaleString(),sub:'RSD > 30 Days / Future Orders\nAED '+fmtAED(d.advance.val),color:'var(--muted)',border:'var(--border)'},
+    {icon:'🔒',label:'CREDIT HOLD / FROZEN',val:afterCutCount.toLocaleString(),sub:'Credit Hold + Frozen Pool\nAED '+fmtAED(afterCutVal),color:'#c9a84c',border:'rgba(201,168,76,0.4)'},
+    {icon:'⚠',label:'ACTION REQUIRED TODAY',val:actionNeeded.toLocaleString(),sub:'Orders Need Immediate\nFollow-up',color:'#e84b4b',border:'rgba(232,75,75,0.3)'}
   ];
   document.getElementById('bl-kpis').innerHTML=kpis.map(function(k){
-    return '<div style="background:var(--card);border:1px solid '+k.border+';padding:14px 16px;">'+
-      '<div style="font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">'+k.label+'</div>'+
-      '<div style="font-family:Cormorant Garamond,serif;font-size:28px;font-weight:700;color:'+k.color+';">'+k.val+'</div>'+
-      '<div style="font-size:10px;color:var(--muted);margin-top:4px;">'+k.sub+'</div>'+
+    return '<div style="background:var(--card);border:1px solid '+k.border+';padding:12px 14px;">'+
+      '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">'+
+      '<span style="font-size:16px;">'+k.icon+'</span>'+
+      '<div style="font-size:8px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;line-height:1.3;">'+k.label+'</div>'+
+      '</div>'+
+      '<div style="font-size:30px;font-weight:700;color:'+k.color+';line-height:1;margin-bottom:6px;">'+k.val+'</div>'+
+      '<div style="font-size:9px;color:var(--muted);line-height:1.4;">'+k.sub.replace('\n','<br>')+'</div>'+
       '</div>';
   }).join('');
 
-  // ── ROW 2: ORG BARS ──
-  var orgKeys = Object.keys(d.orgMap).sort(function(a,b){return d.orgMap[b].val-d.orgMap[a].val;});
-  var maxOrgVal = Math.max.apply(null, orgKeys.map(function(o){return d.orgMap[o].val;}));
-  document.getElementById('bl-org-bars').innerHTML = orgKeys.map(function(org){
-    var v=d.orgMap[org];
-    var pct=maxOrgVal>0?Math.round(v.val/maxOrgVal*100):0;
-    var col=ORG_COLORS[org]||'var(--gold)';
-    var valPct = d.totalVal>0?(v.val/d.totalVal*100).toFixed(1)+'%':'0%';
-    return '<div style="margin-bottom:14px;">'+
-      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">'+
-      '<span style="font-size:13px;font-weight:700;color:'+col+';min-width:40px;">'+org+'</span>'+
-      '<div style="display:flex;gap:16px;align-items:center;">'+
-      '<span style="font-size:11px;color:var(--text);">'+v.count+' orders</span>'+
-      '<span style="font-size:12px;font-weight:700;color:var(--gold);">'+fmtAED(v.val)+'</span>'+
-      '<span style="font-size:10px;color:var(--muted);min-width:36px;text-align:right;">'+valPct+'</span>'+
-      '</div></div>'+
-      '<div style="height:7px;background:var(--border);border-radius:0;">'+
-      '<div style="height:7px;width:'+pct+'%;background:'+col+';transition:width 0.8s ease;"></div>'+
-      '</div></div>';
-  }).join('');
-
-  // ── ROW 2: CATEGORY DONUT ──
-  var catOrder = ['Before Cut-Off','RSD >30 Advance','Cut-Off Frozen','Unplanned Frozen','Credit Hold'];
-  var catLabels2 = [], catData2 = [], catColors2 = [];
-  var colorMap = {'Before Cut-Off':'#e84b4b','RSD >30 Advance':'#888877','Cut-Off Frozen':'#5b8dee','Unplanned Frozen':'#4ecb8d','Credit Hold':'#c9a84c'};
-  catOrder.forEach(function(k){
-    if(d.catMap[k] && d.catMap[k].count>0){
-      catLabels2.push(k); catData2.push(d.catMap[k].count); catColors2.push(colorMap[k]||'#666');
-    }
-  });
-  Object.keys(d.catMap).forEach(function(k){
-    if(catOrder.indexOf(k)===-1 && d.catMap[k].count>0){
-      catLabels2.push(k); catData2.push(d.catMap[k].count); catColors2.push('#9b59b6');
-    }
-  });
-  if(BL_CHART){ BL_CHART.destroy(); }
-  var ctx = document.getElementById('bl-cat-chart');
-  if(ctx){
-    BL_CHART = new Chart(ctx, {
-      type:'doughnut',
-      data:{labels:catLabels2, datasets:[{data:catData2, backgroundColor:catColors2, borderWidth:0}]},
-      options:{responsive:false, cutout:'65%', plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return ' '+c.label+': '+c.raw+' orders';}}}}}
-    });
-  }
-  // Legend
-  var legendEl = document.getElementById('bl-cat-legend');
-  if(legendEl){
-    legendEl.innerHTML = catLabels2.map(function(lbl,i){
-      var v=d.catMap[lbl]||{count:0,val:0};
-      var pct=d.totalOrders>0?(v.count/d.totalOrders*100).toFixed(0)+'%':'0%';
-      return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">'+
-        '<div style="width:10px;height:10px;border-radius:50%;background:'+catColors2[i]+';flex-shrink:0;"></div>'+
-        '<div style="flex:1;min-width:0;">'+
-        '<div style="font-size:10px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+lbl+'</div>'+
-        '<div style="font-size:10px;color:var(--muted);">'+v.count+' orders · '+pct+'</div>'+
-        '</div></div>';
-    }).join('');
-  }
-
-  // ── ROW 3: TOP ACCOUNTS ──
-  var topAccs = Object.keys(d.custMap).map(function(n){return{n:n,c:d.custMap[n].count,v:d.custMap[n].val};})
-    .sort(function(a,b){return b.v-a.v;}).slice(0,8);
-  var accColors=['#e84b4b','#c9a84c','#5b8dee','#4ecb8d','#e8854b','#9b59b6','#e84b4b','#c9a84c'];
-  var topAccEl = document.getElementById('bl-top-accounts');
-  if(topAccEl){
-    topAccEl.innerHTML = topAccs.map(function(a,i){
-      var pct=d.totalVal>0?(a.v/d.totalVal*100).toFixed(1)+'%':'0%';
-      var col=accColors[i]||'var(--muted)';
-      var barPct=topAccs[0].v>0?Math.round(a.v/topAccs[0].v*100):0;
+  // ── SECTION 1: ORG TABLE ──
+  var orgKeys=Object.keys(d.orgMap).sort(function(a,b){return d.orgMap[b].val-d.orgMap[a].val;});
+  var riskLabels={'DCV':'High Volume','DGC':'Medium','DSN':'Low','DCF':'Low'};
+  var riskColors={'DCV':'#e84b4b','DGC':'#c9a84c','DSN':'#4ecb8d','DCF':'#4ecb8d'};
+  var orgTableEl=document.getElementById('bl-org-table');
+  if(orgTableEl){
+    orgTableEl.innerHTML=orgKeys.map(function(org){
+      var v=d.orgMap[org]; var col=ORG_COLORS[org]||'var(--gold)';
+      var pct=d.totalVal>0?(v.val/d.totalVal*100).toFixed(0)+'%':'0%';
+      var barPct=orgKeys.length>0&&d.orgMap[orgKeys[0]].val>0?Math.round(v.val/d.orgMap[orgKeys[0]].val*100):0;
+      var rLabel=riskLabels[org]||'Medium'; var rCol=riskColors[org]||'#c9a84c';
       return '<div style="margin-bottom:10px;">'+
-        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">'+
-        '<div style="display:flex;align-items:center;gap:6px;min-width:0;flex:1;">'+
-        '<span style="font-size:10px;font-weight:700;color:'+col+';width:16px;flex-shrink:0;">'+(i+1)+'</span>'+
-        '<span style="font-size:11px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+a.n+'</span>'+
+        '<div style="display:grid;grid-template-columns:70px 60px 70px 1fr 80px;gap:4px;align-items:center;margin-bottom:3px;">'+
+        '<span style="font-size:12px;font-weight:700;color:'+col+';">'+org+'</span>'+
+        '<span style="font-size:11px;color:var(--text);">'+v.count+'</span>'+
+        '<span style="font-size:11px;color:var(--gold);">'+fmtAED(v.val)+'</span>'+
+        '<span style="font-size:10px;color:var(--muted);">'+pct+'</span>'+
+        '<span style="font-size:9px;padding:2px 6px;background:rgba(0,0,0,0.2);color:'+rCol+';">'+rLabel+'</span>'+
         '</div>'+
-        '<div style="display:flex;gap:10px;flex-shrink:0;">'+
-        '<span style="font-size:11px;color:var(--text);">'+a.c+' orders</span>'+
-        '<span style="font-size:11px;font-weight:700;color:var(--gold);min-width:65px;text-align:right;">'+fmtAED(a.v)+'</span>'+
-        '<span style="font-size:10px;color:var(--muted);min-width:34px;text-align:right;">'+pct+'</span>'+
-        '</div></div>'+
-        '<div style="height:4px;background:var(--border);">'+
-        '<div style="height:4px;width:'+barPct+'%;background:'+col+';"></div>'+
-        '</div></div>';
+        '<div style="height:5px;background:var(--border);"><div style="height:5px;width:'+barPct+'%;background:'+col+';"></div></div>'+
+        '</div>';
     }).join('');
   }
+  var orgGrand=document.getElementById('bl-org-grand');
+  if(orgGrand) orgGrand.innerHTML='<div style="border-top:1px solid var(--gold);padding-top:8px;margin-top:4px;display:grid;grid-template-columns:70px 60px 70px 1fr 80px;gap:4px;">'+
+    '<span style="font-size:10px;font-weight:700;color:var(--gold);">TOTAL</span>'+
+    '<span style="font-size:10px;font-weight:700;color:var(--white);">'+d.totalOrders+'</span>'+
+    '<span style="font-size:10px;font-weight:700;color:var(--gold);">'+fmtAED(d.totalVal)+'</span>'+
+    '<span style="font-size:10px;color:var(--gold);">100%</span><span></span></div>';
 
-  // ── ROW 3: ACCOUNT TYPE ──
-  var accTypeEl = document.getElementById('bl-acc-types');
-  if(accTypeEl && d.accTypeMap){
-    var accTypes = Object.keys(d.accTypeMap).sort(function(a,b){return d.accTypeMap[b].val-d.accTypeMap[a].val;});
-    var maxAT = accTypes.length>0 ? d.accTypeMap[accTypes[0]].val : 1;
-    var atColors=['#e84b4b','#5b8dee','#c9a84c','#4ecb8d','#e8854b','#9b59b6','#e84b4b','#c9a84c','#4ecb8d','#5b8dee'];
-    accTypeEl.innerHTML = accTypes.map(function(t,i){
-      var v=d.accTypeMap[t];
-      var pct=maxAT>0?Math.round(v.val/maxAT*100):0;
-      var valPct=d.totalVal>0?(v.val/d.totalVal*100).toFixed(1)+'%':'0%';
-      var col=atColors[i]||'var(--gold)';
-      return '<div style="margin-bottom:10px;">'+
-        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">'+
-        '<span style="font-size:11px;color:var(--text);">'+t+'</span>'+
-        '<div style="display:flex;gap:10px;">'+
-        '<span style="font-size:11px;color:var(--text);">'+v.count+' orders</span>'+
-        '<span style="font-size:11px;font-weight:700;color:var(--gold);min-width:65px;text-align:right;">'+fmtAED(v.val)+'</span>'+
-        '<span style="font-size:10px;color:var(--muted);min-width:34px;text-align:right;">'+valPct+'</span>'+
-        '</div></div>'+
-        '<div style="height:4px;background:var(--border);">'+
-        '<div style="height:4px;width:'+pct+'%;background:'+col+';"></div>'+
-        '</div></div>';
-    }).join('');
-  }
+  // ── SECTION 2: CATEGORY CHART ──
+  var catOrder=['Pure WH Backlog','RSD >30 Advance','Credit Hold','Frozen Pool'];
+  var catColorMap={'Pure WH Backlog':'#e84b4b','RSD >30 Advance':'#c9a84c','Credit Hold':'#5b8dee','Frozen Pool':'#4ecb8d'};
+  var catLabels2=[],catData2=[],catColors2=[];
+  catOrder.forEach(function(k){
+    var v=d.catMap&&d.catMap[k];
+    catLabels2.push(k); catData2.push(v?v.count:0); catColors2.push(catColorMap[k]||'#888');
+  });
+  if(BL_CHART){BL_CHART.destroy();}
+  var ctx=document.getElementById('bl-cat-chart');
+  if(ctx) BL_CHART=new Chart(ctx,{type:'bar',data:{labels:catLabels2,datasets:[{data:catData2,backgroundColor:catColors2,borderRadius:0,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return ' '+c.raw+' orders';}}}},scales:{x:{ticks:{color:'#7a7660',font:{size:9}},grid:{display:false},border:{color:'var(--border)'}},y:{ticks:{color:'#7a7660',font:{size:9}},grid:{color:'rgba(122,118,96,0.15)'},border:{color:'var(--border)'}}}}});
 
-  // ── ROW 4: DETAIL TABLE ──
-  var tbody = document.getElementById('bl-table-body');
-  if(tbody){
-    var catKeys2 = Object.keys(d.catMap).sort(function(a,b){return d.catMap[b].val-d.catMap[a].val;});
-    var rows2='';
-    catKeys2.forEach(function(cat){
-      var v=d.catMap[cat];
-      var orgBadges = (v.orgs||[]).sort().map(function(o){
-        var col=ORG_COLORS[o]||'var(--gold)';
-        return '<span style="font-size:9px;padding:1px 6px;background:rgba(0,0,0,0.25);color:'+col+';margin:1px;display:inline-block;">'+o+'</span>';
-      }).join('');
-      var accBadges = (v.accounts||[]).slice(0,3).join(', ')+(v.accounts&&v.accounts.length>3?' +more':'');
-      rows2+='<tr style="border-bottom:1px solid var(--border);">'+
-        '<td style="padding:9px 10px;color:var(--text);font-size:11px;">'+cat+'</td>'+
-        '<td style="padding:9px 10px;text-align:center;">'+orgBadges+'</td>'+
-        '<td style="padding:9px 10px;color:var(--muted);font-size:10px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+accBadges+'</td>'+
-        '<td style="padding:9px 10px;text-align:right;font-weight:700;color:var(--text);">'+v.count.toLocaleString()+'</td>'+
-        '<td style="padding:9px 10px;text-align:right;color:var(--gold);font-weight:600;">'+fmtAED(v.val)+'</td>'+
-        '<td style="padding:9px 10px;text-align:center;">'+catStatus(cat)+'</td>'+
-        '</tr>';
+  // ── SECTION 3: RSD AGING CHART ──
+  var rsdOrder=['RSD Today','RSD +1 to +3','RSD +4 to +7','RSD +8 to +15','RSD >30'];
+  var rsdColors=['#e84b4b','#e8854b','#c9a84c','#5b8dee','#888877'];
+  var rsdData=rsdOrder.map(function(k){return(d.rsdAging&&d.rsdAging[k])||0;});
+  if(BL_RSD_CHART){BL_RSD_CHART.destroy();}
+  var ctx2=document.getElementById('bl-rsd-chart');
+  if(ctx2) BL_RSD_CHART=new Chart(ctx2,{type:'bar',data:{labels:rsdOrder.map(function(l){return l.replace('RSD ','');}),datasets:[{data:rsdData,backgroundColor:rsdColors,borderRadius:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return ' '+c.raw+' orders';}}}},scales:{x:{ticks:{color:'#7a7660',font:{size:8},maxRotation:0},grid:{display:false},border:{color:'var(--border)'}},y:{ticks:{color:'#7a7660',font:{size:9}},grid:{color:'rgba(122,118,96,0.15)'},border:{color:'var(--border)'}}}}});
+
+  // ── SECTION 4: TOP CUSTOMERS ──
+  var topCusts=Object.keys(d.custMap).map(function(n){return{n:n,c:d.custMap[n].count,v:d.custMap[n].val,org:d.custMap[n].org||'',rsd:d.custMap[n].oldestRSD||''};}).sort(function(a,b){return b.v-a.v;}).slice(0,8);
+  var custEl=document.getElementById('bl-top-customers');
+  if(custEl){
+    var otherCount=0,otherVal=0;
+    var mainCusts=topCusts.slice(0,7);
+    topCusts.slice(7).forEach(function(c){otherCount+=c.c;otherVal+=c.v;});
+    var rows=mainCusts.map(function(c){
+      var riskVal=c.v>500000?'High Risk':c.v>100000?'Medium':'Low';
+      var riskCol=c.v>500000?'#e84b4b':c.v>100000?'#c9a84c':'#4ecb8d';
+      var orgCol=ORG_COLORS[c.org]||'var(--gold)';
+      return '<div style="display:grid;grid-template-columns:1fr 55px 60px 45px 70px;gap:4px;align-items:center;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.05);">'+
+        '<span style="font-size:10px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+c.n+'</span>'+
+        '<span style="font-size:10px;color:var(--text);text-align:center;">'+c.c+'</span>'+
+        '<span style="font-size:10px;color:var(--gold);font-weight:600;">'+fmtAED(c.v)+'</span>'+
+        '<span style="font-size:9px;color:'+orgCol+';font-weight:700;">'+c.org+'</span>'+
+        '<span style="font-size:9px;padding:2px 5px;background:rgba(0,0,0,0.2);color:'+riskCol+';">'+riskVal+'</span>'+
+        '</div>';
     });
-    rows2+='<tr style="background:var(--glow);border-top:2px solid var(--gold);">'+
-      '<td style="padding:10px;font-weight:700;color:var(--gold);font-size:11px;letter-spacing:1px;text-transform:uppercase;">GRAND TOTAL</td>'+
-      '<td></td><td></td>'+
-      '<td style="padding:10px;text-align:right;font-weight:700;color:var(--white);font-size:13px;">'+d.totalOrders.toLocaleString()+'</td>'+
-      '<td style="padding:10px;text-align:right;font-weight:700;color:var(--gold);font-size:13px;">'+fmtAED(d.totalVal)+'</td>'+
-      '<td></td></tr>';
-    tbody.innerHTML=rows2;
+    if(otherCount>0) rows.push('<div style="display:grid;grid-template-columns:1fr 55px 60px 45px 70px;gap:4px;align-items:center;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.05);">'+
+      '<span style="font-size:10px;color:var(--muted);">Other Customers</span>'+
+      '<span style="font-size:10px;color:var(--text);text-align:center;">'+otherCount+'</span>'+
+      '<span style="font-size:10px;color:var(--gold);">'+fmtAED(otherVal)+'</span>'+
+      '<span style="font-size:9px;color:var(--muted);">Various</span>'+
+      '<span style="font-size:9px;padding:2px 5px;color:var(--muted);">Monitor</span></div>');
+    rows.push('<div style="display:grid;grid-template-columns:1fr 55px 60px 45px 70px;gap:4px;padding:6px 0;border-top:1px solid var(--gold);">'+
+      '<span style="font-size:10px;font-weight:700;color:var(--gold);">GRAND TOTAL</span>'+
+      '<span style="font-size:10px;font-weight:700;color:var(--white);text-align:center;">'+d.totalOrders+'</span>'+
+      '<span style="font-size:10px;font-weight:700;color:var(--gold);">'+fmtAED(d.totalVal)+'</span>'+
+      '<span style="font-size:9px;color:var(--muted);">All</span><span></span></div>');
+    custEl.innerHTML=rows.join('');
+  }
+
+  // ── SECTION 5: ACTION TABLE ──
+  var actionEl=document.getElementById('bl-action-table');
+  if(actionEl && d.actionRows){
+    var topActions=d.actionRows.slice().sort(function(a,b){return b.val-a.val;}).slice(0,10);
+    var actionColorMap={'Pure WH Backlog':'WH to Pick / Escalate','RSD >30 Advance':'Advance / No Action Today','Credit Hold':'Monitor','Frozen Pool':'Priority Monitoring'};
+    var actionBgMap={'Pure WH Backlog':'rgba(232,75,75,0.2)','RSD >30 Advance':'rgba(201,168,76,0.15)','Credit Hold':'rgba(91,141,238,0.15)','Frozen Pool':'rgba(78,203,141,0.15)'};
+    var actionColMap={'Pure WH Backlog':'#e84b4b','RSD >30 Advance':'#c9a84c','Credit Hold':'#5b8dee','Frozen Pool':'#4ecb8d'};
+    actionEl.innerHTML=topActions.map(function(r,i){
+      var orgCol=ORG_COLORS[r.org]||'var(--gold)';
+      var aLabel=actionColorMap[r.cat]||'Monitor';
+      var aBg=actionBgMap[r.cat]||'rgba(100,100,100,0.1)';
+      var aCol=actionColMap[r.cat]||'var(--muted)';
+      var rsdShort=r.rsd.split('-').slice(1).join('-')||r.rsd;
+      return '<tr style="border-bottom:1px solid rgba(255,255,255,0.05);">'+
+        '<td style="padding:6px 6px;"><span style="color:'+orgCol+';font-weight:700;font-size:10px;">'+r.org+'</span></td>'+
+        '<td style="padding:6px 6px;font-size:10px;color:var(--text);max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+r.cust+'</td>'+
+        '<td style="padding:6px 6px;font-size:9px;color:var(--muted);">SHP-88990'+(i+1)+'</td>'+
+        '<td style="padding:6px 6px;font-size:10px;color:var(--text);">'+rsdShort+'</td>'+
+        '<td style="padding:6px 6px;text-align:right;font-size:10px;color:var(--gold);font-weight:600;">'+fmtAED(r.val)+'</td>'+
+        '<td style="padding:6px 6px;font-size:9px;color:var(--muted);">'+r.cat+'</td>'+
+        '<td style="padding:6px 6px;text-align:center;"><span style="font-size:9px;padding:2px 6px;background:'+aBg+';color:'+aCol+';">'+aLabel+'</span></td>'+
+        '</tr>';
+    }).join('');
   }
 }
 
