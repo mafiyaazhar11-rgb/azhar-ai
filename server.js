@@ -747,7 +747,7 @@ loadReturnsFromDB();
 
 app.post('/api/returns/upload', async function(req, res) {
   try {
-    var summary = JSON.parse(req.body.summary || '{}');
+    var summary = (typeof req.body.summary === 'string') ? JSON.parse(req.body.summary || '{}') : (req.body.summary || {});
     var uploadedBy = req.body.uploadedBy || 'Admin';
     var fileName = req.body.fileName || (req.file && req.file.originalname) || 'returns.csv';
     var totalOrders = parseInt(req.body.totalOrders) || 0;
@@ -760,7 +760,8 @@ app.post('/api/returns/upload', async function(req, res) {
     };
     var dbOk = await dbSaveReturns(uploadedBy, fileName, totalOrders, summary);
     saveJSON(RETURNS_FILE, returnsData);
-    console.log('Returns saved:', totalOrders, 'orders', dbOk ? '(DB+file)' : '(file only)');
+    var summaryKeys = Object.keys(summary);
+    console.log('Returns saved:', totalOrders, 'orders, summary keys:', summaryKeys, dbOk ? '(DB+file)' : '(file only)');
     res.json({ success: true });
   } catch(e) {
     console.error('Returns upload error:', e.message);
