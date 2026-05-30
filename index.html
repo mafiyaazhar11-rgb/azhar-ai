@@ -2760,8 +2760,8 @@ function saveReturnsToServer(fileName){
 }
 
 function getFilteredReturnsAll(){
-  var saved = retFilters;
-  retFilters = {wh:'all',month:'all',cat:'all',bu:'all'};
+  var saved = JSON.parse(JSON.stringify(retFilters));
+  retFilters = {wh:'all',month:'all',cat:'all',bu:'all',area:'all'};
   var rows = getFilteredReturns();
   retFilters = saved;
   return rows;
@@ -2966,12 +2966,15 @@ function normalizeCustomer(raw){
 }
 
 function normalizeBU(bu){
-  var b=String(bu||'').toLowerCase().replace(/[^a-z]/g,'');
-  if(b.includes('food')&&(b.includes('dcf')||b.includes('dcv')||!b.includes('non')))return'Food';
-  if(b.includes('nonfood')||b.includes('nonf')||b.includes('dgc')||b.includes('dgs')||b.includes('dll'))return'Non-Food';
+  var raw=String(bu||'').toUpperCase().trim();
+  var b=raw.toLowerCase().replace(/[^a-z]/g,'');
+  if(raw.includes('NON FOOD')||raw.includes('NON-FOOD')||b.includes('nonfood')||b.includes('nonf'))return'Non-Food';
+  if(b.includes('dgc')||b.includes('dgs')||b.includes('dll')||b.includes('dsn'))return'Non-Food';
+  if(raw==='FOOD'||b==='food')return'Food';
+  if(b.includes('dcv')||b.includes('dcf'))return'Food';
+  if(b.includes('food')&&!b.includes('non'))return'Food';
   if(b.includes('salon'))return'Salon';
   if(b.includes('zooz'))return'Zooz';
-  if(b.includes('food')&&!b.includes('non'))return'Food';
   return'Other';
 }
 
@@ -2998,17 +3001,26 @@ function handleReturnsUpload(input){
       var rows=[];
       if(ext==='csv'){
         var text=e.target.result;
-        var lines=text.split('\n').filter(function(l){return l.trim();});
+        // Remove BOM if present
+        if(text.charCodeAt(0)===0xFEFF) text=text.slice(1);
+        var lines=text.split('\n').map(function(l){return l.replace(/\r$/,'');}).filter(function(l){return l.trim();});
         function parseCSVLine(line){
-          var r=[],c='',q=false;
-          for(var i=0;i<line.length;i++){var ch=line[i];if(ch==='"'){q=!q;}else if(ch===','&&!q){r.push(c.trim());c='';}else{c+=ch;}}
-          r.push(c.trim());return r;
+          var result=[],cell='',inQ=false;
+          for(var i=0;i<line.length;i++){
+            var ch=line[i];
+            if(ch==='"'){inQ=!inQ;}
+            else if(ch===','&&!inQ){result.push(cell.trim());cell='';}
+            else{cell+=ch;}
+          }
+          result.push(cell.trim());
+          return result;
         }
         var hdrs=parseCSVLine(lines[0]).map(function(h){return h.replace(/"/g,'').trim();});
         for(var i=1;i<lines.length;i++){
           if(!lines[i].trim())continue;
           var vals=parseCSVLine(lines[i]);
-          var obj={};hdrs.forEach(function(h,j){obj[h]=(vals[j]||'').replace(/"/g,'').trim();});
+          var obj={};
+          hdrs.forEach(function(h,j){obj[h]=(vals[j]||'').replace(/"/g,'').trim();});
           rows.push(obj);
         }
       } else {
@@ -3019,7 +3031,7 @@ function handleReturnsUpload(input){
       if(!rows.length){alert('No data found');return;}
       RET_RAW=rows;
       renderReturns();
-      setTimeout(function(){ saveReturnsToServer(file.name); }, 500);
+      setTimeout(function(){ saveReturnsToServer(file.name); }, 1000);
       var badge=document.getElementById('ret-status-badge');
       if(badge){badge.style.display='block';document.getElementById('ret-last-date').textContent=new Date().toLocaleDateString('en-AE');}
       // Hide upload box after upload, keep star for re-upload
