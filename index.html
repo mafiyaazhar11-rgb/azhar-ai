@@ -2273,14 +2273,14 @@ function processBacklogRows(rows, fileName, saveRaw){
     if(cust){
       if(!custMap[cust])custMap[cust]={count:0,val:0,org:org,oldestRSD:''};
       custMap[cust].count++; custMap[cust].val+=val;
-      if(!custMap[cust].oldestRSD || row[C.date]<custMap[cust].oldestRSD) custMap[cust].oldestRSD=row[C.date];
+      if(!custMap[cust].oldestRSD || String(row[C.date]||'')<custMap[cust].oldestRSD) custMap[cust].oldestRSD=String(row[C.date]||'');
       custMap[cust].org=org;
     }
     // Account type tracking
     var accType = row[C.accType]||'Unknown';
     if(accType){ if(!accTypeMap[accType])accTypeMap[accType]={count:0,val:0}; accTypeMap[accType].count++; accTypeMap[accType].val+=val; }
     // RSD aging
-    var rsdRaw=row[C.date]||''; var rsdBucket='Unknown';
+    var rsdRaw=String(row[C.date]||''); var rsdBucket='Unknown';
     try{
       var rsdParts=rsdRaw.split(' ')[0].split(/[-\/]/);
       var rsdDate=new Date(rsdParts[0],rsdParts[1]-1,rsdParts[2]);
