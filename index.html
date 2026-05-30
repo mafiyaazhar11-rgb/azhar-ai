@@ -2229,16 +2229,16 @@ function processBacklogRows(rows, fileName, saveRaw){
   var keys = Object.keys(rows[0]);
   function fc(){ var names=Array.prototype.slice.call(arguments); return keys.find(function(k){return names.some(function(n){return k.toUpperCase().includes(n.toUpperCase());});})||null; }
   var C = {
-    org:      fc('ORG','ORGNIZATION','ORGNISATION','ORGNAIZATION','BU'),
+    org:      fc('ORG','ORGNIZATION','ORGNISATION','ORGNAIZATION'),
     val:      fc('VALUE','SUM OF VALUE','AMOUNT','AMT','TOTAL_VALUE','TOTAL VALUE'),
-    cat:      fc('COMMENTS','COMMENT','CATEGORY','CATERGORY','ROW LABELS','ROW LABEL','REMARK','REMARKS'),
+    cat:      fc('STATUS'),
     statusCol: fc('STATUS'),
     accType:  fc('ACCOUNT TYPE','ACCOUNTTYPE','ACC TYPE'),
-    buCol:    fc('CATEGORY','BU','FOOD'),
+    buCol:    fc('CATEGORY'),
     accName:  fc('ACCOUNT NAME','ACCOUNTNAME','ACC NAME'),
     customer: fc('CUSTOMER_NAME','CUSTOMER NAME','CUSTOMERNAME','CUSTUMER','CUSTMER','CUSTOMER','CUST'),
-    shipment: fc('SHIPMENT_ID','SHIPMENTID','SHIPMENT ID','SHIPMENT','COUNT OF SHIPMENT','SHIP ID'),
-    date:     fc('REQUESTEDDELIVERYDATE','REQUESTED DELIVERY','RSD','DELIVERY DATE')
+    shipment: fc('SHIPMENT_ID','SHIPMENTID','SHIPMENT ID'),
+    date:     fc('REQUESTEDDELIVERYDATE','REQUESTED DELIVERY DATE')
   };
 
   var orgMap={}, catMap={}, custMap={}, accTypeMap={}, rsdAging={}, actionRows=[];
@@ -2249,11 +2249,11 @@ function processBacklogRows(rows, fileName, saveRaw){
     var org = normalizeORG(row[C.org]);
     if(blFilters.org!=='all' && org!==blFilters.org) return false;
     if(blFilters.bu!=='all'){
-      var rowOrg = normalizeORG(row[C.org]);
-      var foodOrgs = ['DCV','DCF'];
-      var isFoodOrg = foodOrgs.indexOf(rowOrg) !== -1;
-      if(blFilters.bu==='food' && !isFoodOrg) return false;
-      if(blFilters.bu==='nonfood' && isFoodOrg) return false;
+      var buVal = String(row[C.buCol]||'').toUpperCase().replace(/[- ]/g,'');
+      var isFoodRow = buVal==='FOOD';
+      var isNFRow = buVal==='NONFOOD'||buVal==='NON FOOD'.replace(' ','');
+      if(blFilters.bu==='food' && !isFoodRow) return false;
+      if(blFilters.bu==='nonfood' && !isNFRow) return false;
     }
     return true;
   });
@@ -2272,10 +2272,11 @@ function processBacklogRows(rows, fileName, saveRaw){
       if(cust && catMap[cat].accounts.indexOf(cust)===-1) catMap[cat].accounts.push(cust);
     }
     if(cust){
-      if(!custMap[cust])custMap[cust]={count:0,val:0,org:org,oldestRSD:''};
+      if(!custMap[cust])custMap[cust]={count:0,val:0,org:org,oldestRSD:'',topCat:''};
       custMap[cust].count++; custMap[cust].val+=val;
       if(!custMap[cust].oldestRSD || (rsdStr && rsdStr<custMap[cust].oldestRSD)) custMap[cust].oldestRSD=rsdStr||custMap[cust].oldestRSD;
       custMap[cust].org=org;
+      if(val>(custMap[cust].topVal||0)){custMap[cust].topVal=val;custMap[cust].topCat=cat;}
     }
     // Account type tracking
     var accType = row[C.accType]||'Unknown';
@@ -2315,8 +2316,8 @@ function processBacklogRows(rows, fileName, saveRaw){
 
   BL_DATA = { totalOrders:totalOrders, totalVal:totalVal, advance:advance, whBacklog:whBacklog, creditHold:creditHold, cutOffFrozen:cutOffFrozen, unplannedFrozen:unplannedFrozen, critical:critical, orgMap:orgMap, catMap:catMap, custMap:custMap, accTypeMap:accTypeMap, rsdAging:rsdAging, actionRows:actionRows, fileName:fileName, date:new Date().toLocaleDateString('en-AE') };
   renderBacklog();
-  // Save to server so data persists after refresh
-  saveBacklogToServer(fileName, totalOrders);
+  // Only save to server on actual file upload (not on filter)
+  if(saveRaw!==false){ saveBacklogToServer(fileName, totalOrders); }
 }
 
 function renderBacklog(){
@@ -2327,16 +2328,21 @@ function renderBacklog(){
   var badge=document.getElementById('bl-status-badge');
   if(badge){ badge.style.display='block'; document.getElementById('bl-last-date').textContent=d.date; }
 
-  var whBL=(d.catMap&&d.catMap['Before Cut-Off'])||d.whBacklog||{count:0,val:0};
-  var afterCutCount=((d.catMap&&d.catMap['Cut-Off Frozen'])||{count:0}).count+((d.catMap&&d.catMap['Unplanned Frozen'])||{count:0}).count;
-  var afterCutVal=((d.catMap&&d.catMap['Cut-Off Frozen'])||{val:0}).val+((d.catMap&&d.catMap['Unplanned Frozen'])||{val:0}).val;
-  var actionNeeded=(d.catMap&&d.catMap['Before Cut-Off'])?(d.catMap['Before Cut-Off'].count):0;
+  // Always compute from catMap (works for both filtered and unfiltered)
+  var cm=d.catMap||{};
+  var whBL=cm['Before Cut-Off']||{count:0,val:0};
+  var advOrders=cm['RSD >30 Advance']||{count:0,val:0};
+  var cutFrozen=cm['Cut-Off Frozen']||{count:0,val:0};
+  var unplanFrozen=cm['Unplanned Frozen']||{count:0,val:0};
+  var afterCutCount=cutFrozen.count+unplanFrozen.count;
+  var afterCutVal=cutFrozen.val+unplanFrozen.val;
+  var actionNeeded=whBL.count;
 
   // ── ROW 1: 5 KPI CARDS ──
   var kpis=[
     {icon:'📋',label:'TOTAL POOL ORDERS',val:d.totalOrders.toLocaleString(),sub:fmtAED(d.totalVal)+' Total Orders in Pool',color:'var(--gold)',border:'var(--border)'},
-    {icon:'🛡',label:'WH BACKLOG PURE RISK',val:whBL.count.toLocaleString(),sub:'Before Cut-Off Risk\n'+fmtAED(whBL.val),color:'#e84b4b',border:'rgba(232,75,75,0.5)'},
-    {icon:'📅',label:'ADVANCE ORDERS',val:d.advance.count.toLocaleString(),sub:'RSD > 30 Days / Future Orders\n'+fmtAED(d.advance.val),color:'var(--muted)',border:'var(--border)'},
+    {icon:'🛡',label:'WH BACKLOG PURE RISK',val:whBL.count.toLocaleString(),sub:'Before Cut-Off Risk\n'+fmtAED(whBL.val),color:whBL.count>0?'#e84b4b':'var(--muted)',border:whBL.count>0?'rgba(232,75,75,0.5)':'var(--border)'},
+    {icon:'📅',label:'ADVANCE ORDERS',val:advOrders.count.toLocaleString(),sub:'RSD > 30 Days / Future Orders\n'+fmtAED(advOrders.val),color:'var(--muted)',border:'var(--border)'},
     {icon:'🔒',label:'CREDIT HOLD / FROZEN',val:afterCutCount.toLocaleString(),sub:'Credit Hold + Frozen Pool\n'+fmtAED(afterCutVal),color:'#c9a84c',border:'rgba(201,168,76,0.4)'},
     {icon:'⚠',label:'ACTION REQUIRED TODAY',val:actionNeeded.toLocaleString(),sub:'Orders Need Immediate\nFollow-up',color:'#e84b4b',border:'rgba(232,75,75,0.3)'}
   ];
@@ -2438,6 +2444,14 @@ function renderBacklog(){
 
   // ── SECTION 5: ACTION TABLE ──
   var actionEl=document.getElementById('bl-action-table');
+  // If actionRows empty but custMap has data, rebuild from custMap
+  if((!d.actionRows||!d.actionRows.length) && d.custMap){
+    d.actionRows=[];
+    Object.keys(d.custMap).forEach(function(n){
+      var c=d.custMap[n];
+      d.actionRows.push({org:c.org||'',cust:n,ship:'',rsd:c.oldestRSD||'',val:c.val,cat:c.topCat||'RSD >30 Advance'});
+    });
+  }
   if(actionEl && d.actionRows){
     var topActions=d.actionRows.slice().sort(function(a,b){return b.val-a.val;}).slice(0,10);
     var actionColorMap={'Before Cut-Off':'WH to Pick / Escalate','RSD >30 Advance':'Advance / No Action Today','Cut-Off Frozen':'Monitor','Unplanned Frozen':'Priority Monitoring','Credit Hold':'Monitor'};
