@@ -2007,46 +2007,64 @@ function blFilter(type, val){
 function filterFromFullData(){
   if(!BL_FULL_DATA) return;
   var fd = BL_FULL_DATA;
-  // Filter orgMap
-  // Build orgMap from filtered actions
-  var newOrgMap = {};
-  newActions.forEach(function(r){
-    if(!newOrgMap[r.org]) newOrgMap[r.org]={count:0,val:0};
-    newOrgMap[r.org].count++; newOrgMap[r.org].val+=r.val;
-  });
-  var newTotal=newActions.length;
-  var newVal=newActions.reduce(function(s,r){return s+r.val;},0);
-  // Filter custMap by org
-  var newCustMap = {};
-  // Build custMap from filtered actions for cat filter accuracy
-  newActions.forEach(function(r){
-    if(!newCustMap[r.cust]) newCustMap[r.cust]={count:0,val:0,org:r.org,oldestRSD:r.rsd,topCat:r.cat};
-    newCustMap[r.cust].count++;
-    newCustMap[r.cust].val+=r.val;
-    if(r.rsd && (!newCustMap[r.cust].oldestRSD || r.rsd<newCustMap[r.cust].oldestRSD)) newCustMap[r.cust].oldestRSD=r.rsd;
-  });
-  // Filter actionRows by org
-  var newActions=(fd.actionRows||[]).filter(function(r){
+  var foodOrgs = ['DCV','DCF'];
+
+  // STEP 1: Filter actionRows first
+  var newActions = (fd.actionRows||[]).filter(function(r){
     if(blFilters.org!=='all' && r.org!==blFilters.org) return false;
-    var foodOrgs=['DCV','DCF'];
     if(blFilters.bu==='food' && foodOrgs.indexOf(r.org)===-1) return false;
     if(blFilters.bu==='nonfood' && foodOrgs.indexOf(r.org)!==-1) return false;
     if(blFilters.cat!=='all' && r.cat!==blFilters.cat) return false;
     return true;
   });
-  // Rebuild catMap from filtered actions
+
+  // STEP 2: Rebuild orgMap from filtered actions
+  var newOrgMap = {};
+  newActions.forEach(function(r){
+    if(!newOrgMap[r.org]) newOrgMap[r.org] = {count:0, val:0};
+    newOrgMap[r.org].count++;
+    newOrgMap[r.org].val += r.val;
+  });
+
+  // STEP 3: Rebuild catMap from filtered actions
   var newCatMap = {};
   newActions.forEach(function(r){
-    if(!newCatMap[r.cat]) newCatMap[r.cat]={count:0,val:0,orgs:[],accounts:[]};
+    if(!newCatMap[r.cat]) newCatMap[r.cat] = {count:0, val:0, orgs:[], accounts:[]};
     newCatMap[r.cat].count++;
-    newCatMap[r.cat].val+=r.val;
+    newCatMap[r.cat].val += r.val;
     if(r.org && newCatMap[r.cat].orgs.indexOf(r.org)===-1) newCatMap[r.cat].orgs.push(r.org);
     if(r.cust && newCatMap[r.cat].accounts.indexOf(r.cust)===-1) newCatMap[r.cat].accounts.push(r.cust);
   });
+
+  // STEP 4: Rebuild custMap from filtered actions
+  var newCustMap = {};
+  newActions.forEach(function(r){
+    if(!newCustMap[r.cust]) newCustMap[r.cust] = {count:0, val:0, org:r.org, oldestRSD:r.rsd, topCat:r.cat};
+    newCustMap[r.cust].count++;
+    newCustMap[r.cust].val += r.val;
+    if(r.rsd && (!newCustMap[r.cust].oldestRSD || r.rsd < newCustMap[r.cust].oldestRSD))
+      newCustMap[r.cust].oldestRSD = r.rsd;
+  });
+
+  // STEP 5: Rebuild rsdAging from filtered actions
+  var newRsdAging = {};
+  newActions.forEach(function(r){
+    var b = r.rsdBucket||'Unknown';
+    if(!newRsdAging[b]) newRsdAging[b]=0;
+    newRsdAging[b]++;
+  });
+
+  var newTotal = newActions.length;
+  var newVal = newActions.reduce(function(s,r){return s+r.val;}, 0);
+
   BL_DATA = Object.assign({}, fd, {
-    totalOrders: newTotal, totalVal: newVal,
-    orgMap: newOrgMap, catMap: newCatMap,
-    custMap: newCustMap, actionRows: newActions
+    totalOrders: newTotal,
+    totalVal: newVal,
+    orgMap: newOrgMap,
+    catMap: newCatMap,
+    custMap: newCustMap,
+    actionRows: newActions,
+    rsdAging: newRsdAging
   });
   renderBacklog();
 }
@@ -2390,7 +2408,7 @@ function processBacklogRows(rows, fileName, saveRaw){
       }
     }catch(e){}
     if(!rsdAging[rsdBucket])rsdAging[rsdBucket]=0; rsdAging[rsdBucket]++;
-    actionRows.push({org:org,cust:cust,ship:row[C.shipment]||'',rsd:rsdStr,val:val,cat:cat});
+    actionRows.push({org:org,cust:cust,ship:row[C.shipment]||'',rsd:rsdStr,rsdBucket:rsdBucket,val:val,cat:cat});
   });
 
   var advance = catMap['RSD >30 Advance']||{count:0,val:0};
