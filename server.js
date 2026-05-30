@@ -358,22 +358,25 @@ function parseDispatch(buffer) {
     return { route:route, drops:Object.keys(routes[route].locs).length, driver:routes[route].driver, value:Math.round(routes[route].value) };
   }).sort(function(a,b) { return b.drops-a.drops; }).slice(0,30);
 
-  var driverDrops = {};
-  Object.keys(routes).forEach(function(route) {
-    var v = routes[route]; if (!v.driver) return;
-    if (!driverDrops[v.driver]) driverDrops[v.driver] = {drops:0, value:0};
-    driverDrops[v.driver].drops += Object.keys(v.locs).length;
-    driverDrops[v.driver].value += v.value||0;
+  // Count actual orders per driver (not route drops)
+  var driverOrders = {};
+  rows.forEach(function(row) {
+    var drv = C.driver && row[C.driver] ? extractDriverName(row[C.driver]) : '';
+    if (!drv) return;
+    var amt = C.amount ? parseFloat(row[C.amount]) || 0 : 0;
+    if (!driverOrders[drv]) driverOrders[drv] = {orders:0, value:0};
+    driverOrders[drv].orders++;
+    driverOrders[drv].value += amt;
   });
-  var topDrivers = Object.keys(driverDrops).map(function(name) {
-    return { name:name, orders:driverDrops[name].drops, value:Math.round(driverDrops[name].value) };
+  var topDrivers = Object.keys(driverOrders).map(function(name) {
+    return { name:name, orders:driverOrders[name].orders, value:Math.round(driverOrders[name].value) };
   }).sort(function(a,b) { return b.orders-a.orders; }).slice(0,5);
 
   return {
     total_orders: totalOrders, total_value: Math.round(totalValue),
     total_routes: Object.keys(routes).length,
-    total_drivers: Object.keys(driverSet).length || Object.keys(routes).length,
-    total_drops: Object.keys(routes).reduce(function(s,r) { return s+Object.keys(routes[r].locs).length; }, 0),
+    total_drivers: Object.keys(driverOrders).length || Object.keys(driverSet).length,
+    total_drops: totalOrders,
     food_orders: foodOrders, food_value: Math.round(foodValue),
     non_food_orders: nonFoodOrders, non_food_value: Math.round(nonFoodValue),
     pl_orders: plOrders, van_orders: vanOrders,
@@ -439,6 +442,11 @@ app.post('/api/dispatch/upload', upload.single('file'), async function(req, res)
     // Also save to file as backup
     var entry = { uploadedAt:new Date().toISOString(), uploadedBy:uploadedBy, csvText:csv.substring(0,200000), summary:summary, date:dateKey };
     dispatchHistory[dateKey] = entry;
+    // Keep only last 7 dates
+    var histKeys = Object.keys(dispatchHistory).sort().reverse();
+    if (histKeys.length > 7) {
+      histKeys.slice(7).forEach(function(k) { delete dispatchHistory[k]; });
+    }
     currentDispatch = entry;
     var keys = Object.keys(dispatchHistory).sort();
     while (keys.length > 60) delete dispatchHistory[keys.shift()];
