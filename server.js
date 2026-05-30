@@ -383,7 +383,7 @@ function parseDispatch(buffer) {
     total_orders: totalOrders, total_value: Math.round(totalValue),
     total_routes: Object.keys(routes).length,
     total_drivers: Object.keys(driverOrders).length || Object.keys(driverSet).length,
-    total_drops: totalOrders,
+    total_drops: Object.keys(routes).reduce(function(s,r){ return s + Object.keys(routes[r].locs).length; }, 0),
     food_orders: foodOrders, food_value: Math.round(foodValue),
     non_food_orders: nonFoodOrders, non_food_value: Math.round(nonFoodValue),
     pl_orders: plOrders, van_orders: vanOrders,
