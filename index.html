@@ -2236,7 +2236,8 @@ function processBacklogRows(rows, fileName, saveRaw){
     buCol:    fc('CATEGORY','BU','FOOD'),
     accName:  fc('ACCOUNT NAME','ACCOUNTNAME','ACC NAME'),
     customer: fc('CUSTOMER_NAME','CUSTOMER NAME','CUSTOMERNAME','CUSTUMER','CUSTMER','CUSTOMER','CUST'),
-    shipment: fc('SHIPMENT_ID','SHIPMENTID','SHIPMENT ID','SHIPMENT','COUNT OF SHIPMENT','SHIP ID')
+    shipment: fc('SHIPMENT_ID','SHIPMENTID','SHIPMENT ID','SHIPMENT','COUNT OF SHIPMENT','SHIP ID'),
+    date:     fc('REQUESTEDDELIVERYDATE','REQUESTED DELIVERY','RSD','DELIVERY DATE')
   };
 
   var orgMap={}, catMap={}, custMap={}, accTypeMap={}, rsdAging={}, actionRows=[];
@@ -2247,10 +2248,11 @@ function processBacklogRows(rows, fileName, saveRaw){
     var org = normalizeORG(row[C.org]);
     if(blFilters.org!=='all' && org!==blFilters.org) return false;
     if(blFilters.bu!=='all'){
-      var buRaw = String(row[C.buCol]||row[C.accType]||'').toUpperCase().replace(/[^A-Z]/g,'');
-      var isFoodRow = buRaw.includes('FOOD') && !buRaw.includes('NONFOOD') && !buRaw.includes('NONF');
-      if(blFilters.bu==='food' && !isFoodRow) return false;
-      if(blFilters.bu==='nonfood' && isFoodRow) return false;
+      var rowOrg = normalizeORG(row[C.org]);
+      var foodOrgs = ['DCV','DCF'];
+      var isFoodOrg = foodOrgs.indexOf(rowOrg) !== -1;
+      if(blFilters.bu==='food' && !isFoodOrg) return false;
+      if(blFilters.bu==='nonfood' && isFoodOrg) return false;
     }
     return true;
   });
