@@ -1004,11 +1004,15 @@ footer span{color:var(--gold);}
           </div>
         </div>
 
-        <!-- ROW 3: STATUS + WAREHOUSE VALUE TABLE -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+        <!-- ROW 3: STATUS + TEMP + WAREHOUSE TABLE -->
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px;">
           <div style="background:var(--surface);border:1px solid var(--border);padding:16px;">
             <div style="font-size:9px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;">📊 Order Status Breakdown</div>
             <div id="sales-status-bars"></div>
+          </div>
+          <div style="background:var(--surface);border:1px solid var(--border);padding:16px;">
+            <div style="font-size:9px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;">❄ Temperature Split</div>
+            <div id="sales-temp-bars"></div>
           </div>
           <div style="background:var(--surface);border:1px solid var(--border);padding:16px;">
             <div style="font-size:9px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;">🏭 Warehouse Value Summary</div>
@@ -3312,7 +3316,9 @@ function handleSalesUpload(input){
       } else {
         var data = new Uint8Array(e.target.result);
         var wb = XLSX.read(data, {type:'array'});
-        var ws = wb.Sheets[wb.SheetNames[0]];
+        // Use 'Report' sheet if exists, otherwise first sheet
+        var sheetName = wb.SheetNames.indexOf('Report')!==-1 ? 'Report' : wb.SheetNames[0];
+        var ws = wb.Sheets[sheetName];
         rows = XLSX.utils.sheet_to_json(ws, {defval:''});
       }
       processSalesData(rows, file.name);
@@ -3333,12 +3339,14 @@ function processSalesData(rows, fileName){
     wh:     fc('WAREHOUSE','WH'),
     val:    fc('TOTAL','VALUE','AMOUNT'),
     status: fc('STATUS'),
-    onhold: fc('ON HOLD','HOLD')
+    onhold: fc('ON HOLD','HOLD'),
+    temp:   fc('TEMPERATURE','TEMP')
   };
 
   var foodOrgs = ['DCV','DCF'];
-  var orgMap = {}, statusMap = {};
+  var orgMap = {}, statusMap = {}, tempMap = {};
   var totalOrders=0, totalVal=0;
+  var frozenOrders=0, frozenVal=0, ambientOrders=0, ambientVal=0;
   var foodOrders=0, foodVal=0, nfOrders=0, nfVal=0, otherOrders=0, otherVal=0;
 
   rows.forEach(function(row){
@@ -3353,13 +3361,22 @@ function processSalesData(rows, fileName){
     if(!orgMap[wh]) orgMap[wh]={orders:0,val:0,bu:''};
     orgMap[wh].orders++; orgMap[wh].val+=val;
 
-    if(foodOrgs.indexOf(wh)!==-1){ foodOrders++; foodVal+=val; orgMap[wh].bu='Food'; }
-    else if(wh==='DGC'){ nfOrders++; nfVal+=val; orgMap[wh].bu='Non-Food'; }
-    else { otherOrders++; otherVal+=val; orgMap[wh].bu='Other'; }
+    var buLabel = wh==='DCV'?'Food':wh==='DCF'?'Food':wh==='DGC'?'Non-Food':wh==='DSN'?'SharkNinja':wh==='DGS'?'GSEB':wh==='DPS'?'Van':'Other';
+    orgMap[wh].bu = buLabel;
+    if(wh==='DCV'||wh==='DCF'){ foodOrders++; foodVal+=val; }
+    else if(wh==='DGC'){ nfOrders++; nfVal+=val; }
+    else { otherOrders++; otherVal+=val; }
 
     var skey = onhold?'On Hold':status||'Booked';
     if(!statusMap[skey]) statusMap[skey]={orders:0,val:0};
     statusMap[skey].orders++; statusMap[skey].val+=val;
+
+    // Temperature
+    var temp = String(row[C.temp]||'').trim()||'Unknown';
+    if(!tempMap[temp]) tempMap[temp]={orders:0,val:0};
+    tempMap[temp].orders++; tempMap[temp].val+=val;
+    if(temp==='Frozen'){ frozenOrders++; frozenVal+=val; }
+    else { ambientOrders++; ambientVal+=val; }
   });
 
   SALES_DATA = {
@@ -3367,7 +3384,9 @@ function processSalesData(rows, fileName){
     foodOrders:foodOrders, foodVal:foodVal,
     nfOrders:nfOrders, nfVal:nfVal,
     otherOrders:otherOrders, otherVal:otherVal,
-    orgMap:orgMap, statusMap:statusMap,
+    frozenOrders:frozenOrders, frozenVal:frozenVal,
+    ambientOrders:ambientOrders, ambientVal:ambientVal,
+    orgMap:orgMap, statusMap:statusMap, tempMap:tempMap,
     fileName:fileName, date:new Date().toLocaleDateString('en-AE')
   };
 
@@ -3396,8 +3415,8 @@ function renderSalesDashboard(){
     {icon:'📋',label:'TOTAL ORDERS',val:d.totalOrders.toLocaleString(),sub:fmtAED(d.totalVal),color:'var(--gold)',border:'var(--border)'},
     {icon:'🍽',label:'FOOD (DCV+DCF)',val:d.foodOrders.toLocaleString(),sub:fmtAED(d.foodVal),color:'#e84b4b',border:'rgba(232,75,75,0.4)'},
     {icon:'📦',label:'NON-FOOD (DGC)',val:d.nfOrders.toLocaleString(),sub:fmtAED(d.nfVal),color:'#5b8dee',border:'rgba(91,141,238,0.4)'},
-    {icon:'🏭',label:'OTHERS (DSN+DGS)',val:d.otherOrders.toLocaleString(),sub:fmtAED(d.otherVal),color:'#c9a84c',border:'rgba(201,168,76,0.4)'},
-    {icon:'📅',label:'UPLOAD DATE',val:d.date,sub:d.fileName?d.fileName.substring(0,20):'',color:'var(--muted)',border:'var(--border)'}
+    {icon:'🏭',label:'DSN+DGS+DPS',val:d.otherOrders.toLocaleString(),sub:fmtAED(d.otherVal)+' · SharkNinja/GSEB/Van',color:'#c9a84c',border:'rgba(201,168,76,0.4)'},
+    {icon:'❄',label:'FROZEN',val:(d.frozenOrders||0).toLocaleString(),sub:fmtAED(d.frozenVal||0)+' · DCV Frozen',color:'#5b8dee',border:'rgba(91,141,238,0.4)'}
   ];
   document.getElementById('sales-kpis').innerHTML=kpis.map(function(k){
     return '<div style="background:var(--card);border:1px solid '+k.border+';padding:14px 16px;">'+
@@ -3414,7 +3433,7 @@ function renderSalesDashboard(){
   var orgKeys = Object.keys(d.orgMap).sort(function(a,b){return d.orgMap[b].val-d.orgMap[a].val;});
   var maxOrgVal = d.orgMap[orgKeys[0]] ? d.orgMap[orgKeys[0]].val : 1;
   var orgColMap = {DCV:'#e84b4b',DCF:'#e8854b',DGC:'#5b8dee',DSN:'#c9a84c',DGS:'#4ecb8d',DPS:'#9b59b6'};
-  var buColMap = {Food:'#e84b4b','Non-Food':'#5b8dee',Other:'#c9a84c'};
+  var buColMap = {Food:'#e84b4b','Non-Food':'#5b8dee',SharkNinja:'#4ecb8d',GSEB:'#c9a84c',Van:'#e8854b',Other:'#9b59b6'};
   document.getElementById('sales-org-bars').innerHTML=orgKeys.map(function(org){
     var v=d.orgMap[org];
     var pct=maxOrgVal>0?Math.round(v.val/maxOrgVal*100):0;
@@ -3435,11 +3454,18 @@ function renderSalesDashboard(){
   }).join('');
 
   // BU DONUT
-  var buData = [
-    {label:'Food (DCV+DCF)',orders:d.foodOrders,val:d.foodVal,color:'#e84b4b'},
-    {label:'Non-Food (DGC)',orders:d.nfOrders,val:d.nfVal,color:'#5b8dee'},
-    {label:'Others',orders:d.otherOrders,val:d.otherVal,color:'#c9a84c'}
-  ].filter(function(b){return b.orders>0;});
+  // Build BU data from orgMap directly
+  var buGroups = {};
+  Object.keys(d.orgMap||{}).forEach(function(org){
+    var v = d.orgMap[org];
+    var bu = v.bu||'Other';
+    if(!buGroups[bu]) buGroups[bu]={orders:0,val:0};
+    buGroups[bu].orders+=v.orders; buGroups[bu].val+=v.val;
+  });
+  var buColorMap={'Food':'#e84b4b','Non-Food':'#5b8dee','SharkNinja':'#4ecb8d','GSEB':'#c9a84c','Van':'#e8854b','Other':'#9b59b6'};
+  var buData = Object.keys(buGroups).map(function(bu){
+    return {label:bu,orders:buGroups[bu].orders,val:buGroups[bu].val,color:buColorMap[bu]||'#888'};
+  }).filter(function(b){return b.orders>0;}).sort(function(a,b){return b.orders-a.orders;});
   if(SALES_BU_CHART){SALES_BU_CHART.destroy();}
   var ctx=document.getElementById('sales-bu-chart');
   if(ctx) SALES_BU_CHART=new Chart(ctx,{type:'doughnut',data:{
@@ -3453,6 +3479,30 @@ function renderSalesDashboard(){
       '<div><div style="font-size:11px;color:var(--text);">'+b.label+'</div>'+
       '<div style="font-size:10px;color:var(--muted);">'+b.orders+' orders · '+pct+' · '+fmtAED(b.val)+'</div></div></div>';
   }).join('');
+
+  // TEMP BARS
+  var tempEl=document.getElementById('sales-temp-bars');
+  if(tempEl && d.tempMap){
+    var tempKeys=Object.keys(d.tempMap).sort(function(a,b){return d.tempMap[b].orders-d.tempMap[a].orders;});
+    var maxTemp=tempKeys.length>0?d.tempMap[tempKeys[0]].orders:1;
+    tempEl.innerHTML=tempKeys.map(function(t){
+      var v=d.tempMap[t];
+      var pct=maxTemp>0?Math.round(v.orders/maxTemp*100):0;
+      var col=t==='Frozen'?'#5b8dee':t==='Ambient'?'#4ecb8d':'#c9a84c';
+      var share=d.totalOrders>0?(v.orders/d.totalOrders*100).toFixed(1)+'%':'0%';
+      return '<div style="margin-bottom:14px;">'+
+        '<div style="display:flex;justify-content:space-between;margin-bottom:4px;">'+
+        '<span style="font-size:12px;color:var(--text);font-weight:600;">'+t+'</span>'+
+        '<div style="display:flex;gap:10px;">'+
+        '<span style="font-size:11px;color:var(--text);">'+v.orders+' orders</span>'+
+        '<span style="font-size:11px;font-weight:700;color:var(--gold);">'+fmtAED(v.val)+'</span>'+
+        '<span style="font-size:10px;color:var(--muted);">'+share+'</span>'+
+        '</div></div>'+
+        '<div style="height:6px;background:var(--border);">'+
+        '<div style="height:6px;width:'+pct+'%;background:'+col+';"></div>'+
+        '</div></div>';
+    }).join('');
+  }
 
   // STATUS BARS
   var statKeys=Object.keys(d.statusMap).sort(function(a,b){return d.statusMap[b].orders-d.statusMap[a].orders;});
