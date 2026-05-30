@@ -1055,7 +1055,7 @@ function buildDashboard(d){
   document.getElementById('k-orders').textContent=(s.total_orders||0).toLocaleString();
   document.getElementById('k-routes-sub').textContent=(s.total_routes||0)+' routes  '+(s.total_drivers||0)+' drivers';
   const dropsEl=document.getElementById('k-drops');
-  if(dropsEl) dropsEl.textContent=(s.total_drops||0).toLocaleString()+' total drops';
+  if(dropsEl) dropsEl.textContent=(s.total_drops||0).toLocaleString()+' total orders';
   document.getElementById('k-value').textContent='AED '+val;
 
   // FOOD
@@ -1128,7 +1128,7 @@ function buildDashboard(d){
     document.getElementById('ds-drivers-list').innerHTML=s.top_drivers.slice(0,5).map((dr,i)=>{
       const pct=Math.round((dr.orders/maxD)*100);
       const col=i<3?'var(--gold)':'var(--muted)';
-      return'<div style="margin-bottom:12px;"><div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span style="font-size:12px;color:'+col+';font-weight:'+(i<3?'600':'400')+'">'+(i+1)+'. '+dr.name+'</span><span style="font-size:12px;color:'+col+';font-weight:700">'+dr.orders+' drops'+(dr.value?' | AED '+(dr.value>=1000?(Math.round(dr.value/1000)+'K'):''):'')+'</span></div><div class="progress-bar"><div class="progress-fill" style="width:'+pct+'%;background:'+col+'"></div></div></div>';
+      return'<div style="margin-bottom:12px;"><div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span style="font-size:12px;color:'+col+';font-weight:'+(i<3?'600':'400')+'">'+(i+1)+'. '+dr.name+'</span><span style="font-size:12px;color:'+col+';font-weight:700">'+dr.orders+' orders'+(dr.value?' | AED '+(dr.value>=1000?(Math.round(dr.value/1000)+'K'):''):'')+'</span></div><div class="progress-bar"><div class="progress-fill" style="width:'+pct+'%;background:'+col+'"></div></div></div>';
     }).join('');
   }
 
