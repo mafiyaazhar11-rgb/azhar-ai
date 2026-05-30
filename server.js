@@ -832,5 +832,46 @@ app.use(function(err,req,res,next){
   if(!res.headersSent)res.status(500).json({error:err.message||'Server error'});
 });
 
+// ─── DAILY SALES ──────────────────────────────────────────
+var salesData = null;
+
+async function loadSalesFromDB() {
+  try {
+    await pool.query('CREATE TABLE IF NOT EXISTS sales_data (id SERIAL PRIMARY KEY, uploaded_at TIMESTAMPTZ DEFAULT NOW(), uploaded_by TEXT, file_name TEXT, total_orders INT, summary JSONB)');
+    var res = await pool.query('SELECT * FROM sales_data ORDER BY uploaded_at DESC LIMIT 1');
+    if (res.rows[0]) {
+      salesData = { uploadedAt: res.rows[0].uploaded_at, fileName: res.rows[0].file_name, totalOrders: res.rows[0].total_orders, summary: res.rows[0].summary };
+      console.log('Loaded sales from DB');
+    }
+  } catch(e) { console.error('DB load sales:', e.message); }
+}
+loadSalesFromDB();
+
+app.delete('/api/sales/clear', async function(req, res) {
+  try { await pool.query('DELETE FROM sales_data'); salesData = null; res.json({ success: true }); }
+  catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/sales/status', function(req, res) {
+  if (!salesData) return res.json({ hasData: false });
+  if (!salesData.summary || salesData.summary.version !== 'v1') return res.json({ hasData: false });
+  res.json({ hasData: true, uploadedAt: salesData.uploadedAt, fileName: salesData.fileName, totalOrders: salesData.totalOrders, summary: salesData.summary });
+});
+
+app.post('/api/sales/upload', express.json({limit:'10mb'}), async function(req, res) {
+  try {
+    var summary = (typeof req.body.summary === 'string') ? JSON.parse(req.body.summary) : (req.body.summary || {});
+    var fileName = req.body.fileName || 'sales.xlsx';
+    var totalOrders = parseInt(req.body.totalOrders) || 0;
+    salesData = { uploadedAt: new Date(), fileName: fileName, totalOrders: totalOrders, summary: summary };
+    try {
+      await pool.query('CREATE TABLE IF NOT EXISTS sales_data (id SERIAL PRIMARY KEY, uploaded_at TIMESTAMPTZ DEFAULT NOW(), uploaded_by TEXT, file_name TEXT, total_orders INT, summary JSONB)');
+      await pool.query('DELETE FROM sales_data');
+      await pool.query('INSERT INTO sales_data (uploaded_by, file_name, total_orders, summary) VALUES ($1,$2,$3,$4)', ['Admin', fileName, totalOrders, JSON.stringify(summary)]);
+    } catch(dbErr) { console.error('Sales DB save:', dbErr.message); }
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 var PORT=process.env.PORT||3000;
 app.listen(PORT,function(){console.log('AZHAR-AI server running on port '+PORT+(process.env.DATABASE_URL?' with PostgreSQL':' file-only mode'));});
