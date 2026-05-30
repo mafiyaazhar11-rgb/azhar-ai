@@ -2079,6 +2079,7 @@ function saveBacklogToServer(fileName, totalOrders){
   if(!BL_DATA) return;
   var formData = new FormData();
   formData.append('summary', JSON.stringify({
+    version: 'v3',
     totalOrders: BL_DATA.totalOrders,
     totalVal: BL_DATA.totalVal,
     advance: BL_DATA.advance,
@@ -2295,11 +2296,11 @@ function processBacklogRows(rows, fileName, saveRaw){
   });
 
   var advance = catMap['RSD >30 Advance']||{count:0,val:0};
-  var whBacklog = catMap['Before Cut-Off']||catMap['Pure WH Backlog']||{count:0,val:0};
-  var creditHold = (catMap['Credit Hold']||{count:0,val:0});
-  var cutOffFrozen = (catMap['Cut-Off Frozen']||{count:0,val:0});
-  var unplannedFrozen = (catMap['Unplanned Frozen']||{count:0,val:0});
-  var critical = creditHold.count + cutOffFrozen.count + unplannedFrozen.count;
+  var whBacklog = catMap['Before Cut-Off']||{count:0,val:0};
+  var cutOffFrozen = catMap['Cut-Off Frozen']||{count:0,val:0};
+  var unplannedFrozen = catMap['Unplanned Frozen']||{count:0,val:0};
+  var creditHold = catMap['Credit Hold']||{count:0,val:0};
+  var critical = cutOffFrozen.count + unplannedFrozen.count + creditHold.count;
 
   BL_DATA = { totalOrders:totalOrders, totalVal:totalVal, advance:advance, whBacklog:whBacklog, creditHold:creditHold, cutOffFrozen:cutOffFrozen, unplannedFrozen:unplannedFrozen, critical:critical, orgMap:orgMap, catMap:catMap, custMap:custMap, accTypeMap:accTypeMap, rsdAging:rsdAging, actionRows:actionRows, fileName:fileName, date:new Date().toLocaleDateString('en-AE') };
   renderBacklog();
@@ -2315,10 +2316,10 @@ function renderBacklog(){
   var badge=document.getElementById('bl-status-badge');
   if(badge){ badge.style.display='block'; document.getElementById('bl-last-date').textContent=d.date; }
 
-  var whBL=d.whBacklog||{count:0,val:0};
-  var afterCutCount=(d.cutOffFrozen||{count:0}).count+(d.unplannedFrozen||{count:0}).count;
-  var afterCutVal=(d.cutOffFrozen||{val:0}).val+(d.unplannedFrozen||{val:0}).val;
-  var actionNeeded=(d.catMap&&(d.catMap['Before Cut-Off']||d.catMap['Pure WH Backlog']))?((d.catMap['Before Cut-Off']||d.catMap['Pure WH Backlog']).count):0;
+  var whBL=(d.catMap&&d.catMap['Before Cut-Off'])||d.whBacklog||{count:0,val:0};
+  var afterCutCount=((d.catMap&&d.catMap['Cut-Off Frozen'])||{count:0}).count+((d.catMap&&d.catMap['Unplanned Frozen'])||{count:0}).count;
+  var afterCutVal=((d.catMap&&d.catMap['Cut-Off Frozen'])||{val:0}).val+((d.catMap&&d.catMap['Unplanned Frozen'])||{val:0}).val;
+  var actionNeeded=(d.catMap&&d.catMap['Before Cut-Off'])?(d.catMap['Before Cut-Off'].count):0;
 
   // ── ROW 1: 5 KPI CARDS ──
   var kpis=[
@@ -2363,10 +2364,12 @@ function renderBacklog(){
     }).join('');
   }
   var orgGrand=document.getElementById('bl-org-grand');
+  var filteredTotal=orgKeys.reduce(function(s,o){return s+d.orgMap[o].count;},0);
+  var filteredVal=orgKeys.reduce(function(s,o){return s+d.orgMap[o].val;},0);
   if(orgGrand) orgGrand.innerHTML='<div style="border-top:1px solid var(--gold);padding-top:8px;margin-top:4px;display:grid;grid-template-columns:70px 60px 70px 1fr 80px;gap:4px;">'+
     '<span style="font-size:10px;font-weight:700;color:var(--gold);">TOTAL</span>'+
-    '<span style="font-size:10px;font-weight:700;color:var(--white);">'+d.totalOrders+'</span>'+
-    '<span style="font-size:10px;font-weight:700;color:var(--gold);">'+fmtAED(d.totalVal)+'</span>'+
+    '<span style="font-size:10px;font-weight:700;color:var(--white);">'+filteredTotal+'</span>'+
+    '<span style="font-size:10px;font-weight:700;color:var(--gold);">'+fmtAED(filteredVal)+'</span>'+
     '<span style="font-size:10px;color:var(--gold);">100%</span><span></span></div>';
 
   // ── SECTION 2: CATEGORY CHART ──
@@ -2462,6 +2465,7 @@ function saveReturnsToServer(fileName){
   if(!RET_RAW.length) return;
   var rows = getFilteredReturnsAll();
   var summary = buildReturnsSummary(rows);
+  summary.version = 'v3';
   fetch('/api/returns/upload', {
     method:'POST',
     headers:{'Content-Type':'application/json'},
