@@ -290,6 +290,7 @@ function parseDispatch(buffer) {
     amount:   findCol('TOTAL_AMOUNT', 'AMOUNT', 'VALUE'),
     driver:   findCol('DRIVER CONTACT DETAILS', 'DRIVERS NAME', 'DRIVER NAME', 'DRIVER CONTACT', 'DRIVER_CONTACT', 'DRIVER_ID'),
     location: findCol('LOCATION_ID', 'LOCATION'),
+    keep:     findCol('KEEP TOGETHER', 'KEEP_TOGETHER', 'KEEPTOGETHER', 'KEEP'),
     type:     findCol('TYPE'),
     org:      findCol('ROUTE') || findCol('BU') || findCol('ORGANIZATION') || findCol('ORG-BU') || findCol('ORG')
   };
@@ -324,14 +325,18 @@ function parseDispatch(buffer) {
     }
     if (C.route && row[C.route]) {
       var route = toStr(row[C.route]);
-      if (!routes[route]) routes[route] = { locs:{}, driver:'', value:0 };
+      if (!routes[route]) routes[route] = { locs:{}, drivers:{}, orders:0, value:0 };
       var loc = C.location ? toStr(row[C.location]) : '';
       if (loc) routes[route].locs[loc] = 1;
       routes[route].value += amt;
-      if (C.driver && row[C.driver] && !routes[route].driver)
-        routes[route].driver = extractDriverName(row[C.driver]);
+      routes[route].orders++;
+      if (C.driver && row[C.driver]) {
+        var drvName = extractDriverName(row[C.driver]);
+        if (drvName) routes[route].drivers[drvName] = 1;
+      }
     }
     if (C.driver && row[C.driver]) {
+      var keepVal2 = C.keep ? toStr(row[C.keep]) : (C.location ? toStr(row[C.location]) : '');
       var drv = extractDriverName(row[C.driver]) || toStr(row[C.driver]);
       if (drv) driverSet[drv] = 1;
     }
@@ -355,7 +360,7 @@ function parseDispatch(buffer) {
   }).sort(function(a,b) { return b.value-a.value; }).slice(0,6);
 
   var topRoutes = Object.keys(routes).map(function(route) {
-    return { route:route, drops:Object.keys(routes[route].locs).length, driver:routes[route].driver, value:Math.round(routes[route].value) };
+    return { route:route, orders:routes[route].orders, drops:Object.keys(routes[route].locs).length, driverCount:Object.keys(routes[route].drivers).length, value:Math.round(routes[route].value) };
   }).sort(function(a,b) { return b.drops-a.drops; }).slice(0,30);
 
   // Count actual orders per driver (not route drops)
@@ -364,12 +369,14 @@ function parseDispatch(buffer) {
     var drv = C.driver && row[C.driver] ? extractDriverName(row[C.driver]) : '';
     if (!drv) return;
     var amt = C.amount ? parseFloat(row[C.amount]) || 0 : 0;
-    if (!driverOrders[drv]) driverOrders[drv] = {orders:0, value:0};
+    var locId = C.location ? toStr(row[C.location]) : '';
+    if (!driverOrders[drv]) driverOrders[drv] = {orders:0, drops:{}, value:0};
     driverOrders[drv].orders++;
     driverOrders[drv].value += amt;
+    if (locId) driverOrders[drv].drops[locId] = 1;
   });
   var topDrivers = Object.keys(driverOrders).map(function(name) {
-    return { name:name, orders:driverOrders[name].orders, value:Math.round(driverOrders[name].value) };
+    return { name:name, orders:driverOrders[name].orders, drops:Object.keys(driverOrders[name].drops).length, value:Math.round(driverOrders[name].value) };
   }).sort(function(a,b) { return b.orders-a.orders; }).slice(0,5);
 
   return {
