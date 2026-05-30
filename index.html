@@ -664,7 +664,7 @@ footer span{color:var(--gold);}
       <div id="bl-dashboard" style="display:none;">
 
         <!-- FILTERS -->
-        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;align-items:center;">
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px;align-items:center;">
           <span style="font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;min-width:20px;">ORG</span>
           <button class="ret-pill on" id="bl-f-org-all" onclick="blFilter('org','all')">All</button>
           <button class="ret-pill" id="bl-f-org-dcv" onclick="blFilter('org','DCV')">DCV</button>
@@ -676,6 +676,14 @@ footer span{color:var(--gold);}
           <button class="ret-pill on" id="bl-f-bu-all" onclick="blFilter('bu','all')">All</button>
           <button class="ret-pill" id="bl-f-bu-food" onclick="blFilter('bu','food')">Food</button>
           <button class="ret-pill" id="bl-f-bu-nf" onclick="blFilter('bu','nonfood')">Non-Food</button>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;align-items:center;">
+          <span style="font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;min-width:55px;">CATEGORY</span>
+          <button class="ret-pill on" id="bl-f-cat-all" onclick="blFilter('cat','all')">All</button>
+          <button class="ret-pill" id="bl-f-cat-wh" onclick="blFilter('cat','Before Cut-Off')" style="border-color:rgba(232,75,75,0.5);color:#e84b4b;">WH Backlog</button>
+          <button class="ret-pill" id="bl-f-cat-adv" onclick="blFilter('cat','RSD >30 Advance')">Advance Orders</button>
+          <button class="ret-pill" id="bl-f-cat-cof" onclick="blFilter('cat','Cut-Off Frozen')" style="border-color:rgba(91,141,238,0.5);color:#5b8dee;">Cut-Off Frozen</button>
+          <button class="ret-pill" id="bl-f-cat-unp" onclick="blFilter('cat','Unplanned Frozen')" style="border-color:rgba(78,203,141,0.5);color:#4ecb8d;">Unplanned Frozen</button>
         </div>
 
         <!-- ROW 1: 5 KPI CARDS -->
@@ -1970,7 +1978,7 @@ document.addEventListener('DOMContentLoaded', function(){
 var BL_DATA = null;
 var BL_FULL_DATA = null;
 var BL_RAW_ROWS = [];
-var blFilters = {org:'all', bu:'all'};
+var blFilters = {org:'all', bu:'all', cat:'all'};
 
 function blFilter(type, val){
   blFilters[type] = val;
@@ -1979,8 +1987,12 @@ function blFilter(type, val){
   var orgVals=['all','DCV','DGC','DSN','DCF'];
   var buIds=['bl-f-bu-all','bl-f-bu-food','bl-f-bu-nf'];
   var buVals=['all','food','nonfood'];
+  var catIds=['bl-f-cat-all','bl-f-cat-wh','bl-f-cat-adv','bl-f-cat-cof','bl-f-cat-unp'];
+  var catVals=['all','Before Cut-Off','RSD >30 Advance','Cut-Off Frozen','Unplanned Frozen'];
+  var catStyles=['','border-color:rgba(232,75,75,0.5);color:#e84b4b;','','border-color:rgba(91,141,238,0.5);color:#5b8dee;','border-color:rgba(78,203,141,0.5);color:#4ecb8d;'];
   if(type==='org') orgIds.forEach(function(id,i){var el=document.getElementById(id);if(el)el.className='ret-pill'+(orgVals[i]===val?' on':'');});
   if(type==='bu') buIds.forEach(function(id,i){var el=document.getElementById(id);if(el)el.className='ret-pill'+(buVals[i]===val?' on':'');});
+  if(type==='cat') catIds.forEach(function(id,i){var el=document.getElementById(id);if(el){el.className='ret-pill'+(catVals[i]===val?' on':''); if(catVals[i]!=='all')el.style.cssText=catVals[i]===val?'background:rgba(201,168,76,0.2);'+catStyles[i]:catStyles[i];}});
   // Re-process with filters
   if(BL_RAW_ROWS.length){
     processBacklogRows(BL_RAW_ROWS, BL_DATA?BL_DATA.fileName:'backlog.xlsx', false);
@@ -1996,26 +2008,22 @@ function filterFromFullData(){
   if(!BL_FULL_DATA) return;
   var fd = BL_FULL_DATA;
   // Filter orgMap
+  // Build orgMap from filtered actions
   var newOrgMap = {};
-  Object.keys(fd.orgMap).forEach(function(org){
-    if(blFilters.org!=='all' && org!==blFilters.org) return;
-    var foodOrgs=['DCV','DCF'];
-    if(blFilters.bu==='food' && foodOrgs.indexOf(org)===-1) return;
-    if(blFilters.bu==='nonfood' && foodOrgs.indexOf(org)!==-1) return;
-    newOrgMap[org] = fd.orgMap[org];
+  newActions.forEach(function(r){
+    if(!newOrgMap[r.org]) newOrgMap[r.org]={count:0,val:0};
+    newOrgMap[r.org].count++; newOrgMap[r.org].val+=r.val;
   });
-  // Recalculate totals from filtered orgMap
-  var newTotal=0, newVal=0;
-  Object.keys(newOrgMap).forEach(function(o){newTotal+=newOrgMap[o].count; newVal+=newOrgMap[o].val;});
+  var newTotal=newActions.length;
+  var newVal=newActions.reduce(function(s,r){return s+r.val;},0);
   // Filter custMap by org
   var newCustMap = {};
-  Object.keys(fd.custMap).forEach(function(c){
-    var cOrg = fd.custMap[c].org||'';
-    if(blFilters.org!=='all' && cOrg!==blFilters.org) return;
-    var foodOrgs=['DCV','DCF'];
-    if(blFilters.bu==='food' && foodOrgs.indexOf(cOrg)===-1) return;
-    if(blFilters.bu==='nonfood' && foodOrgs.indexOf(cOrg)!==-1) return;
-    newCustMap[c] = fd.custMap[c];
+  // Build custMap from filtered actions for cat filter accuracy
+  newActions.forEach(function(r){
+    if(!newCustMap[r.cust]) newCustMap[r.cust]={count:0,val:0,org:r.org,oldestRSD:r.rsd,topCat:r.cat};
+    newCustMap[r.cust].count++;
+    newCustMap[r.cust].val+=r.val;
+    if(r.rsd && (!newCustMap[r.cust].oldestRSD || r.rsd<newCustMap[r.cust].oldestRSD)) newCustMap[r.cust].oldestRSD=r.rsd;
   });
   // Filter actionRows by org
   var newActions=(fd.actionRows||[]).filter(function(r){
@@ -2023,6 +2031,7 @@ function filterFromFullData(){
     var foodOrgs=['DCV','DCF'];
     if(blFilters.bu==='food' && foodOrgs.indexOf(r.org)===-1) return false;
     if(blFilters.bu==='nonfood' && foodOrgs.indexOf(r.org)!==-1) return false;
+    if(blFilters.cat!=='all' && r.cat!==blFilters.cat) return false;
     return true;
   });
   // Rebuild catMap from filtered actions
@@ -2312,6 +2321,11 @@ function processBacklogRows(rows, fileName, saveRaw){
       var isNFRow = buVal==='NONFOOD'||buVal==='NON FOOD'.replace(' ','');
       if(blFilters.bu==='food' && !isFoodRow) return false;
       if(blFilters.bu==='nonfood' && !isNFRow) return false;
+    }
+    if(blFilters.cat!=='all'){
+      var statusVal2 = String(row[C.statusCol]||'').trim();
+      var rowCat = shortCat(statusVal2||String(row[C.cat]||'').trim());
+      if(rowCat!==blFilters.cat) return false;
     }
     return true;
   });
