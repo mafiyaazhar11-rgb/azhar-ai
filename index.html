@@ -2127,6 +2127,18 @@ function fmtAED(v){
 
 var blAuthDone = false;
 
+function resetBlFilterPills(){
+  ['bl-f-org-all','bl-f-org-dcv','bl-f-org-dgc','bl-f-org-dsn','bl-f-org-dcf'].forEach(function(id,i){
+    var el=document.getElementById(id); if(el)el.className='ret-pill'+(i===0?' on':'');
+  });
+  ['bl-f-bu-all','bl-f-bu-food','bl-f-bu-nf'].forEach(function(id,i){
+    var el=document.getElementById(id); if(el)el.className='ret-pill'+(i===0?' on':'');
+  });
+  ['bl-f-cat-all','bl-f-cat-wh','bl-f-cat-adv','bl-f-cat-cof','bl-f-cat-unp'].forEach(function(id,i){
+    var el=document.getElementById(id); if(el){ el.className='ret-pill'+(i===0?' on':''); el.style.cssText=''; }
+  });
+}
+
 function blClearData(){
   if(!confirm('Clear all saved backlog data?')) return;
   fetch('/api/backlog/clear', {method:'DELETE'})
@@ -2204,6 +2216,8 @@ function loadBacklogFromServer(){
         fileName: d.fileName, date: s.date||new Date().toLocaleDateString('en-AE')
       };
       BL_FULL_DATA = JSON.parse(JSON.stringify(BL_DATA));
+      blFilters={org:'all',bu:'all',cat:'all'};
+      resetBlFilterPills();
       renderBacklog();
       var badge=document.getElementById('bl-status-badge');
       if(badge){ badge.style.display='block'; document.getElementById('bl-last-date').textContent=BL_DATA.date; }
@@ -2291,7 +2305,7 @@ function handleBacklogUpload(input){
 }
 
 function processBacklogRows(rows, fileName, saveRaw){
-  if(saveRaw!==false){ BL_RAW_ROWS = rows; blFilters={org:'all',bu:'all'}; }
+  if(saveRaw!==false){ BL_RAW_ROWS = rows; blFilters={org:'all',bu:'all',cat:'all'}; resetBlFilterPills(); }
   // Detect columns
   var keys = Object.keys(rows[0]);
   function fc(){ var names=Array.prototype.slice.call(arguments); return keys.find(function(k){return names.some(function(n){return k.toUpperCase().includes(n.toUpperCase());});})||null; }
@@ -2389,9 +2403,9 @@ function processBacklogRows(rows, fileName, saveRaw){
   BL_DATA = { totalOrders:totalOrders, totalVal:totalVal, advance:advance, whBacklog:whBacklog, creditHold:creditHold, cutOffFrozen:cutOffFrozen, unplannedFrozen:unplannedFrozen, critical:critical, orgMap:orgMap, catMap:catMap, custMap:custMap, accTypeMap:accTypeMap, rsdAging:rsdAging, actionRows:actionRows, fileName:fileName, date:new Date().toLocaleDateString('en-AE') };
   renderBacklog();
   // Only save to server on actual file upload (not on filter)
-  if(saveRaw!==false){ 
+  if(saveRaw!==false){
     BL_FULL_DATA = JSON.parse(JSON.stringify(BL_DATA));
-    saveBacklogToServer(fileName, totalOrders); 
+    saveBacklogToServer(fileName, totalOrders);
   }
 }
 
