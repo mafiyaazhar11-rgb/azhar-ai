@@ -470,7 +470,7 @@ footer span{color:var(--gold);}
   </div>
   <div class="sb-section">AI Command Centre</div>
   <button class="sb-item on" onclick="goTab('dispatch',this)"><span class="icon">🚚</span> Daily Dispatch</button>
-  <button class="sb-item" onclick="goTab('rejection',this)"><span class="icon">📊</span> Daily Rejection</button>
+  <button class="sb-item" onclick="goTab('rejection',this)"><span class="icon">📊</span> Rejection YTD</button>
   <button class="sb-item" onclick="goTab('summary',this)"><span class="icon">📋</span> Executive Summary</button>
   <button class="sb-item" onclick="goTab('email',this)"><span class="icon">✉️</span> Email Writer</button>
   <button class="sb-item" onclick="goTab('invoice',this)"><span class="icon">💼</span> Proforma Invoice</button>
@@ -974,7 +974,7 @@ updateClock(); setInterval(updateClock,1000);
 //  TAB NAV 
 const TITLES={
   dispatch:  ['Welcome back, Azhar','Operations & Customer Service AI Command Centre'],
-  rejection: ['Daily Rejection Analysis','YTD JanMay 2026  Pivot Dashboard'],
+  rejection: ['Rejection YTD Analysis','YTD Jan–May 2026 · BU Contribution Dashboard'],
   summary:   ['Executive Summary Generator','Create professional summaries for leadership'],
   email:     ['Professional Email Writer','Write and refine business correspondence'],
   invoice:   ['Proforma Invoice Generator','Create professional invoices with letterhead'],
@@ -1597,12 +1597,24 @@ oc.innerHTML=ORG_SUMMARY.map(function(o){
   }).join('');
 
   // KPI Cards
-  const totalOrders=d.tDel+d.tRej;
-  const rejRate=totalOrders>0?(d.tRej/totalOrders*100).toFixed(2)+'%':'0%';
+  // Get overall (all-BU) data for current selection to compute overall rate
+  var _savedType = rejType;
+  rejType = 'all';
+  var _allData = getFilteredData();
+  rejType = _savedType;
+  var allGrandTotal = (_allData.tDel + _allData.tRej) || 1;
+  const overallRate = (_allData.tRej/allGrandTotal*100).toFixed(2)+'%';
+  const totalOrders = d.tDel + d.tRej;
+  const rejRate = overallRate; // always show overall rate
+  const buContrib = (rejType!=='all') ? (d.tRej/allGrandTotal*100).toFixed(2)+'%' : null;
   const kEl=document.getElementById('rej-kpis');
   if(kEl)kEl.innerHTML=''
     +'<div style="background:var(--card);border:1px solid var(--border);padding:16px;position:relative;"><div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:0.4;"></div><div style="font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">Total Rejections</div><div style="font-family:Cormorant Garamond,serif;font-size:28px;font-weight:700;color:var(--gold);">'+d.tRej.toLocaleString()+'</div></div>'
-    +'<div style="background:rgba(232,75,75,0.1);border:1px solid rgba(232,75,75,0.3);padding:16px;"><div style="font-size:9px;letter-spacing:2px;color:var(--red);text-transform:uppercase;margin-bottom:6px;">Rejection Rate</div><div style="font-family:\'Cormorant Garamond\',serif;font-size:28px;font-weight:700;color:var(--red);">'+rejRate+'</div></div>'
+    +'<div style="background:rgba(232,75,75,0.1);border:1px solid rgba(232,75,75,0.3);padding:16px;">'+
+     '<div style="font-size:9px;letter-spacing:2px;color:var(--red);text-transform:uppercase;margin-bottom:4px;">'+(buContrib?'BU Contribution to Rejections':'Rejection Rate')+'</div>'+
+     '<div style="font-family:Cormorant Garamond,serif;font-size:28px;font-weight:700;color:var(--red);">'+(buContrib||rejRate)+'</div>'+
+     (buContrib?'<div style="font-size:9px;color:var(--muted);margin-top:3px;">Overall: '+overallRate+' · '+(rejType==='food'?'Food':'Non-Food')+' share of total</div>':'')+
+     '</div>'
     +'<div style="background:var(--card);border:1px solid var(--border);padding:16px;position:relative;"><div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:0.4;"></div><div style="font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">Delivered</div><div style="font-family:\'Cormorant Garamond\',serif;font-size:28px;font-weight:700;color:var(--green);">'+d.tDel.toLocaleString()+'</div></div>'
     +'<div style="background:var(--card);border:1px solid var(--border);padding:16px;position:relative;"><div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:0.4;"></div><div style="font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">Value at Risk</div><div style="font-family:\'Cormorant Garamond\',serif;font-size:28px;font-weight:700;color:var(--gold);">'+d.val+'</div></div>';
 
