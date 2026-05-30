@@ -1677,7 +1677,7 @@ oc.innerHTML=ORG_SUMMARY.map(function(o){
       +'<span style="font-size:13px;font-weight:700;color:'+o.color+';">'+o.org+'</span>'
       +'<span style="font-size:9px;color:var(--red);background:rgba(232,75,75,0.1);padding:2px 6px;border-radius:10px;">'+o.rate+'</span>'
       +'</div>'
-      +'<div style="font-family:\'Cormorant Garamond\',serif;font-size:20px;font-weight:700;color:var(--text);">'+getOrgFilteredCount(o).toLocaleString()+'</div>'
+      +'<div style="font-family:Cormorant Garamond,serif;font-size:20px;font-weight:700;color:var(--text);">'+getOrgFilteredCount(o).toLocaleString()+'</div>'
       +'<div style="font-size:10px;color:var(--gold);margin-top:2px;">'+getOrgFilteredVal(o)+'</div>'
       +'<div style="font-size:9px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+o.bu+'</div>'
       +'</div>';
@@ -1702,8 +1702,8 @@ oc.innerHTML=ORG_SUMMARY.map(function(o){
      '<div style="font-family:Cormorant Garamond,serif;font-size:28px;font-weight:700;color:var(--red);">'+(buContrib||rejRate)+'</div>'+
      (buContrib?'<div style="font-size:9px;color:var(--muted);margin-top:3px;">Overall: '+overallRate+' · '+(rejType==='food'?'Food':'Non-Food')+' share of total</div>':'')+
      '</div>'
-    +'<div style="background:var(--card);border:1px solid var(--border);padding:16px;position:relative;"><div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:0.4;"></div><div style="font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">Delivered</div><div style="font-family:\'Cormorant Garamond\',serif;font-size:28px;font-weight:700;color:var(--green);">'+d.tDel.toLocaleString()+'</div></div>'
-    +'<div style="background:var(--card);border:1px solid var(--border);padding:16px;position:relative;"><div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:0.4;"></div><div style="font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">Value at Risk</div><div style="font-family:\'Cormorant Garamond\',serif;font-size:28px;font-weight:700;color:var(--gold);">'+d.val+'</div></div>';
+    +'<div style="background:var(--card);border:1px solid var(--border);padding:16px;position:relative;"><div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:0.4;"></div><div style="font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">Delivered</div><div style="font-family:Cormorant Garamond,serif;font-size:28px;font-weight:700;color:var(--green);">'+d.tDel.toLocaleString()+'</div></div>'
+    +'<div style="background:var(--card);border:1px solid var(--border);padding:16px;position:relative;"><div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:0.4;"></div><div style="font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">Value at Risk</div><div style="font-family:Cormorant Garamond,serif;font-size:28px;font-weight:700;color:var(--gold);">'+d.val+'</div></div>';
 
   // Charts
   const gridC='rgba(255,255,255,0.06)', tickC='#7a7660';
@@ -2792,8 +2792,8 @@ function loadReturnsFromServer(){
     .then(function(d){
       if(!d||!d.hasData) return;
       var s=d.summary||{};
-      // Auto-detect bad summary: has orders but zero value = old corrupt data
-      if((s.totalOrders||0)>0 && (s.totalVal||0)===0){
+      // Auto-detect bad summary: has many orders but zero value = corrupt
+      if((s.totalOrders||0)>100 && (s.totalVal||0)===0){
         console.log('Bad returns summary detected - clearing');
         fetch('/api/returns/clear',{method:'DELETE'}).catch(function(){});
         return;
@@ -3019,7 +3019,7 @@ function handleReturnsUpload(input){
       if(!rows.length){alert('No data found');return;}
       RET_RAW=rows;
       renderReturns();
-      saveReturnsToServer(file.name);
+      setTimeout(function(){ saveReturnsToServer(file.name); }, 500);
       var badge=document.getElementById('ret-status-badge');
       if(badge){badge.style.display='block';document.getElementById('ret-last-date').textContent=new Date().toLocaleDateString('en-AE');}
       // Hide upload box after upload, keep star for re-upload
@@ -3090,7 +3090,7 @@ function getFilteredReturns(){
     cat:fc('CREDIT NOTE CATEGORY','CREDIT NOTE CAT','CATEGORY'),
     bu:fc('BUSINESS UNITS','BUSINESS UNIT','BU'),
     tot:fc('TOTAL'),
-    date:fc('RETURN ORDERED DATE','RETURN ORDERED','BOOKED DATE'),
+    date:fc('RETURN ORDERED','BOOKED DATE','RETURN DATE'),
     cust:fc('CUSTOMER NAME','CUSTOMER'),
     shipTo:fc('SHIP TO'),
     orderNo:fc('ORDER NUMBER','ORDER NO')
@@ -3162,7 +3162,7 @@ function renderReturns(){
   ].map(function(k){
     return '<div style="background:var(--card);border:1px solid var(--border);padding:14px;">'
       +'<div style="font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">'+k.lbl+'</div>'
-      +'<div style="font-family:\'Cormorant Garamond\',serif;font-size:26px;font-weight:700;color:'+k.col+';">'+k.val+'</div>'
+      +'<div style="font-family:Cormorant Garamond,serif;font-size:26px;font-weight:700;color:'+k.col+';">'+k.val+'</div>'
       +'<div style="font-size:10px;color:var(--muted);margin-top:4px;">'+k.sub+'</div>'
       +'</div>';
   }).join('');
