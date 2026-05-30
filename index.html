@@ -1968,6 +1968,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
 // ── WH BACKLOG DASHBOARD ──────────────────────────────────
 var BL_DATA = null;
+var BL_FULL_DATA = null;
 var BL_RAW_ROWS = [];
 var blFilters = {org:'all', bu:'all'};
 
@@ -1981,8 +1982,64 @@ function blFilter(type, val){
   if(type==='org') orgIds.forEach(function(id,i){var el=document.getElementById(id);if(el)el.className='ret-pill'+(orgVals[i]===val?' on':'');});
   if(type==='bu') buIds.forEach(function(id,i){var el=document.getElementById(id);if(el)el.className='ret-pill'+(buVals[i]===val?' on':'');});
   // Re-process with filters
-  if(BL_RAW_ROWS.length) processBacklogRows(BL_RAW_ROWS, BL_DATA?BL_DATA.fileName:'backlog.xlsx', false);
-  else if(BL_DATA) renderBacklog();
+  if(BL_RAW_ROWS.length){
+    processBacklogRows(BL_RAW_ROWS, BL_DATA?BL_DATA.fileName:'backlog.xlsx', false);
+  } else if(BL_FULL_DATA){
+    // Loaded from server - filter the saved full data
+    filterFromFullData();
+  } else if(BL_DATA){
+    renderBacklog();
+  }
+}
+
+function filterFromFullData(){
+  if(!BL_FULL_DATA) return;
+  var fd = BL_FULL_DATA;
+  // Filter orgMap
+  var newOrgMap = {};
+  Object.keys(fd.orgMap).forEach(function(org){
+    if(blFilters.org!=='all' && org!==blFilters.org) return;
+    var foodOrgs=['DCV','DCF'];
+    if(blFilters.bu==='food' && foodOrgs.indexOf(org)===-1) return;
+    if(blFilters.bu==='nonfood' && foodOrgs.indexOf(org)!==-1) return;
+    newOrgMap[org] = fd.orgMap[org];
+  });
+  // Recalculate totals from filtered orgMap
+  var newTotal=0, newVal=0;
+  Object.keys(newOrgMap).forEach(function(o){newTotal+=newOrgMap[o].count; newVal+=newOrgMap[o].val;});
+  // Filter custMap by org
+  var newCustMap = {};
+  Object.keys(fd.custMap).forEach(function(c){
+    var cOrg = fd.custMap[c].org||'';
+    if(blFilters.org!=='all' && cOrg!==blFilters.org) return;
+    var foodOrgs=['DCV','DCF'];
+    if(blFilters.bu==='food' && foodOrgs.indexOf(cOrg)===-1) return;
+    if(blFilters.bu==='nonfood' && foodOrgs.indexOf(cOrg)!==-1) return;
+    newCustMap[c] = fd.custMap[c];
+  });
+  // Filter actionRows by org
+  var newActions=(fd.actionRows||[]).filter(function(r){
+    if(blFilters.org!=='all' && r.org!==blFilters.org) return false;
+    var foodOrgs=['DCV','DCF'];
+    if(blFilters.bu==='food' && foodOrgs.indexOf(r.org)===-1) return false;
+    if(blFilters.bu==='nonfood' && foodOrgs.indexOf(r.org)!==-1) return false;
+    return true;
+  });
+  // Rebuild catMap from filtered actions
+  var newCatMap = {};
+  newActions.forEach(function(r){
+    if(!newCatMap[r.cat]) newCatMap[r.cat]={count:0,val:0,orgs:[],accounts:[]};
+    newCatMap[r.cat].count++;
+    newCatMap[r.cat].val+=r.val;
+    if(r.org && newCatMap[r.cat].orgs.indexOf(r.org)===-1) newCatMap[r.cat].orgs.push(r.org);
+    if(r.cust && newCatMap[r.cat].accounts.indexOf(r.cust)===-1) newCatMap[r.cat].accounts.push(r.cust);
+  });
+  BL_DATA = Object.assign({}, fd, {
+    totalOrders: newTotal, totalVal: newVal,
+    orgMap: newOrgMap, catMap: newCatMap,
+    custMap: newCustMap, actionRows: newActions
+  });
+  renderBacklog();
 }
 var BL_CHART = null;
 var BL_RSD_CHART = null;
@@ -2137,6 +2194,7 @@ function loadBacklogFromServer(){
         orgMap: s.orgMap||{}, catMap: s.catMap||{}, custMap: s.custMap||{}, accTypeMap: s.accTypeMap||{}, rsdAging: s.rsdAging||{}, actionRows: s.actionRows||[],
         fileName: d.fileName, date: s.date||new Date().toLocaleDateString('en-AE')
       };
+      BL_FULL_DATA = JSON.parse(JSON.stringify(BL_DATA));
       renderBacklog();
       var badge=document.getElementById('bl-status-badge');
       if(badge){ badge.style.display='block'; document.getElementById('bl-last-date').textContent=BL_DATA.date; }
@@ -2224,7 +2282,7 @@ function handleBacklogUpload(input){
 }
 
 function processBacklogRows(rows, fileName, saveRaw){
-  if(saveRaw!==false){ BL_RAW_ROWS = rows; }
+  if(saveRaw!==false){ BL_RAW_ROWS = rows; blFilters={org:'all',bu:'all'}; }
   // Detect columns
   var keys = Object.keys(rows[0]);
   function fc(){ var names=Array.prototype.slice.call(arguments); return keys.find(function(k){return names.some(function(n){return k.toUpperCase().includes(n.toUpperCase());});})||null; }
@@ -2317,7 +2375,10 @@ function processBacklogRows(rows, fileName, saveRaw){
   BL_DATA = { totalOrders:totalOrders, totalVal:totalVal, advance:advance, whBacklog:whBacklog, creditHold:creditHold, cutOffFrozen:cutOffFrozen, unplannedFrozen:unplannedFrozen, critical:critical, orgMap:orgMap, catMap:catMap, custMap:custMap, accTypeMap:accTypeMap, rsdAging:rsdAging, actionRows:actionRows, fileName:fileName, date:new Date().toLocaleDateString('en-AE') };
   renderBacklog();
   // Only save to server on actual file upload (not on filter)
-  if(saveRaw!==false){ saveBacklogToServer(fileName, totalOrders); }
+  if(saveRaw!==false){ 
+    BL_FULL_DATA = JSON.parse(JSON.stringify(BL_DATA));
+    saveBacklogToServer(fileName, totalOrders); 
+  }
 }
 
 function renderBacklog(){
