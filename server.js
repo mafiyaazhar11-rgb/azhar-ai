@@ -191,8 +191,13 @@ app.delete('/api/backlog/clear', async function(req, res) {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
+var BACKLOG_SUMMARY_VERSION = 'v3'; // Increment when shortCat logic changes
 app.get('/api/backlog/status', function(req, res) {
   if (!backlogData) return res.json({ hasData: false });
+  // If summary version doesn't match, force re-upload
+  if (!backlogData.summary || backlogData.summary.version !== BACKLOG_SUMMARY_VERSION) {
+    return res.json({ hasData: false, reason: 'version_mismatch' });
+  }
   res.json({ hasData: true, uploadedAt: backlogData.uploadedAt, uploadedBy: backlogData.uploadedBy, fileName: backlogData.fileName, totalOrders: backlogData.totalOrders, summary: backlogData.summary });
 });
 
@@ -787,8 +792,12 @@ app.delete('/api/returns/clear', async function(req, res) {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
+var RETURNS_SUMMARY_VERSION = 'v3';
 app.get('/api/returns/status', function(req, res) {
   if (!returnsData) return res.json({ hasData: false });
+  if (!returnsData.summary || returnsData.summary.version !== RETURNS_SUMMARY_VERSION) {
+    return res.json({ hasData: false, reason: 'version_mismatch' });
+  }
   res.json({
     hasData: true,
     uploadedAt: returnsData.uploadedAt,
