@@ -444,266 +444,7 @@ footer span{color:var(--gold);}
 }
 
 </style>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js">
-// ── DAILY SALES DASHBOARD ─────────────────────────────────
-var SALES_DATA = null;
-var SALES_BU_CHART = null;
-var salesUploadVisible = false;
-
-function salesToggleUpload(){
-  salesUploadVisible = !salesUploadVisible;
-  var box = document.getElementById('sales-upload-box');
-  if(box) box.style.display = salesUploadVisible ? 'block' : 'none';
-}
-
-function salesClearData(){
-  if(!confirm('Clear all saved sales data?')) return;
-  fetch('/api/sales/clear', {method:'DELETE'})
-    .then(function(r){return r.json();})
-    .then(function(d){
-      if(d.success){
-        SALES_DATA = null;
-        document.getElementById('sales-nodata').style.display='flex';
-        document.getElementById('sales-dashboard').style.display='none';
-        alert('Sales data cleared.');
-      }
-    }).catch(function(e){ alert('Error: '+e.message); });
-}
-
-function handleSalesUpload(input){
-  var file = input.files[0];
-  if(!file) return;
-  var reader = new FileReader();
-  reader.onload = function(e){
-    try{
-      var rows = [];
-      var ext = file.name.split('.').pop().toLowerCase();
-      if(ext==='csv'){
-        var lines = e.target.result.split('\n').filter(function(l){return l.trim();});
-        var headers = lines[0].split(',').map(function(h){return h.trim().replace(/^"|"$/g,'');});
-        for(var i=1;i<lines.length;i++){
-          var cells = lines[i].split(',');
-          var row = {};
-          headers.forEach(function(h,j){row[h]=(cells[j]||'').trim().replace(/^"|"$/g,'');});
-          rows.push(row);
-        }
-      } else {
-        var data = new Uint8Array(e.target.result);
-        var wb = XLSX.read(data, {type:'array'});
-        var ws = wb.Sheets[wb.SheetNames[0]];
-        rows = XLSX.utils.sheet_to_json(ws, {defval:''});
-      }
-      processSalesData(rows, file.name);
-    } catch(ex){ alert('Error reading file: '+ex.message); }
-  };
-  if(file.name.split('.').pop().toLowerCase()==='csv') reader.readAsText(file);
-  else reader.readAsArrayBuffer(file);
-}
-
-function processSalesData(rows, fileName){
-  if(!rows||!rows.length) return;
-  var keys = Object.keys(rows[0]);
-  function fc(){
-    var names = Array.prototype.slice.call(arguments);
-    return keys.find(function(k){return names.some(function(n){return k.toUpperCase().includes(n.toUpperCase());});}) || null;
-  }
-  var C = {
-    wh:     fc('WAREHOUSE','WH'),
-    val:    fc('TOTAL','VALUE','AMOUNT'),
-    status: fc('STATUS'),
-    onhold: fc('ON HOLD','HOLD')
-  };
-
-  var foodOrgs = ['DCV','DCF'];
-  var orgMap = {}, statusMap = {};
-  var totalOrders=0, totalVal=0;
-  var foodOrders=0, foodVal=0, nfOrders=0, nfVal=0, otherOrders=0, otherVal=0;
-
-  rows.forEach(function(row){
-    var wh = String(row[C.wh]||'').trim().toUpperCase();
-    var val = Math.abs(parseFloat(String(row[C.val]||'').replace(/,/g,''))||0);
-    var status = String(row[C.status]||'').trim();
-    var onhold = String(row[C.onhold]||'').trim();
-
-    if(!wh) return;
-    totalOrders++; totalVal+=val;
-
-    if(!orgMap[wh]) orgMap[wh]={orders:0,val:0,bu:''};
-    orgMap[wh].orders++; orgMap[wh].val+=val;
-
-    if(foodOrgs.indexOf(wh)!==-1){ foodOrders++; foodVal+=val; orgMap[wh].bu='Food'; }
-    else if(wh==='DGC'){ nfOrders++; nfVal+=val; orgMap[wh].bu='Non-Food'; }
-    else { otherOrders++; otherVal+=val; orgMap[wh].bu='Other'; }
-
-    var skey = onhold?'On Hold':status||'Booked';
-    if(!statusMap[skey]) statusMap[skey]={orders:0,val:0};
-    statusMap[skey].orders++; statusMap[skey].val+=val;
-  });
-
-  SALES_DATA = {
-    totalOrders:totalOrders, totalVal:totalVal,
-    foodOrders:foodOrders, foodVal:foodVal,
-    nfOrders:nfOrders, nfVal:nfVal,
-    otherOrders:otherOrders, otherVal:otherVal,
-    orgMap:orgMap, statusMap:statusMap,
-    fileName:fileName, date:new Date().toLocaleDateString('en-AE')
-  };
-
-  // Hide upload box
-  var box=document.getElementById('sales-upload-box');
-  if(box)box.style.display='none';
-  salesUploadVisible=false;
-
-  renderSalesDashboard();
-  saveSalesToServer(fileName);
-}
-
-function renderSalesDashboard(){
-  if(!SALES_DATA) return;
-  var d = SALES_DATA;
-  document.getElementById('sales-nodata').style.display='none';
-  document.getElementById('sales-dashboard').style.display='block';
-  document.getElementById('sales-star-wrap').style.display='block';
-
-  var lastEl=document.getElementById('sales-last-upload');
-  if(lastEl) lastEl.textContent='Last: '+d.date;
-
-  // KPI CARDS
-  var orgColors = {DCV:'#e84b4b',DCF:'#e8854b',DGC:'#5b8dee',DSN:'#c9a84c',DGS:'#4ecb8d'};
-  var kpis=[
-    {icon:'📋',label:'TOTAL ORDERS',val:d.totalOrders.toLocaleString(),sub:fmtAED(d.totalVal),color:'var(--gold)',border:'var(--border)'},
-    {icon:'🍽',label:'FOOD (DCV+DCF)',val:d.foodOrders.toLocaleString(),sub:fmtAED(d.foodVal),color:'#e84b4b',border:'rgba(232,75,75,0.4)'},
-    {icon:'📦',label:'NON-FOOD (DGC)',val:d.nfOrders.toLocaleString(),sub:fmtAED(d.nfVal),color:'#5b8dee',border:'rgba(91,141,238,0.4)'},
-    {icon:'🏭',label:'OTHERS (DSN+DGS)',val:d.otherOrders.toLocaleString(),sub:fmtAED(d.otherVal),color:'#c9a84c',border:'rgba(201,168,76,0.4)'},
-    {icon:'📅',label:'UPLOAD DATE',val:d.date,sub:d.fileName?d.fileName.substring(0,20):'',color:'var(--muted)',border:'var(--border)'}
-  ];
-  document.getElementById('sales-kpis').innerHTML=kpis.map(function(k){
-    return '<div style="background:var(--card);border:1px solid '+k.border+';padding:14px 16px;">'+
-      '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">'+
-      '<span style="font-size:16px;">'+k.icon+'</span>'+
-      '<div style="font-size:8px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;">'+k.label+'</div>'+
-      '</div>'+
-      '<div style="font-size:26px;font-weight:700;color:'+k.color+';line-height:1;margin-bottom:4px;">'+k.val+'</div>'+
-      '<div style="font-size:10px;color:var(--muted);">'+k.sub+'</div>'+
-      '</div>';
-  }).join('');
-
-  // ORG BARS
-  var orgKeys = Object.keys(d.orgMap).sort(function(a,b){return d.orgMap[b].val-d.orgMap[a].val;});
-  var maxOrgVal = d.orgMap[orgKeys[0]] ? d.orgMap[orgKeys[0]].val : 1;
-  var orgColMap = {DCV:'#e84b4b',DCF:'#e8854b',DGC:'#5b8dee',DSN:'#c9a84c',DGS:'#4ecb8d',DPS:'#9b59b6'};
-  var buColMap = {Food:'#e84b4b','Non-Food':'#5b8dee',Other:'#c9a84c'};
-  document.getElementById('sales-org-bars').innerHTML=orgKeys.map(function(org){
-    var v=d.orgMap[org];
-    var pct=maxOrgVal>0?Math.round(v.val/maxOrgVal*100):0;
-    var col=orgColMap[org]||'var(--gold)';
-    var share=d.totalVal>0?(v.val/d.totalVal*100).toFixed(1)+'%':'0%';
-    var buLabel=v.bu?('<span style="font-size:9px;padding:1px 6px;background:rgba(0,0,0,0.2);color:'+buColMap[v.bu]+';margin-left:6px;">'+v.bu+'</span>'):'';
-    return '<div style="margin-bottom:12px;">'+
-      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">'+
-      '<div style="display:flex;align-items:center;"><span style="font-size:13px;font-weight:700;color:'+col+';min-width:40px;">'+org+'</span>'+buLabel+'</div>'+
-      '<div style="display:flex;gap:14px;align-items:center;">'+
-      '<span style="font-size:11px;color:var(--text);">'+v.orders+' orders</span>'+
-      '<span style="font-size:12px;font-weight:700;color:var(--gold);">'+fmtAED(v.val)+'</span>'+
-      '<span style="font-size:10px;color:var(--muted);min-width:36px;text-align:right;">'+share+'</span>'+
-      '</div></div>'+
-      '<div style="height:6px;background:var(--border);">'+
-      '<div style="height:6px;width:'+pct+'%;background:'+col+';"></div>'+
-      '</div></div>';
-  }).join('');
-
-  // BU DONUT
-  var buData = [
-    {label:'Food (DCV+DCF)',orders:d.foodOrders,val:d.foodVal,color:'#e84b4b'},
-    {label:'Non-Food (DGC)',orders:d.nfOrders,val:d.nfVal,color:'#5b8dee'},
-    {label:'Others',orders:d.otherOrders,val:d.otherVal,color:'#c9a84c'}
-  ].filter(function(b){return b.orders>0;});
-  if(SALES_BU_CHART){SALES_BU_CHART.destroy();}
-  var ctx=document.getElementById('sales-bu-chart');
-  if(ctx) SALES_BU_CHART=new Chart(ctx,{type:'doughnut',data:{
-    labels:buData.map(function(b){return b.label;}),
-    datasets:[{data:buData.map(function(b){return b.orders;}),backgroundColor:buData.map(function(b){return b.color;}),borderWidth:0}]
-  },options:{responsive:false,cutout:'65%',plugins:{legend:{display:false}}}});
-  document.getElementById('sales-bu-legend').innerHTML=buData.map(function(b){
-    var pct=d.totalOrders>0?(b.orders/d.totalOrders*100).toFixed(1)+'%':'0%';
-    return '<div style="margin-bottom:10px;display:flex;align-items:center;gap:8px;">'+
-      '<div style="width:10px;height:10px;border-radius:50%;background:'+b.color+';flex-shrink:0;"></div>'+
-      '<div><div style="font-size:11px;color:var(--text);">'+b.label+'</div>'+
-      '<div style="font-size:10px;color:var(--muted);">'+b.orders+' orders · '+pct+' · '+fmtAED(b.val)+'</div></div></div>';
-  }).join('');
-
-  // STATUS BARS
-  var statKeys=Object.keys(d.statusMap).sort(function(a,b){return d.statusMap[b].orders-d.statusMap[a].orders;});
-  var maxStat=statKeys.length>0?d.statusMap[statKeys[0]].orders:1;
-  document.getElementById('sales-status-bars').innerHTML=statKeys.map(function(s){
-    var v=d.statusMap[s];
-    var pct=maxStat>0?Math.round(v.orders/maxStat*100):0;
-    var col=s==='On Hold'?'#e84b4b':s==='Booked'?'#4ecb8d':'#c9a84c';
-    var share=d.totalOrders>0?(v.orders/d.totalOrders*100).toFixed(1)+'%':'0%';
-    return '<div style="margin-bottom:12px;">'+
-      '<div style="display:flex;justify-content:space-between;margin-bottom:4px;">'+
-      '<span style="font-size:11px;color:var(--text);">'+s+'</span>'+
-      '<div style="display:flex;gap:12px;">'+
-      '<span style="font-size:11px;color:var(--text);">'+v.orders+' orders</span>'+
-      '<span style="font-size:11px;font-weight:700;color:var(--gold);">'+fmtAED(v.val)+'</span>'+
-      '<span style="font-size:10px;color:var(--muted);min-width:34px;text-align:right;">'+share+'</span>'+
-      '</div></div>'+
-      '<div style="height:5px;background:var(--border);">'+
-      '<div style="height:5px;width:'+pct+'%;background:'+col+';"></div>'+
-      '</div></div>';
-  }).join('');
-
-  // WAREHOUSE TABLE
-  var tbody='';
-  orgKeys.forEach(function(org){
-    var v=d.orgMap[org];
-    var share=d.totalVal>0?(v.val/d.totalVal*100).toFixed(1)+'%':'0%';
-    var buLabel=v.bu||'-';
-    var buCol={Food:'#e84b4b','Non-Food':'#5b8dee',Other:'#c9a84c'}[buLabel]||'var(--muted)';
-    var orgCol=orgColMap[org]||'var(--gold)';
-    tbody+='<tr style="border-bottom:1px solid var(--border);">'+
-      '<td style="padding:8px;font-weight:700;color:'+orgCol+';">'+org+'</td>'+
-      '<td style="padding:8px;"><span style="font-size:9px;padding:2px 6px;background:rgba(0,0,0,0.2);color:'+buCol+';">'+buLabel+'</span></td>'+
-      '<td style="padding:8px;text-align:right;color:var(--text);">'+v.orders+'</td>'+
-      '<td style="padding:8px;text-align:right;color:var(--gold);font-weight:600;">'+fmtAED(v.val)+'</td>'+
-      '<td style="padding:8px;text-align:right;color:var(--muted);">'+share+'</td>'+
-      '</tr>';
-  });
-  tbody+='<tr style="background:var(--glow);border-top:2px solid var(--gold);">'+
-    '<td style="padding:8px;font-weight:700;color:var(--gold);" colspan="2">TOTAL</td>'+
-    '<td style="padding:8px;text-align:right;font-weight:700;color:var(--white);">'+d.totalOrders+'</td>'+
-    '<td style="padding:8px;text-align:right;font-weight:700;color:var(--gold);">'+fmtAED(d.totalVal)+'</td>'+
-    '<td style="padding:8px;text-align:right;color:var(--gold);">100%</td>'+
-    '</tr>';
-  document.getElementById('sales-wh-table').innerHTML=tbody;
-}
-
-function saveSalesToServer(fileName){
-  if(!SALES_DATA) return;
-  fetch('/api/sales/upload',{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({summary:Object.assign({version:'v1'},SALES_DATA),fileName:fileName,uploadedBy:'Admin',totalOrders:SALES_DATA.totalOrders})
-  }).then(function(r){return r.json();})
-  .then(function(d){if(d&&d.success)console.log('Sales saved to server');})
-  .catch(function(e){console.log('Sales save error:',e.message);});
-}
-
-function loadSalesFromServer(){
-  fetch('/api/sales/status')
-    .then(function(r){var ct=r.headers.get('content-type')||'';if(!ct.includes('json'))return null;return r.json();})
-    .then(function(d){
-      if(!d||!d.hasData) return;
-      var s=d.summary||{};
-      if((s.totalOrders||0)>0&&(s.totalVal||0)===0){fetch('/api/sales/clear',{method:'DELETE'}).catch(function(){});return;}
-      SALES_DATA=Object.assign({},s,{fileName:d.fileName,date:s.date||new Date().toLocaleDateString('en-AE')});
-      renderSalesDashboard();
-    }).catch(function(e){console.log('Sales load error:',e.message);});
-}
-
-loadSalesFromServer();
-
-</script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body>
 
@@ -3525,6 +3266,265 @@ function renderReturns(){
 // Logo spin
 function spinLogo(){const box=document.querySelector('.sb-logo-box');if(!box)return;box.classList.add('spinning');setTimeout(()=>box.classList.remove('spinning'),1000);}
 spinLogo(); setInterval(spinLogo,60000);
+
+// ── DAILY SALES DASHBOARD ─────────────────────────────────
+var SALES_DATA = null;
+var SALES_BU_CHART = null;
+var salesUploadVisible = false;
+
+function salesToggleUpload(){
+  salesUploadVisible = !salesUploadVisible;
+  var box = document.getElementById('sales-upload-box');
+  if(box) box.style.display = salesUploadVisible ? 'block' : 'none';
+}
+
+function salesClearData(){
+  if(!confirm('Clear all saved sales data?')) return;
+  fetch('/api/sales/clear', {method:'DELETE'})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(d.success){
+        SALES_DATA = null;
+        document.getElementById('sales-nodata').style.display='flex';
+        document.getElementById('sales-dashboard').style.display='none';
+        alert('Sales data cleared.');
+      }
+    }).catch(function(e){ alert('Error: '+e.message); });
+}
+
+function handleSalesUpload(input){
+  var file = input.files[0];
+  if(!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      var rows = [];
+      var ext = file.name.split('.').pop().toLowerCase();
+      if(ext==='csv'){
+        var lines = e.target.result.split('\n').filter(function(l){return l.trim();});
+        var headers = lines[0].split(',').map(function(h){return h.trim().replace(/^"|"$/g,'');});
+        for(var i=1;i<lines.length;i++){
+          var cells = lines[i].split(',');
+          var row = {};
+          headers.forEach(function(h,j){row[h]=(cells[j]||'').trim().replace(/^"|"$/g,'');});
+          rows.push(row);
+        }
+      } else {
+        var data = new Uint8Array(e.target.result);
+        var wb = XLSX.read(data, {type:'array'});
+        var ws = wb.Sheets[wb.SheetNames[0]];
+        rows = XLSX.utils.sheet_to_json(ws, {defval:''});
+      }
+      processSalesData(rows, file.name);
+    } catch(ex){ alert('Error reading file: '+ex.message); }
+  };
+  if(file.name.split('.').pop().toLowerCase()==='csv') reader.readAsText(file);
+  else reader.readAsArrayBuffer(file);
+}
+
+function processSalesData(rows, fileName){
+  if(!rows||!rows.length) return;
+  var keys = Object.keys(rows[0]);
+  function fc(){
+    var names = Array.prototype.slice.call(arguments);
+    return keys.find(function(k){return names.some(function(n){return k.toUpperCase().includes(n.toUpperCase());});}) || null;
+  }
+  var C = {
+    wh:     fc('WAREHOUSE','WH'),
+    val:    fc('TOTAL','VALUE','AMOUNT'),
+    status: fc('STATUS'),
+    onhold: fc('ON HOLD','HOLD')
+  };
+
+  var foodOrgs = ['DCV','DCF'];
+  var orgMap = {}, statusMap = {};
+  var totalOrders=0, totalVal=0;
+  var foodOrders=0, foodVal=0, nfOrders=0, nfVal=0, otherOrders=0, otherVal=0;
+
+  rows.forEach(function(row){
+    var wh = String(row[C.wh]||'').trim().toUpperCase();
+    var val = Math.abs(parseFloat(String(row[C.val]||'').replace(/,/g,''))||0);
+    var status = String(row[C.status]||'').trim();
+    var onhold = String(row[C.onhold]||'').trim();
+
+    if(!wh) return;
+    totalOrders++; totalVal+=val;
+
+    if(!orgMap[wh]) orgMap[wh]={orders:0,val:0,bu:''};
+    orgMap[wh].orders++; orgMap[wh].val+=val;
+
+    if(foodOrgs.indexOf(wh)!==-1){ foodOrders++; foodVal+=val; orgMap[wh].bu='Food'; }
+    else if(wh==='DGC'){ nfOrders++; nfVal+=val; orgMap[wh].bu='Non-Food'; }
+    else { otherOrders++; otherVal+=val; orgMap[wh].bu='Other'; }
+
+    var skey = onhold?'On Hold':status||'Booked';
+    if(!statusMap[skey]) statusMap[skey]={orders:0,val:0};
+    statusMap[skey].orders++; statusMap[skey].val+=val;
+  });
+
+  SALES_DATA = {
+    totalOrders:totalOrders, totalVal:totalVal,
+    foodOrders:foodOrders, foodVal:foodVal,
+    nfOrders:nfOrders, nfVal:nfVal,
+    otherOrders:otherOrders, otherVal:otherVal,
+    orgMap:orgMap, statusMap:statusMap,
+    fileName:fileName, date:new Date().toLocaleDateString('en-AE')
+  };
+
+  // Hide upload box
+  var box=document.getElementById('sales-upload-box');
+  if(box)box.style.display='none';
+  salesUploadVisible=false;
+
+  renderSalesDashboard();
+  saveSalesToServer(fileName);
+}
+
+function renderSalesDashboard(){
+  if(!SALES_DATA) return;
+  var d = SALES_DATA;
+  document.getElementById('sales-nodata').style.display='none';
+  document.getElementById('sales-dashboard').style.display='block';
+  document.getElementById('sales-star-wrap').style.display='block';
+
+  var lastEl=document.getElementById('sales-last-upload');
+  if(lastEl) lastEl.textContent='Last: '+d.date;
+
+  // KPI CARDS
+  var orgColors = {DCV:'#e84b4b',DCF:'#e8854b',DGC:'#5b8dee',DSN:'#c9a84c',DGS:'#4ecb8d'};
+  var kpis=[
+    {icon:'📋',label:'TOTAL ORDERS',val:d.totalOrders.toLocaleString(),sub:fmtAED(d.totalVal),color:'var(--gold)',border:'var(--border)'},
+    {icon:'🍽',label:'FOOD (DCV+DCF)',val:d.foodOrders.toLocaleString(),sub:fmtAED(d.foodVal),color:'#e84b4b',border:'rgba(232,75,75,0.4)'},
+    {icon:'📦',label:'NON-FOOD (DGC)',val:d.nfOrders.toLocaleString(),sub:fmtAED(d.nfVal),color:'#5b8dee',border:'rgba(91,141,238,0.4)'},
+    {icon:'🏭',label:'OTHERS (DSN+DGS)',val:d.otherOrders.toLocaleString(),sub:fmtAED(d.otherVal),color:'#c9a84c',border:'rgba(201,168,76,0.4)'},
+    {icon:'📅',label:'UPLOAD DATE',val:d.date,sub:d.fileName?d.fileName.substring(0,20):'',color:'var(--muted)',border:'var(--border)'}
+  ];
+  document.getElementById('sales-kpis').innerHTML=kpis.map(function(k){
+    return '<div style="background:var(--card);border:1px solid '+k.border+';padding:14px 16px;">'+
+      '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">'+
+      '<span style="font-size:16px;">'+k.icon+'</span>'+
+      '<div style="font-size:8px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;">'+k.label+'</div>'+
+      '</div>'+
+      '<div style="font-size:26px;font-weight:700;color:'+k.color+';line-height:1;margin-bottom:4px;">'+k.val+'</div>'+
+      '<div style="font-size:10px;color:var(--muted);">'+k.sub+'</div>'+
+      '</div>';
+  }).join('');
+
+  // ORG BARS
+  var orgKeys = Object.keys(d.orgMap).sort(function(a,b){return d.orgMap[b].val-d.orgMap[a].val;});
+  var maxOrgVal = d.orgMap[orgKeys[0]] ? d.orgMap[orgKeys[0]].val : 1;
+  var orgColMap = {DCV:'#e84b4b',DCF:'#e8854b',DGC:'#5b8dee',DSN:'#c9a84c',DGS:'#4ecb8d',DPS:'#9b59b6'};
+  var buColMap = {Food:'#e84b4b','Non-Food':'#5b8dee',Other:'#c9a84c'};
+  document.getElementById('sales-org-bars').innerHTML=orgKeys.map(function(org){
+    var v=d.orgMap[org];
+    var pct=maxOrgVal>0?Math.round(v.val/maxOrgVal*100):0;
+    var col=orgColMap[org]||'var(--gold)';
+    var share=d.totalVal>0?(v.val/d.totalVal*100).toFixed(1)+'%':'0%';
+    var buLabel=v.bu?('<span style="font-size:9px;padding:1px 6px;background:rgba(0,0,0,0.2);color:'+buColMap[v.bu]+';margin-left:6px;">'+v.bu+'</span>'):'';
+    return '<div style="margin-bottom:12px;">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">'+
+      '<div style="display:flex;align-items:center;"><span style="font-size:13px;font-weight:700;color:'+col+';min-width:40px;">'+org+'</span>'+buLabel+'</div>'+
+      '<div style="display:flex;gap:14px;align-items:center;">'+
+      '<span style="font-size:11px;color:var(--text);">'+v.orders+' orders</span>'+
+      '<span style="font-size:12px;font-weight:700;color:var(--gold);">'+fmtAED(v.val)+'</span>'+
+      '<span style="font-size:10px;color:var(--muted);min-width:36px;text-align:right;">'+share+'</span>'+
+      '</div></div>'+
+      '<div style="height:6px;background:var(--border);">'+
+      '<div style="height:6px;width:'+pct+'%;background:'+col+';"></div>'+
+      '</div></div>';
+  }).join('');
+
+  // BU DONUT
+  var buData = [
+    {label:'Food (DCV+DCF)',orders:d.foodOrders,val:d.foodVal,color:'#e84b4b'},
+    {label:'Non-Food (DGC)',orders:d.nfOrders,val:d.nfVal,color:'#5b8dee'},
+    {label:'Others',orders:d.otherOrders,val:d.otherVal,color:'#c9a84c'}
+  ].filter(function(b){return b.orders>0;});
+  if(SALES_BU_CHART){SALES_BU_CHART.destroy();}
+  var ctx=document.getElementById('sales-bu-chart');
+  if(ctx) SALES_BU_CHART=new Chart(ctx,{type:'doughnut',data:{
+    labels:buData.map(function(b){return b.label;}),
+    datasets:[{data:buData.map(function(b){return b.orders;}),backgroundColor:buData.map(function(b){return b.color;}),borderWidth:0}]
+  },options:{responsive:false,cutout:'65%',plugins:{legend:{display:false}}}});
+  document.getElementById('sales-bu-legend').innerHTML=buData.map(function(b){
+    var pct=d.totalOrders>0?(b.orders/d.totalOrders*100).toFixed(1)+'%':'0%';
+    return '<div style="margin-bottom:10px;display:flex;align-items:center;gap:8px;">'+
+      '<div style="width:10px;height:10px;border-radius:50%;background:'+b.color+';flex-shrink:0;"></div>'+
+      '<div><div style="font-size:11px;color:var(--text);">'+b.label+'</div>'+
+      '<div style="font-size:10px;color:var(--muted);">'+b.orders+' orders · '+pct+' · '+fmtAED(b.val)+'</div></div></div>';
+  }).join('');
+
+  // STATUS BARS
+  var statKeys=Object.keys(d.statusMap).sort(function(a,b){return d.statusMap[b].orders-d.statusMap[a].orders;});
+  var maxStat=statKeys.length>0?d.statusMap[statKeys[0]].orders:1;
+  document.getElementById('sales-status-bars').innerHTML=statKeys.map(function(s){
+    var v=d.statusMap[s];
+    var pct=maxStat>0?Math.round(v.orders/maxStat*100):0;
+    var col=s==='On Hold'?'#e84b4b':s==='Booked'?'#4ecb8d':'#c9a84c';
+    var share=d.totalOrders>0?(v.orders/d.totalOrders*100).toFixed(1)+'%':'0%';
+    return '<div style="margin-bottom:12px;">'+
+      '<div style="display:flex;justify-content:space-between;margin-bottom:4px;">'+
+      '<span style="font-size:11px;color:var(--text);">'+s+'</span>'+
+      '<div style="display:flex;gap:12px;">'+
+      '<span style="font-size:11px;color:var(--text);">'+v.orders+' orders</span>'+
+      '<span style="font-size:11px;font-weight:700;color:var(--gold);">'+fmtAED(v.val)+'</span>'+
+      '<span style="font-size:10px;color:var(--muted);min-width:34px;text-align:right;">'+share+'</span>'+
+      '</div></div>'+
+      '<div style="height:5px;background:var(--border);">'+
+      '<div style="height:5px;width:'+pct+'%;background:'+col+';"></div>'+
+      '</div></div>';
+  }).join('');
+
+  // WAREHOUSE TABLE
+  var tbody='';
+  orgKeys.forEach(function(org){
+    var v=d.orgMap[org];
+    var share=d.totalVal>0?(v.val/d.totalVal*100).toFixed(1)+'%':'0%';
+    var buLabel=v.bu||'-';
+    var buCol={Food:'#e84b4b','Non-Food':'#5b8dee',Other:'#c9a84c'}[buLabel]||'var(--muted)';
+    var orgCol=orgColMap[org]||'var(--gold)';
+    tbody+='<tr style="border-bottom:1px solid var(--border);">'+
+      '<td style="padding:8px;font-weight:700;color:'+orgCol+';">'+org+'</td>'+
+      '<td style="padding:8px;"><span style="font-size:9px;padding:2px 6px;background:rgba(0,0,0,0.2);color:'+buCol+';">'+buLabel+'</span></td>'+
+      '<td style="padding:8px;text-align:right;color:var(--text);">'+v.orders+'</td>'+
+      '<td style="padding:8px;text-align:right;color:var(--gold);font-weight:600;">'+fmtAED(v.val)+'</td>'+
+      '<td style="padding:8px;text-align:right;color:var(--muted);">'+share+'</td>'+
+      '</tr>';
+  });
+  tbody+='<tr style="background:var(--glow);border-top:2px solid var(--gold);">'+
+    '<td style="padding:8px;font-weight:700;color:var(--gold);" colspan="2">TOTAL</td>'+
+    '<td style="padding:8px;text-align:right;font-weight:700;color:var(--white);">'+d.totalOrders+'</td>'+
+    '<td style="padding:8px;text-align:right;font-weight:700;color:var(--gold);">'+fmtAED(d.totalVal)+'</td>'+
+    '<td style="padding:8px;text-align:right;color:var(--gold);">100%</td>'+
+    '</tr>';
+  document.getElementById('sales-wh-table').innerHTML=tbody;
+}
+
+function saveSalesToServer(fileName){
+  if(!SALES_DATA) return;
+  fetch('/api/sales/upload',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({summary:Object.assign({version:'v1'},SALES_DATA),fileName:fileName,uploadedBy:'Admin',totalOrders:SALES_DATA.totalOrders})
+  }).then(function(r){return r.json();})
+  .then(function(d){if(d&&d.success)console.log('Sales saved to server');})
+  .catch(function(e){console.log('Sales save error:',e.message);});
+}
+
+function loadSalesFromServer(){
+  fetch('/api/sales/status')
+    .then(function(r){var ct=r.headers.get('content-type')||'';if(!ct.includes('json'))return null;return r.json();})
+    .then(function(d){
+      if(!d||!d.hasData) return;
+      var s=d.summary||{};
+      if((s.totalOrders||0)>0&&(s.totalVal||0)===0){fetch('/api/sales/clear',{method:'DELETE'}).catch(function(){});return;}
+      SALES_DATA=Object.assign({},s,{fileName:d.fileName,date:s.date||new Date().toLocaleDateString('en-AE')});
+      renderSalesDashboard();
+    }).catch(function(e){console.log('Sales load error:',e.message);});
+}
+
+loadSalesFromServer();
+
 </script>
 <!-- WH Backlog Password Modal -->
 <div id="bl-pwd-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9999;align-items:center;justify-content:center;">
