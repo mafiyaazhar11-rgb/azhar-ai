@@ -3335,6 +3335,8 @@ function processSalesData(rows, fileName){
     var names = Array.prototype.slice.call(arguments);
     return keys.find(function(k){return names.some(function(n){return k.toUpperCase().includes(n.toUpperCase());});}) || null;
   }
+  console.log('Sales rows:', rows.length, 'First row keys:', Object.keys(rows[0]).slice(0,5));
+  console.log('First row Total:', rows[0][fc('TOTAL','VALUE','AMOUNT')]);
   var C = {
     wh:     fc('WAREHOUSE','WH'),
     val:    fc('TOTAL','VALUE','AMOUNT'),
