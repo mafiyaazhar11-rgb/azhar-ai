@@ -194,6 +194,9 @@ footer span{color:var(--gold);}
 }
 
 @media (max-width: 768px) {
+  /* Mobile touch scrolling fix */
+  .main { -webkit-overflow-scrolling: touch; overflow-y: auto; }
+  .content { -webkit-overflow-scrolling: touch; overflow-y: auto; overflow-x: hidden; touch-action: pan-y; }
 
   /* Show hamburger */
   .hamburger { display: flex; }
@@ -295,9 +298,10 @@ footer span{color:var(--gold);}
     grid-template-columns: 1fr !important;
   }
 
-  /* Remove horizontal overflow */
-  body { overflow-x: hidden; }
-  .content { overflow-x: hidden; }
+  /* Scroll fix */
+  body { overflow-x: hidden; overflow-y: hidden; }
+  .content { overflow-x: hidden; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  .main { overflow-y: auto; -webkit-overflow-scrolling: touch; }
 
   /* Route table - horizontal scroll only that box */
   #ds-routes-box > div { overflow-x: auto; }
