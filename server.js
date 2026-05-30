@@ -183,6 +183,14 @@ app.post('/api/backlog/upload', upload.single('file'), async function(req, res) 
   }
 });
 
+app.delete('/api/backlog/clear', async function(req, res) {
+  try {
+    await pool.query('DELETE FROM backlog_data');
+    backlogData = null;
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 app.get('/api/backlog/status', function(req, res) {
   if (!backlogData) return res.json({ hasData: false });
   res.json({ hasData: true, uploadedAt: backlogData.uploadedAt, uploadedBy: backlogData.uploadedBy, fileName: backlogData.fileName, totalOrders: backlogData.totalOrders, summary: backlogData.summary });
