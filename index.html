@@ -793,6 +793,12 @@ footer span{color:var(--gold);}
             <button class="ret-pill" id="rl-uaq" onclick="retFilter('area','UAQ')">UAQ</button>
           </div>
           <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
+            <span style="font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;min-width:50px;">CATEGORY</span>
+            <button class="ret-pill on" id="rcat-all" onclick="retFilter('cat','all')">All</button>
+            <button class="ret-pill" id="rcat-inv" onclick="retFilter('cat','Invoice Cancellation')">Invoice Cancel</button>
+            <button class="ret-pill" id="rcat-grv" onclick="retFilter('cat','GRV-Return')">GRV Return</button>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
             <span style="font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;min-width:20px;">BU</span>
             <button class="ret-pill on" id="rbu-all" onclick="retFilter('bu','all')">All</button>
             <button class="ret-pill" id="rbu-food" onclick="retFilter('bu','food')">Food</button>
@@ -2340,9 +2346,9 @@ function loadReturnsFromServer(){
 function renderReturnsFromSummary(s, fileName){
   document.getElementById('ret-nodata').style.display='none';
   document.getElementById('ret-dashboard').style.display='block';
-  // Hide star so manager doesn't see upload option
+  // Keep star visible for re-upload
   var sw=document.getElementById('ret-star-wrap');
-  if(sw)sw.style.display='none';
+  if(sw)sw.style.display='block';
   var badge=document.getElementById('ret-status-badge');
   if(badge){ badge.style.display='block'; document.getElementById('ret-last-date').textContent=new Date().toLocaleDateString('en-AE'); }
 
@@ -2538,12 +2544,12 @@ function handleReturnsUpload(input){
       saveReturnsToServer(file.name);
       var badge=document.getElementById('ret-status-badge');
       if(badge){badge.style.display='block';document.getElementById('ret-last-date').textContent=new Date().toLocaleDateString('en-AE');}
-      // Hide upload box AND star after successful upload
+      // Hide upload box after upload, keep star for re-upload
       var box=document.getElementById('ret-upload-box');
       if(box)box.style.display='none';
       retUploadVisible=false;
       var starWrap=document.getElementById('ret-star-wrap');
-      if(starWrap)starWrap.style.display='none';
+      if(starWrap)starWrap.style.display='block';
     } catch(err){alert('Error reading file: '+err.message);}
   };
   if(ext==='csv')reader.readAsText(file);
@@ -2579,13 +2585,15 @@ function retFilter(type, val){
     wh:['rw-all','rw-dcv','rw-dgc','rw-dll','rw-dgs','rw-dcf','rw-dgn'],
     month:['retm-all','retm-1','retm-2','retm-3','retm-4','retm-5'],
     area:['rl-all','rl-dxb','rl-shj','rl-ajm','rl-ain','rl-rak','rl-fuj','rl-uaq'],
-    bu:['rbu-all','rbu-food','rbu-nf']
+    bu:['rbu-all','rbu-food','rbu-nf'],
+    cat:['rcat-all','rcat-inv','rcat-grv']
   };
   var valMaps={
     wh:['all','DCV','DGC','DLL','DGS','DCF','DGN'],
     month:['all',1,2,3,4,5],
     area:['all','DXB','SHJ','AJM','AIN','RAK','FUJ','UAQ'],
-    bu:['all','food','nonfood']
+    bu:['all','food','nonfood'],
+    cat:['all','Invoice Cancellation','GRV-Return']
   };
   if(maps[type]){
     maps[type].forEach(function(id,i){
@@ -2619,6 +2627,7 @@ function getFilteredReturns(){
     }
     var area=extractArea(row[C.shipTo]);
     if(retFilters.area!=='all'&&area!==retFilters.area)return false;
+    if(retFilters.cat!=='all'&&cat!==retFilters.cat)return false;
 
     return true;
   }).map(function(row){
