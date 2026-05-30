@@ -662,6 +662,21 @@ footer span{color:var(--gold);}
       <!-- DASHBOARD DATA -->
       <div id="bl-dashboard" style="display:none;">
 
+        <!-- FILTERS -->
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;align-items:center;">
+          <span style="font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;min-width:20px;">ORG</span>
+          <button class="ret-pill on" id="bl-f-org-all" onclick="blFilter('org','all')">All</button>
+          <button class="ret-pill" id="bl-f-org-dcv" onclick="blFilter('org','DCV')">DCV</button>
+          <button class="ret-pill" id="bl-f-org-dgc" onclick="blFilter('org','DGC')">DGC</button>
+          <button class="ret-pill" id="bl-f-org-dsn" onclick="blFilter('org','DSN')">DSN</button>
+          <button class="ret-pill" id="bl-f-org-dcf" onclick="blFilter('org','DCF')">DCF</button>
+          <span style="width:1px;height:16px;background:var(--border);margin:0 4px;"></span>
+          <span style="font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;min-width:20px;">BU</span>
+          <button class="ret-pill on" id="bl-f-bu-all" onclick="blFilter('bu','all')">All</button>
+          <button class="ret-pill" id="bl-f-bu-food" onclick="blFilter('bu','food')">Food</button>
+          <button class="ret-pill" id="bl-f-bu-nf" onclick="blFilter('bu','nonfood')">Non-Food</button>
+        </div>
+
         <!-- ROW 1: 5 KPI CARDS -->
         <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px;" id="bl-kpis"></div>
 
@@ -1952,6 +1967,22 @@ document.addEventListener('DOMContentLoaded', function(){
 
 // ── WH BACKLOG DASHBOARD ──────────────────────────────────
 var BL_DATA = null;
+var BL_RAW_ROWS = [];
+var blFilters = {org:'all', bu:'all'};
+
+function blFilter(type, val){
+  blFilters[type] = val;
+  // Update pill states
+  var orgIds=['bl-f-org-all','bl-f-org-dcv','bl-f-org-dgc','bl-f-org-dsn','bl-f-org-dcf'];
+  var orgVals=['all','DCV','DGC','DSN','DCF'];
+  var buIds=['bl-f-bu-all','bl-f-bu-food','bl-f-bu-nf'];
+  var buVals=['all','food','nonfood'];
+  if(type==='org') orgIds.forEach(function(id,i){var el=document.getElementById(id);if(el)el.className='ret-pill'+(orgVals[i]===val?' on':'');});
+  if(type==='bu') buIds.forEach(function(id,i){var el=document.getElementById(id);if(el)el.className='ret-pill'+(buVals[i]===val?' on':'');});
+  // Re-process with filters
+  if(BL_RAW_ROWS.length) processBacklogRows(BL_RAW_ROWS, BL_DATA?BL_DATA.fileName:'backlog.xlsx', false);
+  else if(BL_DATA) renderBacklog();
+}
 var BL_CHART = null;
 var BL_RSD_CHART = null;
 var ORG_COLORS = {DCV:'#e84b4b', DGC:'#5b8dee', DSN:'#c9a84c', DGS:'#4ecb8d', DCF:'#e8854b'};
@@ -2156,14 +2187,15 @@ function handleBacklogUpload(input){
         rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], {defval:''});
       }
       if(!rows.length){ alert('No data found in file'); return; }
-      parseBacklogData(rows, file.name);
+      processBacklogRows(rows, file.name, true);
     } catch(err){ alert('Error reading file: '+err.message); }
   };
   if(ext === 'csv') reader.readAsText(file);
   else reader.readAsArrayBuffer(file);
 }
 
-function parseBacklogData(rows, fileName){
+function processBacklogRows(rows, fileName, saveRaw){
+  if(saveRaw!==false){ BL_RAW_ROWS = rows; }
   // Detect columns
   var keys = Object.keys(rows[0]);
   function fc(){ var names=Array.prototype.slice.call(arguments); return keys.find(function(k){return names.some(function(n){return k.toUpperCase().includes(n.toUpperCase());});})||null; }
@@ -2180,7 +2212,19 @@ function parseBacklogData(rows, fileName){
   var orgMap={}, catMap={}, custMap={}, accTypeMap={}, rsdAging={}, actionRows=[];
   var totalOrders=0, totalVal=0;
 
-  rows.forEach(function(row){
+  // Apply filters
+  var filteredRows = rows.filter(function(row){
+    var org = normalizeORG(row[C.org]);
+    if(blFilters.org!=='all' && org!==blFilters.org) return false;
+    if(blFilters.bu!=='all'){
+      var bu = normalizeBU(row[C.accType]||row[C.org]||'');
+      if(blFilters.bu==='food' && bu!=='Food') return false;
+      if(blFilters.bu==='nonfood' && bu!=='Non-Food') return false;
+    }
+    return true;
+  });
+
+  filteredRows.forEach(function(row){
     var org = normalizeORG(row[C.org]);
     var val = parseFloat(row[C.val])||0;
     var cat = shortCat(String(row[C.cat]||'').trim());
@@ -2221,7 +2265,7 @@ function parseBacklogData(rows, fileName){
   });
 
   var advance = catMap['RSD >30 Advance']||{count:0,val:0};
-  var whBacklog = catMap['Before Cut-Off']||{count:0,val:0};
+  var whBacklog = catMap['Before Cut-Off']||catMap['Pure WH Backlog']||{count:0,val:0};
   var creditHold = (catMap['Credit Hold']||{count:0,val:0});
   var cutOffFrozen = (catMap['Cut-Off Frozen']||{count:0,val:0});
   var unplannedFrozen = (catMap['Unplanned Frozen']||{count:0,val:0});
@@ -2244,11 +2288,11 @@ function renderBacklog(){
   var whBL=d.whBacklog||{count:0,val:0};
   var afterCutCount=(d.cutOffFrozen||{count:0}).count+(d.unplannedFrozen||{count:0}).count;
   var afterCutVal=(d.cutOffFrozen||{val:0}).val+(d.unplannedFrozen||{val:0}).val;
-  var actionNeeded=(d.catMap&&d.catMap['Pure WH Backlog'])?d.catMap['Pure WH Backlog'].count:0;
+  var actionNeeded=(d.catMap&&(d.catMap['Before Cut-Off']||d.catMap['Pure WH Backlog']))?((d.catMap['Before Cut-Off']||d.catMap['Pure WH Backlog']).count):0;
 
   // ── ROW 1: 5 KPI CARDS ──
   var kpis=[
-    {icon:'📋',label:'TOTAL POOL ORDERS',val:d.totalOrders.toLocaleString(),sub:'AED '+fmtAED(d.totalVal)+' Total Orders in Pool',color:'var(--gold)',border:'var(--border)'},
+    {icon:'📋',label:'TOTAL POOL ORDERS',val:d.totalOrders.toLocaleString(),sub:fmtAED(d.totalVal)+' Total Orders in Pool',color:'var(--gold)',border:'var(--border)'},
     {icon:'🛡',label:'WH BACKLOG PURE RISK',val:whBL.count.toLocaleString(),sub:'Before Cut-Off Risk\nAED '+fmtAED(whBL.val),color:'#e84b4b',border:'rgba(232,75,75,0.5)'},
     {icon:'📅',label:'ADVANCE ORDERS',val:d.advance.count.toLocaleString(),sub:'RSD > 30 Days / Future Orders\nAED '+fmtAED(d.advance.val),color:'var(--muted)',border:'var(--border)'},
     {icon:'🔒',label:'CREDIT HOLD / FROZEN',val:afterCutCount.toLocaleString(),sub:'Credit Hold + Frozen Pool\nAED '+fmtAED(afterCutVal),color:'#c9a84c',border:'rgba(201,168,76,0.4)'},
@@ -2296,8 +2340,8 @@ function renderBacklog(){
     '<span style="font-size:10px;color:var(--gold);">100%</span><span></span></div>';
 
   // ── SECTION 2: CATEGORY CHART ──
-  var catOrder=['Pure WH Backlog','RSD >30 Advance','Credit Hold','Frozen Pool'];
-  var catColorMap={'Pure WH Backlog':'#e84b4b','RSD >30 Advance':'#c9a84c','Credit Hold':'#5b8dee','Frozen Pool':'#4ecb8d'};
+  var catOrder=['Before Cut-Off','RSD >30 Advance','Cut-Off Frozen','Unplanned Frozen'];
+  var catColorMap={'Before Cut-Off':'#e84b4b','RSD >30 Advance':'#c9a84c','Cut-Off Frozen':'#5b8dee','Unplanned Frozen':'#4ecb8d'};
   var catLabels2=[],catData2=[],catColors2=[];
   catOrder.forEach(function(k){
     var v=d.catMap&&d.catMap[k];
@@ -2352,9 +2396,9 @@ function renderBacklog(){
   var actionEl=document.getElementById('bl-action-table');
   if(actionEl && d.actionRows){
     var topActions=d.actionRows.slice().sort(function(a,b){return b.val-a.val;}).slice(0,10);
-    var actionColorMap={'Pure WH Backlog':'WH to Pick / Escalate','RSD >30 Advance':'Advance / No Action Today','Credit Hold':'Monitor','Frozen Pool':'Priority Monitoring'};
-    var actionBgMap={'Pure WH Backlog':'rgba(232,75,75,0.2)','RSD >30 Advance':'rgba(201,168,76,0.15)','Credit Hold':'rgba(91,141,238,0.15)','Frozen Pool':'rgba(78,203,141,0.15)'};
-    var actionColMap={'Pure WH Backlog':'#e84b4b','RSD >30 Advance':'#c9a84c','Credit Hold':'#5b8dee','Frozen Pool':'#4ecb8d'};
+    var actionColorMap={'Before Cut-Off':'WH to Pick / Escalate','RSD >30 Advance':'Advance / No Action Today','Cut-Off Frozen':'Monitor','Unplanned Frozen':'Priority Monitoring','Credit Hold':'Monitor'};
+    var actionBgMap={'Before Cut-Off':'rgba(232,75,75,0.2)','RSD >30 Advance':'rgba(201,168,76,0.15)','Cut-Off Frozen':'rgba(91,141,238,0.15)','Unplanned Frozen':'rgba(78,203,141,0.15)','Credit Hold':'rgba(201,168,76,0.15)'};
+    var actionColMap={'Before Cut-Off':'#e84b4b','RSD >30 Advance':'#c9a84c','Cut-Off Frozen':'#5b8dee','Unplanned Frozen':'#4ecb8d','Credit Hold':'#c9a84c'};
     actionEl.innerHTML=topActions.map(function(r,i){
       var orgCol=ORG_COLORS[r.org]||'var(--gold)';
       var aLabel=actionColorMap[r.cat]||'Monitor';
