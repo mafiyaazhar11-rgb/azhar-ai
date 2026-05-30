@@ -199,7 +199,8 @@ function toStr(v) { return String(v == null ? '' : v).trim(); }
 function normaliseType(raw) {
   var t = toStr(raw).toUpperCase().replace(/\s+/g, ' ').trim();
   if (t === 'FOOD' || t.startsWith('FOOD')) return 'food';
-  if (t === 'NON FOOD' || t.includes('NON FOOD') || t.includes('NON-FOOD')) return 'nonfood';
+  if (t.includes('NON-FOOD') || t.includes('NON FOOD')) return 'nonfood';
+  if (t === 'GSEB' || t === 'SHARKNINJA') return 'nonfood';
   if (t === '3PL' || t === '3 PL') return '3pl';
   if (t === 'VAN') return 'van';
   return t.toLowerCase();
@@ -274,16 +275,16 @@ function parseDispatch(buffer) {
     city:     findCol('CITY', 'AREA'),
     customer: findCol('CUSTOMER NAME', 'CUSTOMER'),
     amount:   findCol('TOTAL_AMOUNT', 'AMOUNT', 'VALUE'),
-    driver:   findCol('DRIVER CONTACT DETAILS', 'DRIVERS NAME', 'DRIVER NAME', 'DRIVER CONTACT', 'DRIVER_CONTACT'),
+    driver:   findCol('DRIVER CONTACT DETAILS', 'DRIVERS NAME', 'DRIVER NAME', 'DRIVER CONTACT', 'DRIVER_CONTACT', 'DRIVER_ID'),
     location: findCol('LOCATION_ID', 'LOCATION'),
     type:     findCol('TYPE'),
-    org:      findCol('BU') || findCol('ORGANIZATION') || findCol('ORG-BU') || findCol('ORG')
+    org:      findCol('ROUTE') || findCol('BU') || findCol('ORGANIZATION') || findCol('ORG-BU') || findCol('ORG')
   };
   console.log('Dispatch cols:', JSON.stringify(C));
 
   var totalOrders=0, totalValue=0, foodOrders=0, foodValue=0, nonFoodOrders=0, nonFoodValue=0, plOrders=0, vanOrders=0;
   var cities={}, customers={}, routes={}, driverSet={};
-  var orgStats={ DCV:{o:0,v:0}, DCF:{o:0,v:0}, DGC:{o:0,v:0}, DGS:{o:0,v:0}, DSN:{o:0,v:0}, HCP:{o:0,v:0} };
+  var orgStats={ DCV:{o:0,v:0}, DCF:{o:0,v:0}, DGC:{o:0,v:0}, DGS:{o:0,v:0}, DSN:{o:0,v:0}, DPS:{o:0,v:0}, HCP:{o:0,v:0} };
 
   for (var i = 0; i < rows.length; i++) {
     var row = rows[i];
@@ -369,6 +370,7 @@ function parseDispatch(buffer) {
       DGC: { orders:orgStats.DGC.o, value:Math.round(orgStats.DGC.v) },
       DGS: { orders:orgStats.DGS.o, value:Math.round(orgStats.DGS.v) },
       DSN: { orders:orgStats.DSN.o, value:Math.round(orgStats.DSN.v) },
+      DPS: { orders:orgStats.DPS.o, value:Math.round(orgStats.DPS.v) },
       HCP: { orders:orgStats.HCP.o, value:Math.round(orgStats.HCP.v) }
     },
     by_city: byCity, top_customers: topCustomers,
