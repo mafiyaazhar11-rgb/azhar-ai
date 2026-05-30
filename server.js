@@ -769,6 +769,14 @@ app.post('/api/returns/upload', async function(req, res) {
   }
 });
 
+app.delete('/api/returns/clear', async function(req, res) {
+  try {
+    await pool.query('DELETE FROM returns_data');
+    returnsData = null;
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 app.get('/api/returns/status', function(req, res) {
   if (!returnsData) return res.json({ hasData: false });
   res.json({
