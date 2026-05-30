@@ -2608,9 +2608,14 @@ function getFilteredReturns(){
   var keys=Object.keys(RET_RAW[0]||{});
   function fc(){var names=Array.prototype.slice.call(arguments);return keys.find(function(k){return names.some(function(n){return k.toUpperCase().includes(n.toUpperCase());});})||null;}
   var C={
-    wh:fc('WAREHOUSE'),cat:fc('CREDIT NOTE CAT','CATEGORY'),bu:fc('BUSINESS UNIT','BUSINESS NITS'),
-    tot:fc('TOTAL'),date:fc('RETURN ORDERED DATE','RETURN DATE','BOOKED DATE'),
-    cust:fc('CUSTOMER NAME'),shipTo:fc('SHIP TO'),orderNo:fc('ORDER NUMBER','ORDER NO')
+    wh:fc('WAREHOUSE'),
+    cat:fc('CREDIT NOTE CATEGORY','CREDIT NOTE CAT','CATEGORY'),
+    bu:fc('BUSINESS UNITS','BUSINESS UNIT','BU'),
+    tot:fc('TOTAL'),
+    date:fc('RETURN ORDERED DATE','RETURN ORDERED','BOOKED DATE'),
+    cust:fc('CUSTOMER NAME','CUSTOMER'),
+    shipTo:fc('SHIP TO'),
+    orderNo:fc('ORDER NUMBER','ORDER NO')
   };
   return RET_RAW.filter(function(row){
     var wh=String(row[C.wh]||'').trim().toUpperCase();
@@ -2637,7 +2642,7 @@ function getFilteredReturns(){
       wh:String(row[C.wh]||'').trim().toUpperCase(),
       cat:String(row[C.cat]||'').trim(),
       bu:normalizeBU(row[C.bu]),
-      tot:Math.abs(parseFloat(row[C.tot])||0),
+      tot:Math.abs(parseFloat(String(row[C.tot]||'').replace(/,/g,''))||0),
       month:parseInt(p[0])||0,
       cust:normalizeCustomer(row[C.cust]||''),
       area:extractArea(row[C.shipTo]),
