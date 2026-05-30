@@ -3335,11 +3335,14 @@ function processSalesData(rows, fileName){
     var names = Array.prototype.slice.call(arguments);
     return keys.find(function(k){return names.some(function(n){return k.toUpperCase().includes(n.toUpperCase());});}) || null;
   }
-  console.log('Sales rows:', rows.length, 'First row keys:', Object.keys(rows[0]).slice(0,5));
-  console.log('First row Total:', rows[0][fc('TOTAL','VALUE','AMOUNT')]);
   var C = {
     wh:     fc('WAREHOUSE','WH'),
-    val:    fc('TOTAL','VALUE','AMOUNT'),
+    val:    (function(){
+              // Find exact 'Total' column, not 'Total Drops'
+              return keys.find(function(k){return k.trim()==='Total'||k.trim()==='TOTAL'||k.trim()==='total';}) ||
+                     keys.find(function(k){var u=k.toUpperCase();return u==='TOTAL VALUE'||u==='NET TOTAL'||u==='AMOUNT';}) ||
+                     fc('TOTAL','VALUE','AMOUNT');
+            })(),
     status: fc('STATUS'),
     onhold: fc('ON HOLD','HOLD'),
     temp:   fc('TEMPERATURE','TEMP')
