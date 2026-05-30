@@ -645,6 +645,7 @@ footer span{color:var(--gold);}
         </div>
         <div style="display:flex;align-items:center;gap:10px;">
           <div id="bl-status-badge" style="font-size:10px;color:var(--muted);display:none;">Last: <span id="bl-last-date">—</span></div>
+          <button onclick="blClearData()" style="padding:8px 14px;background:transparent;border:1px solid #e84b4b;color:#e84b4b;font-size:10px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;">🗑 CLEAR</button>
           <button onclick="blAuthUpload(event)" style="padding:8px 18px;background:var(--glow);border:1px solid var(--gold);color:var(--gold);font-size:10px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;display:flex;align-items:center;gap:6px;">
             <span>📦</span> UPLOAD FILE
           </button>
@@ -2059,6 +2060,20 @@ function fmtAED(v){
 }
 
 var blAuthDone = false;
+
+function blClearData(){
+  if(!confirm('Clear all saved backlog data?')) return;
+  fetch('/api/backlog/clear', {method:'DELETE'})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(d.success){
+        BL_DATA=null; BL_RAW_ROWS=[];
+        document.getElementById('bl-nodata').style.display='flex';
+        document.getElementById('bl-dashboard').style.display='none';
+        alert('Backlog data cleared. Upload new file.');
+      }
+    }).catch(function(e){alert('Error: '+e.message);});
+}
 // Save backlog summary to server
 function saveBacklogToServer(fileName, totalOrders){
   if(!BL_DATA) return;
@@ -2104,6 +2119,12 @@ function loadBacklogFromServer(){
     .then(function(d){
       if(!d || !d.hasData) return;
       var s = d.summary || {};
+      // Auto-detect bad summary
+      if((s.totalOrders||0)>0 && (s.totalVal||0)===0){
+        console.log('Bad backlog summary detected - clearing');
+        fetch('/api/backlog/clear',{method:'DELETE'}).catch(function(){});
+        return;
+      }
       BL_DATA = {
         totalOrders: s.totalOrders||0, totalVal: s.totalVal||0,
         advance: s.advance||{count:0,val:0},
@@ -2489,7 +2510,12 @@ function loadReturnsFromServer(){
     .then(function(d){
       if(!d||!d.hasData) return;
       var s=d.summary||{};
-      // Render from summary directly
+      // Auto-detect bad summary: has orders but zero value = old corrupt data
+      if((s.totalOrders||0)>0 && (s.totalVal||0)===0){
+        console.log('Bad returns summary detected - clearing');
+        fetch('/api/returns/clear',{method:'DELETE'}).catch(function(){});
+        return;
+      }
       renderReturnsFromSummary(s, d.fileName);
     })
     .catch(function(e){ console.log('Returns not available:', e.message); });
