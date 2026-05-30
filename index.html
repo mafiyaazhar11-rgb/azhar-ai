@@ -2735,6 +2735,7 @@ var RET_CHART_MONTH = null;
 var RET_CHART_CAT = null;
 var retUploadVisible = false;
 var retFilters = { wh:'all', month:'all', area:'all', bu:'all', cat:'all' };
+var RET_FULL_SUMMARY = null; // Full unfiltered summary from server
 var WH_COLORS = {DCV:'#e84b4b',DGC:'#5b8dee',DLL:'#c9a84c',DGS:'#4ecb8d',DCF:'#e8854b',DGN:'#9b59b6'};
 var MONTH_NAMES = ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
@@ -2798,6 +2799,7 @@ function loadReturnsFromServer(){
         fetch('/api/returns/clear',{method:'DELETE'}).catch(function(){});
         return;
       }
+      RET_FULL_SUMMARY = s;
       renderReturnsFromSummary(s, d.fileName);
     })
     .catch(function(e){ console.log('Returns not available:', e.message); });
@@ -3030,6 +3032,9 @@ function handleReturnsUpload(input){
       }
       if(!rows.length){alert('No data found');return;}
       RET_RAW=rows;
+      // Build and store full summary for filter use
+      var allRows = getFilteredReturnsAll();
+      RET_FULL_SUMMARY = buildReturnsSummary(allRows);
       renderReturns();
       setTimeout(function(){ saveReturnsToServer(file.name); }, 1000);
       var badge=document.getElementById('ret-status-badge');
@@ -3143,8 +3148,95 @@ function getFilteredReturns(){
 
 function fmtAEDR(v){if(v>=1000000)return'AED '+(v/1000000).toFixed(2)+'M';if(v>=1000)return'AED '+Math.round(v/1000)+'K';return'AED '+Math.round(v);}
 
+function renderReturnsFiltered(){
+  // Filter summary maps based on retFilters when RET_RAW not available
+  var s = RET_FULL_SUMMARY;
+  if(!s) return;
+
+  // Build filtered summary from the raw maps
+  var filtered = {
+    totalVal:0, invCount:0, invVal:0, grvCount:0, grvVal:0,
+    whMap:{}, catMap:{}, buMap:{}, monthMap:{}, areaMap:{}, custMap:{},
+    totalOrders:0
+  };
+
+  // We filter using whMap, monthMap, areaMap, catMap, buMap
+  // Since summary only has aggregated maps, we can only filter by one dimension at a time
+  // Best approach: use the most restrictive filter to subset
+
+  // Get warehouse filter
+  var whF = retFilters.wh !== 'all' ? retFilters.wh : null;
+  var catF = retFilters.cat !== 'all' ? retFilters.cat : null;
+  var buF = retFilters.bu !== 'all' ? retFilters.bu : null;
+  var moF = retFilters.month !== 'all' ? parseInt(retFilters.month) : null;
+  var areaF = retFilters.area !== 'all' ? retFilters.area : null;
+
+  // Apply WH filter
+  var whMap = {};
+  if(whF){ if(s.whMap[whF]) whMap[whF] = s.whMap[whF]; }
+  else { whMap = s.whMap || {}; }
+
+  // Apply CAT filter
+  var catMap = {};
+  if(catF){ if(s.catMap[catF]) catMap[catF] = s.catMap[catF]; }
+  else { catMap = s.catMap || {}; }
+
+  // Apply MONTH filter
+  var monthMap = {};
+  if(moF){ if(s.monthMap[moF]) monthMap[moF] = s.monthMap[moF]; }
+  else { monthMap = s.monthMap || {}; }
+
+  // Calculate totals from most restrictive filter
+  // Priority: cat > wh > month
+  if(catF && catMap[catF]){
+    var cv = catMap[catF];
+    filtered.totalOrders = cv.c || 0;
+    filtered.totalVal = cv.v || 0;
+    filtered.catMap = catMap;
+    if(catF === 'Invoice Cancellation'){ filtered.invCount = cv.c; filtered.invVal = cv.v; }
+    else if(catF === 'GRV-Return'){ filtered.grvCount = cv.c; filtered.grvVal = cv.v; }
+  } else if(whF && whMap[whF]){
+    filtered.totalVal = whMap[whF] || 0;
+    filtered.catMap = catMap;
+    filtered.whMap = whMap;
+    // Recalc from catMap proportionally
+    Object.keys(catMap).forEach(function(k){
+      var cv = catMap[k];
+      filtered.totalOrders += cv.c||0;
+      if(k==='Invoice Cancellation'){ filtered.invCount+=(cv.c||0); filtered.invVal+=(cv.v||0); }
+      if(k==='GRV-Return'){ filtered.grvCount+=(cv.c||0); filtered.grvVal+=(cv.v||0); }
+    });
+  } else {
+    // No filter or month only - use full summary
+    filtered.totalVal = s.totalVal || 0;
+    filtered.totalOrders = s.totalOrders || 0;
+    filtered.invCount = s.invCount || 0;
+    filtered.invVal = s.invVal || 0;
+    filtered.grvCount = s.grvCount || 0;
+    filtered.grvVal = s.grvVal || 0;
+    filtered.catMap = catMap;
+    filtered.whMap = whMap;
+    filtered.monthMap = monthMap;
+    filtered.areaMap = s.areaMap || {};
+    filtered.buMap = s.buMap || {};
+    filtered.custMap = s.custMap || {};
+  }
+
+  filtered.whMap = filtered.whMap || whMap;
+  filtered.monthMap = filtered.monthMap || monthMap;
+  filtered.areaMap = filtered.areaMap || (s.areaMap || {});
+  filtered.buMap = filtered.buMap || (s.buMap || {});
+  filtered.custMap = filtered.custMap || (s.custMap || {});
+
+  renderReturnsFromSummary(filtered, '');
+}
+
 function renderReturns(){
-  if(!RET_RAW.length)return;
+  // If no raw data but have full summary, filter from summary
+  if(!RET_RAW.length){
+    if(RET_FULL_SUMMARY) renderReturnsFiltered();
+    return;
+  }
   document.getElementById('ret-nodata').style.display='none';
   document.getElementById('ret-dashboard').style.display='block';
   var rows=getFilteredReturns();
