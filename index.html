@@ -2008,10 +2008,10 @@ function shortCat(cat){
   if(u.includes('ADVANCE ORDER')||u.includes('ADVANCE-ORDER')) return 'RSD >30 Advance';
   // Generic RSD > future date (e.g. RSD>01-JUNE)
   if(u.includes('RSD>') || (u.includes('RSD') && u.includes('JUNE')) || (u.includes('RSD') && u.includes('JULY'))) return 'RSD >30 Advance';
-  // Status column direct values
-  if(u.includes('-ADVANCE ORDER')) return 'RSD >30 Advance';
-  if(u.includes('-WH BACK LOG')) return 'Before Cut-Off';
-  if(u.includes('-AUTO BOOKED')) return 'Cut-Off Frozen';
+  // Status column direct values like 'DCV-Advance Order', 'DCV-WH Back Log Order'
+  if(u.includes('ADVANCE ORDER')) return 'RSD >30 Advance';
+  if(u.includes('WH BACK LOG') || u.includes('WH BACKLOG')) return 'Before Cut-Off';
+  if(u.includes('AUTO BOOKED') || u.includes('CREDIT HOLD')) return 'Cut-Off Frozen';
   return c.replace(/  +/g,' ').trim().substring(0,35);
 }
 
@@ -2232,6 +2232,7 @@ function processBacklogRows(rows, fileName, saveRaw){
     org:      fc('ORG','ORGNIZATION','ORGNISATION','ORGNAIZATION','BU'),
     val:      fc('VALUE','SUM OF VALUE','AMOUNT','AMT','TOTAL_VALUE','TOTAL VALUE'),
     cat:      fc('COMMENTS','COMMENT','CATEGORY','CATERGORY','ROW LABELS','ROW LABEL','REMARK','REMARKS'),
+    statusCol: fc('STATUS'),
     accType:  fc('ACCOUNT TYPE','ACCOUNTTYPE','ACC TYPE'),
     buCol:    fc('CATEGORY','BU','FOOD'),
     accName:  fc('ACCOUNT NAME','ACCOUNTNAME','ACC NAME'),
@@ -2260,7 +2261,7 @@ function processBacklogRows(rows, fileName, saveRaw){
   filteredRows.forEach(function(row){
     var org = normalizeORG(row[C.org]);
     var val = parseFloat(row[C.val])||0;
-    var cat = shortCat(String(row[C.cat]||'').trim());
+    var statusVal = String(row[C.statusCol]||'').trim(); var cat = shortCat(statusVal||String(row[C.cat]||'').trim());
     var cust = cleanCustName(row[C.customer]);
     totalOrders++; totalVal+=val;
     if(org){ if(!orgMap[org])orgMap[org]={count:0,val:0}; orgMap[org].count++; orgMap[org].val+=val; }
@@ -2273,28 +2274,36 @@ function processBacklogRows(rows, fileName, saveRaw){
     if(cust){
       if(!custMap[cust])custMap[cust]={count:0,val:0,org:org,oldestRSD:''};
       custMap[cust].count++; custMap[cust].val+=val;
-      if(!custMap[cust].oldestRSD || String(row[C.date]||'')<custMap[cust].oldestRSD) custMap[cust].oldestRSD=String(row[C.date]||'');
+      if(!custMap[cust].oldestRSD || (rsdStr && rsdStr<custMap[cust].oldestRSD)) custMap[cust].oldestRSD=rsdStr||custMap[cust].oldestRSD;
       custMap[cust].org=org;
     }
     // Account type tracking
     var accType = row[C.accType]||'Unknown';
     if(accType){ if(!accTypeMap[accType])accTypeMap[accType]={count:0,val:0}; accTypeMap[accType].count++; accTypeMap[accType].val+=val; }
     // RSD aging
-    var rsdRaw=String(row[C.date]||''); var rsdBucket='Unknown';
+    // Handle date - could be Date object, number, or string
+    var rsdDate2=null; var rsdStr='';
     try{
-      var rsdParts=rsdRaw.split(' ')[0].split(/[-\/]/);
-      var rsdDate=new Date(rsdParts[0],rsdParts[1]-1,rsdParts[2]);
-      var today2=new Date(); today2.setHours(0,0,0,0);
-      var diff=Math.round((rsdDate-today2)/(1000*60*60*24));
-      if(diff<=0)rsdBucket='RSD Today';
-      else if(diff<=3)rsdBucket='RSD +1 to +3';
-      else if(diff<=7)rsdBucket='RSD +4 to +7';
-      else if(diff<=15)rsdBucket='RSD +8 to +15';
-      else rsdBucket='RSD >30';
+      var rsdRaw2=row[C.date];
+      if(rsdRaw2 instanceof Date){ rsdDate2=rsdRaw2; }
+      else if(typeof rsdRaw2==='number'){ rsdDate2=new Date(Math.round((rsdRaw2-25569)*86400*1000)); }
+      else if(rsdRaw2){ var p=String(rsdRaw2).split(/[T ]/)[0].split(/[-\/]/); rsdDate2=new Date(p[0],p[1]-1,p[2]); }
+      if(rsdDate2){ rsdStr=(rsdDate2.getDate())+'-'+(rsdDate2.toLocaleString('en',{month:'short'}))+'-'+(String(rsdDate2.getFullYear()).slice(2)); }
+    }catch(e){}
+    var rsdBucket='Unknown';
+    try{
+      if(rsdDate2){
+        var today2=new Date(); today2.setHours(0,0,0,0);
+        var diff=Math.round((rsdDate2-today2)/(1000*60*60*24));
+        if(diff<=0)rsdBucket='RSD Today';
+        else if(diff<=3)rsdBucket='RSD +1 to +3';
+        else if(diff<=7)rsdBucket='RSD +4 to +7';
+        else if(diff<=15)rsdBucket='RSD +8 to +15';
+        else rsdBucket='RSD >30';
+      }
     }catch(e){}
     if(!rsdAging[rsdBucket])rsdAging[rsdBucket]=0; rsdAging[rsdBucket]++;
-    // Action rows
-    actionRows.push({org:org,cust:cust,ship:row[C.orderNo]||'',rsd:rsdRaw.split(' ')[0],val:val,cat:cat});
+    actionRows.push({org:org,cust:cust,ship:row[C.shipment]||'',rsd:rsdStr,val:val,cat:cat});
   });
 
   var advance = catMap['RSD >30 Advance']||{count:0,val:0};
@@ -2326,7 +2335,7 @@ function renderBacklog(){
   // ── ROW 1: 5 KPI CARDS ──
   var kpis=[
     {icon:'📋',label:'TOTAL POOL ORDERS',val:d.totalOrders.toLocaleString(),sub:fmtAED(d.totalVal)+' Total Orders in Pool',color:'var(--gold)',border:'var(--border)'},
-    {icon:'🛡',label:'WH BACKLOG PURE RISK',val:whBL.count.toLocaleString(),sub:'Before Cut-Off Risk\nAED '+fmtAED(whBL.val),color:'#e84b4b',border:'rgba(232,75,75,0.5)'},
+    {icon:'🛡',label:'WH BACKLOG PURE RISK',val:whBL.count.toLocaleString(),sub:'Before Cut-Off Risk\n'+fmtAED(whBL.val),color:'#e84b4b',border:'rgba(232,75,75,0.5)'},
     {icon:'📅',label:'ADVANCE ORDERS',val:d.advance.count.toLocaleString(),sub:'RSD > 30 Days / Future Orders\n'+fmtAED(d.advance.val),color:'var(--muted)',border:'var(--border)'},
     {icon:'🔒',label:'CREDIT HOLD / FROZEN',val:afterCutCount.toLocaleString(),sub:'Credit Hold + Frozen Pool\n'+fmtAED(afterCutVal),color:'#c9a84c',border:'rgba(201,168,76,0.4)'},
     {icon:'⚠',label:'ACTION REQUIRED TODAY',val:actionNeeded.toLocaleString(),sub:'Orders Need Immediate\nFollow-up',color:'#e84b4b',border:'rgba(232,75,75,0.3)'}
