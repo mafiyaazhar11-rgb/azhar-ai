@@ -880,7 +880,7 @@ const TITLES={
   invoice:   ['Proforma Invoice Generator','Create professional invoices with letterhead'],
   excel:     ['Excel Support & Data Analysis','Fix formulas and analyse spreadsheet data'],
   returns:   ['Daily Returns Dashboard','Invoice Cancellations - GRV Returns - BU-wise Analysis'],
-  backlog:   ['WH Backlog Order Dashboard','Advance Orders - Credit Holds - Frozen - Daily Pool Report'],
+  backlog:   ['WH Backlog Order Dashboard','WH Backlog Risk · Advance Orders · Credit Holds · Frozen Pool'],
   returns:   ['Daily Returns Dashboard','Invoice Cancellations - GRV Returns - BU-wise Analysis']
 };
 function goTab(id,btn){
@@ -1975,11 +1975,11 @@ function cleanCustName(name){
 function catStatus(cat){
   var c = String(cat||'');
   var statusMap = {
-    'RSD >30 Advance':'<span style="font-size:9px;padding:2px 8px;background:rgba(232,75,75,0.15);color:#e84b4b;letter-spacing:1px;">CRITICAL</span>',
+    'RSD >30 Advance':'<span style="font-size:9px;padding:2px 8px;background:rgba(100,100,100,0.15);color:var(--muted);letter-spacing:1px;">ADVANCE</span>',
     'Credit Hold':'<span style="font-size:9px;padding:2px 8px;background:rgba(201,168,76,0.15);color:var(--gold);letter-spacing:1px;">ON HOLD</span>',
-    'Cut-Off Frozen':'<span style="font-size:9px;padding:2px 8px;background:rgba(91,141,238,0.15);color:#5b8dee;letter-spacing:1px;">FROZEN</span>',
-    'Unplanned Frozen':'<span style="font-size:9px;padding:2px 8px;background:rgba(91,141,238,0.15);color:#5b8dee;letter-spacing:1px;">FROZEN</span>',
-    'Before Cut-Off':'<span style="font-size:9px;padding:2px 8px;background:rgba(78,203,141,0.15);color:#4ecb8d;letter-spacing:1px;">PENDING</span>'
+    'Cut-Off Frozen':'<span style="font-size:9px;padding:2px 8px;background:rgba(91,141,238,0.15);color:#5b8dee;letter-spacing:1px;">AFTER CUT-OFF</span>',
+    'Unplanned Frozen':'<span style="font-size:9px;padding:2px 8px;background:rgba(91,141,238,0.15);color:#5b8dee;letter-spacing:1px;">UNPLANNED FROZEN</span>',
+    'Before Cut-Off':'<span style="font-size:9px;padding:2px 8px;background:rgba(232,75,75,0.15);color:#e84b4b;letter-spacing:1px;">WH BACKLOG RISK</span>'
   };
   return statusMap[shortCat(cat)] || '';
 }
@@ -1999,6 +1999,10 @@ function saveBacklogToServer(fileName, totalOrders){
     totalOrders: BL_DATA.totalOrders,
     totalVal: BL_DATA.totalVal,
     advance: BL_DATA.advance,
+    whBacklog: BL_DATA.whBacklog||{count:0,val:0},
+    creditHold: BL_DATA.creditHold||{count:0,val:0},
+    cutOffFrozen: BL_DATA.cutOffFrozen||{count:0,val:0},
+    unplannedFrozen: BL_DATA.unplannedFrozen||{count:0,val:0},
     critical: BL_DATA.critical,
     orgMap: BL_DATA.orgMap,
     catMap: BL_DATA.catMap,
@@ -2031,7 +2035,12 @@ function loadBacklogFromServer(){
       var s = d.summary || {};
       BL_DATA = {
         totalOrders: s.totalOrders||0, totalVal: s.totalVal||0,
-        advance: s.advance||{count:0,val:0}, critical: s.critical||0,
+        advance: s.advance||{count:0,val:0},
+        whBacklog: s.whBacklog||{count:0,val:0},
+        creditHold: s.creditHold||{count:0,val:0},
+        cutOffFrozen: s.cutOffFrozen||{count:0,val:0},
+        unplannedFrozen: s.unplannedFrozen||{count:0,val:0},
+        critical: s.critical||0,
         orgMap: s.orgMap||{}, catMap: s.catMap||{}, custMap: s.custMap||{},
         fileName: d.fileName, date: s.date||new Date().toLocaleDateString('en-AE')
       };
@@ -2148,9 +2157,13 @@ function parseBacklogData(rows, fileName){
   });
 
   var advance = catMap['RSD >30 Advance']||{count:0,val:0};
-  var critical = (catMap['Credit Hold']||{count:0}).count + (catMap['Cut-Off Frozen']||{count:0}).count + (catMap['Unplanned Frozen']||{count:0}).count;
+  var whBacklog = catMap['Before Cut-Off']||{count:0,val:0};
+  var creditHold = (catMap['Credit Hold']||{count:0,val:0});
+  var cutOffFrozen = (catMap['Cut-Off Frozen']||{count:0,val:0});
+  var unplannedFrozen = (catMap['Unplanned Frozen']||{count:0,val:0});
+  var critical = creditHold.count + cutOffFrozen.count + unplannedFrozen.count;
 
-  BL_DATA = { totalOrders:totalOrders, totalVal:totalVal, advance:advance, critical:critical, orgMap:orgMap, catMap:catMap, custMap:custMap, fileName:fileName, date:new Date().toLocaleDateString('en-AE') };
+  BL_DATA = { totalOrders:totalOrders, totalVal:totalVal, advance:advance, whBacklog:whBacklog, creditHold:creditHold, cutOffFrozen:cutOffFrozen, unplannedFrozen:unplannedFrozen, critical:critical, orgMap:orgMap, catMap:catMap, custMap:custMap, fileName:fileName, date:new Date().toLocaleDateString('en-AE') };
   renderBacklog();
   // Save to server so data persists after refresh
   saveBacklogToServer(fileName, totalOrders);
@@ -2165,11 +2178,12 @@ function renderBacklog(){
   if(badge){ badge.style.display='block'; document.getElementById('bl-last-date').textContent=d.date; }
 
   // KPIs
+  var whBL = d.whBacklog||{count:0,val:0};
   var kpis=[
-    {label:'TOTAL BACKLOG',val:d.totalOrders.toLocaleString(),sub:'orders in pool',color:'var(--gold)'},
-    {label:'TOTAL VALUE AT RISK',val:fmtAED(d.totalVal),sub:'all categories',color:'#e84b4b'},
-    {label:'RSD >30 ADVANCE',val:d.advance.count.toLocaleString(),sub:fmtAED(d.advance.val),color:'#e84b4b'},
-    {label:'CRITICAL HOLDS',val:d.critical.toLocaleString(),sub:'frozen + credit hold',color:'var(--gold)'}
+    {label:'TOTAL POOL ORDERS',val:d.totalOrders.toLocaleString(),sub:'all orders in pool',color:'var(--gold)'},
+    {label:'WH BACKLOG (PURE RISK)',val:whBL.count.toLocaleString(),sub:fmtAED(whBL.val)+' · before cut-off',color:'#e84b4b'},
+    {label:'ADVANCE ORDERS',val:d.advance.count.toLocaleString(),sub:fmtAED(d.advance.val)+' · RSD >30',color:'var(--muted)'},
+    {label:'CREDIT HOLD / FROZEN',val:d.critical.toLocaleString(),sub:'after cut-off + holds',color:'#c9a84c'}
   ];
   document.getElementById('bl-kpis').innerHTML=kpis.map(function(k){
     return '<div style="background:var(--card);border:1px solid var(--border);padding:14px;">'
