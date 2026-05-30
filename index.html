@@ -1992,19 +1992,26 @@ function normalizeStr(s){ return String(s||'').toUpperCase().replace(/[^A-Z0-9]/
 function shortCat(cat){
   var c = String(cat||'');
   var u = c.toUpperCase();
-  var n = normalizeStr(c);
-  // RSD >30 Advance Orders - catches: RSD>30, RSD >30, RSD > 30, rsd30, advance order etc
-  if(n.includes('RSD30')||n.includes('RSD3O')||(n.includes('RSD')&&(n.includes('30')||n.includes('3O')))||u.includes('ADVANCE ORDER')) return 'RSD >30 Advance';
-  // Unplanned Frozen - catches: UNPLANED, UNPLAN, unplanned etc
-  if(u.includes('UNPLAN')||u.includes('UNPLANED')||u.includes('UN PLAN')) return 'Unplanned Frozen';
-  // Cut-Off Frozen - catches: FROZEN, FREEZ, FROZ, Cut Off, Cutoff etc
-  if((u.includes('FROZ')||u.includes('FREEZ')||u.includes('FROZEN'))&&(u.includes('CUT')||u.includes('AFTER')||u.includes('AUTO'))) return 'Cut-Off Frozen';
-  // Credit Hold - catches: CREDIT HOLD, CREDIT HELD, CRADIT, credit, hold, late release
-  if(u.includes('CREDIT')||u.includes('CRADIT')||u.includes('CRDIT')||(u.includes('HOLD')&&u.includes('LATE'))) return 'Credit Hold';
-  // Before Cut-Off - catches: BEFORE, BEFOR, BEFR, BFR
-  if(u.includes('BEFOR')||u.includes('BEFR')||u.includes('BEF CUT')||(u.includes('BEFORE')&&u.includes('CUT'))) return 'Before Cut-Off';
-  // Fallback - clean up common typos in display
-  return c.replace(/  +/g,' ').replace(/- -/g,'-').trim().substring(0,35);
+  // Check specific types FIRST before generic RSD check
+  // Unplanned Frozen
+  if(u.includes('UNPLAN')) return 'Unplanned Frozen';
+  // Cut-Off Frozen
+  if(u.includes('FROZEN')||(u.includes('FROZ')&&u.includes('CUT'))) return 'Cut-Off Frozen';
+  // Credit Hold / Late Released
+  if(u.includes('CREDIT HOLD')||u.includes('LATE RELEAS')||u.includes('AUTO BOOKED')) return 'Cut-Off Frozen';
+  // WH Backlog - Before Cut-Off
+  if(u.includes('BEFORE CUT')||u.includes('BEFORE CUT-OFF')||u.includes('WH BACK LOG')||u.includes('WH BACKLOG')) return 'Before Cut-Off';
+  // After Cut-Off (not frozen)
+  if(u.includes('AFTER CUT')) return 'Cut-Off Frozen';
+  // Advance Order - RSD > today
+  if(u.includes('ADVANCE ORDER')||u.includes('ADVANCE-ORDER')) return 'RSD >30 Advance';
+  // Generic RSD > future date (e.g. RSD>01-JUNE)
+  if(u.includes('RSD>') || (u.includes('RSD') && u.includes('JUNE')) || (u.includes('RSD') && u.includes('JULY'))) return 'RSD >30 Advance';
+  // Status column direct values
+  if(u.includes('-ADVANCE ORDER')) return 'RSD >30 Advance';
+  if(u.includes('-WH BACK LOG')) return 'Before Cut-Off';
+  if(u.includes('-AUTO BOOKED')) return 'Cut-Off Frozen';
+  return c.replace(/  +/g,' ').trim().substring(0,35);
 }
 
 // Robust ORG normalizer - handles lowercase, spaces, typos
@@ -2204,6 +2211,7 @@ function processBacklogRows(rows, fileName, saveRaw){
     val:      fc('VALUE','SUM OF VALUE','AMOUNT','AMT','TOTAL_VALUE','TOTAL VALUE'),
     cat:      fc('COMMENTS','COMMENT','CATEGORY','CATERGORY','ROW LABELS','ROW LABEL','REMARK','REMARKS'),
     accType:  fc('ACCOUNT TYPE','ACCOUNTTYPE','ACC TYPE'),
+    buCol:    fc('CATEGORY','BU','FOOD'),
     accName:  fc('ACCOUNT NAME','ACCOUNTNAME','ACC NAME'),
     customer: fc('CUSTOMER_NAME','CUSTOMER NAME','CUSTOMERNAME','CUSTUMER','CUSTMER','CUSTOMER','CUST'),
     shipment: fc('SHIPMENT_ID','SHIPMENTID','SHIPMENT ID','SHIPMENT','COUNT OF SHIPMENT','SHIP ID')
@@ -2217,9 +2225,10 @@ function processBacklogRows(rows, fileName, saveRaw){
     var org = normalizeORG(row[C.org]);
     if(blFilters.org!=='all' && org!==blFilters.org) return false;
     if(blFilters.bu!=='all'){
-      var bu = normalizeBU(row[C.accType]||row[C.org]||'');
-      if(blFilters.bu==='food' && bu!=='Food') return false;
-      if(blFilters.bu==='nonfood' && bu!=='Non-Food') return false;
+      var buRaw = String(row[C.buCol]||row[C.accType]||'').toUpperCase().replace(/[^A-Z]/g,'');
+      var isFoodRow = buRaw.includes('FOOD') && !buRaw.includes('NONFOOD') && !buRaw.includes('NONF');
+      if(blFilters.bu==='food' && !isFoodRow) return false;
+      if(blFilters.bu==='nonfood' && isFoodRow) return false;
     }
     return true;
   });
@@ -2294,8 +2303,8 @@ function renderBacklog(){
   var kpis=[
     {icon:'📋',label:'TOTAL POOL ORDERS',val:d.totalOrders.toLocaleString(),sub:fmtAED(d.totalVal)+' Total Orders in Pool',color:'var(--gold)',border:'var(--border)'},
     {icon:'🛡',label:'WH BACKLOG PURE RISK',val:whBL.count.toLocaleString(),sub:'Before Cut-Off Risk\nAED '+fmtAED(whBL.val),color:'#e84b4b',border:'rgba(232,75,75,0.5)'},
-    {icon:'📅',label:'ADVANCE ORDERS',val:d.advance.count.toLocaleString(),sub:'RSD > 30 Days / Future Orders\nAED '+fmtAED(d.advance.val),color:'var(--muted)',border:'var(--border)'},
-    {icon:'🔒',label:'CREDIT HOLD / FROZEN',val:afterCutCount.toLocaleString(),sub:'Credit Hold + Frozen Pool\nAED '+fmtAED(afterCutVal),color:'#c9a84c',border:'rgba(201,168,76,0.4)'},
+    {icon:'📅',label:'ADVANCE ORDERS',val:d.advance.count.toLocaleString(),sub:'RSD > 30 Days / Future Orders\n'+fmtAED(d.advance.val),color:'var(--muted)',border:'var(--border)'},
+    {icon:'🔒',label:'CREDIT HOLD / FROZEN',val:afterCutCount.toLocaleString(),sub:'Credit Hold + Frozen Pool\n'+fmtAED(afterCutVal),color:'#c9a84c',border:'rgba(201,168,76,0.4)'},
     {icon:'⚠',label:'ACTION REQUIRED TODAY',val:actionNeeded.toLocaleString(),sub:'Orders Need Immediate\nFollow-up',color:'#e84b4b',border:'rgba(232,75,75,0.3)'}
   ];
   document.getElementById('bl-kpis').innerHTML=kpis.map(function(k){
