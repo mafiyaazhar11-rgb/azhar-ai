@@ -1070,7 +1070,7 @@ footer span{color:var(--gold);}
     <div class="panel" id="excel"><div class="box"><div class="box-title">📐 Excel Support &amp; Data Analysis</div><div class="upload" onclick="document.getElementById('xl-file').click()"><div style="font-size:22px;margin-bottom:6px;">📊</div><div style="font-size:11px;color:var(--muted);">Upload .csv or .xlsx file</div><div style="font-size:10px;color:var(--muted);margin-top:3px;" id="xl-file-name">File → Save As → CSV first</div></div><input type="file" id="xl-file" accept=".csv,.txt,.xlsx" style="display:none" onchange="loadFileExcel(this)"/><label class="lbl">Your Formula or Question</label><textarea id="xl-q" placeholder="e.g. Fix my VLOOKUP returning #N/A&#10;e.g. Analyse this data and give key insights"></textarea><label class="lbl">Context (Optional)</label><textarea id="xl-ctx" style="min-height:55px;" placeholder="e.g. Column A = Date, Column B = Customer, Column C = Amount..."></textarea><button class="btn" id="xl-btn" onclick="doExcel()"><span>Analyse &amp; Fix Excel</span></button><div class="loader" id="xl-loader"><div class="ring"></div><div class="ring-txt">Analysing your data...</div></div><div class="out" id="xl-out"><div class="out-head"><span class="out-lbl">✦ Excel Analysis</span><button class="copy" onclick="doCopy('xl-answer')">Copy</button></div><div class="out-body" id="xl-answer"></div></div></div></div>
 
   </div>
-  <footer>Powered by <span>✦ AZHAR-AI</span> &nbsp;·&nbsp; Operations &amp; Customer Service Intelligence Platform &nbsp;·&nbsp; <span style="color:var(--gold2);">This is powered by Azhar</span> &nbsp;·&nbsp; V 4.0</footer>
+  <footer>✦ &nbsp; Operations &amp; Customer Service Intelligence Platform &nbsp;·&nbsp; Control Tower &nbsp;·&nbsp; V 4.0</footer>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
@@ -4168,6 +4168,40 @@ function renderInvSales() {
   document.getElementById('inv-sales-dashboard').style.display = 'block';
 }
 
+// ── INV SALES UPLOAD PASSWORD ──
+function invShowUpload() {
+  document.getElementById('inv-pwd-modal').style.display = 'flex';
+  document.getElementById('inv-pwd-input').value = '';
+  document.getElementById('inv-pwd-error').style.display = 'none';
+  setTimeout(function(){ document.getElementById('inv-pwd-input').focus(); }, 100);
+}
+
+function invPwdConfirm() {
+  var pwd = document.getElementById('inv-pwd-input').value;
+  fetch('/api/backlog/check-password', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-auth-token': AUTH_TOKEN },
+    body: JSON.stringify({ password: pwd })
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(d){
+    if (d.ok) {
+      document.getElementById('inv-pwd-modal').style.display = 'none';
+      document.getElementById('inv-file-input').click();
+    } else {
+      document.getElementById('inv-pwd-error').style.display = 'block';
+      document.getElementById('inv-pwd-input').value = '';
+      document.getElementById('inv-pwd-input').focus();
+    }
+  })
+  .catch(function(){ document.getElementById('inv-pwd-error').style.display = 'block'; });
+}
+
+function invPwdCancel() {
+  document.getElementById('inv-pwd-modal').style.display = 'none';
+  document.getElementById('inv-pwd-input').value = '';
+}
+
 // ═══════════════ VOICE COMMAND SYSTEM ═══════════════
 var vcListening = false;
 var vcRecognition = null;
@@ -5228,7 +5262,7 @@ window.addEventListener('load', authBoot);
     <div style="font-size:13px;color:var(--gold);letter-spacing:2px;">NO DATA LOADED</div>
     <div style="font-size:11px;color:var(--muted);">Upload your Invoiced Sales Excel file</div>
     <input type="file" id="inv-file-input" accept=".xlsx,.xls,.csv" style="display:none;" onchange="handleInvSalesUpload(this)">
-    <button onclick="document.getElementById('inv-file-input').click()" style="background:rgba(201,168,76,0.1);border:1px solid #c9a84c;color:#c9a84c;font-size:10px;letter-spacing:2px;padding:10px 24px;cursor:pointer;font-family:Montserrat,sans-serif;">✦ UPLOAD FILE</button>
+    <button onclick="invShowUpload()" style="background:rgba(201,168,76,0.1);border:1px solid #c9a84c;color:#c9a84c;font-size:10px;letter-spacing:2px;padding:10px 24px;cursor:pointer;font-family:Montserrat,sans-serif;">✦ UPLOAD FILE</button>
   </div>
   <div id="inv-sales-dashboard" style="display:none;">
     <!-- Status badge + upload star -->
@@ -5238,7 +5272,7 @@ window.addEventListener('load', authBoot);
       </div>
       <div>
         <input type="file" id="inv-file-input2" accept=".xlsx,.xls,.csv" style="display:none;" onchange="handleInvSalesUpload(this)">
-        <button onclick="document.getElementById('inv-file-input2').click()" style="background:transparent;border:none;cursor:pointer;font-size:18px;color:var(--gold);opacity:0.3;transition:opacity 0.3s;padding:4px;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.3'">✦</button>
+        <button onclick="invShowUpload()" id="inv-star-btn" style="background:transparent;border:none;cursor:pointer;font-size:18px;color:var(--gold);opacity:0.25;transition:opacity 0.3s;padding:4px;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.25'">✦</button>
       </div>
     </div>
     <!-- Filters -->
@@ -5265,8 +5299,8 @@ window.addEventListener('load', authBoot);
     </div>
     <!-- Charts -->
     <div style="display:grid;grid-template-columns:1.6fr 1fr;gap:12px;margin-bottom:16px;">
-      <div class="box"><div class="box-title">📊 Sales by Brand</div><canvas id="inv-brand-chart" height="200"></canvas></div>
-      <div class="box"><div class="box-title">🏢 Sales by BU</div><canvas id="inv-bu-chart" height="200"></canvas></div>
+      <div class="box"><div class="box-title">📊 Sales by Brand</div><canvas id="inv-brand-chart" height="140"></canvas></div>
+      <div class="box"><div class="box-title">🏢 Sales by BU</div><canvas id="inv-bu-chart" height="140"></canvas></div>
     </div>
     <!-- Tables -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
@@ -5297,6 +5331,22 @@ window.addEventListener('load', authBoot);
 </div>
 
 
+
+<!-- ═══════════════ INV SALES PASSWORD MODAL ═══════════════ -->
+<div id="inv-pwd-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:var(--surface);border:1px solid var(--gold);padding:24px;width:320px;">
+    <div style="font-size:10px;color:var(--gold);letter-spacing:3px;text-transform:uppercase;margin-bottom:16px;">✦ UPLOAD ACCESS</div>
+    <div style="position:relative;margin-bottom:12px;">
+      <input type="password" id="inv-pwd-input" placeholder="Enter password" onkeydown="if(event.keyCode===13)invPwdConfirm();" style="width:100%;padding:10px 40px 10px 12px;background:var(--black);border:1px solid var(--gold);color:var(--text);font-family:Montserrat,sans-serif;font-size:13px;outline:none;box-sizing:border-box;">
+      <span onclick="var i=document.getElementById('inv-pwd-input');i.type=i.type==='password'?'text':'password';" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);cursor:pointer;color:var(--muted);font-size:14px;">👁</span>
+    </div>
+    <div id="inv-pwd-error" style="color:#e84b4b;font-size:10px;margin-bottom:10px;display:none;">Incorrect password</div>
+    <div style="display:flex;gap:8px;">
+      <button onclick="invPwdConfirm()" style="flex:1;padding:10px;background:var(--gold);border:none;color:var(--black);font-family:Montserrat,sans-serif;font-size:10px;font-weight:600;letter-spacing:2px;text-transform:uppercase;cursor:pointer;">CONFIRM</button>
+      <button onclick="invPwdCancel()" style="flex:1;padding:10px;background:transparent;border:1px solid var(--border);color:var(--muted);font-family:Montserrat,sans-serif;font-size:10px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;">CANCEL</button>
+    </div>
+  </div>
+</div>
 
 <!-- ═══════════════ JARVIS FULLSCREEN MODE ═══════════════ -->
 <div id="jarvis-fullscreen" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:#050a0f;z-index:9995;flex-direction:column;align-items:center;justify-content:center;padding:24px;box-sizing:border-box;">
