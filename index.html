@@ -467,7 +467,7 @@ footer span{color:var(--gold);}
 
   <button class="sb-item" onclick="goTab('backlog',this)"><span class="icon">📦</span> WH Backlog</button>
   <button class="sb-item" onclick="goTab('returns',this)"><span class="icon">🔄</span> Market Returns</button>
-  <button class="sb-item" onclick="goTab('sales',this)"><span class="icon">📈</span> Daily Sales</button>
+  <button class="sb-item" onclick="goTab('sales',this)"><span class="icon">📊</span> Order Summary</button>
       <button class="sb-item" onclick="goTab('invsales',this)"><span class="icon">🧾</span> Invoiced Today Sales</button>
 </aside>
 
@@ -1009,7 +1009,7 @@ footer span{color:var(--gold);}
       <div id="sales-upload-box" style="display:none;background:var(--surface);border:1px solid var(--gold);padding:16px 20px;margin-bottom:16px;">
         <div style="display:flex;justify-content:space-between;align-items:center;">
           <div>
-            <div style="font-size:11px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;">Daily Sales Upload</div>
+            <div style="font-size:11px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;">Order Summary Upload</div>
             <div style="font-size:10px;color:var(--muted);">Upload your Sales Orders Excel/CSV file</div>
           </div>
           <div style="display:flex;gap:8px;align-items:center;">
@@ -1112,7 +1112,7 @@ const TITLES={
   invoice:   ['Proforma Invoice Generator','Create professional invoices with letterhead'],
   excel:     ['Excel Support & Data Analysis','Fix formulas and analyse spreadsheet data'],
   returns:   ['Market Returns & Invoice Cancellation','GRV Returns · Invoice Cancellations · BU-wise Analysis'],
-  sales:     ['Daily Sales by BU','Food · Non-Food · ORG Value Breakdown'],
+    sales:     ['Order Process Summary','Food - Non-Food - ORG - Warehouse Value Breakdown'],
   backlog:   ['WH Backlog Risk Command Center','Pure Risk · Advance Orders · Credit Hold · Frozen Pool · BU Ownership'],
   returns:   ['Daily Returns Dashboard','Invoice Cancellations - GRV Returns - BU-wise Analysis']
 };
@@ -5891,7 +5891,7 @@ window.addEventListener('load', authBoot);
               <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#f5f0e8;cursor:pointer;"><input type="checkbox" value="invoice" checked> Proforma Invoice</label>
               <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#f5f0e8;cursor:pointer;"><input type="checkbox" value="backlog" checked> WH Backlog</label>
               <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#f5f0e8;cursor:pointer;"><input type="checkbox" value="returns" checked> Daily Returns</label>
-              <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#f5f0e8;cursor:pointer;"><input type="checkbox" value="sales" checked> Daily Sales</label>
+              <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#f5f0e8;cursor:pointer;"><input type="checkbox" value="sales" checked> Order Summary</label>
             </div>
           </div>
           <div style="display:flex;gap:8px;">
