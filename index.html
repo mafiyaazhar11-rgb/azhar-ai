@@ -3733,6 +3733,7 @@ function showApp() {
   if(AUTH_USER && AUTH_USER.must_change_password) {
     document.getElementById('change-pwd-modal').style.display = 'flex';
   }
+  startInactivityWatcher();
 }
 
 function applyDashboardAccess() {
@@ -3863,9 +3864,9 @@ async function loadUsers(){
           '<td style="padding:8px;color:#7a7660;font-size:10px;">'+ll+'</td>'+
           '<td style="padding:8px;display:flex;gap:4px;flex-wrap:wrap;">'+
           (!isMe?'<button onclick="editUser('+u.id+')" style="background:transparent;border:1px solid rgba(201,168,76,0.3);color:#c9a84c;font-size:9px;padding:3px 8px;cursor:pointer;font-family:Montserrat,sans-serif;">EDIT</button>':'')+
-          (!isMe?'<button onclick="resetPwd('+u.id+',''+u.username+'')" style="background:transparent;border:1px solid rgba(91,141,238,0.3);color:#5b8dee;font-size:9px;padding:3px 8px;cursor:pointer;font-family:Montserrat,sans-serif;">RESET PWD</button>':'')+
+          (!isMe?'<button onclick="resetPwd('+u.id+',\''+u.username+'\')" style="background:transparent;border:1px solid rgba(91,141,238,0.3);color:#5b8dee;font-size:9px;padding:3px 8px;cursor:pointer;font-family:Montserrat,sans-serif;">RESET PWD</button>':'')+
           (!isMe?'<button onclick="toggleUser('+u.id+','+(u.active?'false':'true')+')" style="background:transparent;border:1px solid rgba(255,255,255,0.1);color:#7a7660;font-size:9px;padding:3px 8px;cursor:pointer;font-family:Montserrat,sans-serif;">'+(u.active?'DISABLE':'ENABLE')+'</button>':'')+
-          (!isMe?'<button onclick="deleteUser('+u.id+',''+u.username+'')" style="background:transparent;border:1px solid rgba(232,75,75,0.3);color:#e84b4b;font-size:9px;padding:3px 8px;cursor:pointer;font-family:Montserrat,sans-serif;">DELETE</button>':'')+
+          (!isMe?'<button onclick="deleteUser('+u.id+',\''+u.username+'\')" style="background:transparent;border:1px solid rgba(232,75,75,0.3);color:#e84b4b;font-size:9px;padding:3px 8px;cursor:pointer;font-family:Montserrat,sans-serif;">DELETE</button>':'')+
           '</td></tr>';
       }).join('')+'</tbody></table>';
   }catch(e){console.error('Load users:',e);}
@@ -3991,6 +3992,27 @@ window.fetch = function(url, opts) {
   return _origFetch.apply(this, [url, opts]);
 };
 
+// Auto-logout for non-admin users after 10 minutes inactivity
+var _inactivityTimer = null;
+var _INACTIVITY_LIMIT = 10 * 60 * 1000; // 10 minutes
+
+function resetInactivityTimer() {
+  if (!AUTH_USER || AUTH_USER.role === 'superadmin') return;
+  clearTimeout(_inactivityTimer);
+  _inactivityTimer = setTimeout(function() {
+    alert('You have been logged out due to 10 minutes of inactivity.');
+    doLogout();
+  }, _INACTIVITY_LIMIT);
+}
+
+function startInactivityWatcher() {
+  if (!AUTH_USER || AUTH_USER.role === 'superadmin') return;
+  ['mousemove','keydown','click','scroll','touchstart'].forEach(function(evt) {
+    document.addEventListener(evt, resetInactivityTimer, true);
+  });
+  resetInactivityTimer();
+}
+
 // Boot on load
 window.addEventListener('load', authBoot);
 </script>
@@ -4020,8 +4042,9 @@ window.addEventListener('load', authBoot);
   <div style="width:380px;padding:40px;background:#111108;border:1px solid rgba(201,168,76,0.3);">
     <div style="text-align:center;margin-bottom:32px;">
       <div style="font-size:28px;margin-bottom:8px;">✦</div>
-      <div style="font-family:'Playfair Display',serif;font-size:20px;color:#c9a84c;letter-spacing:2px;">AZHAR-AI</div>
-      <div style="font-size:9px;color:#7a7660;letter-spacing:3px;text-transform:uppercase;margin-top:4px;">CST Operations Intelligence</div>
+      <div style="font-family:'Playfair Display',serif;font-size:16px;color:#c9a84c;letter-spacing:2px;font-weight:700;">CUSTOMER SERVICE &#38; OPERATIONS</div>
+      <div style="font-family:'Playfair Display',serif;font-size:13px;color:#c9a84c;letter-spacing:2px;">CONTROL TOWER</div>
+      <div style="font-size:9px;color:#7a7660;letter-spacing:3px;text-transform:uppercase;margin-top:4px;">Intelligence Platform</div>
     </div>
     <div id="login-error" style="display:none;background:rgba(232,75,75,0.1);border:1px solid rgba(232,75,75,0.3);color:#e84b4b;font-size:11px;padding:10px;margin-bottom:16px;text-align:center;"></div>
     <div style="margin-bottom:16px;">
