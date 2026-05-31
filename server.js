@@ -1144,7 +1144,7 @@ app.get('/api/invsales/status', requireAuth, function(req, res) {
   res.json({ hasData: true, uploadedAt: invSalesData.uploadedAt, fileName: invSalesData.fileName, totalOrders: invSalesData.totalOrders, summary: invSalesData.summary });
 });
 
-app.post('/api/invsales/upload', requireAuth, requireRole('superadmin','subadmin'), express.json({limit:'10mb'}), async function(req, res) {
+app.post('/api/invsales/upload', requireAuth, requireRole('superadmin','subadmin'), async function(req, res) {
   try {
     var summary = (typeof req.body.summary === 'string') ? JSON.parse(req.body.summary) : (req.body.summary || {});
     var fileName = req.body.fileName || 'invoiced_sales.xlsx';
@@ -1154,9 +1154,11 @@ app.post('/api/invsales/upload', requireAuth, requireRole('superadmin','subadmin
     try {
       await pool.query('CREATE TABLE IF NOT EXISTS invsales_data (id SERIAL PRIMARY KEY, uploaded_at TIMESTAMPTZ DEFAULT NOW(), uploaded_by TEXT, file_name TEXT, total_orders INT, summary JSONB)');
       await pool.query('DELETE FROM invsales_data');
-      await pool.query('INSERT INTO invsales_data (uploaded_by, file_name, total_orders, summary) VALUES ($1,$2,$3,$4)', [uploadedBy, fileName, totalOrders, JSON.stringify(summary)]);
-      console.log('InvSales saved to DB');
-    } catch(dbErr) { console.error('InvSales DB save:', dbErr.message); }
+      var summaryJson = JSON.stringify(summary);
+      console.log('InvSales summary size:', summaryJson.length, 'bytes, version:', summary.version);
+      await pool.query('INSERT INTO invsales_data (uploaded_by, file_name, total_orders, summary) VALUES ($1,$2,$3,$4)', [uploadedBy, fileName, totalOrders, summaryJson]);
+      console.log('InvSales saved to DB OK');
+    } catch(dbErr) { console.error('InvSales DB save ERROR:', dbErr.message, dbErr.stack); }
     await auditLog(req.user.uid, req.user.username, 'UPLOAD', 'Invoiced Sales: ' + fileName, '');
     res.json({ success: true });
   } catch(e) { res.status(500).json({ error: e.message }); }
@@ -1243,7 +1245,7 @@ app.get('/api/sales/status', function(req, res) {
   res.json({ hasData: true, uploadedAt: salesData.uploadedAt, fileName: salesData.fileName, totalOrders: salesData.totalOrders, summary: salesData.summary });
 });
 
-app.post('/api/sales/upload', express.json({limit:'10mb'}), async function(req, res) {
+app.post('/api/sales/upload', async function(req, res) {
   try {
     var summary = (typeof req.body.summary === 'string') ? JSON.parse(req.body.summary) : (req.body.summary || {});
     var fileName = req.body.fileName || 'sales.xlsx';
