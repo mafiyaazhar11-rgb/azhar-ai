@@ -222,6 +222,10 @@ footer span{color:var(--gold);}
   .topbar-right .dot-live { display: none !important; }
   .topbar-right .topbar-date { display: none !important; }
   .topbar-right .sb-avatar { display: none !important; }
+  /* Dispatch upload star in topbar - hide on mobile (use fixed star instead) */
+  .topbar-right > button[onclick*="dsToggleUpload"] { display: none !important; }
+  /* Ensure topbar-right doesnt overflow */
+  .topbar-right { overflow: visible !important; flex-shrink: 0; }
 
   /* User name - very compact */
   .topbar-right > div:first-child div { font-size: 9px !important; }
@@ -231,14 +235,17 @@ footer span{color:var(--gold);}
   /* Show only role badge + mic + logout */
   .topbar-right { gap: 4px !important; }
 
-  /* MIC BUTTON - prominent on mobile */
+  /* MIC BUTTON - always visible on mobile */
   #vc-mic-btn { 
-    display: flex !important; 
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
     width: 40px !important; 
     height: 40px !important; 
     font-size: 20px !important; 
     flex-shrink: 0 !important;
     border-radius: 50% !important;
+    order: -1 !important; /* Always first in topbar-right */
   }
 
   /* Logout button - compact */
@@ -329,6 +336,15 @@ footer span{color:var(--gold);}
 
   /* ── LOGIN PAGE ── */
   #login-page > div { width: 90% !important; padding: 28px 20px !important; }
+
+  /* ── INVOICED TODAY SALES MOBILE ── */
+  #inv-kpis { grid-template-columns: 1fr 1fr !important; gap: 8px !important; }
+  #inv-kpis .box { padding: 10px 8px !important; }
+  #inv-kpis [style*="font-size:26px"] { font-size: 18px !important; }
+  #inv-kpis [style*="font-size:14px"] { font-size: 11px !important; }
+  #inv-brand-chart, #inv-bu-chart { max-height: 130px !important; }
+  #inv-mgr-table, #inv-salesman-table, #inv-cust-table, #inv-brand-table { font-size: 10px; }
+  #inv-manager-pills, #inv-brand-pills, #inv-area-pills { flex-wrap: nowrap !important; overflow-x: auto; }
 }
 
 @media (max-width: 480px) {
@@ -4133,13 +4149,13 @@ function renderInvSales() {
   var bColors = ['#c9a84c','#5b8dee','#4ecb8d','#e84b4b','#e8854b','#9b59b6','#c9a84c','#5b8dee','#4ecb8d','#e84b4b'];
   if (INV_CHARTS.brand) INV_CHARTS.brand.destroy();
   var bCtx = document.getElementById('inv-brand-chart').getContext('2d');
-  INV_CHARTS.brand = new Chart(bCtx, { type:'bar', data:{ labels:brandsSorted, datasets:[{ data:brandsSorted.map(function(b){return Math.round(brandMap[b].val);}), backgroundColor:bColors, borderRadius:4 }] }, options:{ responsive:true, plugins:{legend:{display:false}}, scales:{ x:{ticks:{color:'#7a7660',font:{size:9}}}, y:{ticks:{color:'#7a7660',font:{size:9},callback:function(v){return 'AED '+fmtV(v);}}}} } });
+  INV_CHARTS.brand = new Chart(bCtx, { type:'bar', data:{ labels:brandsSorted, datasets:[{ data:brandsSorted.map(function(b){return Math.round(brandMap[b].val);}), backgroundColor:bColors, borderRadius:3 }] }, options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ x:{ticks:{color:'#7a7660',font:{size:8},maxRotation:45}}, y:{ticks:{color:'#7a7660',font:{size:8},callback:function(v){return 'AED '+fmtV(v);}}}} } });
 
   // BU chart
   var buKeys = Object.keys(buMap).sort(function(a,b){return buMap[b].val-buMap[a].val;});
   if (INV_CHARTS.bu) INV_CHARTS.bu.destroy();
   var buCtx = document.getElementById('inv-bu-chart').getContext('2d');
-  INV_CHARTS.bu = new Chart(buCtx, { type:'doughnut', data:{ labels:buKeys, datasets:[{ data:buKeys.map(function(b){return Math.round(buMap[b].val);}), backgroundColor:bColors, borderWidth:1 }] }, options:{ responsive:true, plugins:{legend:{position:'bottom',labels:{color:'#7a7660',font:{size:9},boxWidth:10}}} } });
+  INV_CHARTS.bu = new Chart(buCtx, { type:'doughnut', data:{ labels:buKeys, datasets:[{ data:buKeys.map(function(b){return Math.round(buMap[b].val);}), backgroundColor:bColors, borderWidth:1 }] }, options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom',labels:{color:'#7a7660',font:{size:8},boxWidth:8}}} } });
 
   // Manager table
   var mgrSorted = Object.keys(mgrMap).sort(function(a,b){return mgrMap[b].val-mgrMap[a].val;});
@@ -5310,8 +5326,8 @@ window.addEventListener('load', authBoot);
 
     <!-- Charts -->
     <div style="display:grid;grid-template-columns:1.6fr 1fr;gap:12px;margin-bottom:16px;">
-      <div class="box"><div class="box-title">📊 Sales by Brand</div><canvas id="inv-brand-chart" height="140"></canvas></div>
-      <div class="box"><div class="box-title">🏢 Sales by BU</div><canvas id="inv-bu-chart" height="140"></canvas></div>
+      <div class="box"><div class="box-title">📊 Sales by Brand</div><canvas id="inv-brand-chart" style="max-height:160px;"></canvas></div>
+      <div class="box"><div class="box-title">🏢 Sales by BU</div><canvas id="inv-bu-chart" style="max-height:160px;"></canvas></div>
     </div>
 
     <!-- Tables -->
