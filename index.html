@@ -434,7 +434,7 @@ footer span{color:var(--gold);}
   <button class="sb-item" onclick="goTab('invoice',this)"><span class="icon">💼</span> Proforma Invoice</button>
 
   <button class="sb-item" onclick="goTab('backlog',this)"><span class="icon">📦</span> WH Backlog</button>
-  <button class="sb-item" onclick="goTab('returns',this)"><span class="icon">🔄</span> Daily Returns</button>
+  <button class="sb-item" onclick="goTab('returns',this)"><span class="icon">🔄</span> Market Returns</button>
   <button class="sb-item" onclick="goTab('sales',this)"><span class="icon">📈</span> Daily Sales</button>
 </aside>
 
@@ -904,6 +904,14 @@ footer span{color:var(--gold);}
           <div id="ret-top-customers"></div>
         </div>
 
+        <!-- RETURN REASONS -->
+        <div id="ret-reasons-section" style="background:var(--surface);border:1px solid var(--border);padding:14px 16px;margin-top:14px;">
+          <div style="font-size:9px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;">📋 Return Reasons Breakdown</div>
+          <div id="ret-reasons-content">
+            <div style="font-size:11px;color:var(--muted);padding:20px;text-align:center;">Return reason data will appear here once you add the Rejection Reason column to your upload file.</div>
+          </div>
+        </div>
+
       </div>
     </div>
 
@@ -1022,7 +1030,7 @@ const TITLES={
   email:     ['Professional Email Writer','Write and refine business correspondence'],
   invoice:   ['Proforma Invoice Generator','Create professional invoices with letterhead'],
   excel:     ['Excel Support & Data Analysis','Fix formulas and analyse spreadsheet data'],
-  returns:   ['Daily Returns Dashboard','Invoice Cancellations - GRV Returns - BU-wise Analysis'],
+  returns:   ['Market Returns & Invoice Cancellation','GRV Returns · Invoice Cancellations · BU-wise Analysis'],
   sales:     ['Daily Sales by BU','Food · Non-Food · ORG Value Breakdown'],
   backlog:   ['WH Backlog Risk Command Center','Pure Risk · Advance Orders · Credit Hold · Frozen Pool · BU Ownership'],
   returns:   ['Daily Returns Dashboard','Invoice Cancellations - GRV Returns - BU-wise Analysis']
@@ -2728,7 +2736,7 @@ function getFilteredReturnsAll(){
 
 function buildReturnsSummary(rows){
   var totalVal=0,invCount=0,invVal=0,grvCount=0,grvVal=0;
-  var whMap={},catMap={},buMap={},monthMap={},areaMap={},custMap={};
+  var whMap={},catMap={},buMap={},monthMap={},areaMap={},custMap={},reasonMap={};
   rows.forEach(function(r){
     totalVal+=r.tot;
     if(r.cat==='Invoice Cancellation'){invCount++;invVal+=r.tot;}
@@ -2739,10 +2747,11 @@ function buildReturnsSummary(rows){
     if(r.month){if(!monthMap[r.month])monthMap[r.month]=0;monthMap[r.month]+=r.tot;}
     if(r.area){if(!areaMap[r.area])areaMap[r.area]=0;areaMap[r.area]+=r.tot;}
     if(r.cust){if(!custMap[r.cust])custMap[r.cust]=0;custMap[r.cust]+=r.tot;}
+    if(r.reason){if(!reasonMap[r.reason])reasonMap[r.reason]={c:0,v:0};reasonMap[r.reason].c++;reasonMap[r.reason].v+=r.tot;}
   });
   return {totalVal:totalVal,invCount:invCount,invVal:invVal,grvCount:grvCount,grvVal:grvVal,
     whMap:whMap,catMap:catMap,buMap:buMap,monthMap:monthMap,areaMap:areaMap,custMap:custMap,
-    totalOrders:rows.length};
+    reasonMap:reasonMap,totalOrders:rows.length};
 }
 
 function loadReturnsFromServer(){
@@ -2814,6 +2823,32 @@ function renderReturnsFromSummary(s, fileName){
 
   var topCusts=Object.keys(custMap).map(function(n){return{n:n,v:custMap[n]};}).sort(function(a,b){return b.v-a.v;}).slice(0,10); var cC=['#e84b4b','#e84b4b','#c9a84c','#c9a84c','#5b8dee','#5b8dee','#4ecb8d','#4ecb8d','#9b59b6','#9b59b6'];
   document.getElementById('ret-top-customers').innerHTML=topCusts.map(function(c,i){var pct=totalVal>0?(c.v/totalVal*100).toFixed(1)+'%':'0%';var col=cC[i]||'var(--muted)';return '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);"><div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;"><span style="font-size:11px;font-weight:700;color:'+col+';width:18px;flex-shrink:0;">'+(i+1)+'</span><span style="font-size:12px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+c.n+'</span></div><div style="display:flex;align-items:center;gap:16px;flex-shrink:0;"><div style="text-align:right;min-width:70px;"><div style="font-size:12px;font-weight:700;color:var(--gold);">'+fmtAEDR(c.v)+'</div></div><div style="text-align:right;min-width:40px;"><div style="font-size:11px;color:#e84b4b;">'+pct+'</div><div style="font-size:9px;color:var(--muted);">of total</div></div></div></div>';}).join('');
+
+  // Return Reasons
+  var reasonEl=document.getElementById('ret-reasons-content');
+  if(reasonEl){
+    var rm=s.reasonMap||{};
+    var rKeys=Object.keys(rm).filter(function(k){return k&&k.length>0;}).sort(function(a,b){return rm[b].c-rm[a].c;});
+    if(rKeys.length>0){
+      var maxR=rm[rKeys[0]].c||1;
+      var rColors=['#e84b4b','#c9a84c','#5b8dee','#4ecb8d','#e8854b','#9b59b6','#e84b4b','#c9a84c','#5b8dee','#4ecb8d'];
+      reasonEl.innerHTML=rKeys.slice(0,10).map(function(r,i){
+        var v=rm[r]; var pct=totalVal>0?(v.v/totalVal*100).toFixed(1)+'%':'0%';
+        var barPct=maxR>0?Math.round(v.c/maxR*100):0; var col=rColors[i%rColors.length];
+        return '<div style="margin-bottom:10px;">'+
+          '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">'+
+          '<span style="font-size:11px;color:var(--text);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:55%;">'+r+'</span>'+
+          '<div style="display:flex;gap:10px;flex-shrink:0;">'+
+          '<span style="font-size:11px;color:var(--text);">'+v.c.toLocaleString()+' orders</span>'+
+          '<span style="font-size:11px;color:var(--gold);font-weight:600;">'+fmtAEDR(v.v)+'</span>'+
+          '<span style="font-size:10px;color:var(--muted);min-width:36px;text-align:right;">'+pct+'</span>'+
+          '</div></div>'+
+          '<div style="height:5px;background:var(--border);"><div style="height:5px;width:'+barPct+'%;background:'+col+';"></div></div></div>';
+      }).join('');
+    } else {
+      reasonEl.innerHTML='<div style="font-size:11px;color:var(--muted);padding:20px;text-align:center;">No return reason data yet. Add a Return Reason column to your upload file.</div>';
+    }
+  }
 }
 
 function retClearAndUpload(){
@@ -3068,7 +3103,8 @@ function getFilteredReturns(){
     date:fc('RETURN ORDERED','BOOKED DATE','RETURN DATE'),
     cust:fc('CUSTOMER NAME','CUSTOMER'),
     shipTo:fc('SHIP TO'),
-    orderNo:fc('ORDER NUMBER','ORDER NO')
+    orderNo:fc('ORDER NUMBER','ORDER NO'),
+    reason:fc('RETURN REASON','REASON')
   };
   return RET_RAW.filter(function(row){
     var wh=String(row[C.wh]||'').trim().toUpperCase();
@@ -3099,7 +3135,8 @@ function getFilteredReturns(){
       month:parseInt(p[0])||0,
       cust:normalizeCustomer(row[C.cust]||''),
       area:extractArea(row[C.shipTo]),
-      orderNo:String(row[C.orderNo]||'').trim()
+      orderNo:String(row[C.orderNo]||'').trim(),
+      reason:String(row[C.reason]||'').trim()
     };
   });
 }
@@ -3107,84 +3144,110 @@ function getFilteredReturns(){
 function fmtAEDR(v){if(v>=1000000)return'AED '+(v/1000000).toFixed(2)+'M';if(v>=1000)return'AED '+Math.round(v/1000)+'K';return'AED '+Math.round(v);}
 
 function renderReturnsFiltered(){
-  // Filter summary maps based on retFilters when RET_RAW not available
+  if(!RET_FULL_SUMMARY) return;
   var s = RET_FULL_SUMMARY;
-  if(!s) return;
 
-  // Build filtered summary from the raw maps
-  var filtered = {
-    totalVal:0, invCount:0, invVal:0, grvCount:0, grvVal:0,
-    whMap:{}, catMap:{}, buMap:{}, monthMap:{}, areaMap:{}, custMap:{},
-    totalOrders:0
-  };
-
-  // We filter using whMap, monthMap, areaMap, catMap, buMap
-  // Since summary only has aggregated maps, we can only filter by one dimension at a time
-  // Best approach: use the most restrictive filter to subset
-
-  // Get warehouse filter
-  var whF = retFilters.wh !== 'all' ? retFilters.wh : null;
-  var catF = retFilters.cat !== 'all' ? retFilters.cat : null;
-  var buF = retFilters.bu !== 'all' ? retFilters.bu : null;
-  var moF = retFilters.month !== 'all' ? parseInt(retFilters.month) : null;
-  var areaF = retFilters.area !== 'all' ? retFilters.area : null;
-
-  // Apply WH filter
-  var whMap = {};
-  if(whF){ if(s.whMap[whF]) whMap[whF] = s.whMap[whF]; }
-  else { whMap = s.whMap || {}; }
-
-  // Apply CAT filter
-  var catMap = {};
-  if(catF){ if(s.catMap[catF]) catMap[catF] = s.catMap[catF]; }
-  else { catMap = s.catMap || {}; }
-
-  // Apply MONTH filter
-  var monthMap = {};
-  if(moF){ if(s.monthMap[moF]) monthMap[moF] = s.monthMap[moF]; }
-  else { monthMap = s.monthMap || {}; }
-
-  // Calculate totals from most restrictive filter
-  // Priority: cat > wh > month
-  if(catF && catMap[catF]){
-    var cv = catMap[catF];
-    filtered.totalOrders = cv.c || 0;
-    filtered.totalVal = cv.v || 0;
-    filtered.catMap = catMap;
-    if(catF === 'Invoice Cancellation'){ filtered.invCount = cv.c; filtered.invVal = cv.v; }
-    else if(catF === 'GRV-Return'){ filtered.grvCount = cv.c; filtered.grvVal = cv.v; }
-  } else if(whF && whMap[whF]){
-    filtered.totalVal = whMap[whF] || 0;
-    filtered.catMap = catMap;
-    filtered.whMap = whMap;
-    // Recalc from catMap proportionally
-    Object.keys(catMap).forEach(function(k){
-      var cv = catMap[k];
-      filtered.totalOrders += cv.c||0;
-      if(k==='Invoice Cancellation'){ filtered.invCount+=(cv.c||0); filtered.invVal+=(cv.v||0); }
-      if(k==='GRV-Return'){ filtered.grvCount+=(cv.c||0); filtered.grvVal+=(cv.v||0); }
-    });
-  } else {
-    // No filter or month only - use full summary
-    filtered.totalVal = s.totalVal || 0;
-    filtered.totalOrders = s.totalOrders || 0;
-    filtered.invCount = s.invCount || 0;
-    filtered.invVal = s.invVal || 0;
-    filtered.grvCount = s.grvCount || 0;
-    filtered.grvVal = s.grvVal || 0;
-    filtered.catMap = catMap;
-    filtered.whMap = whMap;
-    filtered.monthMap = monthMap;
-    filtered.areaMap = s.areaMap || {};
-    filtered.buMap = s.buMap || {};
-    filtered.custMap = s.custMap || {};
+  // When ALL filters are default - show full summary
+  var isAllDefault = retFilters.wh==='all' && retFilters.month==='all' && 
+    retFilters.area==='all' && retFilters.bu==='all' && retFilters.cat==='all';
+  
+  if(isAllDefault){
+    renderReturnsFromSummary(s, '');
+    return;
   }
 
-  filtered.whMap = filtered.whMap || whMap;
-  filtered.monthMap = filtered.monthMap || monthMap;
-  filtered.areaMap = filtered.areaMap || (s.areaMap || {});
-  filtered.buMap = filtered.buMap || (s.buMap || {});
-  filtered.custMap = filtered.custMap || (s.custMap || {});
+  // Filter from rawMap (stored per row in summary)
+  // Since we only have aggregated maps, we filter what we can
+  var filtered = {
+    totalVal:0, invCount:0, invVal:0, grvCount:0, grvVal:0,
+    totalOrders:0, whMap:{}, catMap:{}, buMap:{}, monthMap:{}, areaMap:{}, custMap:{}
+  };
+
+  // Use rawRows if available for multi-dimension filtering
+  if(RET_RAW && RET_RAW.length){
+    var frows = getFilteredReturns();
+    var sum = buildReturnsSummary(frows);
+    renderReturnsFromSummary(sum, '');
+    return;
+  }
+
+  // Fallback: filter from summary maps with priority
+  // Apply filters in order of specificity
+  var useMap = null;
+  var filterVal = null;
+
+  if(retFilters.cat !== 'all'){
+    // Filter by category
+    var catKey = retFilters.cat === 'Invoice Cancellation' ? 'Invoice Cancellation' : 'GRV-Return';
+    var cv = (s.catMap || {})[catKey] || {c:0, v:0};
+    filtered.totalOrders = cv.c || 0;
+    filtered.totalVal = cv.v || 0;
+    if(catKey === 'Invoice Cancellation'){ filtered.invCount = cv.c; filtered.invVal = cv.v; }
+    else { filtered.grvCount = cv.c; filtered.grvVal = cv.v; }
+    filtered.catMap = {};
+    filtered.catMap[catKey] = cv;
+  } else if(retFilters.wh !== 'all'){
+    var wv = (s.whMap || {})[retFilters.wh] || 0;
+    // Estimate split from overall percentages
+    var totalV = s.totalVal || 1;
+    var ratio = wv / totalV;
+    filtered.totalOrders = Math.round((s.totalOrders||0) * ratio);
+    filtered.totalVal = wv;
+    filtered.invCount = Math.round((s.invCount||0) * ratio);
+    filtered.invVal = Math.round((s.invVal||0) * ratio);
+    filtered.grvCount = Math.round((s.grvCount||0) * ratio);
+    filtered.grvVal = Math.round((s.grvVal||0) * ratio);
+    filtered.whMap = {}; filtered.whMap[retFilters.wh] = wv;
+    filtered.catMap = s.catMap || {};
+  } else if(retFilters.month !== 'all'){
+    var mv = (s.monthMap || {})[parseInt(retFilters.month)] || 0;
+    var totalV2 = s.totalVal || 1;
+    var ratio2 = mv / totalV2;
+    filtered.totalOrders = Math.round((s.totalOrders||0) * ratio2);
+    filtered.totalVal = mv;
+    filtered.invCount = Math.round((s.invCount||0) * ratio2);
+    filtered.invVal = Math.round((s.invVal||0) * ratio2);
+    filtered.grvCount = Math.round((s.grvCount||0) * ratio2);
+    filtered.grvVal = Math.round((s.grvVal||0) * ratio2);
+    filtered.monthMap = {}; filtered.monthMap[retFilters.month] = mv;
+    filtered.catMap = s.catMap || {};
+    filtered.whMap = s.whMap || {};
+  } else if(retFilters.area !== 'all'){
+    var av = (s.areaMap || {})[retFilters.area] || 0;
+    var totalV3 = s.totalVal || 1;
+    var ratio3 = av / totalV3;
+    filtered.totalOrders = Math.round((s.totalOrders||0) * ratio3);
+    filtered.totalVal = av;
+    filtered.invCount = Math.round((s.invCount||0) * ratio3);
+    filtered.invVal = Math.round((s.invVal||0) * ratio3);
+    filtered.grvCount = Math.round((s.grvCount||0) * ratio3);
+    filtered.grvVal = Math.round((s.grvVal||0) * ratio3);
+    filtered.areaMap = {}; filtered.areaMap[retFilters.area] = av;
+    filtered.catMap = s.catMap || {};
+    filtered.whMap = s.whMap || {};
+  } else if(retFilters.bu !== 'all'){
+    var buKey = retFilters.bu === 'food' ? 'Food' : 'Non-Food';
+    var bv = (s.buMap || {})[buKey] || 0;
+    var totalV4 = s.totalVal || 1;
+    var ratio4 = bv / totalV4;
+    filtered.totalOrders = Math.round((s.totalOrders||0) * ratio4);
+    filtered.totalVal = bv;
+    filtered.invCount = Math.round((s.invCount||0) * ratio4);
+    filtered.invVal = Math.round((s.invVal||0) * ratio4);
+    filtered.grvCount = Math.round((s.grvCount||0) * ratio4);
+    filtered.grvVal = Math.round((s.grvVal||0) * ratio4);
+    filtered.buMap = {}; filtered.buMap[buKey] = bv;
+    filtered.catMap = s.catMap || {};
+    filtered.whMap = s.whMap || {};
+  }
+
+  // Fill missing maps from full summary
+  filtered.whMap = filtered.whMap || s.whMap || {};
+  filtered.catMap = filtered.catMap || s.catMap || {};
+  filtered.buMap = filtered.buMap || s.buMap || {};
+  filtered.monthMap = filtered.monthMap || s.monthMap || {};
+  filtered.areaMap = filtered.areaMap || s.areaMap || {};
+  filtered.custMap = filtered.custMap || s.custMap || {};
 
   renderReturnsFromSummary(filtered, '');
 }
