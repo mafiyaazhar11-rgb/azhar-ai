@@ -3691,7 +3691,7 @@ function renderReturns(){
       +'<div style="height:6px;background:var(--border);border-radius:0;">'
       +'<div style="height:6px;width:'+pct+'%;background:'+col+';transition:width 0.8s;"></div>'
       +'</div></div>';
-  }).join('');
+  }).join('') : '<div style="color:var(--muted);font-size:11px;padding:12px 0;">No warehouse data for selected filters</div>';
 
   // Category donut
   var catKeys=Object.keys(catMap);
