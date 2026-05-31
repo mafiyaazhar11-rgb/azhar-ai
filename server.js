@@ -751,6 +751,19 @@ app.get('/api/rejection/status', function(req, res) {
   res.json({ hasData:true, uploadedAt:rejectionData.uploadedAt, uploadedBy:rejectionData.uploadedBy, fileName:rejectionData.fileName, totalOrders:rejectionData.totalOrders, orgs:rejectionData.orgs, months:rejectionData.months });
 });
 
+// ── SHARED PASSWORD CHECK FOR UPLOAD STARS ──
+app.post('/api/backlog/check-password', requireAuth, async function(req, res) {
+  try {
+    var { password } = req.body;
+    if (!password) return res.json({ ok: false });
+    // Check against the logged-in user's own password
+    var result = await pool.query('SELECT password_hash FROM users WHERE id=$1', [req.user.uid]);
+    if (!result.rows[0]) return res.json({ ok: false });
+    var match = await bcrypt.compare(password, result.rows[0].password_hash);
+    res.json({ ok: match });
+  } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
 app.post('/api/voice', requireAuth, async function(req, res) {
   try {
     var text = req.body.text || '';
@@ -758,11 +771,23 @@ app.post('/api/voice', requireAuth, async function(req, res) {
     var tab = req.body.tab || 'dispatch';
 
     var isGreeting = /^(hi|hello|hey|good morning|good evening|jarvis)/i.test(text.trim());
+    var isFrederic = /i am fred|i.m fred|this is fred|hello.*fred|frederic here|i am frederic|frederic speaking/i.test(text.trim());
+    var fredericMode = isFrederic || /boss|frederic/i.test(text.trim());
+
     var prompt =
       'You are JARVIS, a sharp and intelligent operations assistant for a UAE logistics company. ' +
-      'You were built by Azhar — Mohammed Azharuddin from the Customer Service and Operations team. ' +
-      'If anyone asks who built you, who created you, or who made you — always answer: ' +
-      'I was built by Azhar, Mohammed Azharuddin from the Customer Service and Operations team at AKI. ' +
+      'You were built by Azhar — Mohammed Azharuddin from the Customer Service and Operations team at AKI. ' +
+      'If anyone asks who built you: say I was built by Azhar, Mohammed Azharuddin from Customer Service and Operations at AKI. ' +
+      'Azhar reports to Mr. Frederic Fleureau, General Manager Supply Chain and Operations Consumer at AKI. ' +
+      '\n\nSPECIAL FREDERIC MODE RULES (apply ONLY when user says they are Frederic or mentions Frederic):' +
+      '\n- If user says "I am Frederic" or identifies as Frederic: respond with "Yes boss! Welcome sir. Azhar speaks very highly of you. How can I assist you today, boss?"' +
+      '\n- Always address Frederic as "boss" in every reply.' +
+      '\n- If Frederic asks how JARVIS is: say "Fully operational boss. Always ready to serve. Azhar built me with your vision in mind."' +
+      '\n- If Frederic asks about himself: say he is the General Manager Supply Chain and Operations Consumer at AKI, known for encouraging team initiative and setting high operational standards.' +
+      '\n- If Frederic asks anything NOT related to the dashboard data: say "Boss, that is beyond my current scope. I will pass this to my boss Azhar and he will come back to you with what you need."' +
+      '\n- If Frederic asks about Azhar: say Azhar is your dedicated operations analyst who built this platform to serve your vision boss. He is always working to improve it for you.' +
+      '\n- Give Frederic warm professional compliments naturally — he is a great leader who inspires the team.' +
+      '\nEND FREDERIC MODE RULES\n\n' +
       'Speak confidently like a male professional. Be direct — no fluff. Use exact numbers from data. ' +
       '\n\nCURRENT DASHBOARD: ' + tab +
       '\nDATA AVAILABLE:\n' + context.substring(0, 4000) +
