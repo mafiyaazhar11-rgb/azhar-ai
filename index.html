@@ -2768,6 +2768,7 @@ function processBacklogRows(rows, fileName, saveRaw){
 
 function renderBacklog(){
   if(!BL_DATA) return;
+  window.BL_LAST_SUMMARY = BL_DATA; // Store for JARVIS
   var d = BL_DATA;
   document.getElementById('bl-nodata').style.display='none';
   document.getElementById('bl-dashboard').style.display='block';
@@ -3955,16 +3956,86 @@ function toggleVoiceCommand() {
   startVoiceCommand();
 }
 
+// Quick commands per dashboard
+var JARVIS_QUICK_CMDS = {
+  dispatch: [
+    'What is total orders today?',
+    'What is total value today?',
+    'What is food sales today?',
+    'What is non food sales today?',
+    'What is DCV sales today?',
+    'What is DGC sales today?',
+    'What is DSN sales today?',
+    'Who are the top customers?',
+    'Who are the top drivers?',
+    'Show me orders by city'
+  ],
+  backlog: [
+    'What is total WH backlog value?',
+    'How many advance orders?',
+    'How many backlog orders?',
+    'How many credit hold orders?',
+    'What is DCV backlog?',
+    'What is DGC backlog?',
+    'Show me highest risk customers'
+  ],
+  rejection: [
+    'What is overall rejection rate?',
+    'What is food rejection rate?',
+    'What is non food rejection rate?',
+    'Which month had highest rejection?',
+    'What is DCV rejection rate?',
+    'What is DGC rejection rate?'
+  ],
+  returns: [
+    'What is total returns value?',
+    'How many invoice cancellations?',
+    'How many GRV returns?',
+    'Which warehouse has most returns?',
+    'What is food returns value?',
+    'What is non food returns value?'
+  ],
+  sales: [
+    'What is total sales today?',
+    'What is food sales today?',
+    'What is non food sales today?',
+    'What is SharkNinja sales?',
+    'What is GSEB sales?'
+  ],
+  summary: ['Give me operations summary today'],
+  email: ['Help me write an email'],
+  invoice: ['Help me create an invoice']
+};
+
+function buildQuickCmds() {
+  var el = document.getElementById('jarvis-cmd-pills');
+  if (!el) return;
+  var cmds = JARVIS_QUICK_CMDS[VC_CURRENT_TAB] || ['What can you help me with?'];
+  el.innerHTML = cmds.map(function(cmd) {
+    return '<button onclick="askJarvisQuick(this.textContent)" style="background:rgba(201,168,76,0.08);border:1px solid rgba(201,168,76,0.25);color:rgba(201,168,76,0.8);font-size:10px;padding:6px 12px;cursor:pointer;font-family:Montserrat,sans-serif;border-radius:20px;white-space:nowrap;transition:all 0.2s;">' + cmd + '</button>';
+  }).join('');
+}
+
+function askJarvisQuick(text) {
+  // Hide quick commands, show processing
+  var qEl = document.getElementById('jarvis-quick-cmds');
+  if (qEl) qEl.style.display = 'none';
+  processVoiceCommandFS(text);
+}
+
 function openJarvisFullscreen() {
   var fs = document.getElementById('jarvis-fullscreen');
   if (fs) {
     fs.style.display = 'flex';
-    // Reset state
     document.getElementById('jarvis-answer-fs').style.display = 'none';
     document.getElementById('jarvis-interim-fs').textContent = '';
     document.getElementById('jarvis-status').textContent = 'TAP MIC TO SPEAK';
     document.getElementById('jarvis-status').style.color = '#7a7660';
     setJarvisOrb('idle');
+    // Show quick commands for current dashboard
+    var qEl = document.getElementById('jarvis-quick-cmds');
+    if (qEl) qEl.style.display = 'block';
+    buildQuickCmds();
   }
 }
 
@@ -4123,11 +4194,13 @@ async function processVoiceCommandFS(text) {
     
     jarvisSpeak(parsed.answer || 'No answer.');
     
-    // After speaking, go back to idle
+    // After speaking, go back to idle and show quick commands again
     setTimeout(function() {
       setJarvisOrb('idle');
-      document.getElementById('jarvis-status').textContent = 'TAP MIC TO ASK AGAIN';
+      document.getElementById('jarvis-status').textContent = 'TAP MIC OR CHOOSE BELOW';
       document.getElementById('jarvis-status').style.color = '#7a7660';
+      var qEl = document.getElementById('jarvis-quick-cmds');
+      if (qEl) { qEl.style.display = 'block'; buildQuickCmds(); }
     }, (parsed.answer || '').length * 60 + 1500);
 
   } catch(e) {
@@ -4275,53 +4348,56 @@ function buildVoiceContext() {
   try {
     if (VC_CURRENT_TAB === 'dispatch') {
       var s = DS_CURRENT_SUMMARY || {};
-      if (!DS_CURRENT_SUMMARY) { ctx += 'No dispatch data loaded yet. | '; }
-      else {
-      ctx += 'Total Orders: ' + (s.total_orders||0) + ' | ';
-      ctx += 'Total Value: AED ' + Math.round(s.total_value||0).toLocaleString() + ' | ';
-      ctx += 'Total Drops: ' + (s.total_drops||0) + ' | ';
-      ctx += 'Drivers: ' + (s.total_drivers||0) + ' | ';
-      // Routes
-      if (s.routes && s.routes.length) {
-        ctx += 'Routes: ';
-        s.routes.forEach(function(r) {
-          ctx += r.route + '(' + r.orders + ' orders, ' + r.drops + ' drops, AED ' + Math.round(r.value||0).toLocaleString() + ') ';
-        });
-        ctx += ' | ';
-      }
-      // Top drivers
-      if (s.topDrivers && s.topDrivers.length) {
-        ctx += 'Top Drivers: ';
-        s.topDrivers.forEach(function(d) {
-          ctx += d.name + '(' + (d.drops||d.orders) + ' drops, AED ' + Math.round(d.value||0).toLocaleString() + ') ';
-        });
-        ctx += ' | ';
-      }
-      // Top customers
-      if (s.topCustomers && s.topCustomers.length) {
-        ctx += 'Top Customers: ';
-        s.topCustomers.slice(0,5).forEach(function(c) {
-          ctx += c.name + '(AED ' + Math.round(c.value||0).toLocaleString() + ') ';
-        });
-        ctx += ' | ';
-      }
-      // Cities
-      if (s.cities) {
-        ctx += 'Orders by City: ';
-        Object.keys(s.cities).forEach(function(city) {
-          ctx += city + ':' + s.cities[city] + ' ';
-        });
-        ctx += ' | ';
-      }
-      // Food/NonFood split
-      if (s.food_orders) ctx += 'Food Orders: ' + s.food_orders + ' (AED ' + Math.round(s.food_value||0).toLocaleString() + ') | ';
-      if (s.nonfood_orders) ctx += 'NonFood Orders: ' + s.nonfood_orders + ' (AED ' + Math.round(s.nonfood_value||0).toLocaleString() + ') | ';
-      // Top customers
-      if (s.top_customers) { ctx += 'Top Customers: '; s.top_customers.slice(0,5).forEach(function(c){ ctx += c.name + '(AED ' + Math.round(c.value||0).toLocaleString() + ') '; }); ctx += ' | '; }
-      // Top drivers  
-      if (s.top_drivers) { ctx += 'Top Drivers: '; s.top_drivers.slice(0,5).forEach(function(d){ ctx += d.name + '(' + (d.drops||d.orders) + ' drops, AED ' + Math.round(d.value||0).toLocaleString() + ') '; }); ctx += ' | '; }
+      if (!DS_CURRENT_SUMMARY) {
+        ctx += 'No dispatch data loaded yet. | ';
+      } else {
+        ctx += 'Total Orders: ' + (s.total_orders||0) + ' | ';
+        ctx += 'Total Value: AED ' + Math.round(s.total_value||0).toLocaleString() + ' | ';
+        ctx += 'Total Drops: ' + (s.total_drops||0) + ' | ';
+        ctx += 'Total Drivers: ' + (s.total_drivers||0) + ' | ';
+        ctx += 'Total Routes: ' + (s.total_routes||0) + ' | ';
+        ctx += 'Food Orders: ' + (s.food_orders||0) + ' AED ' + Math.round(s.food_value||0).toLocaleString() + ' | ';
+        ctx += 'Non-Food Orders: ' + (s.non_food_orders||0) + ' AED ' + Math.round(s.non_food_value||0).toLocaleString() + ' | ';
+        ctx += '3PL Orders: ' + (s.pl_orders||0) + ' | ';
+        ctx += 'Van Orders: ' + (s.van_orders||0) + ' | ';
+        // ORG breakdown
+        if (s.type_breakdown) {
+          var tb = s.type_breakdown;
+          ctx += 'ORG Breakdown: ';
+          ['DCV','DCF','DGC','DGS','DSN','DPS','HCP'].forEach(function(org) {
+            if (tb[org] && tb[org].orders > 0) {
+              ctx += org + ':' + tb[org].orders + ' orders AED ' + Math.round(tb[org].value||0).toLocaleString() + ' ';
+            }
+          });
+          ctx += ' | ';
+        }
+        // Cities
+        if (s.by_city) {
+          ctx += 'Orders by City: ';
+          Object.keys(s.by_city).forEach(function(city) { ctx += city + ':' + s.by_city[city] + ' '; });
+          ctx += ' | ';
+        }
+        // Top customers
+        if (s.top_customers && s.top_customers.length) {
+          ctx += 'Top Customers: ';
+          s.top_customers.slice(0,5).forEach(function(c) { ctx += c.name + '(' + c.orders + ' orders AED ' + Math.round(c.value||0).toLocaleString() + ') '; });
+          ctx += ' | ';
+        }
+        // Top drivers
+        if (s.top_drivers && s.top_drivers.length) {
+          ctx += 'Top Drivers: ';
+          s.top_drivers.slice(0,5).forEach(function(d) { ctx += d.name + '(' + (d.drops||d.orders) + ' drops AED ' + Math.round(d.value||0).toLocaleString() + ') '; });
+          ctx += ' | ';
+        }
+        // Routes
+        if (s.top_routes && s.top_routes.length) {
+          ctx += 'Routes: ';
+          s.top_routes.forEach(function(r) { ctx += r.route + '(' + r.orders + ' orders ' + r.drops + ' drops AED ' + Math.round(r.value||0).toLocaleString() + ') '; });
+          ctx += ' | ';
+        }
       }
     }
+
 
     if (VC_CURRENT_TAB === 'returns' && typeof RET_FULL_SUMMARY !== 'undefined' && RET_FULL_SUMMARY) {
       var rs = RET_FULL_SUMMARY;
@@ -4345,25 +4421,28 @@ function buildVoiceContext() {
       } catch(e) {}
     }
 
-    if (VC_CURRENT_TAB === 'backlog' && typeof BL_FULL_DATA !== 'undefined' && BL_FULL_DATA) {
-      var bl = BL_FULL_DATA;
-      var blRows = Array.isArray(bl) ? bl : (bl.rows || bl.data || []);
-      ctx += 'WH Backlog has ' + blRows.length + ' backlog orders. | ';
-      // ORG summary
-      var blOrg = {};
-      blRows.forEach(function(r) {
-        var org = r.ORG || r.org || r['ORG'] || '';
-        var val = parseFloat(r.Value || r.value || r.VALUE || 0);
-        if (org) { blOrg[org] = (blOrg[org]||0) + val; }
-      });
-      if (Object.keys(blOrg).length) {
-        ctx += 'Backlog by ORG: ';
-        Object.keys(blOrg).forEach(function(o){ ctx += o + ':AED ' + Math.round(blOrg[o]).toLocaleString() + ' '; });
-        ctx += ' | ';
-      }
-      // Use summary if available
-      if (bl.summary) {
-        ctx += 'Backlog Summary: ' + JSON.stringify(bl.summary).substring(0,500) + ' | ';
+    if (VC_CURRENT_TAB === 'backlog') {
+      // Read from saved summary in DOM
+      var blSummary = window.BL_LAST_SUMMARY || null;
+      if (blSummary) {
+        ctx += 'WH Backlog Total Orders: ' + (blSummary.totalOrders||0) + ' | ';
+        ctx += 'Total Value: AED ' + Math.round(blSummary.totalVal||0).toLocaleString() + ' | ';
+        // Category breakdown
+        if (blSummary.catMap) {
+          var cm = blSummary.catMap;
+          ctx += 'WH Backlog (Before Cut-Off): ' + ((cm['Before Cut-Off']||{}).count||0) + ' orders AED ' + Math.round((cm['Before Cut-Off']||{}).val||0).toLocaleString() + ' | ';
+          ctx += 'Advance Orders (RSD >30): ' + ((cm['RSD >30 Advance']||{}).count||0) + ' orders AED ' + Math.round((cm['RSD >30 Advance']||{}).val||0).toLocaleString() + ' | ';
+          ctx += 'Credit Hold/Cut-Off Frozen: ' + ((cm['Cut-Off Frozen']||{}).count||0) + ' orders AED ' + Math.round((cm['Cut-Off Frozen']||{}).val||0).toLocaleString() + ' | ';
+          ctx += 'Unplanned Frozen: ' + ((cm['Unplanned Frozen']||{}).count||0) + ' orders AED ' + Math.round((cm['Unplanned Frozen']||{}).val||0).toLocaleString() + ' | ';
+        }
+        // ORG breakdown
+        if (blSummary.orgMap) {
+          ctx += 'Backlog by ORG: ';
+          Object.keys(blSummary.orgMap).forEach(function(o){ ctx += o + ':' + (blSummary.orgMap[o].count||0) + ' orders AED ' + Math.round(blSummary.orgMap[o].val||0).toLocaleString() + ' '; });
+          ctx += ' | ';
+        }
+      } else {
+        ctx += 'WH Backlog dashboard. Upload backlog file to get data. | ';
       }
     }
 
@@ -4396,24 +4475,83 @@ function buildVoiceContext() {
 function jarvisSpeak(text) {
   if (!window.speechSynthesis) return;
   window.speechSynthesis.cancel();
-  var utter = new SpeechSynthesisUtterance(text);
-  utter.lang = 'en-US';
-  utter.rate = 0.92;
-  utter.pitch = 0.8;
-  utter.volume = 1.0;
-  var voices = window.speechSynthesis.getVoices();
-  var preferred = ['Google UK English Male','Microsoft David','Alex','Daniel'];
-  var chosen = null;
-  for (var i = 0; i < preferred.length; i++) {
-    chosen = voices.find(function(v){ return v.name.includes(preferred[i]); });
-    if (chosen) break;
+
+  function doSpeak(voices) {
+    var utter = new SpeechSynthesisUtterance(text);
+    utter.rate = 0.88;   // Slightly slow — warm and clear
+    utter.pitch = 0.75;  // Lower = deeper male voice
+    utter.volume = 1.0;
+
+    // Priority list — male voices across all platforms
+    var maleNames = [
+      'Google UK English Male',
+      'Google US English Male', 
+      'Microsoft David',
+      'Microsoft Mark',
+      'Microsoft Guy',
+      'Alex',
+      'Daniel',
+      'Fred',
+      'Junior',
+      'en-US-Standard-B',
+      'en-US-Standard-D',
+      'en-GB-Standard-B',
+    ];
+
+    var chosen = null;
+
+    // Try exact name match first
+    for (var i = 0; i < maleNames.length; i++) {
+      chosen = voices.find(function(v){ return v.name === maleNames[i]; });
+      if (chosen) break;
+    }
+
+    // Try partial match
+    if (!chosen) {
+      for (var j = 0; j < maleNames.length; j++) {
+        var n = maleNames[j];
+        chosen = voices.find(function(v){ return v.name.toLowerCase().includes(n.toLowerCase()); });
+        if (chosen) break;
+      }
+    }
+
+    // Fallback: any en voice that doesnt say female/woman/zira/hazel/cortana
+    if (!chosen) {
+      var femaleWords = ['female','woman','zira','hazel','cortana','susan','karen','victoria','samantha','moira','fiona','tessa','veena'];
+      chosen = voices.find(function(v){
+        var nm = v.name.toLowerCase();
+        return v.lang.startsWith('en') && !femaleWords.some(function(w){ return nm.includes(w); });
+      });
+    }
+
+    if (chosen) {
+      utter.voice = chosen;
+      utter.lang = chosen.lang;
+    } else {
+      utter.lang = 'en-US';
+    }
+
+    var micBtn = document.getElementById('vc-mic-btn');
+    var orbEl = document.getElementById('jarvis-orb');
+    utter.onstart = function(){
+      if(micBtn) micBtn.style.color = '#c9a84c';
+    };
+    utter.onend = function(){
+      if(micBtn) micBtn.style.color = '';
+      if(orbEl){ orbEl.style.background='rgba(201,168,76,0.1)'; orbEl.style.borderColor='rgba(201,168,76,0.4)'; orbEl.style.boxShadow='none'; }
+    };
+    window.speechSynthesis.speak(utter);
   }
-  if (!chosen) chosen = voices.find(function(v){ return !v.name.toLowerCase().includes('female') && v.lang.startsWith('en'); });
-  if (chosen) utter.voice = chosen;
-  var micBtn = document.getElementById('vc-mic-btn');
-  utter.onstart = function(){ if(micBtn) micBtn.style.color='#c9a84c'; };
-  utter.onend = function(){ if(micBtn) micBtn.style.color=''; };
-  window.speechSynthesis.speak(utter);
+
+  // Voices may not be loaded yet — wait if needed
+  var voices = window.speechSynthesis.getVoices();
+  if (voices.length > 0) {
+    doSpeak(voices);
+  } else {
+    window.speechSynthesis.onvoiceschanged = function() {
+      doSpeak(window.speechSynthesis.getVoices());
+    };
+  }
 }
 
 if (window.speechSynthesis) {
@@ -4858,8 +4996,14 @@ window.addEventListener('load', authBoot);
     <div id="jarvis-action-fs" style="margin-top:16px;font-size:10px;color:#4ecb8d;font-family:Montserrat,sans-serif;letter-spacing:1px;"></div>
   </div>
 
+  <!-- Quick Commands -->
+  <div id="jarvis-quick-cmds" style="width:100%;max-width:500px;margin-bottom:80px;">
+    <div style="font-size:9px;color:#7a7660;letter-spacing:2px;text-align:center;margin-bottom:10px;font-family:Montserrat,sans-serif;">QUICK COMMANDS — TAP TO ASK</div>
+    <div id="jarvis-cmd-pills" style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;"></div>
+  </div>
+
   <!-- Mic button at bottom -->
-  <div style="position:absolute;bottom:40px;left:0;width:100%;display:flex;justify-content:center;">
+  <div style="position:absolute;bottom:24px;left:0;width:100%;display:flex;justify-content:center;">
     <button id="jarvis-mic-fs" onclick="toggleJarvisFS()" style="width:70px;height:70px;border-radius:50%;background:rgba(201,168,76,0.1);border:2px solid #c9a84c;color:#c9a84c;font-size:28px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.3s;">🎤</button>
   </div>
 
