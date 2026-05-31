@@ -768,14 +768,16 @@ app.post('/api/voice', requireAuth, async function(req, res) {
       '\nDATA AVAILABLE:\n' + context.substring(0, 4000) +
       '\n\nUSER COMMAND: "' + text + '"' +
       '\n\nINSTRUCTIONS:' +
-      '\n- If greeting: introduce as JARVIS operations assistant briefly.' +
-      '\n- If asking about data: find exact numbers in the DATA AVAILABLE above and answer precisely.' +
-      '\n- If asking to filter/show specific route, warehouse, city, BU: set action=filter.' +
-      '\n- If asking to go to another dashboard: set action=navigate.' +
-      '\n- If data is not available for the question: say what is available instead.' +
-      '\n- NEVER say you cannot find data if numbers exist in the context above.' +
-      '\n\nReply ONLY with this exact JSON (no markdown, no extra text):' +
-      '\n{"answer":"your precise answer with numbers","action":"none or filter or navigate","action_detail":"filter value or dashboard name","action_label":"what action was applied"}';
+      '\n- CRITICAL: You are currently on the ' + tab + ' dashboard. Only use data from that dashboard.' +
+      '\n- If greeting: say Hello, I am JARVIS your operations assistant. Ask how you can help.' +
+      '\n- If asking about data: look carefully in DATA AVAILABLE above and give exact numbers.' +
+      '\n- If you see the data in context, USE IT. Never say no data if it exists above.' +
+      '\n- If asking to filter (route, ORG, warehouse, city, BU): set action=filter, action_detail=the value.' +
+      '\n- If asking to switch dashboard (backlog, returns, sales, dispatch, rejection): set action=navigate.' +
+      '\n- If genuinely no data loaded yet: say the dashboard has no data uploaded yet, please upload a file.' +
+      '\n- Keep answer under 3 sentences. Use exact numbers. Be confident like a male professional.' +
+      '\n\nReply ONLY with valid JSON, no markdown:' +
+      '\n{"answer":"precise answer","action":"none or filter or navigate","action_detail":"value","action_label":"label"}';
 
     var msg = await anthropic.messages.create({
       model: 'claude-haiku-4-5-20251001',
