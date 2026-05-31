@@ -2988,7 +2988,8 @@ function getFilteredReturnsAll(){
 
 function buildReturnsSummary(rows){
   var totalVal=0,invCount=0,invVal=0,grvCount=0,grvVal=0;
-  var whMap={},catMap={},buMap={},monthMap={},areaMap={},custMap={},reasonMap={};
+  var whMap={},catMap={},buMap={},monthMap={},dateMap={},areaMap={},custMap={},reasonMap={};
+  var MNAMES={1:'Jan',2:'Feb',3:'Mar',4:'Apr',5:'May',6:'Jun',7:'Jul',8:'Aug',9:'Sep',10:'Oct',11:'Nov',12:'Dec'};
   rows.forEach(function(r){
     totalVal+=r.tot;
     if(r.cat==='Invoice Cancellation'){invCount++;invVal+=r.tot;}
@@ -2996,13 +2997,18 @@ function buildReturnsSummary(rows){
     if(r.wh){if(!whMap[r.wh])whMap[r.wh]=0;whMap[r.wh]+=r.tot;}
     if(r.cat){if(!catMap[r.cat])catMap[r.cat]={c:0,v:0};catMap[r.cat].c++;catMap[r.cat].v+=r.tot;}
     if(r.bu){if(!buMap[r.bu])buMap[r.bu]=0;buMap[r.bu]+=r.tot;}
-    if(r.month){if(!monthMap[r.month])monthMap[r.month]=0;monthMap[r.month]+=r.tot;}
+    if(r.month){if(!monthMap[r.month])monthMap[r.month]={val:0,count:0};monthMap[r.month].val+=r.tot;monthMap[r.month].count++;}
+    if(r.month&&r.day){
+      var dk=(MNAMES[r.month]||r.month)+' '+r.day;
+      if(!dateMap[dk])dateMap[dk]={val:0,count:0,month:r.month,day:r.day};
+      dateMap[dk].val+=r.tot;dateMap[dk].count++;
+    }
     if(r.area){if(!areaMap[r.area])areaMap[r.area]=0;areaMap[r.area]+=r.tot;}
     if(r.cust){if(!custMap[r.cust])custMap[r.cust]=0;custMap[r.cust]+=r.tot;}
     if(r.reason){if(!reasonMap[r.reason])reasonMap[r.reason]={c:0,v:0};reasonMap[r.reason].c++;reasonMap[r.reason].v+=r.tot;}
   });
   return {totalVal:totalVal,invCount:invCount,invVal:invVal,grvCount:grvCount,grvVal:grvVal,
-    whMap:whMap,catMap:catMap,buMap:buMap,monthMap:monthMap,areaMap:areaMap,custMap:custMap,
+    whMap:whMap,catMap:catMap,buMap:buMap,monthMap:monthMap,dateMap:dateMap,areaMap:areaMap,custMap:custMap,
     reasonMap:reasonMap,totalOrders:rows.length};
 }
 
@@ -3385,6 +3391,8 @@ function getFilteredReturns(){
       bu:normalizeBU(row[C.bu]),
       tot:Math.abs(parseFloat(String(row[C.tot]||'').replace(/,/g,''))||0),
       month:parseInt(p[0])||0,
+      day:parseInt(p[1])||0,
+      dateStr:dt,
       cust:normalizeCustomer(row[C.cust]||''),
       area:extractArea(row[C.shipTo]),
       orderNo:String(row[C.orderNo]||'').trim(),
@@ -3452,16 +3460,24 @@ function renderReturnsFiltered(){
     filtered.whMap = {}; filtered.whMap[retFilters.wh] = wv;
     filtered.catMap = s.catMap || {};
   } else if(retFilters.month !== 'all'){
-    var mv = (s.monthMap || {})[parseInt(retFilters.month)] || 0;
+    var _mRaw = (s.monthMap || {})[parseInt(retFilters.month)] || {val:0,count:0};
+    var mv = typeof _mRaw === 'object' ? _mRaw.val : _mRaw;
+    var mc = typeof _mRaw === 'object' ? _mRaw.count : 0;
     var totalV2 = s.totalVal || 1;
     var ratio2 = mv / totalV2;
-    filtered.totalOrders = Math.round((s.totalOrders||0) * ratio2);
+    filtered.totalOrders = mc || Math.round((s.totalOrders||0) * ratio2);
     filtered.totalVal = mv;
     filtered.invCount = Math.round((s.invCount||0) * ratio2);
     filtered.invVal = Math.round((s.invVal||0) * ratio2);
     filtered.grvCount = Math.round((s.grvCount||0) * ratio2);
     filtered.grvVal = Math.round((s.grvVal||0) * ratio2);
-    filtered.monthMap = {}; filtered.monthMap[retFilters.month] = mv;
+    filtered.monthMap = {}; filtered.monthMap[retFilters.month] = {val:mv,count:mc};
+    // Pass dateMap filtered to active month
+    if(s.dateMap){
+      filtered.dateMap={};
+      var fm=parseInt(retFilters.month);
+      Object.keys(s.dateMap).forEach(function(dk){if(s.dateMap[dk].month===fm)filtered.dateMap[dk]=s.dateMap[dk];});
+    }
     filtered.catMap = s.catMap || {};
     filtered.whMap = s.whMap || {};
   } else if(retFilters.area !== 'all'){
@@ -3546,7 +3562,7 @@ function renderReturns(){
 
   // Monthly chart
   var months=[1,2,3,4,5];
-  var monthData=months.map(function(m){return Math.round(monthMap[m]||0);});
+  var monthData=months.map(function(m){var mv=monthMap[m]||0;return Math.round(typeof mv==='object'?mv.val:mv);});
   if(RET_CHART_MONTH){RET_CHART_MONTH.destroy();}
   var ctx=document.getElementById('ret-month-chart');
   if(ctx){
@@ -4790,11 +4806,64 @@ function buildVoiceContext() {
 
     if (VC_CURRENT_TAB === 'returns' && typeof RET_FULL_SUMMARY !== 'undefined' && RET_FULL_SUMMARY) {
       var rs = RET_FULL_SUMMARY;
-      ctx += 'Total Returns: AED ' + Math.round(rs.totalVal||0).toLocaleString() + ' (' + (rs.totalOrders||0) + ' orders) | ';
-      ctx += 'Invoice Cancellations: ' + (rs.invCount||0) + ' orders AED ' + Math.round(rs.invVal||0).toLocaleString() + ' | ';
-      ctx += 'GRV Returns: ' + (rs.grvCount||0) + ' orders AED ' + Math.round(rs.grvVal||0).toLocaleString() + ' | ';
-      if (rs.whMap) { ctx += 'By Warehouse: '; Object.keys(rs.whMap).forEach(function(w){ ctx += w + ':AED ' + Math.round(rs.whMap[w]).toLocaleString() + ' '; }); ctx += ' | '; }
-      if (rs.buMap) { ctx += 'By BU: '; Object.keys(rs.buMap).forEach(function(b){ ctx += b + ':AED ' + Math.round(rs.buMap[b]).toLocaleString() + ' '; }); ctx += ' | '; }
+      var MNAMES_J={1:'January',2:'February',3:'March',4:'April',5:'May',6:'June',7:'July',8:'August',9:'September',10:'October',11:'November',12:'December'};
+      // Active filters context
+      var activeFilters=[];
+      if(typeof retFilters!=='undefined'){
+        if(retFilters.month!=='all') activeFilters.push('Month filter: '+( MNAMES_J[retFilters.month]||retFilters.month));
+        if(retFilters.wh!=='all') activeFilters.push('Warehouse filter: '+retFilters.wh);
+        if(retFilters.area!=='all') activeFilters.push('Area filter: '+retFilters.area);
+        if(retFilters.bu!=='all') activeFilters.push('BU filter: '+retFilters.bu);
+        if(retFilters.cat!=='all') activeFilters.push('Category filter: '+retFilters.cat);
+      }
+      if(activeFilters.length) ctx += 'ACTIVE FILTERS: '+activeFilters.join(', ')+' | ';
+      // Use filtered summary if filters are active, otherwise full summary
+      var rsd = rs;
+      if(typeof retFilters!=='undefined' && (retFilters.month!=='all'||retFilters.wh!=='all'||retFilters.area!=='all'||retFilters.bu!=='all'||retFilters.cat!=='all') && typeof renderReturnsFiltered!=='undefined') {
+        // Build live filtered summary for JARVIS
+        try {
+          var frows2 = getFilteredReturnRows ? getFilteredReturnRows() : [];
+          if(frows2.length) rsd = buildReturnsSummary(frows2);
+        } catch(e2){}
+      }
+      ctx += 'Market Returns Dashboard | ';
+      ctx += 'Total Returns Value: AED ' + Math.round(rsd.totalVal||0).toLocaleString() + ' (' + (rsd.totalOrders||0) + ' orders) | ';
+      ctx += 'Invoice Cancellations: ' + (rsd.invCount||0) + ' orders AED ' + Math.round(rsd.invVal||0).toLocaleString() + ' | ';
+      ctx += 'GRV Returns: ' + (rsd.grvCount||0) + ' orders AED ' + Math.round(rsd.grvVal||0).toLocaleString() + ' | ';
+      if (rsd.whMap) { ctx += 'By Warehouse: '; Object.keys(rsd.whMap).sort(function(a,b){return (rsd.whMap[b]||0)-(rsd.whMap[a]||0);}).forEach(function(w){ ctx += w+':AED '+Math.round(rsd.whMap[w]||0).toLocaleString()+' '; }); ctx += ' | '; }
+      if (rsd.buMap) { ctx += 'By BU: '; Object.keys(rsd.buMap).forEach(function(b){ ctx += b+':AED '+Math.round(rsd.buMap[b]||0).toLocaleString()+' '; }); ctx += ' | '; }
+      // Month breakdown (always from full summary)
+      if (rs.monthMap && Object.keys(rs.monthMap).length) {
+        ctx += 'Monthly Breakdown: ';
+        var mkeys = Object.keys(rs.monthMap).map(Number).sort(function(a,b){return a-b;});
+        mkeys.forEach(function(m){
+          var mo=rs.monthMap[m]||{};
+          var mv=typeof mo==='object'?mo.val:mo;
+          var mc=typeof mo==='object'?mo.count:0;
+          ctx += (MNAMES_J[m]||m)+':AED '+Math.round(mv).toLocaleString()+'('+mc+' orders) ';
+        });
+        ctx += ' | ';
+      }
+      // Date breakdown — show for active month or last 20 dates
+      var dmSource = (rsd.dateMap && Object.keys(rsd.dateMap).length) ? rsd.dateMap : (rs.dateMap||{});
+      if (dmSource && Object.keys(dmSource).length) {
+        ctx += 'Daily Returns Data: ';
+        var dkeys = Object.keys(dmSource).sort(function(a,b){
+          var da=dmSource[a],db=dmSource[b];
+          return (da.month*100+(da.day||0))-(db.month*100+(db.day||0));
+        }).slice(-20);
+        dkeys.forEach(function(dk){
+          var dv=dmSource[dk];
+          ctx += dk+':AED '+Math.round(dv.val||0).toLocaleString()+'('+( dv.count||0)+') ';
+        });
+        ctx += ' | ';
+      }
+      // Top customers
+      if (rsd.custMap && Object.keys(rsd.custMap).length) {
+        ctx += 'Top Customers: ';
+        Object.keys(rsd.custMap).sort(function(a,b){return (rsd.custMap[b]||0)-(rsd.custMap[a]||0);}).slice(0,5).forEach(function(c){ ctx += c+':AED '+Math.round(rsd.custMap[c]||0).toLocaleString()+' '; });
+        ctx += ' | ';
+      }
     }
 
     if (VC_CURRENT_TAB === 'rejection' && typeof ORG_DATA !== 'undefined') {
