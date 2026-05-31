@@ -3432,6 +3432,30 @@ function renderReturnsFiltered(){
   }
 
   // Fallback: no raw rows — filter summary maps using combined ratios
+
+  // WH ↔ BU compatibility: some warehouses only handle Food or Non-Food
+  // If selected WH and BU are incompatible → return zeros immediately
+  var FOOD_WH    = ['DCV','DCF'];           // Food only
+  var NONFOOD_WH = ['DGC','DGS','DLL','DGN','DSN']; // Non-Food only
+  if(retFilters.wh !== 'all' && retFilters.bu !== 'all'){
+    var whUpper = retFilters.wh.toUpperCase();
+    var buFilter = retFilters.bu; // 'food' or 'nonfood'
+    var whIsFood    = FOOD_WH.indexOf(whUpper)    !== -1;
+    var whIsNonFood = NONFOOD_WH.indexOf(whUpper) !== -1;
+    var incompatible = (buFilter==='food'    && whIsNonFood) ||
+                       (buFilter==='nonfood' && whIsFood);
+    if(incompatible){
+      // Zero everything - this combination cannot exist
+      filtered.totalVal=0; filtered.totalOrders=0;
+      filtered.invCount=0; filtered.invVal=0;
+      filtered.grvCount=0; filtered.grvVal=0;
+      filtered.whMap={}; filtered.buMap={}; filtered.catMap={};
+      filtered.monthMap={}; filtered.areaMap={}; filtered.custMap={};
+      renderReturnsFromSummary(filtered, '');
+      return;
+    }
+  }
+
   // Collect individual ratios for each active filter and multiply them
   var combinedRatio = 1.0;
   var totalV = s.totalVal || 1;
@@ -3462,6 +3486,14 @@ function renderReturnsFiltered(){
     var wv = (s.whMap || {})[retFilters.wh] || 0;
     combinedRatio *= (wv / totalV);
     filtered.whMap = {}; filtered.whMap[retFilters.wh] = wv;
+    // If no BU filter set, force buMap to show only the compatible BU for this WH
+    if(retFilters.bu === 'all'){
+      var whUp = retFilters.wh.toUpperCase();
+      var isFoodWH = FOOD_WH.indexOf(whUp) !== -1;
+      var isNFWH   = NONFOOD_WH.indexOf(whUp) !== -1;
+      if(isFoodWH)        { filtered.buMap = {'Food': wv}; }
+      else if(isNFWH)     { filtered.buMap = {'Non-Food': wv}; }
+    }
   }
 
   // MONTH filter
