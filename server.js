@@ -1115,61 +1115,23 @@ app.post('/api/users/:id/reset-password', requireAuth, requireRole('superadmin')
 // ─── INVOICED TODAY SALES ──────────────────────────────────────────────────
 var invSalesData = null;
 
-async function loadInvSalesFromDB() {
-  try {
-    await pool.query(`CREATE TABLE IF NOT EXISTS invsales_data (
-      id SERIAL PRIMARY KEY,
-      uploaded_at TIMESTAMPTZ DEFAULT NOW(),
-      uploaded_by TEXT,
-      file_name TEXT,
-      total_orders INT,
-      summary JSONB
-    )`);
-    var result = await pool.query('SELECT * FROM invsales_data ORDER BY uploaded_at DESC LIMIT 1');
-    if (result.rows[0]) {
-      invSalesData = {
-        uploadedAt: result.rows[0].uploaded_at,
-        fileName: result.rows[0].file_name,
-        totalOrders: result.rows[0].total_orders,
-        summary: result.rows[0].summary
-      };
-      console.log('Loaded invSales from DB:', invSalesData.fileName);
-    }
-  } catch(e) { console.error('DB load invSales:', e.message); }
-}
-loadInvSalesFromDB();
-
 app.get('/api/invsales/status', requireAuth, function(req, res) {
   if (!invSalesData) return res.json({ hasData: false });
-  res.json({ hasData: true, uploadedAt: invSalesData.uploadedAt, fileName: invSalesData.fileName, totalOrders: invSalesData.totalOrders, summary: invSalesData.summary });
+  res.json({ hasData: true, uploadedAt: invSalesData.uploadedAt, fileName: invSalesData.fileName, totalOrders: invSalesData.totalOrders });
 });
 
 app.post('/api/invsales/upload', requireAuth, requireRole('superadmin','subadmin'), async function(req, res) {
   try {
-    var summary = (typeof req.body.summary === 'string') ? JSON.parse(req.body.summary) : (req.body.summary || {});
-    var fileName = req.body.fileName || 'invoiced_sales.xlsx';
-    var uploadedBy = req.body.uploadedBy || req.user.username;
-    var totalOrders = parseInt(req.body.totalOrders) || 0;
+    var { summary, fileName, uploadedBy, totalOrders } = req.body;
     invSalesData = { summary, fileName, uploadedBy, totalOrders, uploadedAt: new Date().toISOString() };
-    try {
-      await pool.query('CREATE TABLE IF NOT EXISTS invsales_data (id SERIAL PRIMARY KEY, uploaded_at TIMESTAMPTZ DEFAULT NOW(), uploaded_by TEXT, file_name TEXT, total_orders INT, summary JSONB)');
-      await pool.query('DELETE FROM invsales_data');
-      var summaryJson = JSON.stringify(summary);
-      console.log('InvSales summary size:', summaryJson.length, 'bytes, version:', summary.version);
-      await pool.query('INSERT INTO invsales_data (uploaded_by, file_name, total_orders, summary) VALUES ($1,$2,$3,$4)', [uploadedBy, fileName, totalOrders, summaryJson]);
-      console.log('InvSales saved to DB OK');
-    } catch(dbErr) { console.error('InvSales DB save ERROR:', dbErr.message, dbErr.stack); }
     await auditLog(req.user.uid, req.user.username, 'UPLOAD', 'Invoiced Sales: ' + fileName, '');
     res.json({ success: true });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
-app.delete('/api/invsales/clear', requireAuth, requireRole('superadmin','subadmin'), async function(req, res) {
-  try {
-    await pool.query('DELETE FROM invsales_data');
-    invSalesData = null;
-    res.json({ success: true });
-  } catch(e) { res.status(500).json({ error: e.message }); }
+app.delete('/api/invsales/clear', requireAuth, requireRole('superadmin','subadmin'), function(req, res) {
+  invSalesData = null;
+  res.json({ success: true });
 });
 
 // ── EMERGENCY ADMIN RESET (remove after first use) ──
@@ -1245,7 +1207,7 @@ app.get('/api/sales/status', function(req, res) {
   res.json({ hasData: true, uploadedAt: salesData.uploadedAt, fileName: salesData.fileName, totalOrders: salesData.totalOrders, summary: salesData.summary });
 });
 
-app.post('/api/sales/upload', async function(req, res) {
+app.post('/api/sales/upload', express.json({limit:'10mb'}), async function(req, res) {
   try {
     var summary = (typeof req.body.summary === 'string') ? JSON.parse(req.body.summary) : (req.body.summary || {});
     var fileName = req.body.fileName || 'sales.xlsx';
