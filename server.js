@@ -1087,6 +1087,28 @@ app.post('/api/users/:id/reset-password', requireAuth, requireRole('superadmin')
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
+// ─── INVOICED TODAY SALES ──────────────────────────────────────────────────
+var invSalesData = null;
+
+app.get('/api/invsales/status', requireAuth, function(req, res) {
+  if (!invSalesData) return res.json({ hasData: false });
+  res.json({ hasData: true, uploadedAt: invSalesData.uploadedAt, fileName: invSalesData.fileName, totalOrders: invSalesData.totalOrders });
+});
+
+app.post('/api/invsales/upload', requireAuth, requireRole('superadmin','subadmin'), async function(req, res) {
+  try {
+    var { summary, fileName, uploadedBy, totalOrders } = req.body;
+    invSalesData = { summary, fileName, uploadedBy, totalOrders, uploadedAt: new Date().toISOString() };
+    await auditLog(req.user.uid, req.user.username, 'UPLOAD', 'Invoiced Sales: ' + fileName, '');
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/invsales/clear', requireAuth, requireRole('superadmin','subadmin'), function(req, res) {
+  invSalesData = null;
+  res.json({ success: true });
+});
+
 // ── EMERGENCY ADMIN RESET (remove after first use) ──
 app.get('/api/setup/reset-admin', async function(req, res) {
   try {
