@@ -3690,6 +3690,309 @@ function loadSalesFromServer(){
 
 loadSalesFromServer();
 
+
+// ═══════════════ AUTH SYSTEM ═══════════════
+var AUTH_TOKEN = localStorage.getItem('azhar_token') || null;
+var AUTH_USER = null;
+
+async function authBoot() {
+  // Hide main app first
+  var sidebar = document.querySelector('.sidebar');
+  var main = document.querySelector('.main');
+  if(sidebar) sidebar.style.display = 'none';
+  if(main) main.style.display = 'none';
+  document.getElementById('login-page').style.display = 'flex';
+
+  if (!AUTH_TOKEN) { showLogin(); return; }
+  try {
+    var r = await fetch('/api/auth/me', { headers: { 'x-auth-token': AUTH_TOKEN } });
+    if (!r.ok) { AUTH_TOKEN=null; localStorage.removeItem('azhar_token'); showLogin(); return; }
+    AUTH_USER = await r.json();
+    showApp();
+  } catch(e) { showLogin(); }
+}
+
+function showLogin() {
+  document.getElementById('login-page').style.display = 'flex';
+  var sidebar = document.querySelector('.sidebar');
+  var main = document.querySelector('.main');
+  if(sidebar) sidebar.style.display = 'none';
+  if(main) main.style.display = 'none';
+  setTimeout(function(){ var u=document.getElementById('login-user'); if(u)u.focus(); }, 200);
+}
+
+function showApp() {
+  document.getElementById('login-page').style.display = 'none';
+  var sidebar = document.querySelector('.sidebar');
+  var main = document.querySelector('.main');
+  if(sidebar) sidebar.style.display = '';
+  if(main) main.style.display = '';
+  applyDashboardAccess();
+  applyUploadAccess();
+  addUserInfoTopbar();
+  if(AUTH_USER && AUTH_USER.must_change_password) {
+    document.getElementById('change-pwd-modal').style.display = 'flex';
+  }
+}
+
+function applyDashboardAccess() {
+  if(!AUTH_USER || AUTH_USER.role === 'superadmin') return;
+  var allowed = AUTH_USER.dashboards || [];
+  document.querySelectorAll('.sb-item').forEach(function(btn) {
+    var onclick = btn.getAttribute('onclick') || '';
+    var match = onclick.match(/goTab\('([^']+)'/);
+    if(match && allowed.indexOf(match[1]) === -1) btn.style.display = 'none';
+  });
+}
+
+function applyUploadAccess() {
+  if(!AUTH_USER) return;
+  var canUpload = AUTH_USER.role === 'superadmin' || AUTH_USER.role === 'subadmin';
+  if(!canUpload) {
+    ['ret-star-wrap','bl-star-wrap','sales-star-wrap'].forEach(function(id) {
+      var el = document.getElementById(id);
+      if(el) el.style.display = 'none';
+    });
+  }
+}
+
+function addUserInfoTopbar() {
+  if(!AUTH_USER) return;
+  var topbar = document.querySelector('.topbar-right');
+  if(!topbar) return;
+  var roleColors = {superadmin:'#c9a84c', subadmin:'#5b8dee', viewer:'#7a7660'};
+  var roleLabels = {superadmin:'Admin', subadmin:'Sub Admin', viewer:'Viewer'};
+  var col = roleColors[AUTH_USER.role] || '#7a7660';
+  var div = document.createElement('div');
+  div.style.cssText = 'display:flex;align-items:center;gap:10px;margin-right:10px;';
+  div.innerHTML =
+    '<div style="text-align:right;">' +
+      '<div style="font-size:11px;color:#f5f0e8;font-weight:600;">'+(AUTH_USER.full_name||AUTH_USER.username)+'</div>' +
+      '<div style="font-size:9px;color:'+col+';letter-spacing:1px;">'+(roleLabels[AUTH_USER.role]||AUTH_USER.role)+'</div>' +
+    '</div>' +
+    (AUTH_USER.role==='superadmin' ? '<button onclick="openAdmin()" style="background:transparent;border:1px solid rgba(201,168,76,0.3);color:#c9a84c;font-size:9px;padding:4px 10px;cursor:pointer;font-family:Montserrat,sans-serif;letter-spacing:1px;">⚙ ADMIN</button>' : '') +
+    '<button onclick="doLogout()" style="background:transparent;border:1px solid rgba(255,255,255,0.15);color:#7a7660;font-size:9px;padding:4px 10px;cursor:pointer;font-family:Montserrat,sans-serif;letter-spacing:1px;">LOGOUT</button>';
+  topbar.insertBefore(div, topbar.firstChild);
+}
+
+async function doLogin() {
+  var username = document.getElementById('login-user').value.trim();
+  var password = document.getElementById('login-pass').value;
+  var errEl = document.getElementById('login-error');
+  var btn = document.getElementById('login-btn');
+  if(!username||!password){errEl.textContent='Please enter username and password';errEl.style.display='block';return;}
+  btn.textContent='SIGNING IN...'; btn.disabled=true; errEl.style.display='none';
+  try {
+    var r = await fetch('/api/auth/login', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({username:username, password:password})
+    });
+    var data = await r.json();
+    if(!r.ok){errEl.textContent=data.error||'Login failed';errEl.style.display='block';btn.textContent='SIGN IN →';btn.disabled=false;document.getElementById('login-pass').value='';return;}
+    AUTH_TOKEN=data.token; AUTH_USER=data.user;
+    localStorage.setItem('azhar_token', AUTH_TOKEN);
+    btn.textContent='SIGN IN →'; btn.disabled=false;
+    showApp();
+  } catch(e){errEl.textContent='Connection error';errEl.style.display='block';btn.textContent='SIGN IN →';btn.disabled=false;}
+}
+
+async function doLogout() {
+  try{ await fetch('/api/auth/logout',{method:'POST',headers:{'x-auth-token':AUTH_TOKEN}}); }catch(e){}
+  AUTH_TOKEN=null; AUTH_USER=null;
+  localStorage.removeItem('azhar_token');
+  location.reload();
+}
+
+async function doChangePwd() {
+  var cur=document.getElementById('chpwd-current').value;
+  var nw=document.getElementById('chpwd-new').value;
+  var cf=document.getElementById('chpwd-confirm').value;
+  var err=document.getElementById('chpwd-error');
+  if(!cur||!nw||!cf){err.textContent='All fields required';err.style.display='block';return;}
+  if(nw!==cf){err.textContent='Passwords do not match';err.style.display='block';return;}
+  if(nw.length<6){err.textContent='Min 6 characters';err.style.display='block';return;}
+  try{
+    var r=await fetch('/api/auth/change-password',{method:'POST',headers:{'Content-Type':'application/json','x-auth-token':AUTH_TOKEN},body:JSON.stringify({current_password:cur,new_password:nw})});
+    var d=await r.json();
+    if(!r.ok){err.textContent=d.error;err.style.display='block';return;}
+    document.getElementById('change-pwd-modal').style.display='none';
+    alert('Password changed successfully!');
+  }catch(e){err.textContent='Error: '+e.message;err.style.display='block';}
+}
+
+// ── ADMIN PANEL ──
+function openAdmin(){document.getElementById('admin-panel').style.display='block';adminTab('users');loadUsers();}
+function closeAdmin(){document.getElementById('admin-panel').style.display='none';}
+
+function adminTab(tab){
+  document.getElementById('admin-users-tab').style.display=tab==='users'?'block':'none';
+  document.getElementById('admin-audit-tab').style.display=tab==='audit'?'block':'none';
+  document.getElementById('admin-tab-users').style.cssText='padding:8px 20px;background:'+(tab==='users'?'rgba(201,168,76,0.15)':'transparent')+';border:1px solid '+(tab==='users'?'#c9a84c':'rgba(255,255,255,0.1)')+';color:'+(tab==='users'?'#c9a84c':'#7a7660')+';font-size:10px;letter-spacing:2px;cursor:pointer;font-family:Montserrat,sans-serif;';
+  document.getElementById('admin-tab-audit').style.cssText='padding:8px 20px;background:'+(tab==='audit'?'rgba(201,168,76,0.15)':'transparent')+';border:1px solid '+(tab==='audit'?'#c9a84c':'rgba(255,255,255,0.1)')+';color:'+(tab==='audit'?'#c9a84c':'#7a7660')+';font-size:10px;letter-spacing:2px;cursor:pointer;font-family:Montserrat,sans-serif;';
+  if(tab==='audit') loadAuditLog();
+}
+
+async function loadUsers(){
+  try{
+    var r=await fetch('/api/users',{headers:{'x-auth-token':AUTH_TOKEN}});
+    var d=await r.json();
+    var el=document.getElementById('admin-users-list');
+    var rColors={superadmin:'#c9a84c',subadmin:'#5b8dee',viewer:'#7a7660'};
+    var rLabels={superadmin:'Super Admin',subadmin:'Sub Admin',viewer:'Viewer'};
+    el.innerHTML='<table style="width:100%;border-collapse:collapse;font-size:11px;">'+
+      '<thead><tr style="border-bottom:1px solid rgba(201,168,76,0.3);">'+
+      '<th style="text-align:left;padding:8px;font-size:9px;color:#c9a84c;letter-spacing:1px;">USERNAME</th>'+
+      '<th style="text-align:left;padding:8px;font-size:9px;color:#c9a84c;letter-spacing:1px;">FULL NAME</th>'+
+      '<th style="text-align:left;padding:8px;font-size:9px;color:#c9a84c;letter-spacing:1px;">ROLE</th>'+
+      '<th style="text-align:left;padding:8px;font-size:9px;color:#c9a84c;letter-spacing:1px;">ACCESS</th>'+
+      '<th style="text-align:left;padding:8px;font-size:9px;color:#c9a84c;letter-spacing:1px;">STATUS</th>'+
+      '<th style="text-align:left;padding:8px;font-size:9px;color:#c9a84c;letter-spacing:1px;">LAST LOGIN</th>'+
+      '<th style="text-align:left;padding:8px;font-size:9px;color:#c9a84c;letter-spacing:1px;">ACTIONS</th>'+
+      '</tr></thead><tbody>'+
+      (d.users||[]).map(function(u){
+        var col=rColors[u.role]||'#7a7660';
+        var dbs=(u.dashboards||[]).length;
+        var ll=u.last_login?new Date(u.last_login).toLocaleDateString('en-AE'):'Never';
+        var isMe=u.username==='azhar';
+        return '<tr style="border-bottom:1px solid rgba(255,255,255,0.05);">'+
+          '<td style="padding:8px;color:#f5f0e8;font-weight:600;">'+u.username+'</td>'+
+          '<td style="padding:8px;color:#f5f0e8;">'+u.full_name+'</td>'+
+          '<td style="padding:8px;"><span style="color:'+col+';font-size:10px;">'+rLabels[u.role]+'</span></td>'+
+          '<td style="padding:8px;color:#7a7660;font-size:10px;">'+dbs+'/8</td>'+
+          '<td style="padding:8px;font-size:10px;"><span style="color:'+(u.active?'#4ecb8d':'#e84b4b')+';">●</span> '+(u.active?'Active':'Disabled')+'</td>'+
+          '<td style="padding:8px;color:#7a7660;font-size:10px;">'+ll+'</td>'+
+          '<td style="padding:8px;display:flex;gap:4px;flex-wrap:wrap;">'+
+          (!isMe?'<button onclick="editUser('+u.id+')" style="background:transparent;border:1px solid rgba(201,168,76,0.3);color:#c9a84c;font-size:9px;padding:3px 8px;cursor:pointer;font-family:Montserrat,sans-serif;">EDIT</button>':'')+
+          (!isMe?'<button onclick="resetPwd('+u.id+',''+u.username+'')" style="background:transparent;border:1px solid rgba(91,141,238,0.3);color:#5b8dee;font-size:9px;padding:3px 8px;cursor:pointer;font-family:Montserrat,sans-serif;">RESET PWD</button>':'')+
+          (!isMe?'<button onclick="toggleUser('+u.id+','+(u.active?'false':'true')+')" style="background:transparent;border:1px solid rgba(255,255,255,0.1);color:#7a7660;font-size:9px;padding:3px 8px;cursor:pointer;font-family:Montserrat,sans-serif;">'+(u.active?'DISABLE':'ENABLE')+'</button>':'')+
+          (!isMe?'<button onclick="deleteUser('+u.id+',''+u.username+'')" style="background:transparent;border:1px solid rgba(232,75,75,0.3);color:#e84b4b;font-size:9px;padding:3px 8px;cursor:pointer;font-family:Montserrat,sans-serif;">DELETE</button>':'')+
+          '</td></tr>';
+      }).join('')+'</tbody></table>';
+  }catch(e){console.error('Load users:',e);}
+}
+
+function showAddUser(){
+  document.getElementById('edit-user-id').value='';
+  document.getElementById('uf-username').value='';
+  document.getElementById('uf-username').disabled=false;
+  document.getElementById('uf-fullname').value='';
+  document.getElementById('uf-password').value='';
+  document.getElementById('uf-role').value='viewer';
+  document.getElementById('user-form-title').textContent='ADD NEW USER';
+  document.querySelectorAll('#uf-dashboards input').forEach(function(cb){cb.checked=true;});
+  document.getElementById('admin-user-form').style.display='block';
+}
+
+async function editUser(id){
+  try{
+    var r=await fetch('/api/users',{headers:{'x-auth-token':AUTH_TOKEN}});
+    var d=await r.json();
+    var u=(d.users||[]).find(function(u){return u.id===id;});
+    if(!u) return;
+    document.getElementById('edit-user-id').value=id;
+    document.getElementById('uf-username').value=u.username;
+    document.getElementById('uf-username').disabled=true;
+    document.getElementById('uf-fullname').value=u.full_name||'';
+    document.getElementById('uf-password').value='';
+    document.getElementById('uf-role').value=u.role;
+    document.getElementById('user-form-title').textContent='EDIT: '+u.username.toUpperCase();
+    var dbs=u.dashboards||[];
+    document.querySelectorAll('#uf-dashboards input').forEach(function(cb){cb.checked=dbs.indexOf(cb.value)!==-1;});
+    document.getElementById('admin-user-form').style.display='block';
+  }catch(e){alert('Error: '+e.message);}
+}
+
+async function saveUser(){
+  var id=document.getElementById('edit-user-id').value;
+  var username=document.getElementById('uf-username').value.trim();
+  var fullname=document.getElementById('uf-fullname').value.trim();
+  var password=document.getElementById('uf-password').value;
+  var role=document.getElementById('uf-role').value;
+  var dashboards=[];
+  document.querySelectorAll('#uf-dashboards input:checked').forEach(function(cb){dashboards.push(cb.value);});
+  if(!id&&(!username||!password)){alert('Username and password required');return;}
+  try{
+    var url=id?'/api/users/'+id:'/api/users';
+    var method=id?'PUT':'POST';
+    var body={full_name:fullname,role:role,dashboards:dashboards};
+    if(!id){body.username=username;body.password=password;}
+    if(id&&password){body.password=password;}
+    var r=await fetch(url,{method:method,headers:{'Content-Type':'application/json','x-auth-token':AUTH_TOKEN},body:JSON.stringify(body)});
+    var d=await r.json();
+    if(!r.ok){alert(d.error||'Error saving');return;}
+    document.getElementById('admin-user-form').style.display='none';
+    loadUsers();
+  }catch(e){alert('Error: '+e.message);}
+}
+
+async function resetPwd(id,username){
+  var pwd=prompt('New password for '+username+' (min 6 chars):');
+  if(!pwd||pwd.length<6){if(pwd!==null)alert('Min 6 characters');return;}
+  try{
+    var r=await fetch('/api/users/'+id+'/reset-password',{method:'POST',headers:{'Content-Type':'application/json','x-auth-token':AUTH_TOKEN},body:JSON.stringify({new_password:pwd})});
+    var d=await r.json();
+    if(!r.ok){alert(d.error);return;}
+    alert('Password reset for '+username+'. User will be prompted to change on next login.');
+    loadUsers();
+  }catch(e){alert('Error: '+e.message);}
+}
+
+async function toggleUser(id,active){
+  try{
+    await fetch('/api/users/'+id,{method:'PUT',headers:{'Content-Type':'application/json','x-auth-token':AUTH_TOKEN},body:JSON.stringify({active:active})});
+    loadUsers();
+  }catch(e){alert('Error: '+e.message);}
+}
+
+async function deleteUser(id,username){
+  if(!confirm('Delete user "'+username+'"? Cannot be undone.')) return;
+  try{
+    var r=await fetch('/api/users/'+id,{method:'DELETE',headers:{'x-auth-token':AUTH_TOKEN}});
+    var d=await r.json();
+    if(!r.ok){alert(d.error);return;}
+    loadUsers();
+  }catch(e){alert('Error: '+e.message);}
+}
+
+async function loadAuditLog(){
+  try{
+    var r=await fetch('/api/audit',{headers:{'x-auth-token':AUTH_TOKEN}});
+    var d=await r.json();
+    var el=document.getElementById('admin-audit-list');
+    var aColors={LOGIN:'#4ecb8d',LOGOUT:'#7a7660',CREATE_USER:'#5b8dee',DELETE_USER:'#e84b4b',UPDATE_USER:'#c9a84c',RESET_PASSWORD:'#e8854b',CHANGE_PASSWORD:'#4ecb8d'};
+    el.innerHTML='<table style="width:100%;border-collapse:collapse;font-size:11px;">'+
+      '<thead><tr style="border-bottom:1px solid rgba(201,168,76,0.3);">'+
+      '<th style="text-align:left;padding:6px 8px;font-size:9px;color:#c9a84c;">TIME</th>'+
+      '<th style="text-align:left;padding:6px 8px;font-size:9px;color:#c9a84c;">USER</th>'+
+      '<th style="text-align:left;padding:6px 8px;font-size:9px;color:#c9a84c;">ACTION</th>'+
+      '<th style="text-align:left;padding:6px 8px;font-size:9px;color:#c9a84c;">DETAILS</th>'+
+      '</tr></thead><tbody>'+
+      (d.logs||[]).map(function(log){
+        var col=aColors[log.action]||'#7a7660';
+        var t=new Date(log.created_at).toLocaleString('en-AE');
+        return '<tr style="border-bottom:1px solid rgba(255,255,255,0.04);">'+
+          '<td style="padding:6px 8px;color:#7a7660;font-size:10px;white-space:nowrap;">'+t+'</td>'+
+          '<td style="padding:6px 8px;color:#f5f0e8;font-weight:600;">'+log.username+'</td>'+
+          '<td style="padding:6px 8px;"><span style="color:'+col+';font-size:10px;">'+log.action+'</span></td>'+
+          '<td style="padding:6px 8px;color:#7a7660;font-size:10px;">'+log.details+'</td>'+
+          '</tr>';
+      }).join('')+'</tbody></table>';
+  }catch(e){console.error('Audit:',e);}
+}
+
+// Intercept all fetch calls to add auth token
+var _origFetch = window.fetch;
+window.fetch = function(url, opts) {
+  if(typeof url==='string' && url.startsWith('/api/') && AUTH_TOKEN) {
+    opts = opts||{};
+    opts.headers = opts.headers||{};
+    if(!opts.headers['x-auth-token']) opts.headers['x-auth-token'] = AUTH_TOKEN;
+  }
+  return _origFetch.apply(this, [url, opts]);
+};
+
+// Boot on load
+window.addEventListener('load', authBoot);
 </script>
 <!-- WH Backlog Password Modal -->
 <div id="bl-pwd-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9999;align-items:center;justify-content:center;">
@@ -3710,6 +4013,125 @@ loadSalesFromServer();
   </div>
 </div>
 
+
+
+<!-- ═══════════════ LOGIN PAGE ═══════════════ -->
+<div id="login-page" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:#0a0a08;z-index:9999;display:flex;align-items:center;justify-content:center;">
+  <div style="width:380px;padding:40px;background:#111108;border:1px solid rgba(201,168,76,0.3);">
+    <div style="text-align:center;margin-bottom:32px;">
+      <div style="font-size:28px;margin-bottom:8px;">✦</div>
+      <div style="font-family:'Playfair Display',serif;font-size:20px;color:#c9a84c;letter-spacing:2px;">AZHAR-AI</div>
+      <div style="font-size:9px;color:#7a7660;letter-spacing:3px;text-transform:uppercase;margin-top:4px;">CST Operations Intelligence</div>
+    </div>
+    <div id="login-error" style="display:none;background:rgba(232,75,75,0.1);border:1px solid rgba(232,75,75,0.3);color:#e84b4b;font-size:11px;padding:10px;margin-bottom:16px;text-align:center;"></div>
+    <div style="margin-bottom:16px;">
+      <label style="font-size:9px;color:#7a7660;letter-spacing:2px;text-transform:uppercase;display:block;margin-bottom:6px;">USERNAME</label>
+      <input id="login-user" type="text" autocomplete="username" style="width:100%;background:#0a0a08;border:1px solid rgba(201,168,76,0.3);color:#f5f0e8;font-size:13px;padding:10px 12px;font-family:Montserrat,sans-serif;outline:none;box-sizing:border-box;" placeholder="Enter username" onkeydown="if(event.key==='Enter')document.getElementById('login-pass').focus()">
+    </div>
+    <div style="margin-bottom:24px;">
+      <label style="font-size:9px;color:#7a7660;letter-spacing:2px;text-transform:uppercase;display:block;margin-bottom:6px;">PASSWORD</label>
+      <input id="login-pass" type="password" autocomplete="current-password" style="width:100%;background:#0a0a08;border:1px solid rgba(201,168,76,0.3);color:#f5f0e8;font-size:13px;padding:10px 12px;font-family:Montserrat,sans-serif;outline:none;box-sizing:border-box;" placeholder="Enter password" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button onclick="doLogin()" id="login-btn" style="width:100%;background:rgba(201,168,76,0.1);border:1px solid #c9a84c;color:#c9a84c;font-size:11px;letter-spacing:3px;text-transform:uppercase;padding:12px;cursor:pointer;font-family:Montserrat,sans-serif;transition:all 0.2s;" onmouseover="this.style.background='rgba(201,168,76,0.2)'" onmouseout="this.style.background='rgba(201,168,76,0.1)'">
+      SIGN IN →
+    </button>
+    <div style="text-align:center;margin-top:20px;font-size:9px;color:#7a7660;">azr-operations.com · V 4.0</div>
+  </div>
+</div>
+
+<!-- ═══════════════ CHANGE PASSWORD MODAL ═══════════════ -->
+<div id="change-pwd-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:9998;align-items:center;justify-content:center;">
+  <div style="width:360px;padding:32px;background:#111108;border:1px solid rgba(201,168,76,0.3);">
+    <div style="font-size:13px;color:#c9a84c;letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;">Change Password</div>
+    <div style="font-size:10px;color:#7a7660;margin-bottom:24px;">Please change your password to continue</div>
+    <div id="chpwd-error" style="display:none;background:rgba(232,75,75,0.1);border:1px solid rgba(232,75,75,0.3);color:#e84b4b;font-size:11px;padding:8px;margin-bottom:12px;"></div>
+    <div style="margin-bottom:12px;">
+      <label style="font-size:9px;color:#7a7660;letter-spacing:2px;text-transform:uppercase;display:block;margin-bottom:4px;">CURRENT PASSWORD</label>
+      <input id="chpwd-current" type="password" style="width:100%;background:#0a0a08;border:1px solid rgba(201,168,76,0.3);color:#f5f0e8;font-size:12px;padding:8px 10px;font-family:Montserrat,sans-serif;outline:none;box-sizing:border-box;">
+    </div>
+    <div style="margin-bottom:12px;">
+      <label style="font-size:9px;color:#7a7660;letter-spacing:2px;text-transform:uppercase;display:block;margin-bottom:4px;">NEW PASSWORD</label>
+      <input id="chpwd-new" type="password" style="width:100%;background:#0a0a08;border:1px solid rgba(201,168,76,0.3);color:#f5f0e8;font-size:12px;padding:8px 10px;font-family:Montserrat,sans-serif;outline:none;box-sizing:border-box;">
+    </div>
+    <div style="margin-bottom:20px;">
+      <label style="font-size:9px;color:#7a7660;letter-spacing:2px;text-transform:uppercase;display:block;margin-bottom:4px;">CONFIRM PASSWORD</label>
+      <input id="chpwd-confirm" type="password" style="width:100%;background:#0a0a08;border:1px solid rgba(201,168,76,0.3);color:#f5f0e8;font-size:12px;padding:8px 10px;font-family:Montserrat,sans-serif;outline:none;box-sizing:border-box;">
+    </div>
+    <button onclick="doChangePwd()" style="width:100%;background:rgba(201,168,76,0.1);border:1px solid #c9a84c;color:#c9a84c;font-size:10px;letter-spacing:2px;text-transform:uppercase;padding:10px;cursor:pointer;font-family:Montserrat,sans-serif;">SAVE PASSWORD</button>
+  </div>
+</div>
+
+<!-- ═══════════════ ADMIN PANEL ═══════════════ -->
+<div id="admin-panel" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:9997;overflow-y:auto;">
+  <div style="max-width:900px;margin:40px auto;padding:0 16px;">
+    <div style="background:#111108;border:1px solid rgba(201,168,76,0.3);padding:24px;margin-bottom:16px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+        <div>
+          <div style="font-family:'Playfair Display',serif;font-size:18px;color:#c9a84c;">Admin Control Panel</div>
+          <div style="font-size:9px;color:#7a7660;letter-spacing:2px;margin-top:2px;">USER MANAGEMENT · AUDIT LOG</div>
+        </div>
+        <button onclick="closeAdmin()" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#7a7660;padding:6px 16px;cursor:pointer;font-family:Montserrat,sans-serif;font-size:10px;">✕ CLOSE</button>
+      </div>
+      <!-- Tabs -->
+      <div style="display:flex;gap:2px;margin-bottom:20px;">
+        <button id="admin-tab-users" onclick="adminTab('users')" style="padding:8px 20px;background:rgba(201,168,76,0.15);border:1px solid #c9a84c;color:#c9a84c;font-size:10px;letter-spacing:2px;cursor:pointer;font-family:Montserrat,sans-serif;">👥 USERS</button>
+        <button id="admin-tab-audit" onclick="adminTab('audit')" style="padding:8px 20px;background:transparent;border:1px solid rgba(255,255,255,0.1);color:#7a7660;font-size:10px;letter-spacing:2px;cursor:pointer;font-family:Montserrat,sans-serif;">📋 AUDIT LOG</button>
+      </div>
+      <!-- Users Tab -->
+      <div id="admin-users-tab">
+        <button onclick="showAddUser()" style="background:rgba(201,168,76,0.1);border:1px solid #c9a84c;color:#c9a84c;font-size:10px;letter-spacing:2px;padding:8px 16px;cursor:pointer;font-family:Montserrat,sans-serif;margin-bottom:16px;">+ ADD USER</button>
+        <div id="admin-user-form" style="display:none;background:#0a0a08;border:1px solid rgba(201,168,76,0.2);padding:16px;margin-bottom:16px;">
+          <div style="font-size:10px;color:#c9a84c;letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;" id="user-form-title">ADD NEW USER</div>
+          <input type="hidden" id="edit-user-id">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+            <div>
+              <label style="font-size:9px;color:#7a7660;display:block;margin-bottom:4px;">USERNAME</label>
+              <input id="uf-username" type="text" style="width:100%;background:#111108;border:1px solid rgba(255,255,255,0.1);color:#f5f0e8;font-size:12px;padding:7px 10px;font-family:Montserrat,sans-serif;outline:none;box-sizing:border-box;">
+            </div>
+            <div>
+              <label style="font-size:9px;color:#7a7660;display:block;margin-bottom:4px;">FULL NAME</label>
+              <input id="uf-fullname" type="text" style="width:100%;background:#111108;border:1px solid rgba(255,255,255,0.1);color:#f5f0e8;font-size:12px;padding:7px 10px;font-family:Montserrat,sans-serif;outline:none;box-sizing:border-box;">
+            </div>
+            <div>
+              <label style="font-size:9px;color:#7a7660;display:block;margin-bottom:4px;">PASSWORD</label>
+              <input id="uf-password" type="text" style="width:100%;background:#111108;border:1px solid rgba(255,255,255,0.1);color:#f5f0e8;font-size:12px;padding:7px 10px;font-family:Montserrat,sans-serif;outline:none;box-sizing:border-box;" placeholder="Leave blank to keep current">
+            </div>
+            <div>
+              <label style="font-size:9px;color:#7a7660;display:block;margin-bottom:4px;">ROLE</label>
+              <select id="uf-role" style="width:100%;background:#111108;border:1px solid rgba(255,255,255,0.1);color:#f5f0e8;font-size:12px;padding:7px 10px;font-family:Montserrat,sans-serif;outline:none;">
+                <option value="viewer">Viewer</option>
+                <option value="subadmin">Sub Admin (Upload Only)</option>
+                <option value="superadmin">Super Admin</option>
+              </select>
+            </div>
+          </div>
+          <div style="margin-bottom:12px;">
+            <label style="font-size:9px;color:#7a7660;display:block;margin-bottom:8px;">DASHBOARD ACCESS</label>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;" id="uf-dashboards">
+              <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#f5f0e8;cursor:pointer;"><input type="checkbox" value="dispatch" checked> Daily Dispatch</label>
+              <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#f5f0e8;cursor:pointer;"><input type="checkbox" value="rejection" checked> Rejection YTD</label>
+              <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#f5f0e8;cursor:pointer;"><input type="checkbox" value="summary" checked> Executive Summary</label>
+              <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#f5f0e8;cursor:pointer;"><input type="checkbox" value="email" checked> Email Writer</label>
+              <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#f5f0e8;cursor:pointer;"><input type="checkbox" value="invoice" checked> Proforma Invoice</label>
+              <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#f5f0e8;cursor:pointer;"><input type="checkbox" value="backlog" checked> WH Backlog</label>
+              <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#f5f0e8;cursor:pointer;"><input type="checkbox" value="returns" checked> Daily Returns</label>
+              <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#f5f0e8;cursor:pointer;"><input type="checkbox" value="sales" checked> Daily Sales</label>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button onclick="saveUser()" style="background:rgba(201,168,76,0.1);border:1px solid #c9a84c;color:#c9a84c;font-size:10px;letter-spacing:2px;padding:8px 20px;cursor:pointer;font-family:Montserrat,sans-serif;">SAVE</button>
+            <button onclick="document.getElementById('admin-user-form').style.display='none'" style="background:transparent;border:1px solid rgba(255,255,255,0.1);color:#7a7660;font-size:10px;letter-spacing:2px;padding:8px 16px;cursor:pointer;font-family:Montserrat,sans-serif;">CANCEL</button>
+          </div>
+        </div>
+        <div id="admin-users-list"></div>
+      </div>
+      <!-- Audit Tab -->
+      <div id="admin-audit-tab" style="display:none;">
+        <div id="admin-audit-list" style="max-height:500px;overflow-y:auto;"></div>
+      </div>
+    </div>
+  </div>
+</div>
 
 </body>
 </html>
