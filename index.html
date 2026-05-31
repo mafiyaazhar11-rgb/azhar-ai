@@ -1129,6 +1129,7 @@ function goTab(id,btn){
   loadBacklogFromServer();
   loadReturnsFromServer();
   if(id==='sales') loadSalesFromServer();
+  if(id==='invsales') loadInvSalesFromServer();
   // Update JARVIS current tab
   VC_CURRENT_TAB = id;
   // Show/hide inv star based on tab and role
@@ -3960,9 +3961,6 @@ function loadSalesFromServer(){
     }).catch(function(e){console.log('Sales load error:',e.message);});
 }
 
-loadSalesFromServer();
-
-
 // ═══════════════ INVOICED TODAY SALES DASHBOARD ═══════════════
 var INV_RAW = [];
 var INV_FILTERS = { manager:'all', brand:'all', area:'all' };
@@ -4079,7 +4077,7 @@ function renderInvSalesFromSummary(s, fileName, uploadedAt) {
   document.getElementById('inv-sales-dashboard').style.display = 'block';
 }
 
-loadInvSalesFromServer();
+// (called from showApp after auth)
 
 function handleInvSalesUpload(input) {
   var file = input.files[0]; if (!file) return;
@@ -5080,6 +5078,9 @@ function showApp() {
   applyUploadAccess();
   addUserInfoTopbar();
   showDemoBanner();
+  // Load persistent dashboard data after auth is ready
+  loadSalesFromServer();
+  loadInvSalesFromServer();
   if(AUTH_USER && AUTH_USER.must_change_password) {
     document.getElementById('change-pwd-modal').style.display = 'flex';
   }
@@ -5097,11 +5098,14 @@ function showDemoBanner(){
     '<span style="font-size:10px;color:#7a7660;font-family:Montserrat,sans-serif;">This is a personal initiative dashboard — not an official IT production system</span>' +
     '<span style="font-size:10px;color:#c9a84c;letter-spacing:2px;font-family:Montserrat,sans-serif;font-weight:700;">⚠ DEMO VERSION</span>';
   document.body.prepend(banner);
-  // Push content down so banner doesn't overlap topbar
-  var topbar = document.querySelector('.topbar');
-  if(topbar) topbar.style.top = banner.offsetHeight + 'px';
-  var sidebar = document.querySelector('.sidebar');
-  if(sidebar) sidebar.style.top = banner.offsetHeight + 'px';
+  // Push entire layout down so banner doesn't create a gap
+  requestAnimationFrame(function() {
+    var h = banner.offsetHeight + 'px';
+    var sidebar = document.querySelector('.sidebar');
+    if(sidebar) { sidebar.style.top = h; sidebar.style.height = 'calc(100vh - ' + h + ')'; }
+    var main = document.getElementById('mainContent');
+    if(main) { main.style.marginTop = h; main.style.height = 'calc(100vh - ' + h + ')'; }
+  });
 }
 
 function applyDashboardAccess() {
@@ -5409,6 +5413,7 @@ window.addEventListener('load', authBoot);
 
   <!-- Dashboard state -->
   <div id="inv-sales-dashboard" style="display:none;">
+
     <!-- Status badge -->
     <div id="inv-status-badge" style="background:rgba(78,203,141,0.1);border:1px solid rgba(78,203,141,0.3);padding:6px 14px;font-size:10px;color:#4ecb8d;letter-spacing:1px;margin-bottom:12px;">
       ✓ LOADED — <span id="inv-last-date">—</span> — <span id="inv-file-name">—</span>
@@ -5438,13 +5443,13 @@ window.addEventListener('load', authBoot);
       <div class="box" style="padding:14px;"><div style="font-size:9px;color:var(--muted);letter-spacing:2px;margin-bottom:6px;">TOP MANAGER</div><div style="font-family:'Cormorant Garamond',serif;font-size:14px;font-weight:700;color:#e8854b;" id="inv-top-mgr">—</div><div style="font-size:10px;color:var(--muted);" id="inv-top-mgr-val">—</div></div>
     </div>
 
-    <!-- Charts -->
-    <div style="display:grid;grid-template-columns:1.6fr 1fr;gap:12px;margin-bottom:16px;">
-      <div class="box"><div class="box-title">📊 Sales by Brand</div><div style="position:relative;height:220px;"><canvas id="inv-brand-chart"></canvas></div></div>
-      <div class="box"><div class="box-title">🏢 Sales by BU</div><div style="position:relative;height:220px;"><canvas id="inv-bu-chart"></canvas></div></div>
+    <!-- Charts: stack vertically so each fills full width, no cutoff -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+      <div class="box"><div class="box-title">📊 Sales by Brand</div><div style="position:relative;height:240px;"><canvas id="inv-brand-chart"></canvas></div></div>
+      <div class="box"><div class="box-title">🏢 Sales by BU</div><div style="position:relative;height:240px;"><canvas id="inv-bu-chart"></canvas></div></div>
     </div>
 
-    <!-- Tables -->
+    <!-- Tables row -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
       <div class="box"><div class="box-title">👔 Manager Performance</div><div style="overflow-x:auto;"><table class="data-table" style="min-width:280px;width:100%;"><thead><tr><th>Manager</th><th style="text-align:right;">Inv</th><th style="text-align:right;">Qty</th><th style="text-align:right;">Value</th></tr></thead><tbody id="inv-mgr-table"></tbody></table></div></div>
       <div class="box"><div class="box-title">🧑 Top Salesmen</div><div style="overflow-x:auto;"><table class="data-table" style="min-width:280px;width:100%;"><thead><tr><th>#</th><th>Salesman</th><th style="text-align:right;">Inv</th><th style="text-align:right;">Value</th></tr></thead><tbody id="inv-salesman-table"></tbody></table></div></div>
@@ -5452,7 +5457,8 @@ window.addEventListener('load', authBoot);
 
     <div class="box" style="margin-bottom:16px;"><div class="box-title">🏪 Top Customers</div><div style="overflow-x:auto;"><table class="data-table" style="min-width:500px;width:100%;"><thead><tr><th>#</th><th>Customer</th><th>Group</th><th>Channel</th><th style="text-align:right;">Qty</th><th style="text-align:right;">Value</th></tr></thead><tbody id="inv-cust-table"></tbody></table></div></div>
 
-    <div class="box"><div class="box-title">🔗 Brand Sales Detail</div><div style="overflow-x:auto;"><table class="data-table" style="min-width:500px;width:100%;"><thead><tr><th>Brand</th><th>BU</th><th style="text-align:center;">Inv</th><th style="text-align:right;">Qty</th><th style="text-align:right;">BNS</th><th style="text-align:right;">Value</th></tr></thead><tbody id="inv-brand-table"></tbody></table></div></div>
+    <div class="box" style="margin-bottom:24px;"><div class="box-title">🔗 Brand Sales Detail</div><div style="overflow-x:auto;"><table class="data-table" style="min-width:500px;width:100%;"><thead><tr><th>Brand</th><th>BU</th><th style="text-align:center;">Inv</th><th style="text-align:right;">Qty</th><th style="text-align:right;">BNS</th><th style="text-align:right;">Value</th></tr></thead><tbody id="inv-brand-table"></tbody></table></div></div>
+
   </div>
 
   <!-- Star - Fixed Bottom Right - admin/subadmin only -->
