@@ -61,8 +61,8 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
 .donut-item{display:flex;align-items:center;gap:8px;font-size:11px;}
 .donut-dot{width:8px;height:8px;border-radius:50%;}
 .data-table{width:100%;border-collapse:collapse;}
-.data-table th{padding:8px 12px;font-size:9px;letter-spacing:1.5px;color:var(--gold);text-transform:uppercase;text-align:left;border-bottom:1px solid var(--border);font-weight:500;}
-.data-table td{padding:10px 12px;font-size:12px;border-bottom:1px solid rgba(42,42,30,0.5);}
+.data-table th{padding:6px 10px;font-size:9px;letter-spacing:1.5px;color:var(--gold);text-transform:uppercase;text-align:left;border-bottom:1px solid var(--border);font-weight:500;}
+.data-table td{padding:7px 10px;font-size:11px;border-bottom:1px solid rgba(42,42,30,0.5);}
 .data-table tr:hover td{background:var(--glow);}
 .d-status{display:flex;align-items:center;gap:12px;padding:12px 16px;border:1px solid var(--border);background:var(--surface);margin-bottom:16px;}
 .d-status.live{border-color:var(--green);background:rgba(78,203,141,0.05);}
@@ -336,6 +336,10 @@ footer span{color:var(--gold);}
 
   /* ── LOGIN PAGE ── */
   #login-page > div { width: 90% !important; padding: 28px 20px !important; }
+
+  /* ── INVOICED TODAY SALES COMPACT TABLE ── */
+  #inv-mgr-table td, #inv-salesman-table td, #inv-cust-table td, #inv-brand-table td { padding:6px 10px !important; font-size:11px !important; }
+  #inv-mgr-table th, #inv-salesman-table th, #inv-cust-table th, #inv-brand-table th { padding:5px 10px !important; }
 
   /* ── INVOICED TODAY SALES MOBILE ── */
   #inv-kpis { grid-template-columns: 1fr 1fr !important; gap: 8px !important; }
@@ -5486,12 +5490,12 @@ window.addEventListener('load', authBoot);
   <div id="inv-sales-dashboard" style="display:none;">
 
     <!-- Status badge -->
-    <div id="inv-status-badge" style="display:none;background:rgba(78,203,141,0.1);border:1px solid rgba(78,203,141,0.3);padding:5px 14px;font-size:10px;color:#4ecb8d;letter-spacing:1px;margin-bottom:10px;">
+    <div id="inv-status-badge" style="display:none;background:rgba(78,203,141,0.1);border:1px solid rgba(78,203,141,0.3);padding:6px 14px;font-size:10px;color:#4ecb8d;letter-spacing:1px;margin-bottom:14px;">
       ✓ LOADED — <span id="inv-last-date">—</span> — <span id="inv-file-name">—</span>
     </div>
 
     <!-- Filters — one row each, scrolls horizontally -->
-    <div id="inv-sticky-header" style="background:var(--surface);border:1px solid var(--border);padding:8px 12px;margin-bottom:14px;">
+    <div id="inv-sticky-header" style="background:var(--surface);border:1px solid var(--border);border-top:2px solid var(--gold);padding:8px 12px;margin-bottom:14px;">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">
         <span style="font-size:9px;color:var(--muted);letter-spacing:1px;width:65px;flex-shrink:0;text-transform:uppercase;">Manager</span>
         <div id="inv-manager-pills" style="display:flex;gap:4px;overflow-x:auto;flex:1;padding-bottom:2px;scrollbar-width:none;"></div>
@@ -5508,25 +5512,25 @@ window.addEventListener('load', authBoot);
 
     <!-- KPIs — 4 cards full width -->
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;" id="inv-kpis">
-      <div class="box" style="padding:16px;">
-        <div style="font-size:9px;color:var(--muted);letter-spacing:2px;margin-bottom:6px;text-transform:uppercase;">Total Value</div>
-        <div style="font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:700;color:var(--gold);" id="inv-total-val">—</div>
-        <div style="font-size:10px;color:var(--muted);margin-top:2px;" id="inv-total-inv">— invoices</div>
+      <div class="box" style="padding:12px 14px;">
+        <div style="font-size:9px;color:var(--muted);letter-spacing:2px;margin-bottom:4px;text-transform:uppercase;">Total Value</div>
+        <div style="font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:700;color:var(--gold);" id="inv-total-val">—</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:1px;" id="inv-total-inv">— invoices</div>
       </div>
-      <div class="box" style="padding:16px;">
-        <div style="font-size:9px;color:var(--muted);letter-spacing:2px;margin-bottom:6px;text-transform:uppercase;">Total Qty</div>
-        <div style="font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:700;color:#5b8dee;" id="inv-total-qty">—</div>
-        <div style="font-size:10px;color:var(--muted);margin-top:2px;" id="inv-total-cust">— customers</div>
+      <div class="box" style="padding:12px 14px;">
+        <div style="font-size:9px;color:var(--muted);letter-spacing:2px;margin-bottom:4px;text-transform:uppercase;">Total Qty</div>
+        <div style="font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:700;color:#5b8dee;" id="inv-total-qty">—</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:1px;" id="inv-total-cust">— customers</div>
       </div>
-      <div class="box" style="padding:16px;">
-        <div style="font-size:9px;color:var(--muted);letter-spacing:2px;margin-bottom:6px;text-transform:uppercase;">Top Brand</div>
-        <div style="font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:700;color:#4ecb8d;" id="inv-top-brand">—</div>
-        <div style="font-size:10px;color:var(--muted);margin-top:2px;" id="inv-top-brand-val">—</div>
+      <div class="box" style="padding:12px 14px;">
+        <div style="font-size:9px;color:var(--muted);letter-spacing:2px;margin-bottom:4px;text-transform:uppercase;">Top Brand</div>
+        <div style="font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:700;color:#4ecb8d;" id="inv-top-brand">—</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:1px;" id="inv-top-brand-val">—</div>
       </div>
-      <div class="box" style="padding:16px;">
-        <div style="font-size:9px;color:var(--muted);letter-spacing:2px;margin-bottom:6px;text-transform:uppercase;">Top Manager</div>
-        <div style="font-family:'Cormorant Garamond',serif;font-size:16px;font-weight:700;color:#e8854b;" id="inv-top-mgr">—</div>
-        <div style="font-size:10px;color:var(--muted);margin-top:2px;" id="inv-top-mgr-val">—</div>
+      <div class="box" style="padding:12px 14px;">
+        <div style="font-size:9px;color:var(--muted);letter-spacing:2px;margin-bottom:4px;text-transform:uppercase;">Top Manager</div>
+        <div style="font-family:'Cormorant Garamond',serif;font-size:14px;font-weight:700;color:#e8854b;" id="inv-top-mgr">—</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:1px;" id="inv-top-mgr-val">—</div>
       </div>
     </div>
 
