@@ -537,7 +537,7 @@ footer span{color:var(--gold);}
         <div class="box"><div class="box-title">📊 Orders by City</div><div class="chart-bars" id="ds-city-bars" style="height:120px;"></div><div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;" id="ds-city-labels"></div></div>
         <div class="box"><div class="box-title">📈 Order Type Split</div><div class="donut-wrap"><svg class="donut-svg" width="100" height="100" viewBox="0 0 100 100"><circle cx="50" cy="50" r="35" fill="none" stroke="#2a2a1e" stroke-width="18"/><circle cx="50" cy="50" r="35" fill="none" stroke="#4ecb8d" stroke-width="18" id="donut-food" stroke-dasharray="0 220" stroke-dashoffset="55" style="transition:stroke-dasharray 1s;"/><circle cx="50" cy="50" r="35" fill="none" stroke="#5b8dee" stroke-width="18" id="donut-nonfood" stroke-dasharray="0 220" stroke-dashoffset="55" style="transition:stroke-dasharray 1s;"/><circle cx="50" cy="50" r="35" fill="none" stroke="#c9a84c" stroke-width="18" id="donut-pl" stroke-dasharray="0 220" stroke-dashoffset="55" style="transition:stroke-dasharray 1s;"/><text x="50" y="46" text-anchor="middle" font-size="11" fill="#c9a84c" font-weight="700" id="donut-center">—</text><text x="50" y="58" text-anchor="middle" font-size="7" fill="#7a7660">ORDERS</text></svg><div class="donut-legend" id="ds-donut-legend"></div></div></div>
       </div>
-      <div class="grid-2" id="ds-tables" style="display:none;"><div class="box"><div class="box-title">💰 Top Customers by Value</div><table class="data-table"><thead><tr><th>#</th><th>Customer</th><th>Orders</th><th>Value (AED)</th></tr></thead><tbody id="ds-cust-body"></tbody></table></div><div class="box"><div class="box-title">🚚 Top 5 Drivers</div><div id="ds-drivers-list"></div></div></div>
+      <div class="grid-2" id="ds-tables" style="display:none;"><div class="box"><div class="box-title">💰 Top Customers by Value</div><div style="overflow-x:auto;-webkit-overflow-scrolling:touch;"><table class="data-table" style="min-width:340px;width:100%;"><thead><tr><th style="width:24px;">#</th><th>Customer</th><th style="width:50px;text-align:center;">Orders</th><th style="width:90px;text-align:right;">Value (AED)</th></tr></thead><tbody id="ds-cust-body"></tbody></table></div></div><div class="box"><div class="box-title">🚚 Top 5 Drivers</div><div id="ds-drivers-list" style="overflow-x:hidden;"></div></div></div>
       <div class="box" id="ds-routes-box" style="display:none;margin-bottom:16px;"><div class="box-title">🗺️ Route Summary — Locations per Route</div><div style="overflow-x:auto;max-height:300px;overflow-y:auto;"><table class="route-table" style="width:100%;"><thead><tr><th style="text-align:left;padding:8px 12px;">Route</th><th style="text-align:center;padding:8px 12px;">Orders</th><th style="text-align:center;padding:8px 12px;">Drivers</th><th style="text-align:center;padding:8px 12px;">Locations</th><th style="text-align:right;padding:8px 12px;">Value (AED)</th></tr></thead><tbody id="ds-route-body"></tbody></table></div></div>
       <div class="box" id="ds-ask-box" style="display:none;margin-bottom:16px;"><div class="box-title">✦ Ask AI About Today's Dispatch</div><div class="qbtns" style="margin-bottom:12px;"><button class="qbtn cust" onclick="doAsk('All LULU orders today — total count, value, branches')">🟡 Lulu</button><button class="qbtn cust" onclick="doAsk('All CARREFOUR orders — count and value')">🔵 Carrefour</button><button class="qbtn cust" onclick="doAsk('All UNION COOP orders — count and value')">🟢 Union Coop</button><button class="qbtn cust" onclick="doAsk('All SPINNEYS orders — count and value')">🟣 Spinneys</button><button class="qbtn cust" onclick="doAsk('All CHOITHRAMS orders — count and value')">🟠 Choithrams</button><button class="qbtn city" onclick="doAsk('Total orders and value for DUBAI today')">📍 Dubai</button><button class="qbtn city" onclick="doAsk('Total orders and value for ABU DHABI today')">📍 Abu Dhabi</button><button class="qbtn city" onclick="doAsk('Total orders and value for SHARJAH today')">📍 Sharjah</button><button class="qbtn city" onclick="doAsk('Total orders and value for FUJAIRAH today')">📍 Fujairah</button><button class="qbtn city" onclick="doAsk('Total orders and value for AL AIN today')">📍 Al Ain</button><button class="qbtn stat" onclick="doAsk('Top 5 drivers by deliveries today')">🚚 Top Drivers</button><button class="qbtn stat" onclick="doAsk('Summary of all routes with drops and values')">🗺️ All Routes</button></div><div class="ask-row"><textarea id="ds-ask" class="ask-inp" placeholder="Ask anything about today's dispatch..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();doAsk(this.value);this.value=''}" rows="2"></textarea><button class="send-btn" id="ds-send" onclick="doAsk(document.getElementById('ds-ask').value);document.getElementById('ds-ask').value=''">→</button></div><div class="out" id="ds-out" style="margin-top:12px;"><div class="out-head"><span class="out-lbl">✦ Dispatch Intelligence</span><button class="copy" onclick="doCopy('ds-answer')">Copy</button></div><div class="out-body" id="ds-answer"></div></div></div>
 
@@ -641,10 +641,10 @@ footer span{color:var(--gold);}
         </div>
 
       <!-- ORG SUMMARY CARDS -->
-      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px;" id="rej-org-cards"></div>
+      <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px;"><div style="display:grid;grid-template-columns:repeat(5,minmax(140px,1fr));gap:10px;margin-bottom:16px;" id="rej-org-cards"></div></div>
 
       <!-- KPI CARDS -->
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;" id="rej-kpis"></div>
+      <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px;"><div style="display:grid;grid-template-columns:repeat(4,minmax(150px,1fr));gap:12px;margin-bottom:16px;" id="rej-kpis"></div></div>
 
       <!-- CHARTS ROW 1 -->
       <div class="grid-2" style="margin-bottom:16px;">
@@ -1396,7 +1396,16 @@ function buildDashboard(d){
     document.getElementById('ds-drivers-list').innerHTML=s.top_drivers.slice(0,5).map((dr,i)=>{
       const pct=Math.round((dr.orders/maxD)*100);
       const col=i<3?'var(--gold)':'var(--muted)';
-      var dropsCount = dr.drops||dr.orders; return'<div style="margin-bottom:12px;"><div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span style="font-size:12px;color:'+col+';font-weight:'+(i<3?'600':'400')+'">'+(i+1)+'. '+dr.name+'</span><span style="font-size:12px;color:'+col+';font-weight:700">'+dropsCount+' drops | AED '+(dr.value>=1000?(Math.round(dr.value/1000)+'K'):dr.value||0)+'</span></div><div class="progress-bar"><div class="progress-fill" style="width:'+pct+'%;background:'+col+'"></div></div></div>';
+      var dropsCount = dr.drops||dr.orders;
+      var drvName = dr.name.length > 18 ? dr.name.substring(0,18)+'...' : dr.name;
+      var drvVal = dr.value>=1000?(Math.round(dr.value/1000)+'K'):(dr.value||0);
+      return'<div style="margin-bottom:10px;">'+
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;gap:4px;">'+
+        '<span style="font-size:11px;color:'+col+';font-weight:'+(i<3?'600':'400')+';flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+(i+1)+'. '+drvName+'</span>'+
+        '<span style="font-size:10px;color:'+col+';font-weight:700;flex-shrink:0;white-space:nowrap;">'+dropsCount+' drops | AED '+drvVal+'</span>'+
+        '</div>'+
+        '<div class="progress-bar"><div class="progress-fill" style="width:'+pct+'%;background:'+col+'"></div></div>'+
+        '</div>';
     }).join('');
   }
 
@@ -4004,10 +4013,27 @@ function setJarvisOrb(state) {
 function startVoiceCommandFS() {
   var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) {
-    document.getElementById('jarvis-status').textContent = 'NOT SUPPORTED IN THIS BROWSER';
+    document.getElementById('jarvis-status').textContent = 'USE CHROME BROWSER FOR VOICE';
+    document.getElementById('jarvis-status').style.color = '#e84b4b';
     return;
   }
 
+  // Request mic permission explicitly first — required for Samsung/Android
+  navigator.mediaDevices.getUserMedia({ audio: true })
+  .then(function(stream) {
+    // Permission granted — stop the stream immediately, SpeechRecognition will use mic
+    stream.getTracks().forEach(function(t) { t.stop(); });
+    startJarvisRecognition();
+  })
+  .catch(function(err) {
+    document.getElementById('jarvis-status').textContent = 'MIC BLOCKED — CHECK BROWSER SETTINGS';
+    document.getElementById('jarvis-status').style.color = '#e84b4b';
+    console.error('Mic permission error:', err);
+  });
+}
+
+function startJarvisRecognition() {
+  var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   vcRecognition = new SpeechRecognition();
   vcRecognition.lang = 'en-US';
   vcRecognition.continuous = true;
@@ -4112,68 +4138,59 @@ async function processVoiceCommandFS(text) {
 function startVoiceCommand() {
   var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) {
-    alert('Voice command is not supported in this browser. Please use Chrome or Safari.');
+    alert('Voice command requires Chrome browser.');
     return;
   }
+  navigator.mediaDevices.getUserMedia({ audio: true })
+  .then(function(stream) {
+    stream.getTracks().forEach(function(t) { t.stop(); });
 
-  vcRecognition = new SpeechRecognition();
-  vcRecognition.lang = 'en-US';
-  vcRecognition.continuous = true;   // Keep listening until user stops
-  vcRecognition.interimResults = true;
-  vcRecognition.maxAlternatives = 1;
+    vcRecognition = new SpeechRecognition();
+    vcRecognition.lang = 'en-US';
+    vcRecognition.continuous = true;
+    vcRecognition.interimResults = true;
 
-  // Auto-stop after 20 seconds of silence
-  var vcSilenceTimer = null;
-  var vcFinalReceived = false;
+    vcListening = true;
+    var micBtn = document.getElementById('vc-mic-btn');
+    if (micBtn) micBtn.classList.add('listening');
+    showVcPanel('listening');
 
-  vcListening = true;
-  var micBtn = document.getElementById('vc-mic-btn');
-  if (micBtn) micBtn.classList.add('listening');
+    var vcSilenceTimer = null;
+    var vcFinalReceived = false;
 
-  // Show panel in listening mode
-  showVcPanel('listening');
-
-  vcRecognition.onresult = function(event) {
-    var interim = '';
-    var final = '';
-    for (var i = event.resultIndex; i < event.results.length; i++) {
-      if (event.results[i].isFinal) final += event.results[i][0].transcript;
-      else interim += event.results[i][0].transcript;
-    }
-    var interimEl = document.getElementById('vc-interim');
-    if (interimEl) interimEl.textContent = interim || final;
-    
-    // Reset silence timer on any speech
-    if (vcSilenceTimer) clearTimeout(vcSilenceTimer);
-    
-    if (final) {
-      vcFinalReceived = true;
-      // Wait 1.5 seconds after last word before processing
-      vcSilenceTimer = setTimeout(function() {
-        if (vcFinalReceived) {
-          vcFinalReceived = false;
-          processVoiceCommand(final.trim());
-        }
-      }, 1500);
-    } else if (interim) {
-      // Reset 20 second max timer on activity
+    vcRecognition.onresult = function(event) {
+      var interim = '', final = '';
+      for (var i = event.resultIndex; i < event.results.length; i++) {
+        if (event.results[i].isFinal) final += event.results[i][0].transcript;
+        else interim += event.results[i][0].transcript;
+      }
+      var interimEl = document.getElementById('vc-interim');
+      if (interimEl) interimEl.textContent = interim || final;
       if (vcSilenceTimer) clearTimeout(vcSilenceTimer);
-      vcSilenceTimer = setTimeout(function() {
-        stopVoiceCommand();
-      }, 20000);
-    }
-  };
+      if (final) {
+        vcFinalReceived = true;
+        vcSilenceTimer = setTimeout(function() {
+          if (vcFinalReceived) { vcFinalReceived = false; processVoiceCommand(final.trim()); }
+        }, 1500);
+      } else if (interim) {
+        vcSilenceTimer = setTimeout(function() { stopVoiceCommand(); }, 20000);
+      }
+    };
 
-  vcRecognition.onerror = function(e) {
-    stopVoiceCommand();
-    if (e.error !== 'no-speech') alert('Microphone error: ' + e.error);
-  };
+    vcRecognition.onerror = function(e) {
+      stopVoiceCommand();
+      if (e.error !== 'no-speech') alert('Microphone error: ' + e.error);
+    };
 
-  vcRecognition.onend = function() {
-    if (vcListening) stopVoiceCommand();
-  };
+    vcRecognition.onend = function() {
+      if (vcListening) stopVoiceCommand();
+    };
 
-  vcRecognition.start();
+    vcRecognition.start();
+  })
+  .catch(function(err) {
+    alert('Microphone blocked. Please allow microphone access in browser settings.');
+  });
 }
 
 function stopVoiceCommand() {
