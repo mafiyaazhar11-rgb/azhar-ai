@@ -1129,7 +1129,7 @@ function goTab(id,btn){
   loadBacklogFromServer();
   loadReturnsFromServer();
   if(id==='sales') loadSalesFromServer();
-  if(id==='invsales') loadInvSalesFromServer();
+  if(id==='invsales') { loadInvSalesFromServer(); setTimeout(invAdjustStickyTop, 100); }
   // Update JARVIS current tab
   VC_CURRENT_TAB = id;
   // Show/hide inv star based on tab and role
@@ -4019,6 +4019,8 @@ function loadInvSalesFromServer() {
       var s = d.summary;
       // Restore from summary (no raw rows — filters won't work, but display will)
       INV_SUMMARY = s;
+      INV_SUMMARY._fileName = d.fileName;
+      INV_SUMMARY._uploadedAt = d.uploadedAt;
       renderInvSalesFromSummary(s, d.fileName, d.uploadedAt);
     })
     .catch(function(e){ console.log('InvSales load error:', e.message); });
@@ -4042,15 +4044,21 @@ function renderInvSalesFromSummary(s, fileName, uploadedAt) {
   if(topBrand){ document.getElementById('inv-top-brand').textContent=topBrand; document.getElementById('inv-top-brand-val').textContent=fmtFull(brandMap[topBrand].val); }
   var topMgr = Object.keys(mgrMap).sort(function(a,b){return mgrMap[b].val-mgrMap[a].val;})[0];
   if(topMgr){ document.getElementById('inv-top-mgr').textContent=topMgr.split(' ').slice(-2).join(' '); document.getElementById('inv-top-mgr-val').textContent=fmtFull(mgrMap[topMgr].val); }
-  // Filter pills (read-only from summary keys)
+  // Filter pills — interactive, work against INV_SUMMARY when no raw rows
   var bColors = ['#c9a84c','#5b8dee','#4ecb8d','#e84b4b','#e8854b','#9b59b6','#c9a84c','#5b8dee','#4ecb8d','#e84b4b'];
-  function buildStaticPills(containerId, vals) {
+  function buildSummaryPills(containerId, type, vals, current) {
     var el = document.getElementById(containerId); if(!el) return;
-    el.innerHTML = '<button class="ret-pill on">ALL</button>' + vals.map(function(v){ return '<button class="ret-pill">'+v+'</button>'; }).join('');
+    var pills = [];
+    pills.push('<button class="ret-pill' + (current==='all' ? ' on' : '') + '" data-val="all" onclick="invFilter(\'' + type + '\',\'all\')">ALL</button>');
+    vals.forEach(function(v) {
+      var sv = v.replace(/['"\\/]/g, '');
+      pills.push('<button class="ret-pill' + (current === v ? ' on' : '') + '" data-val="' + sv + '" onclick="invFilter(\'' + type + '\',\'' + sv + '\')">'+v+'</button>');
+    });
+    el.innerHTML = pills.join('');
   }
-  buildStaticPills('inv-manager-pills', Object.keys(mgrMap).sort());
-  buildStaticPills('inv-brand-pills', Object.keys(brandMap).sort());
-  buildStaticPills('inv-area-pills', Object.keys(s.areaMap||{}).sort());
+  buildSummaryPills('inv-manager-pills', 'manager', Object.keys(mgrMap).sort(), INV_FILTERS.manager);
+  buildSummaryPills('inv-brand-pills', 'brand', Object.keys(brandMap).sort(), INV_FILTERS.brand);
+  buildSummaryPills('inv-area-pills', 'area', Object.keys(s.areaMap||{}).sort(), INV_FILTERS.area);
   // Brand chart
   var brandsSorted = Object.keys(brandMap).sort(function(a,b){return brandMap[b].val-brandMap[a].val;}).slice(0,10);
   if(INV_CHARTS.brand) INV_CHARTS.brand.destroy();
@@ -4075,6 +4083,7 @@ function renderInvSalesFromSummary(s, fileName, uploadedAt) {
   document.getElementById('inv-brand-table').innerHTML = brandAllSorted.map(function(b){ var d=brandMap[b]; return '<tr><td style="color:var(--gold);font-weight:600;">'+b+'</td><td style="color:var(--muted);font-size:10px;">'+d.bu+'</td><td style="text-align:center;color:#f5f0e8;">'+(d.invCount||0)+'</td><td style="text-align:right;color:var(--muted);">'+Math.round(d.qty||0).toLocaleString()+'</td><td style="text-align:right;color:var(--muted);">'+Math.round(d.bns||0).toLocaleString()+'</td><td style="text-align:right;color:var(--gold);font-weight:600;">'+fmtFull(d.val)+'</td></tr>'; }).join('');
   document.getElementById('inv-sales-nodata').style.display = 'none';
   document.getElementById('inv-sales-dashboard').style.display = 'block';
+  invAdjustStickyTop();
 }
 
 // (called from showApp after auth)
@@ -4099,6 +4108,7 @@ function handleInvSalesUpload(input) {
       document.getElementById('inv-file-name').textContent = file.name;
       document.getElementById('inv-sales-nodata').style.display = 'none';
       document.getElementById('inv-sales-dashboard').style.display = 'block';
+      invAdjustStickyTop();
       // ✅ SAVE TO SERVER for persistence across refreshes
       saveInvSalesToServer(file.name);
     } catch(e) { alert('Error reading file: ' + e.message); }
@@ -4141,6 +4151,79 @@ function checkInvDataAge(rows) {
   } catch(e) {}
 }
 
+// Filters and re-renders from INV_SUMMARY when no raw rows (server-loaded data)
+function renderInvSalesFromSummaryFiltered() {
+  if (!INV_SUMMARY) return;
+  var s = INV_SUMMARY;
+  var mf = INV_FILTERS.manager, bf = INV_FILTERS.brand, af = INV_FILTERS.area;
+  // If all filters are 'all', just re-render full summary
+  if (mf === 'all' && bf === 'all' && af === 'all') {
+    renderInvSalesFromSummary(s, s._fileName, s._uploadedAt);
+    return;
+  }
+  // Build filtered sub-maps from custMap (most granular data we have in summary)
+  // Since summary has pre-aggregated maps, filter by rebuilding from custMap rows
+  // We use areaMap/mgrMap/brandMap directly filtered by key
+  function fmtV(v){ return v>=1000000?(v/1000000).toFixed(2)+'M':v>=1000?Math.round(v/1000)+'K':Math.round(v).toString(); }
+  function fmtFull(v){ return 'AED '+Math.round(v).toLocaleString(); }
+  var brandMap = s.brandMap||{}, mgrMap = s.mgrMap||{}, buMap = s.buMap||{};
+  var salesmanMap = s.salesmanMap||{}, custMap = s.custMap||{}, areaMap = s.areaMap||{};
+
+  // Filter brand map by brand filter
+  var fBrandMap = {};
+  Object.keys(brandMap).forEach(function(b){ if(bf==='all'||b===bf) fBrandMap[b]=brandMap[b]; });
+  // Filter mgr map by manager filter
+  var fMgrMap = {};
+  Object.keys(mgrMap).forEach(function(m){ if(mf==='all'||m===mf) fMgrMap[m]=mgrMap[m]; });
+  // Area filter applied to areaMap
+  var fAreaMap = {};
+  Object.keys(areaMap).forEach(function(a){ if(af==='all'||a===af) fAreaMap[a]=areaMap[a]; });
+
+  // Recalculate totals based on active filters
+  // When a filter is active, sum only matching entries
+  var totalVal=0, totalQty=0, invoiceCount=0, custCount=0;
+  // Use the most restrictive available map to sum
+  var activeBrandMap = (bf!=='all') ? fBrandMap : brandMap;
+  Object.keys(activeBrandMap).forEach(function(b){ totalVal+=activeBrandMap[b].val||0; totalQty+=activeBrandMap[b].qty||0; invoiceCount+=activeBrandMap[b].invCount||0; });
+  if(bf==='all' && mf!=='all') {
+    totalVal=0; totalQty=0; invoiceCount=0;
+    Object.keys(fMgrMap).forEach(function(m){ totalVal+=fMgrMap[m].val||0; totalQty+=fMgrMap[m].qty||0; invoiceCount+=fMgrMap[m].invCount||0; });
+  }
+  custCount = Object.keys(custMap).length;
+
+  // KPIs
+  document.getElementById('inv-total-val').textContent = 'AED ' + fmtV(totalVal);
+  document.getElementById('inv-total-inv').textContent = invoiceCount.toLocaleString() + ' invoices';
+  document.getElementById('inv-total-qty').textContent = Math.round(totalQty).toLocaleString();
+  document.getElementById('inv-total-cust').textContent = custCount.toLocaleString() + ' customers';
+
+  var topBrand = Object.keys(fBrandMap).sort(function(a,b){return fBrandMap[b].val-fBrandMap[a].val;})[0];
+  if(topBrand){ document.getElementById('inv-top-brand').textContent=topBrand; document.getElementById('inv-top-brand-val').textContent=fmtFull(fBrandMap[topBrand].val); }
+  var topMgr = Object.keys(fMgrMap).sort(function(a,b){return fMgrMap[b].val-fMgrMap[a].val;})[0];
+  if(topMgr){ document.getElementById('inv-top-mgr').textContent=topMgr.split(' ').slice(-2).join(' '); document.getElementById('inv-top-mgr-val').textContent=fmtFull(fMgrMap[topMgr].val); }
+
+  // Charts
+  var bColors=['#c9a84c','#5b8dee','#4ecb8d','#e84b4b','#e8854b','#9b59b6','#c9a84c','#5b8dee','#4ecb8d','#e84b4b'];
+  var brandsSorted=Object.keys(fBrandMap).sort(function(a,b){return fBrandMap[b].val-fBrandMap[a].val;}).slice(0,10);
+  if(INV_CHARTS.brand) INV_CHARTS.brand.destroy();
+  var bCtx=document.getElementById('inv-brand-chart').getContext('2d');
+  INV_CHARTS.brand=new Chart(bCtx,{type:'bar',data:{labels:brandsSorted,datasets:[{data:brandsSorted.map(function(b){return Math.round(fBrandMap[b].val);}),backgroundColor:bColors,borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#7a7660',font:{size:8},maxRotation:45}},y:{ticks:{color:'#7a7660',font:{size:8},callback:function(v){return 'AED '+fmtV(v);}}}}}});
+  var buKeys=Object.keys(buMap).sort(function(a,b){return buMap[b].val-buMap[a].val;});
+  if(INV_CHARTS.bu) INV_CHARTS.bu.destroy();
+  var buCtx=document.getElementById('inv-bu-chart').getContext('2d');
+  INV_CHARTS.bu=new Chart(buCtx,{type:'doughnut',data:{labels:buKeys,datasets:[{data:buKeys.map(function(b){return Math.round(buMap[b].val);}),backgroundColor:bColors,borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:'#7a7660',font:{size:8},boxWidth:8}}}}});
+
+  // Tables
+  var mgrSorted=Object.keys(fMgrMap).sort(function(a,b){return fMgrMap[b].val-fMgrMap[a].val;});
+  document.getElementById('inv-mgr-table').innerHTML=mgrSorted.map(function(m,i){var d=fMgrMap[m];var col=i===0?'#c9a84c':i===1?'#5b8dee':i===2?'#4ecb8d':'#f5f0e8';return '<tr><td style="color:'+col+';font-weight:'+(i<3?'700':'400')+';">'+m+'</td><td style="text-align:right;color:var(--muted);">'+(d.invCount||0)+'</td><td style="text-align:right;color:var(--muted);">'+Math.round(d.qty||0).toLocaleString()+'</td><td style="text-align:right;color:'+col+';font-weight:600;">'+fmtFull(d.val)+'</td></tr>';}).join('');
+  var salesSorted=Object.keys(salesmanMap).sort(function(a,b){return salesmanMap[b].val-salesmanMap[a].val;}).slice(0,10);
+  document.getElementById('inv-salesman-table').innerHTML=salesSorted.map(function(s,i){var d=salesmanMap[s];return '<tr><td style="color:var(--muted);text-align:center;">'+(i+1)+'</td><td style="color:#f5f0e8;">'+s+'</td><td style="text-align:right;color:var(--muted);">'+(d.invCount||0)+'</td><td style="text-align:right;color:var(--gold);font-weight:600;">'+fmtFull(d.val)+'</td></tr>';}).join('');
+  var custSorted=Object.keys(custMap).sort(function(a,b){return custMap[b].val-custMap[a].val;}).slice(0,15);
+  document.getElementById('inv-cust-table').innerHTML=custSorted.map(function(c,i){var d=custMap[c];return '<tr><td style="color:var(--muted);">'+(i+1)+'</td><td style="color:#f5f0e8;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+c+'</td><td style="color:var(--muted);font-size:10px;">'+d.group+'</td><td style="color:var(--muted);font-size:10px;">'+d.channel+'</td><td style="text-align:right;color:var(--muted);">'+Math.round(d.qty||0).toLocaleString()+'</td><td style="text-align:right;color:var(--gold);font-weight:600;">'+fmtFull(d.val)+'</td></tr>';}).join('');
+  var brandAllSorted=Object.keys(fBrandMap).sort(function(a,b){return fBrandMap[b].val-fBrandMap[a].val;});
+  document.getElementById('inv-brand-table').innerHTML=brandAllSorted.map(function(b){var d=fBrandMap[b];return '<tr><td style="color:var(--gold);font-weight:600;">'+b+'</td><td style="color:var(--muted);font-size:10px;">'+d.bu+'</td><td style="text-align:center;color:#f5f0e8;">'+(d.invCount||0)+'</td><td style="text-align:right;color:var(--muted);">'+Math.round(d.qty||0).toLocaleString()+'</td><td style="text-align:right;color:var(--muted);">'+Math.round(d.bns||0).toLocaleString()+'</td><td style="text-align:right;color:var(--gold);font-weight:600;">'+fmtFull(d.val)+'</td></tr>';}).join('');
+}
+
 function invFilter(type, val) {
   INV_FILTERS[type] = val;
   // Update pill styles
@@ -4151,7 +4234,12 @@ function invFilter(type, val) {
       btn.classList.toggle('on', btn.getAttribute('data-val') === val);
     });
   }
-  renderInvSales();
+  // If raw rows available, use full re-render; otherwise filter from summary
+  if (INV_RAW.length) {
+    renderInvSales();
+  } else if (INV_SUMMARY) {
+    renderInvSalesFromSummaryFiltered();
+  }
 }
 
 function getFilteredInvRows() {
@@ -4300,6 +4388,20 @@ function renderInvSales() {
 
   document.getElementById('inv-sales-nodata').style.display = 'none';
   document.getElementById('inv-sales-dashboard').style.display = 'block';
+  invAdjustStickyTop();
+}
+
+// ── INV STICKY TOP ADJUST ──
+// Adjusts sticky filter row top to account for demo banner height
+function invAdjustStickyTop() {
+  var badge = document.getElementById('inv-status-badge');
+  if (badge) badge.style.display = 'block';
+  var header = document.getElementById('inv-sticky-header');
+  if (!header) return;
+  var banner = document.getElementById('demo-banner');
+  var bannerH = banner ? banner.offsetHeight : 0;
+  var topbarH = 64;
+  header.style.top = (bannerH + topbarH) + 'px';
 }
 
 // ── INV SALES UPLOAD PASSWORD ──
@@ -4862,7 +4964,7 @@ function buildVoiceContext() {
         ctx += 'Customers: ' + (is.custCount||0) + ' | ';
         if (is.brandMap) {
           ctx += 'Sales by Brand: ';
-          Object.keys(is.brandMap).sort(function(a,b){return is.brandMap[b].val-is.brandMap[a].val;}).slice(0,10).forEach(function(b){ ctx += b + ':AED ' + Math.round(is.brandMap[b].val).toLocaleString() + '(' + is.brandMap[b].inv.size + ' inv) '; });
+          Object.keys(is.brandMap).sort(function(a,b){return is.brandMap[b].val-is.brandMap[a].val;}).slice(0,10).forEach(function(b){ ctx += b + ':AED ' + Math.round(is.brandMap[b].val).toLocaleString() + '(' + (is.brandMap[b].invCount||0) + ' inv) '; });
           ctx += ' | ';
         }
         if (is.mgrMap) {
@@ -5414,24 +5516,23 @@ window.addEventListener('load', authBoot);
   <!-- Dashboard state -->
   <div id="inv-sales-dashboard" style="display:none;">
 
-    <!-- Status badge -->
-    <div id="inv-status-badge" style="background:rgba(78,203,141,0.1);border:1px solid rgba(78,203,141,0.3);padding:6px 14px;font-size:10px;color:#4ecb8d;letter-spacing:1px;margin-bottom:12px;">
-      ✓ LOADED — <span id="inv-last-date">—</span> — <span id="inv-file-name">—</span>
-    </div>
-
-    <!-- Filters -->
-    <div style="background:var(--surface);border:1px solid var(--border);padding:12px 16px;margin-bottom:12px;">
-      <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:8px;">
-        <span style="font-size:9px;color:var(--muted);letter-spacing:1px;min-width:65px;">MANAGER</span>
-        <div id="inv-manager-pills" style="display:flex;gap:6px;overflow-x:auto;flex:1;padding-bottom:2px;"></div>
+    <!-- Sticky header: status + filters — always visible below topbar -->
+    <div id="inv-sticky-header" style="position:sticky;top:64px;z-index:40;background:var(--surface);border-bottom:1px solid var(--border);margin:0 -28px 12px -28px;padding:6px 16px 8px;">
+      <!-- Status badge row -->
+      <div id="inv-status-badge" style="display:none;background:rgba(78,203,141,0.08);padding:4px 0;font-size:10px;color:#4ecb8d;letter-spacing:1px;margin-bottom:6px;border-bottom:1px solid rgba(78,203,141,0.15);padding-bottom:6px;">
+        ✓ LOADED — <span id="inv-last-date">—</span> — <span id="inv-file-name">—</span>
       </div>
-      <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:8px;">
-        <span style="font-size:9px;color:var(--muted);letter-spacing:1px;min-width:65px;">BRAND</span>
-        <div id="inv-brand-pills" style="display:flex;gap:6px;overflow-x:auto;flex:1;padding-bottom:2px;"></div>
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;">
+        <span style="font-size:9px;color:var(--muted);letter-spacing:1px;width:65px;flex-shrink:0;">MANAGER</span>
+        <div id="inv-manager-pills" style="display:flex;gap:5px;overflow-x:auto;flex:1;padding-bottom:2px;white-space:nowrap;scrollbar-width:none;"></div>
       </div>
-      <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;">
-        <span style="font-size:9px;color:var(--muted);letter-spacing:1px;min-width:65px;">AREA</span>
-        <div id="inv-area-pills" style="display:flex;gap:6px;overflow-x:auto;flex:1;padding-bottom:2px;"></div>
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;">
+        <span style="font-size:9px;color:var(--muted);letter-spacing:1px;width:65px;flex-shrink:0;">BRAND</span>
+        <div id="inv-brand-pills" style="display:flex;gap:5px;overflow-x:auto;flex:1;padding-bottom:2px;white-space:nowrap;scrollbar-width:none;"></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span style="font-size:9px;color:var(--muted);letter-spacing:1px;width:65px;flex-shrink:0;">AREA</span>
+        <div id="inv-area-pills" style="display:flex;gap:5px;overflow-x:auto;flex:1;padding-bottom:2px;white-space:nowrap;scrollbar-width:none;"></div>
       </div>
     </div>
 
