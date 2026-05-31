@@ -768,16 +768,22 @@ app.post('/api/voice', requireAuth, async function(req, res) {
       '\nDATA AVAILABLE:\n' + context.substring(0, 4000) +
       '\n\nUSER COMMAND: "' + text + '"' +
       '\n\nINSTRUCTIONS:' +
-      '\n- CRITICAL: You are currently on the ' + tab + ' dashboard. Only use data from that dashboard.' +
-      '\n- If greeting: say Hello, I am JARVIS your operations assistant. Ask how you can help.' +
-      '\n- If asking about data: look carefully in DATA AVAILABLE above and give exact numbers.' +
-      '\n- If you see the data in context, USE IT. Never say no data if it exists above.' +
-      '\n- If asking to filter (route, ORG, warehouse, city, BU): set action=filter, action_detail=the value.' +
-      '\n- If asking to switch dashboard (backlog, returns, sales, dispatch, rejection): set action=navigate.' +
-      '\n- If genuinely no data loaded yet: say the dashboard has no data uploaded yet, please upload a file.' +
-      '\n- Keep answer under 3 sentences. Use exact numbers. Be confident like a male professional.' +
-      '\n\nReply ONLY with valid JSON, no markdown:' +
-      '\n{"answer":"precise answer","action":"none or filter or navigate","action_detail":"value","action_label":"label"}';
+      '\n- CRITICAL: You are on the ' + tab + ' dashboard. Use ONLY data from that dashboard.' +
+      '\n- ALWAYS use exact numbers from DATA AVAILABLE. Never say zero or not available if numbers exist.' +
+      '\n- If greeting: say Hello, I am JARVIS your operations assistant. How can I help you today.' +
+      '\n- Total sales/orders/value: use total_orders and total_value fields.' +
+      '\n- Food sales: use food_orders and food_value fields.' +
+      '\n- Non food sales: use non_food_orders and non_food_value fields.' +
+      '\n- DCV/DGC/DCF/DGS/DSN/DPS sales: use type_breakdown.DCV.orders and type_breakdown.DCV.value etc.' +
+      '\n- WH Backlog: look for category counts - advance orders, backlog orders, credit hold, frozen orders.' +
+      '\n- Top customers: list name and AED value from top_customers array.' +
+      '\n- Top drivers: list name, drops, and AED value from top_drivers array.' +
+      '\n- If asking to filter by route/ORG/warehouse/city/BU: set action=filter.' +
+      '\n- If asking to go to another dashboard: set action=navigate.' +
+      '\n- If no data uploaded yet: say please upload the file first.' +
+      '\n- Keep answer under 3 sentences. Use exact numbers. Speak like a confident male professional.' +
+      '\n\nReply ONLY with valid JSON, no markdown, no extra text:' +
+      '\n{"answer":"precise answer with exact numbers","action":"none or filter or navigate","action_detail":"value","action_label":"action description"}';
 
     var msg = await anthropic.messages.create({
       model: 'claude-haiku-4-5-20251001',
