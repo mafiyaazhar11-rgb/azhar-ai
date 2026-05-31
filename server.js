@@ -492,14 +492,10 @@ app.post('/api/dispatch/upload', upload.single('file'), async function(req, res)
     // Also save to file as backup
     var entry = { uploadedAt:new Date().toISOString(), uploadedBy:uploadedBy, csvText:csv.substring(0,200000), summary:summary, date:dateKey };
     dispatchHistory[dateKey] = entry;
-    // Keep only last 7 dates
-    var histKeys = Object.keys(dispatchHistory).sort().reverse();
-    if (histKeys.length > 7) {
-      histKeys.slice(7).forEach(function(k) { delete dispatchHistory[k]; });
-    }
     currentDispatch = entry;
+    // Keep up to 180 days (6 months)
     var keys = Object.keys(dispatchHistory).sort();
-    while (keys.length > 60) delete dispatchHistory[keys.shift()];
+    while (keys.length > 180) delete dispatchHistory[keys.shift()];
     saveJSON(DISPATCH_FILE, { history:dispatchHistory });
     console.log('Dispatch saved:', dateKey, dbOk ? '(DB+file)' : '(file only)');
     res.json({ success:true, summary:summary, uploadedAt:entry.uploadedAt, date:dateKey });
@@ -753,6 +749,43 @@ app.get('/api/rejection/status', function(req, res) {
   res.setHeader('Content-Type', 'application/json');
   if (!rejectionData) return res.json({ hasData:false });
   res.json({ hasData:true, uploadedAt:rejectionData.uploadedAt, uploadedBy:rejectionData.uploadedBy, fileName:rejectionData.fileName, totalOrders:rejectionData.totalOrders, orgs:rejectionData.orgs, months:rejectionData.months });
+});
+
+app.post('/api/voice', requireAuth, async function(req, res) {
+  try {
+    var text = req.body.text || '';
+    var context = req.body.context || '';
+    var tab = req.body.tab || 'dispatch';
+
+    var isGreeting = /^(hi|hello|hey|good morning|good evening|jarvis)/i.test(text.trim());
+    var prompt = 'You are JARVIS, an intelligent operations assistant for a UAE logistics company. ' +
+      'You speak in a confident, professional, male tone. Keep answers sharp and precise. ' +
+      'Current dashboard: ' + tab + '. ' +
+      'Data context: ' + context.substring(0, 3000) + '. ' +
+      'User said: "' + text + '". ' +
+      (isGreeting ? 'Since user is greeting you, introduce yourself briefly as JARVIS the operations assistant and offer to help. ' : '') +
+      'Always use specific numbers from the data when available. ' +
+      'Reply ONLY with a valid JSON object (no markdown, no extra text): ' +
+      '{"answer":"your confident 1-3 sentence answer with specific numbers","action":"none or filter or navigate","action_detail":"what to filter or navigate to","action_label":"short description of action taken"}';
+
+    var msg = await anthropic.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 500,
+      messages: [{ role: 'user', content: prompt }]
+    });
+
+    var raw = (msg.content[0].text || '').trim();
+    var parsed;
+    try {
+      var match = raw.match(/\{[\s\S]*\}/);
+      parsed = JSON.parse(match ? match[0] : raw);
+    } catch(e) {
+      parsed = { answer: raw, action: 'none', action_label: '' };
+    }
+    res.json({ success: true, result: parsed });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 app.post('/api/chat', function(req, res) {
@@ -1034,6 +1067,25 @@ app.post('/api/users/:id/reset-password', requireAuth, requireRole('superadmin')
     var u = await pool.query('SELECT username FROM users WHERE id=$1', [req.params.id]);
     await auditLog(req.user.uid, req.user.username, 'RESET_PASSWORD', 'Reset password for: '+(u.rows[0]||{}).username, '');
     res.json({ success: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── EMERGENCY ADMIN RESET (remove after first use) ──
+app.get('/api/setup/reset-admin', async function(req, res) {
+  try {
+    var hash = await bcrypt.hash('YAmaha100@', 10);
+    // Check if user exists
+    var check = await pool.query("SELECT id FROM users WHERE username='azhar'");
+    if (check.rows.length === 0) {
+      await pool.query(
+        "INSERT INTO users (username, password_hash, full_name, role) VALUES ($1,$2,$3,$4)",
+        ['azhar', hash, 'Mohammed Azharuddin', 'superadmin']
+      );
+      res.json({ success: true, message: 'Admin user created' });
+    } else {
+      await pool.query("UPDATE users SET password_hash=$1 WHERE username='azhar'", [hash]);
+      res.json({ success: true, message: 'Admin password reset to YAmaha100@' });
+    }
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
