@@ -461,7 +461,7 @@ footer span{color:var(--gold);}
     <!-- Listening state -->
     <div id="vc-listening" style="display:none;padding:16px 24px;display:flex;align-items:center;gap:16px;">
       <div id="vc-pulse" style="width:12px;height:12px;border-radius:50%;background:#e84b4b;animation:vc-pulse 1s infinite;flex-shrink:0;"></div>
-      <div style="font-size:11px;color:#e84b4b;letter-spacing:2px;font-family:Montserrat,sans-serif;">LISTENING...</div>
+      <div style="font-size:11px;color:#e84b4b;letter-spacing:2px;font-family:Montserrat,sans-serif;">JARVIS LISTENING...</div>
       <div id="vc-interim" style="font-size:13px;color:rgba(201,168,76,0.6);font-family:Montserrat,sans-serif;flex:1;font-style:italic;"></div>
       <button onclick="stopVoiceCommand()" style="background:transparent;border:1px solid rgba(232,75,75,0.4);color:#e84b4b;font-size:9px;padding:4px 12px;cursor:pointer;font-family:Montserrat,sans-serif;letter-spacing:1px;">STOP</button>
     </div>
@@ -474,7 +474,7 @@ footer span{color:var(--gold);}
         </div>
         <div style="width:1px;background:rgba(201,168,76,0.2);align-self:stretch;flex-shrink:0;margin:0 8px;"></div>
         <div style="flex:1;">
-          <div style="font-size:9px;color:#7a7660;letter-spacing:2px;font-family:Montserrat,sans-serif;margin-bottom:8px;">✦ COMMAND CENTRE RESPONSE</div>
+          <div style="font-size:9px;color:#7a7660;letter-spacing:2px;font-family:Montserrat,sans-serif;margin-bottom:8px;">✦ JARVIS — OPERATIONS INTELLIGENCE</div>
           <div id="vc-answer-text" style="font-size:14px;color:#c9a84c;font-family:'Cormorant Garamond',serif;line-height:1.7;"></div>
           <div id="vc-action-taken" style="margin-top:10px;font-size:10px;color:#4ecb8d;font-family:Montserrat,sans-serif;letter-spacing:1px;"></div>
         </div>
@@ -484,7 +484,7 @@ footer span{color:var(--gold);}
     <!-- Processing state -->
     <div id="vc-processing" style="display:none;padding:16px 24px;display:flex;align-items:center;gap:12px;">
       <div class="ring" style="width:18px;height:18px;border-width:2px;"></div>
-      <div style="font-size:11px;color:var(--muted);letter-spacing:1px;font-family:Montserrat,sans-serif;">Processing your command...</div>
+      <div style="font-size:11px;color:var(--muted);letter-spacing:1px;font-family:Montserrat,sans-serif;">JARVIS is processing...</div>
     </div>
   </div>
 
@@ -4004,30 +4004,15 @@ async function processVoiceCommand(text) {
   var context = buildVoiceContext();
 
   try {
-    var response = await fetch('https://api.anthropic.com/v1/messages', {
+    var response = await fetch('/api/voice', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        messages: [{
-          role: 'user',
-          content: 'You are a voice command AI for an operations dashboard. Dashboard: ' + VC_CURRENT_TAB + '. Data: ' + context + ' Command: ' + text + '. Reply ONLY with valid JSON object with keys: answer, action, action_detail, action_label.'
-        }]
-      })
+      headers: { 'Content-Type': 'application/json', 'x-auth-token': AUTH_TOKEN },
+      body: JSON.stringify({ text: text, context: context, tab: VC_CURRENT_TAB })
     });
 
     var data = await response.json();
-    var rawText = (data.content[0].text || '').trim();
-    
-    // Parse JSON response
-    var parsed;
-    try {
-      var jsonMatch = rawText.match(/\{[\s\S]*\}/);
-      parsed = JSON.parse(jsonMatch ? jsonMatch[0] : rawText);
-    } catch(e) {
-      parsed = { answer: rawText, action: 'none', action_label: '' };
-    }
+    if (!data.success) throw new Error(data.error || 'Server error');
+    var parsed = data.result;
 
     // Execute action if needed
     if (parsed.action && parsed.action !== 'none') {
@@ -4037,12 +4022,15 @@ async function processVoiceCommand(text) {
     // Show answer
     showVcPanel('answer');
     var ansEl = document.getElementById('vc-answer-text');
-    if (ansEl) ansEl.textContent = parsed.answer || 'No answer available.';
+    var answerText = parsed.answer || 'No answer available.';
+    if (ansEl) ansEl.textContent = answerText;
     var actEl = document.getElementById('vc-action-taken');
     if (actEl) {
       actEl.textContent = parsed.action_label ? '⚡ ' + parsed.action_label : '';
       actEl.style.display = parsed.action_label ? 'block' : 'none';
     }
+    // Speak the answer back
+    jarvisSpeak(answerText);
 
   } catch(e) {
     showVcPanel('answer');
@@ -4090,6 +4078,49 @@ function buildVoiceContext() {
   } catch(e) {}
 
   return ctx;
+}
+
+function jarvisSpeak(text) {
+  if (!window.speechSynthesis) return;
+  window.speechSynthesis.cancel(); // Stop any current speech
+  var utter = new SpeechSynthesisUtterance(text);
+  utter.lang = 'en-US';
+  utter.rate = 0.92;   // Slightly slower — more authoritative
+  utter.pitch = 0.8;   // Lower pitch — male bold voice
+  utter.volume = 1.0;
+
+  // Try to find a deep male voice
+  var voices = window.speechSynthesis.getVoices();
+  var preferred = ['Google UK English Male','Microsoft David','Alex','Daniel','Google US English'];
+  var chosen = null;
+  for (var i = 0; i < preferred.length; i++) {
+    chosen = voices.find(function(v) { return v.name.includes(preferred[i]) || v.name === preferred[i]; });
+    if (chosen) break;
+  }
+  // Fallback: pick any male-sounding voice
+  if (!chosen) {
+    chosen = voices.find(function(v) {
+      return !v.name.toLowerCase().includes('female') &&
+             !v.name.toLowerCase().includes('woman') &&
+             v.lang.startsWith('en');
+    });
+  }
+  if (chosen) utter.voice = chosen;
+
+  // Add mic pulsing while speaking
+  var micBtn = document.getElementById('vc-mic-btn');
+  utter.onstart = function() { if (micBtn) micBtn.style.color = '#c9a84c'; };
+  utter.onend = function() { if (micBtn) micBtn.style.color = ''; };
+
+  window.speechSynthesis.speak(utter);
+}
+
+// Preload voices (Chrome loads async)
+if (window.speechSynthesis) {
+  window.speechSynthesis.getVoices();
+  window.speechSynthesis.onvoiceschanged = function() {
+    window.speechSynthesis.getVoices(); // cache
+  };
 }
 
 function executeVoiceAction(action, detail) {
