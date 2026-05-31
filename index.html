@@ -73,6 +73,8 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
 #ds-missing-banner{overflow:hidden;}
 #ds-banner-text{display:inline-block;animation:marquee-scroll 20s linear infinite;white-space:nowrap;}
 @keyframes marquee-scroll{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+@keyframes vc-pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.4;transform:scale(0.8)}}
+#vc-mic-btn.listening{background:rgba(232,75,75,0.2)!important;border-color:#e84b4b!important;color:#e84b4b!important;animation:vc-pulse 1s infinite;}
 .dpill:hover{border-color:var(--gold);color:var(--gold);}
 .dpill.on{background:var(--gold);color:var(--black);border-color:var(--gold);font-weight:700;}
 .dpill.today{border-color:var(--green);color:var(--green);}
@@ -446,9 +448,43 @@ footer span{color:var(--gold);}
       <div class="topbar-left"><h2 id="topbar-title"></h2><p id="topbar-sub">Operations &amp; Customer Service AI Command Centre</p></div>
     <div class="topbar-right">
       <div class="dot-live">System Active</div>
+      <!-- VOICE COMMAND MIC -->
+      <button id="vc-mic-btn" onclick="toggleVoiceCommand()" title="Voice Command" style="background:transparent;border:1px solid rgba(201,168,76,0.3);border-radius:50%;width:34px;height:34px;cursor:pointer;font-size:16px;color:var(--gold);display:flex;align-items:center;justify-content:center;transition:all 0.3s;flex-shrink:0;" onmouseover="this.style.background='rgba(201,168,76,0.15)'" onmouseout="if(!vcListening)this.style.background='transparent'">🎤</button>
       <button onclick="dsToggleUpload()" title="" style="background:transparent;border:none;cursor:pointer;font-size:18px;color:var(--gold);opacity:0.25;transition:opacity 0.3s;padding:4px;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.25'">✦</button>
       <div class="topbar-date"><strong id="tb-date">—</strong><span id="tb-time">—</span></div>
       <div class="sb-avatar" style="width:36px;height:36px;font-size:12px;">A</div>
+    </div>
+  </div>
+
+  <!-- VOICE COMMAND PANEL - slides down from topbar -->
+  <div id="vc-panel" style="display:none;background:#0a0a08;border-bottom:1px solid rgba(201,168,76,0.3);padding:0;overflow:hidden;transition:all 0.4s;position:relative;z-index:50;">
+    <!-- Listening state -->
+    <div id="vc-listening" style="display:none;padding:16px 24px;display:flex;align-items:center;gap:16px;">
+      <div id="vc-pulse" style="width:12px;height:12px;border-radius:50%;background:#e84b4b;animation:vc-pulse 1s infinite;flex-shrink:0;"></div>
+      <div style="font-size:11px;color:#e84b4b;letter-spacing:2px;font-family:Montserrat,sans-serif;">LISTENING...</div>
+      <div id="vc-interim" style="font-size:13px;color:rgba(201,168,76,0.6);font-family:Montserrat,sans-serif;flex:1;font-style:italic;"></div>
+      <button onclick="stopVoiceCommand()" style="background:transparent;border:1px solid rgba(232,75,75,0.4);color:#e84b4b;font-size:9px;padding:4px 12px;cursor:pointer;font-family:Montserrat,sans-serif;letter-spacing:1px;">STOP</button>
+    </div>
+    <!-- Answer state -->
+    <div id="vc-answer" style="display:none;padding:20px 24px;">
+      <div style="display:flex;align-items:flex-start;gap:16px;">
+        <div style="flex-shrink:0;">
+          <div style="font-size:9px;color:#7a7660;letter-spacing:2px;font-family:Montserrat,sans-serif;margin-bottom:6px;">YOU ASKED</div>
+          <div id="vc-question-text" style="font-size:11px;color:rgba(201,168,76,0.7);font-family:Montserrat,sans-serif;font-style:italic;max-width:280px;"></div>
+        </div>
+        <div style="width:1px;background:rgba(201,168,76,0.2);align-self:stretch;flex-shrink:0;margin:0 8px;"></div>
+        <div style="flex:1;">
+          <div style="font-size:9px;color:#7a7660;letter-spacing:2px;font-family:Montserrat,sans-serif;margin-bottom:8px;">✦ COMMAND CENTRE RESPONSE</div>
+          <div id="vc-answer-text" style="font-size:14px;color:#c9a84c;font-family:'Cormorant Garamond',serif;line-height:1.7;"></div>
+          <div id="vc-action-taken" style="margin-top:10px;font-size:10px;color:#4ecb8d;font-family:Montserrat,sans-serif;letter-spacing:1px;"></div>
+        </div>
+        <button onclick="closeVoicePanel()" style="background:transparent;border:none;color:#7a7660;font-size:18px;cursor:pointer;flex-shrink:0;padding:0 4px;line-height:1;">×</button>
+      </div>
+    </div>
+    <!-- Processing state -->
+    <div id="vc-processing" style="display:none;padding:16px 24px;display:flex;align-items:center;gap:12px;">
+      <div class="ring" style="width:18px;height:18px;border-width:2px;"></div>
+      <div style="font-size:11px;color:var(--muted);letter-spacing:1px;font-family:Montserrat,sans-serif;">Processing your command...</div>
     </div>
   </div>
 
@@ -3876,6 +3912,233 @@ function loadSalesFromServer(){
 
 loadSalesFromServer();
 
+
+// ═══════════════ VOICE COMMAND SYSTEM ═══════════════
+var vcListening = false;
+var vcRecognition = null;
+var VC_CURRENT_TAB = 'dispatch';
+
+function toggleVoiceCommand() {
+  if (vcListening) { stopVoiceCommand(); return; }
+  startVoiceCommand();
+}
+
+function startVoiceCommand() {
+  var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    alert('Voice command is not supported in this browser. Please use Chrome or Safari.');
+    return;
+  }
+
+  vcRecognition = new SpeechRecognition();
+  vcRecognition.lang = 'en-US';
+  vcRecognition.continuous = false;
+  vcRecognition.interimResults = true;
+
+  vcListening = true;
+  var micBtn = document.getElementById('vc-mic-btn');
+  if (micBtn) micBtn.classList.add('listening');
+
+  // Show panel in listening mode
+  showVcPanel('listening');
+
+  vcRecognition.onresult = function(event) {
+    var interim = '';
+    var final = '';
+    for (var i = event.resultIndex; i < event.results.length; i++) {
+      if (event.results[i].isFinal) final += event.results[i][0].transcript;
+      else interim += event.results[i][0].transcript;
+    }
+    var interimEl = document.getElementById('vc-interim');
+    if (interimEl) interimEl.textContent = interim || final;
+    if (final) processVoiceCommand(final.trim());
+  };
+
+  vcRecognition.onerror = function(e) {
+    stopVoiceCommand();
+    if (e.error !== 'no-speech') alert('Microphone error: ' + e.error);
+  };
+
+  vcRecognition.onend = function() {
+    if (vcListening) stopVoiceCommand();
+  };
+
+  vcRecognition.start();
+}
+
+function stopVoiceCommand() {
+  vcListening = false;
+  var micBtn = document.getElementById('vc-mic-btn');
+  if (micBtn) { micBtn.classList.remove('listening'); micBtn.style.background = 'transparent'; }
+  if (vcRecognition) { try { vcRecognition.stop(); } catch(e) {} }
+}
+
+function showVcPanel(state) {
+  var panel = document.getElementById('vc-panel');
+  if (!panel) return;
+  panel.style.display = 'block';
+  // Hide all states
+  ['vc-listening','vc-answer','vc-processing'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+  var active = document.getElementById('vc-' + state);
+  if (active) active.style.display = 'flex';
+}
+
+function closeVoicePanel() {
+  var panel = document.getElementById('vc-panel');
+  if (panel) panel.style.display = 'none';
+  stopVoiceCommand();
+}
+
+async function processVoiceCommand(text) {
+  stopVoiceCommand();
+  showVcPanel('processing');
+
+  // Set question text
+  var qEl = document.getElementById('vc-question-text');
+  if (qEl) qEl.textContent = '"' + text + '"';
+
+  // Get current dashboard context and data
+  var context = buildVoiceContext();
+
+  try {
+    var response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{
+          role: 'user',
+          content: 'You are a voice command AI for an operations dashboard. Dashboard: ' + VC_CURRENT_TAB + '. Data: ' + context + ' Command: ' + text + '. Reply ONLY with valid JSON object with keys: answer, action, action_detail, action_label.'
+        }]
+      })
+    });
+
+    var data = await response.json();
+    var rawText = (data.content[0].text || '').trim();
+    
+    // Parse JSON response
+    var parsed;
+    try {
+      var jsonMatch = rawText.match(/\{[\s\S]*\}/);
+      parsed = JSON.parse(jsonMatch ? jsonMatch[0] : rawText);
+    } catch(e) {
+      parsed = { answer: rawText, action: 'none', action_label: '' };
+    }
+
+    // Execute action if needed
+    if (parsed.action && parsed.action !== 'none') {
+      executeVoiceAction(parsed.action, parsed.action_detail);
+    }
+
+    // Show answer
+    showVcPanel('answer');
+    var ansEl = document.getElementById('vc-answer-text');
+    if (ansEl) ansEl.textContent = parsed.answer || 'No answer available.';
+    var actEl = document.getElementById('vc-action-taken');
+    if (actEl) {
+      actEl.textContent = parsed.action_label ? '⚡ ' + parsed.action_label : '';
+      actEl.style.display = parsed.action_label ? 'block' : 'none';
+    }
+
+  } catch(e) {
+    showVcPanel('answer');
+    var ansEl = document.getElementById('vc-answer-text');
+    if (ansEl) ansEl.textContent = 'Sorry, I could not process that command. Please try again.';
+  }
+}
+
+function buildVoiceContext() {
+  var ctx = 'Dashboard: ' + VC_CURRENT_TAB + ' | ';
+  
+  try {
+    // Dispatch context
+    if (VC_CURRENT_TAB === 'dispatch' && typeof currentDispatch !== 'undefined' && currentDispatch) {
+      var s = currentDispatch.summary || {};
+      ctx += 'Total Orders: ' + (s.total_orders || 0) + ' | ';
+      ctx += 'Total Value: AED ' + (s.total_value || 0).toLocaleString() + ' | ';
+      ctx += 'Total Drops: ' + (s.total_drops || 0) + ' | ';
+      ctx += 'Routes: ' + JSON.stringify(s.routes || []) + ' | ';
+      ctx += 'Top Customers: ' + JSON.stringify((s.topCustomers || []).slice(0,5)) + ' | ';
+      ctx += 'Top Drivers: ' + JSON.stringify((s.topDrivers || []).slice(0,5)) + ' | ';
+      ctx += 'Cities: ' + JSON.stringify(s.cities || {}) + ' | ';
+      // Include raw row data for column-specific queries
+      if (typeof DS_RAW !== 'undefined' && DS_RAW && DS_RAW.length > 0) {
+        ctx += 'Available data columns: ' + Object.keys(DS_RAW[0]).join(', ') + ' | ';
+        ctx += 'Sample data (first 3 rows): ' + JSON.stringify(DS_RAW.slice(0,3)) + ' | ';
+      }
+    }
+    // Rejection context
+    if (VC_CURRENT_TAB === 'rejection') {
+      ctx += 'Rejection dashboard is active. Contains YTD rejection data by BU, ORG, and month. ';
+    }
+    // Returns context
+    if (VC_CURRENT_TAB === 'returns' && typeof RET_FULL_SUMMARY !== 'undefined' && RET_FULL_SUMMARY) {
+      var rs = RET_FULL_SUMMARY;
+      ctx += 'Total Returns Value: AED ' + (rs.totalVal || 0).toLocaleString() + ' | ';
+      ctx += 'Invoice Cancellations: ' + (rs.invCount || 0) + ' — AED ' + (rs.invVal || 0).toLocaleString() + ' | ';
+      ctx += 'GRV Returns: ' + (rs.grvCount || 0) + ' — AED ' + (rs.grvVal || 0).toLocaleString() + ' | ';
+      ctx += 'By Warehouse: ' + JSON.stringify(rs.whMap || {}) + ' | ';
+    }
+    // Backlog context
+    if (VC_CURRENT_TAB === 'backlog' && typeof BL_FULL_DATA !== 'undefined' && BL_FULL_DATA) {
+      ctx += 'WH Backlog data available. Contains ORG, category, customer, and value breakdown. ';
+    }
+  } catch(e) {}
+
+  return ctx;
+}
+
+function executeVoiceAction(action, detail) {
+  try {
+    if (!action || action === 'none') return;
+    var d = (detail || '').toLowerCase();
+
+    if (action === 'navigate') {
+      var tabs = {dispatch:'dispatch',rejection:'rejection',returns:'returns',backlog:'backlog',sales:'sales',summary:'summary',email:'email',invoice:'invoice'};
+      Object.keys(tabs).forEach(function(k) {
+        if (d.includes(k) && typeof goTab === 'function') goTab(tabs[k], null);
+      });
+    }
+
+    if (action === 'filter' && VC_CURRENT_TAB === 'dispatch') {
+      var routes = ['DCV','DGC','DCF','DGS','DPS','DSN','TPW'];
+      routes.forEach(function(r) {
+        if (detail.toUpperCase().includes(r) && typeof dsFilter === 'function') dsFilter('route', r);
+      });
+      var cities = ['Dubai','AbuDhabi','Sharjah','Ajman','AlAin','RAK','Fujairah','UAQ'];
+      cities.forEach(function(c) {
+        if (d.includes(c.toLowerCase()) && typeof dsFilter === 'function') dsFilter('city', c);
+      });
+    }
+
+    if (action === 'filter' && VC_CURRENT_TAB === 'returns') {
+      if (d.includes('invoice')) retFilter('cat','Invoice Cancellation');
+      else if (d.includes('grv')) retFilter('cat','GRV-Return');
+      if (d.includes('food') && !d.includes('non')) retFilter('bu','food');
+      else if (d.includes('non')) retFilter('bu','nonfood');
+      ['DCV','DGC','DCF','DGS','DLL','DGN'].forEach(function(w) {
+        if (detail.toUpperCase().includes(w)) retFilter('wh', w);
+      });
+    }
+  } catch(e) { console.error('Voice action error:', e); }
+}
+
+
+// Track current tab for voice context
+var _origGoTab = null;
+document.addEventListener('DOMContentLoaded', function() {
+  if (typeof goTab === 'function') {
+    _origGoTab = goTab;
+    window.goTab = function(tab, el) {
+      VC_CURRENT_TAB = tab;
+      if (_origGoTab) _origGoTab(tab, el);
+    };
+  }
+});
 
 // ═══════════════ AUTH SYSTEM ═══════════════
 var AUTH_TOKEN = localStorage.getItem('azhar_token') || null;
