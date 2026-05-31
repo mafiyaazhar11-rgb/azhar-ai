@@ -1115,6 +1115,12 @@ function goTab(id,btn){
   if(id==='sales') loadSalesFromServer();
   // Update JARVIS current tab
   VC_CURRENT_TAB = id;
+  // Show/hide inv star based on tab and role
+  var invStar = document.getElementById('inv-star-wrap');
+  if (invStar) {
+    var canUpload = AUTH_USER && (AUTH_USER.role === 'superadmin' || AUTH_USER.role === 'subadmin');
+    invStar.style.display = (id === 'invsales' && canUpload) ? 'block' : (id !== 'invsales' ? 'none' : invStar.style.display);
+  }
 }
 
 //  UTILS 
@@ -4187,7 +4193,7 @@ function invPwdConfirm() {
   .then(function(d){
     if (d.ok) {
       document.getElementById('inv-pwd-modal').style.display = 'none';
-      document.getElementById('inv-file-input').click();
+      document.getElementById('inv-file-input2').click();
     } else {
       document.getElementById('inv-pwd-error').style.display = 'block';
       document.getElementById('inv-pwd-input').value = '';
@@ -4981,12 +4987,16 @@ function applyDashboardAccess() {
 function applyUploadAccess() {
   if(!AUTH_USER) return;
   var canUpload = AUTH_USER.role === 'superadmin' || AUTH_USER.role === 'subadmin';
-  if(!canUpload) {
-    ['ret-star-wrap','bl-star-wrap','sales-star-wrap'].forEach(function(id) {
-      var el = document.getElementById(id);
-      if(el) el.style.display = 'none';
-    });
-  }
+  var allStars = ['ret-star-wrap','bl-star-wrap','sales-star-wrap','inv-star-wrap'];
+  allStars.forEach(function(id) {
+    var el = document.getElementById(id);
+    if(!el) return;
+    if(canUpload) {
+      el.style.display = 'block';
+    } else {
+      el.style.display = 'none';
+    }
+  });
 }
 
 function addUserInfoTopbar() {
@@ -5270,13 +5280,14 @@ window.addEventListener('load', authBoot);
       <div id="inv-status-badge" style="background:rgba(78,203,141,0.1);border:1px solid rgba(78,203,141,0.3);padding:6px 14px;font-size:10px;color:#4ecb8d;letter-spacing:1px;">
         ✓ LOADED — <span id="inv-last-date">—</span> — <span id="inv-file-name">—</span>
       </div>
-      <div>
-        <input type="file" id="inv-file-input2" accept=".xlsx,.xls,.csv" style="display:none;" onchange="handleInvSalesUpload(this)">
-        <span id="inv-star-wrap">
-          <button onclick="invShowUpload()" id="inv-star-btn" style="background:transparent;border:none;cursor:pointer;font-size:20px;color:var(--gold);opacity:0.25;transition:opacity 0.3s;padding:4px;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.25'">✦</button>
-        </span>
-      </div>
+      <div id="inv-status-spacer"></div>
     </div>
+    <!-- Upload Star - Fixed Bottom Right (admin/subadmin only) -->
+    <div id="inv-star-wrap" style="position:fixed;bottom:20px;right:20px;z-index:100;display:none;">
+      <input type="file" id="inv-file-input2" accept=".xlsx,.xls,.csv" style="display:none;" onchange="handleInvSalesUpload(this)">
+      <button onclick="invShowUpload()" id="inv-star-btn" title="Upload Invoiced Sales" style="background:transparent;border:none;cursor:pointer;font-size:22px;color:var(--gold);opacity:0.25;transition:opacity 0.3s;padding:6px;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.25'">✦</button>
+    </div>
+
     <!-- Filters -->
     <div style="background:var(--surface);border:1px solid var(--border);padding:12px 16px;margin-bottom:12px;">
       <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:8px;">
