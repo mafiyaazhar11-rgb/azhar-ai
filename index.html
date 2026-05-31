@@ -1129,6 +1129,7 @@ function goTab(id,btn){
   loadBacklogFromServer();
   loadReturnsFromServer();
   if(id==='sales') loadSalesFromServer();
+  if(id==='invsales') loadInvSalesFromServer();
   // Update JARVIS current tab
   VC_CURRENT_TAB = id;
   // Show/hide inv star based on tab and role
@@ -3989,6 +3990,8 @@ function handleInvSalesUpload(input) {
       document.getElementById('inv-file-name').textContent = file.name;
       document.getElementById('inv-sales-nodata').style.display = 'none';
       document.getElementById('inv-sales-dashboard').style.display = 'block';
+      // Save to DB for persistence
+      saveInvSalesToServer(file.name);
     } catch(e) { alert('Error reading file: ' + e.message); }
   };
   reader.readAsArrayBuffer(file);
@@ -4223,6 +4226,98 @@ function invPwdCancel() {
   document.getElementById('inv-pwd-modal').style.display = 'none';
   document.getElementById('inv-pwd-input').value = '';
 }
+
+// ── INVSALES DB SAVE / LOAD ──
+function saveInvSalesToServer(fileName) {
+  if (!INV_RAW || !INV_RAW.length) return;
+  // Build a serializable summary (no Sets)
+  var keys = Object.keys(INV_RAW[0]);
+  function fc() { var names = Array.prototype.slice.call(arguments); return keys.find(function(k){ return names.some(function(n){ return k.toUpperCase().includes(n.toUpperCase()); }); }) || null; }
+  var C = { brand:fc('BRAND'), bu:fc('BUSINESS_UNIT','BUSINESS UNIT','BU'), cust:fc('CUSTOMER_NAME','CUSTOMER NAME','CUSTOMER'), group:fc('GROUP'), channel:fc('CHANNEL'), area:fc('AREA'), manager:fc('MANAGER'), salesman:fc('SALESMAN'), qty:fc('QUANTITY','QTY'), bns:fc('BNS'), value:fc('VALUE','AMOUNT'), invNo:fc('INVOICE_NO','INVOICE NO','INVOICE NUMBER'), invDate:fc('INVOICE_DATE','INVOICE DATE') };
+  var totalVal=0, totalQty=0, invoiceSet=new Set(), custSet=new Set();
+  var brandMap={}, buMap={}, mgrMap={}, salesMap={}, custMap={}, areaMap={};
+  INV_RAW.forEach(function(row) {
+    var val=Math.abs(parseFloat(String(row[C.value]||'0').replace(/,/g,''))||0);
+    var qty=parseFloat(String(row[C.qty]||'0').replace(/,/g,''))||0;
+    var bns=parseFloat(String(row[C.bns]||'0').replace(/,/g,''))||0;
+    var brand=String(row[C.brand]||'').trim(), bu=String(row[C.bu]||'').trim(), mgr=String(row[C.manager]||'').trim();
+    var salesman=String(row[C.salesman]||'').trim(), cust=String(row[C.cust]||'').trim();
+    var group=String(row[C.group]||'').trim(), channel=String(row[C.channel]||'').trim(), area=String(row[C.area]||'').trim();
+    var invNo=String(row[C.invNo]||'').trim();
+    totalVal+=val; totalQty+=qty;
+    if(invNo) invoiceSet.add(invNo); if(cust) custSet.add(cust);
+    if(brand){if(!brandMap[brand])brandMap[brand]={val:0,qty:0,bns:0,invCount:0,bu:bu};brandMap[brand].val+=val;brandMap[brand].qty+=qty;brandMap[brand].bns+=bns;if(invNo)brandMap[brand].invCount++;}
+    if(bu){if(!buMap[bu])buMap[bu]={val:0,qty:0};buMap[bu].val+=val;buMap[bu].qty+=qty;}
+    if(mgr){if(!mgrMap[mgr])mgrMap[mgr]={val:0,qty:0,invCount:0};mgrMap[mgr].val+=val;mgrMap[mgr].qty+=qty;if(invNo)mgrMap[mgr].invCount++;}
+    if(salesman){if(!salesMap[salesman])salesMap[salesman]={val:0,invCount:0,mgr:mgr};salesMap[salesman].val+=val;if(invNo)salesMap[salesman].invCount++;}
+    if(cust){if(!custMap[cust])custMap[cust]={val:0,qty:0,group:group,channel:channel};custMap[cust].val+=val;custMap[cust].qty+=qty;}
+    if(area){if(!areaMap[area])areaMap[area]=0;areaMap[area]+=val;}
+  });
+  var summary = { version:'v1', totalVal:totalVal, totalQty:totalQty, invoiceCount:invoiceSet.size, custCount:custSet.size, brandMap:brandMap, buMap:buMap, mgrMap:mgrMap, salesMap:salesMap, custMap:custMap, areaMap:areaMap, dateStr:getInvDate(INV_RAW) };
+  try {
+    fetch('/api/invsales/upload', {
+      method:'POST', headers:{'Content-Type':'application/json','x-auth-token':AUTH_TOKEN},
+      body: JSON.stringify({ summary:summary, fileName:fileName, uploadedBy:'Admin', totalOrders:summary.invoiceCount })
+    }).then(function(r){return r.json();}).then(function(d){
+      if(d&&d.success) console.log('InvSales saved to DB');
+      else console.error('InvSales save failed:', d);
+    }).catch(function(e){console.error('InvSales save error:',e.message);});
+  } catch(e) { console.error('InvSales save error:', e.message); }
+}
+
+function loadInvSalesFromServer() {
+  if (!AUTH_TOKEN) return;
+  fetch('/api/invsales/status', { headers: { 'x-auth-token': AUTH_TOKEN } })
+  .then(function(r){ return r.json(); })
+  .then(function(d) {
+    if (!d || !d.hasData || !d.summary || d.summary.version !== 'v1') return;
+    var s = d.summary;
+    // Restore display from saved summary
+    var brandMap=s.brandMap||{}, mgrMap=s.mgrMap||{}, buMap=s.buMap||{}, salesMap=s.salesMap||{}, custMap=s.custMap||{};
+    function fmtV(v){ return v>=1000000?(v/1000000).toFixed(2)+'M':v>=1000?Math.round(v/1000)+'K':Math.round(v).toString(); }
+    function fmtFull(v){ return 'AED '+Math.round(v).toLocaleString(); }
+    // KPIs
+    document.getElementById('inv-total-val').textContent = 'AED ' + fmtV(s.totalVal||0);
+    document.getElementById('inv-total-inv').textContent = (s.invoiceCount||0).toLocaleString() + ' invoices';
+    document.getElementById('inv-total-qty').textContent = Math.round(s.totalQty||0).toLocaleString();
+    document.getElementById('inv-total-cust').textContent = (s.custCount||0).toLocaleString() + ' customers';
+    var topBrand=Object.keys(brandMap).sort(function(a,b){return brandMap[b].val-brandMap[a].val;})[0];
+    if(topBrand){document.getElementById('inv-top-brand').textContent=topBrand;document.getElementById('inv-top-brand-val').textContent=fmtFull(brandMap[topBrand].val);}
+    var topMgr=Object.keys(mgrMap).sort(function(a,b){return mgrMap[b].val-mgrMap[a].val;})[0];
+    if(topMgr){document.getElementById('inv-top-mgr').textContent=topMgr.split(' ').slice(-2).join(' ');document.getElementById('inv-top-mgr-val').textContent=fmtFull(mgrMap[topMgr].val);}
+    // Status
+    document.getElementById('inv-last-date').textContent = s.dateStr||'—';
+    document.getElementById('inv-file-name').textContent = d.fileName||'—';
+    // Pills
+    function buildPill(cid, type, vals) {
+      var el=document.getElementById(cid); if(!el) return;
+      var html='<button class="ret-pill on" data-type="'+type+'" data-val="all">ALL</button>';
+      vals.forEach(function(v){
+        var sv=v.replace(/"/g,'');
+        html+='<button class="ret-pill" data-type="'+type+'" data-val="'+sv+'">'+v+'</button>';
+      });
+      el.innerHTML=html;
+      el.querySelectorAll('.ret-pill').forEach(function(btn){
+        btn.addEventListener('click',function(){invFilter(this.dataset.type,this.dataset.val);});
+      });
+    }
+    buildPill('inv-manager-pills','manager',Object.keys(mgrMap).sort());
+    buildPill('inv-brand-pills','brand',Object.keys(brandMap).sort());
+    buildPill('inv-area-pills','area',Object.keys(s.areaMap||{}).sort());
+    // Manager table
+    document.getElementById('inv-mgr-table').innerHTML=Object.keys(mgrMap).sort(function(a,b){return mgrMap[b].val-mgrMap[a].val;}).map(function(m,i){var v=mgrMap[m];var col=i===0?'#c9a84c':i===1?'#5b8dee':i===2?'#4ecb8d':'#f5f0e8';return '<tr><td style="color:'+col+';font-weight:'+(i<3?700:400)+';">'+m+'</td><td style="text-align:right;color:var(--muted);">'+(v.invCount||0)+'</td><td style="text-align:right;color:var(--muted);">'+Math.round(v.qty||0).toLocaleString()+'</td><td style="text-align:right;color:'+col+';font-weight:600;">'+fmtFull(v.val)+'</td></tr>';}).join('');
+    // Salesmen table
+    document.getElementById('inv-salesman-table').innerHTML=Object.keys(salesMap).sort(function(a,b){return salesMap[b].val-salesMap[a].val;}).slice(0,10).map(function(s,i){var v=salesMap[s];return '<tr><td style="color:var(--muted);text-align:center;">'+(i+1)+'</td><td style="color:#f5f0e8;">'+s+'</td><td style="text-align:right;color:var(--muted);">'+(v.invCount||0)+'</td><td style="text-align:right;color:var(--gold);font-weight:600;">'+fmtFull(v.val)+'</td></tr>';}).join('');
+    // Customers table
+    document.getElementById('inv-cust-table').innerHTML=Object.keys(custMap).sort(function(a,b){return custMap[b].val-custMap[a].val;}).slice(0,15).map(function(c,i){var v=custMap[c];return '<tr><td style="color:var(--muted);">'+(i+1)+'</td><td style="color:#f5f0e8;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+c+'</td><td style="color:var(--muted);font-size:10px;">'+v.group+'</td><td style="color:var(--muted);font-size:10px;">'+v.channel+'</td><td style="text-align:right;color:var(--muted);">'+Math.round(v.qty||0).toLocaleString()+'</td><td style="text-align:right;color:var(--gold);font-weight:600;">'+fmtFull(v.val)+'</td></tr>';}).join('');
+    // Brand table
+    document.getElementById('inv-brand-table').innerHTML=Object.keys(brandMap).sort(function(a,b){return brandMap[b].val-brandMap[a].val;}).map(function(b){var v=brandMap[b];return '<tr><td style="color:var(--gold);font-weight:600;">'+b+'</td><td style="color:var(--muted);font-size:10px;">'+v.bu+'</td><td style="text-align:center;color:#f5f0e8;">'+(v.invCount||0)+'</td><td style="text-align:right;color:var(--muted);">'+Math.round(v.qty||0).toLocaleString()+'</td><td style="text-align:right;color:var(--muted);">'+Math.round(v.bns||0).toLocaleString()+'</td><td style="text-align:right;color:var(--gold);font-weight:600;">'+fmtFull(v.val)+'</td></tr>';}).join('');
+    document.getElementById('inv-sales-nodata').style.display = 'none';
+    document.getElementById('inv-sales-dashboard').style.display = 'block';
+  })
+  .catch(function(e){ console.log('InvSales load error:', e.message); });
+}
+
 
 // ═══════════════ VOICE COMMAND SYSTEM ═══════════════
 var vcListening = false;
@@ -4966,6 +5061,8 @@ function showApp() {
   applyUploadAccess();
   addUserInfoTopbar();
   showDemoBanner();
+  loadSalesFromServer();
+  loadInvSalesFromServer();
   if(AUTH_USER && AUTH_USER.must_change_password) {
     document.getElementById('change-pwd-modal').style.display = 'flex';
   }
