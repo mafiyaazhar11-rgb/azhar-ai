@@ -194,176 +194,134 @@ footer span{color:var(--gold);}
 }
 
 @media (max-width: 768px) {
-  /* Mobile touch scrolling fix */
-  .main { -webkit-overflow-scrolling: touch; overflow-y: auto; }
-  .content { -webkit-overflow-scrolling: touch; overflow-y: auto; overflow-x: hidden; touch-action: pan-y; }
 
-  /* Show hamburger */
+  /* ── CORE LAYOUT ── */
+  body { overflow: hidden; }
   .hamburger { display: flex; }
-
-  /* Sidebar slides in/out */
-  .sidebar {
-    transform: translateX(-100%);
-    transition: transform 0.3s ease;
-    z-index: 99;
-    width: 240px;
-  }
+  .sidebar { transform: translateX(-100%); transition: transform 0.3s ease; z-index: 99; width: 240px; }
   .sidebar.open { transform: translateX(0); }
   .sidebar-overlay.open { display: block; }
+  .main { margin-left: 0; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; }
+  .content { overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; padding: 10px 8px; }
 
-  /* Main content takes full width */
-  .main { margin-left: 0; }
-
-  /* Topbar adjustments */
-  .topbar { padding: 0 14px 0 56px; height: 56px; }
-  .topbar-left h2 { font-size: 15px; }
+  /* ── TOPBAR ── */
+  .topbar { padding: 0 10px 0 52px; height: 52px; }
+  .topbar-left h2 { font-size: 13px; }
   .topbar-left p { display: none; }
-  .topbar-right { gap: 10px; }
-  .topbar-date strong { font-size: 11px; }
+  .topbar-right { gap: 6px; font-size: 10px; }
+  .topbar-date strong { font-size: 10px; }
   .topbar-date span { display: none; }
-  .dot-live { font-size: 9px; }
 
-  /* Content padding */
-  .content { padding: 14px; }
+  /* ── ALL GRIDS → SINGLE COLUMN ── */
+  .kpi-row, .grid-2, .grid-3-1, .inv-grid { grid-template-columns: 1fr !important; gap: 8px !important; }
+  [style*="grid-template-columns:repeat(5"] { grid-template-columns: repeat(2,1fr) !important; gap: 8px !important; }
+  [style*="grid-template-columns:repeat(4"] { grid-template-columns: repeat(2,1fr) !important; gap: 8px !important; }
+  [style*="grid-template-columns:repeat(3"] { grid-template-columns: 1fr 1fr !important; gap: 8px !important; }
+  [style*="grid-template-columns:1fr 1fr 1fr"] { grid-template-columns: 1fr !important; gap: 8px !important; }
+  [style*="grid-template-columns:1fr 1fr;"] { grid-template-columns: 1fr !important; gap: 8px !important; }
+  [style*="grid-template-columns:1.2fr 1fr 1fr"] { grid-template-columns: 1fr !important; gap: 8px !important; }
+  [style*="grid-template-columns:1fr 1.6fr"] { grid-template-columns: 1fr !important; gap: 8px !important; }
+  [style*="grid-template-columns:1.1fr 1fr"] { grid-template-columns: 1fr !important; gap: 8px !important; }
+  [style*="grid-template-columns:1.2fr 1fr;"] { grid-template-columns: 1fr !important; gap: 8px !important; }
 
-  /* KPI row - stack vertically */
-  .kpi-row {
-    grid-template-columns: 1fr !important;
-    gap: 10px;
-  }
-
-  /* Grid layouts - stack vertically */
-  .grid-2 {
-    grid-template-columns: 1fr !important;
-    gap: 10px;
-  }
-  .grid-3-1 {
-    grid-template-columns: 1fr !important;
-    gap: 10px;
-  }
-
-  /* KPI cards */
-  .kpi-card { padding: 14px; }
-  .kpi-value { font-size: 24px; }
+  /* ── KPI CARDS ── */
+  .kpi-card { padding: 12px 10px; }
+  .kpi-value { font-size: 22px; }
   .kpi-label { font-size: 8px; }
+  #bl-kpis { grid-template-columns: 1fr 1fr !important; gap: 8px !important; }
+  #ret-kpis { grid-template-columns: 1fr 1fr !important; gap: 8px !important; }
+  #sales-kpis { grid-template-columns: 1fr 1fr !important; gap: 8px !important; }
 
-  /* The food/nonfood/3pl breakdown grid */
-  .kpi-card > div[style*="grid-template-columns:1fr 1fr 1fr"] {
-    grid-template-columns: 1fr !important;
-  }
+  /* ── CHARTS - FIT SCREEN ── */
+  canvas { max-width: 100% !important; max-height: 180px !important; }
+  .chart-bars { height: 100px !important; }
+  #bl-cat-chart, #bl-rsd-chart { max-height: 150px !important; width: 100% !important; }
 
-  /* Charts */
-  .chart-bars { height: 90px !important; }
-  canvas { max-height: 160px !important; }
+  /* ── ALL TABLES - HORIZONTAL SCROLL ── */
+  .data-table, .route-table { font-size: 10px; width: 100%; }
+  .data-table th, .route-table th { padding: 5px 6px; font-size: 8px; white-space: nowrap; }
+  .data-table td, .route-table td { padding: 6px 6px; font-size: 10px; white-space: nowrap; }
 
-  /* Tables - scrollable */
-  .data-table, .route-table {
-    font-size: 11px;
-  }
-  .data-table th, .route-table th { padding: 6px 8px; font-size: 8px; }
-  .data-table td, .route-table td { padding: 7px 8px; }
+  /* Table wrappers - always scrollable */
+  #ds-routes-box > div,
+  #ds-tables,
+  #bl-dashboard .box,
+  #ret-dashboard .box,
+  #rej-content .box,
+  #sum-content .box { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 
-  /* Box padding */
-  .box { padding: 14px; }
+  #bl-action-table, #bl-detail-table { display: block; overflow-x: auto; white-space: nowrap; width: 100%; }
+  .route-table { display: block; overflow-x: auto; white-space: nowrap; }
+
+  /* ── REJECTION DASHBOARD ── */
+  #rej-org-cards { grid-template-columns: 1fr 1fr !important; gap: 8px !important; }
+  #rej-kpis { grid-template-columns: 1fr 1fr !important; gap: 8px !important; }
+  .day-cell { width: 32px !important; height: 32px !important; font-size: 9px !important; }
+  .day-cell .day-count { font-size: 7px !important; }
+
+  /* Day pills scroll horizontally */
+  .day-row { overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 4px; flex-wrap: nowrap !important; }
+
+  /* Rejection reason chart - make visible */
+  #rej-reasons-chart { max-height: 200px !important; width: 100% !important; }
+
+  /* ── FILTER PILLS - HORIZONTAL SCROLL ── */
+  .ret-pill, .rej-pill, .dpill { font-size: 8px !important; padding: 4px 8px !important; white-space: nowrap; }
+  [id*="bl-f"] { font-size: 8px !important; padding: 3px 7px !important; white-space: nowrap; }
+
+  /* Make filter rows scrollable */
+  div[style*="display:flex;flex-wrap:wrap;gap:8px"] { overflow-x: auto !important; flex-wrap: nowrap !important; padding-bottom: 6px !important; -webkit-overflow-scrolling: touch; }
+  div[style*="display:flex;flex-wrap:wrap;gap:12px"] { overflow-x: auto !important; flex-wrap: nowrap !important; padding-bottom: 6px !important; }
+
+  /* ── WH BACKLOG ── */
+  #bl-org-table { overflow-x: auto; }
+  #bl-org-bars { overflow-x: hidden; }
+
+  /* ── DISPATCH ── */
+  .qbtns { overflow-x: auto; flex-wrap: nowrap !important; -webkit-overflow-scrolling: touch; padding-bottom: 4px; }
+  .qbtn { font-size: 8px !important; padding: 5px 8px !important; white-space: nowrap; }
+
+  /* City chart bar labels */
+  .city-label { font-size: 8px !important; }
+
+  /* ── RETURNS ── */
+  .donut-wrap { flex-direction: column; align-items: center; gap: 10px; }
+
+  /* ── BOX / CARD PADDING ── */
+  .box { padding: 10px 10px; }
   .box-title { font-size: 9px; }
+  [style*="padding:16px"] { padding: 12px 10px !important; }
+  [style*="padding:14px"] { padding: 10px 8px !important; }
 
-  /* ORG cards - 2 per row on mobile */
-  #rej-org-cards {
-    grid-template-columns: repeat(2, 1fr) !important;
-    gap: 8px;
-  }
+  /* ── UPLOAD BOX ── */
+  [id*="upload-box"] { padding: 10px !important; flex-direction: column !important; gap: 8px !important; }
+  [id*="upload-box"] > div:last-child { flex-wrap: wrap; gap: 6px; }
 
-  /* KPI rejection cards - 2x2 */
-  #rej-kpis {
-    grid-template-columns: repeat(2, 1fr) !important;
-    gap: 8px;
-  }
+  /* ── FOOTER ── */
+  footer { font-size: 8px; padding: 8px 10px; }
+  [class*="footer"], [id*="footer"] { font-size: 8px !important; }
 
-  /* Day grid cells smaller */
-  .day-cell {
-    width: 36px !important;
-    height: 36px !important;
-  }
+  /* ── ADMIN PANEL ── */
+  #admin-panel > div { padding: 0 8px; margin: 20px auto; }
+  #admin-panel table { font-size: 9px; display: block; overflow-x: auto; white-space: nowrap; }
+  #admin-audit-list table { display: block; overflow-x: auto; }
 
-  /* Pills wrap nicely */
-  .rej-pill { padding: 4px 10px; font-size: 9px; }
-  .dpill { padding: 4px 8px; font-size: 9px; }
-
-  /* Quick buttons wrap */
-  .qbtns { gap: 4px; }
-  .qbtn { padding: 5px 8px; font-size: 8px; }
-
-  /* Invoice grid - stack */
-  .inv-grid {
-    grid-template-columns: 1fr !important;
-  }
-
-  /* Scroll fix - allow BOTH directions */
-  body { overflow-x: hidden; overflow-y: hidden; }
-  .main { overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; }
-  .content { overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; padding: 12px 10px; }
-
-  /* Route table - horizontal scroll */
-  #ds-routes-box > div { overflow-x: auto; }
-
-  /* ALL inline grids with multiple columns - stack to 1 column */
-  [style*="grid-template-columns:repeat(4"] { grid-template-columns: repeat(2,1fr) !important; }
-  [style*="grid-template-columns:repeat(5"] { grid-template-columns: repeat(2,1fr) !important; }
-  [style*="grid-template-columns:repeat(3"] { grid-template-columns: repeat(2,1fr) !important; }
-  [style*="grid-template-columns:1fr 1fr 1fr"] { grid-template-columns: 1fr !important; }
-  [style*="grid-template-columns:1fr 1fr;"] { grid-template-columns: 1fr !important; }
-  [style*="grid-template-columns:1.2fr 1fr 1fr"] { grid-template-columns: 1fr !important; }
-  [style*="grid-template-columns:1fr 1.6fr"] { grid-template-columns: 1fr !important; }
-  [style*="grid-template-columns:1.1fr 1fr"] { grid-template-columns: 1fr !important; }
-
-  /* All tables inside dashboards - horizontal scroll */
-  #bl-dashboard table,
-  #ret-dashboard table,
-  #ds-content table,
-  #rej-content table,
-  #sum-content table { font-size: 10px; }
-
-  /* Wrap all overflow tables */
-  #bl-action-table, #bl-detail-table, .route-table { display: block; overflow-x: auto; white-space: nowrap; }
-
-  /* Filter pills - wrap and scroll */
-  [id*="bl-f"], .ret-pill { font-size: 8px !important; padding: 3px 8px !important; }
-  div[style*="display:flex;flex-wrap:wrap"] { overflow-x: auto; flex-wrap: nowrap !important; padding-bottom: 4px; }
-
-  /* KPI cards in backlog/returns - 2 columns */
-  #bl-kpis { grid-template-columns: repeat(2,1fr) !important; }
-  #ret-kpis { grid-template-columns: repeat(2,1fr) !important; }
-
-  /* ORG bars - full width */
-  #bl-org-bars > div [style*="grid-template-columns:70px"] { 
-    display: flex; flex-wrap: wrap; gap: 4px;
-  }
-
-  /* Charts max height on mobile */
-  #bl-cat-chart, #bl-rsd-chart { max-height: 130px !important; }
-
-  /* Donut chart wrap */
-  .donut-wrap { flex-direction: column; align-items: center; gap: 12px; }
-
-  /* Upload box */
-  [id*="upload-box"] { padding: 10px !important; }
-
-  /* Footer */
-  footer { font-size: 8px; padding: 10px 14px; }
+  /* ── LOGIN PAGE ── */
+  #login-page > div { width: 90% !important; padding: 28px 20px !important; margin: 0 auto; }
 }
 
 @media (max-width: 480px) {
-  /* Very small phones */
-  .topbar-left h2 { font-size: 13px; }
+  .content { padding: 8px 6px; }
+  .topbar-left h2 { font-size: 12px; }
   .kpi-value { font-size: 20px; }
-  #rej-org-cards { grid-template-columns: repeat(2, 1fr) !important; }
-  #bl-kpis { grid-template-columns: 1fr 1fr !important; gap: 8px !important; }
-  .content { padding: 8px 6px !important; }
-  [style*="font-size:30px"] { font-size: 22px !important; }
+  #bl-kpis { grid-template-columns: 1fr 1fr !important; }
+  #rej-org-cards { grid-template-columns: 1fr 1fr !important; }
   [style*="font-size:28px"] { font-size: 20px !important; }
-  #rej-kpis { grid-template-columns: 1fr 1fr !important; }
-  .day-cell { width: 30px !important; height: 30px !important; font-size: 10px !important; }
+  [style*="font-size:30px"] { font-size: 22px !important; }
+  .day-cell { width: 28px !important; height: 28px !important; }
 }
+
+
 
 
 /* ═══════════════════════════════════════════
