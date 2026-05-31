@@ -1119,7 +1119,7 @@ function goTab(id,btn){
   var invStar = document.getElementById('inv-star-wrap');
   if (invStar) {
     var canUpload = AUTH_USER && (AUTH_USER.role === 'superadmin' || AUTH_USER.role === 'subadmin');
-    invStar.style.display = (id === 'invsales' && canUpload) ? 'block' : (id !== 'invsales' ? 'none' : invStar.style.display);
+    invStar.style.display = (id === 'invsales' && canUpload) ? 'block' : 'none';
   }
 }
 
@@ -4193,7 +4193,7 @@ function invPwdConfirm() {
   .then(function(d){
     if (d.ok) {
       document.getElementById('inv-pwd-modal').style.display = 'none';
-      document.getElementById('inv-file-input2').click();
+      document.getElementById('inv-file-input').click();
     } else {
       document.getElementById('inv-pwd-error').style.display = 'block';
       document.getElementById('inv-pwd-input').value = '';
@@ -4987,16 +4987,14 @@ function applyDashboardAccess() {
 function applyUploadAccess() {
   if(!AUTH_USER) return;
   var canUpload = AUTH_USER.role === 'superadmin' || AUTH_USER.role === 'subadmin';
-  var allStars = ['ret-star-wrap','bl-star-wrap','sales-star-wrap','inv-star-wrap'];
-  allStars.forEach(function(id) {
+  // These stars always show when user can upload
+  ['ret-star-wrap','bl-star-wrap','sales-star-wrap'].forEach(function(id) {
     var el = document.getElementById(id);
-    if(!el) return;
-    if(canUpload) {
-      el.style.display = 'block';
-    } else {
-      el.style.display = 'none';
-    }
+    if(el) el.style.display = canUpload ? 'block' : 'none';
   });
+  // inv star only shows on invsales tab
+  var invStar = document.getElementById('inv-star-wrap');
+  if(invStar) invStar.style.display = (canUpload && VC_CURRENT_TAB === 'invsales') ? 'block' : 'none';
 }
 
 function addUserInfoTopbar() {
@@ -5261,31 +5259,29 @@ window.addEventListener('load', authBoot);
 </script>
 <!-- WH Backlog Password Modal -->
 <div id="invsales" class="panel">
+
   <!-- Old data warning popup -->
   <div id="inv-old-warning" style="display:none;position:fixed;top:70px;left:50%;transform:translateX(-50%);background:#1a0a00;border:2px solid #e84b4b;padding:12px 24px;z-index:999;text-align:center;min-width:300px;">
     <div style="font-size:11px;color:#e84b4b;font-weight:700;letter-spacing:1px;">⚠ OLD DATA WARNING</div>
     <div id="inv-old-date-msg" style="font-size:11px;color:#f5f0e8;margin-top:4px;"></div>
     <button onclick="document.getElementById('inv-old-warning').style.display='none'" style="margin-top:8px;background:transparent;border:1px solid rgba(232,75,75,0.4);color:#e84b4b;font-size:9px;padding:3px 12px;cursor:pointer;font-family:Montserrat,sans-serif;">DISMISS</button>
   </div>
+
+  <!-- Single hidden file input used by both star clicks -->
+  <input type="file" id="inv-file-input" accept=".xlsx,.xls,.csv" style="display:none;" onchange="handleInvSalesUpload(this)">
+
+  <!-- No data state -->
   <div id="inv-sales-nodata" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:60vh;gap:16px;">
     <div style="font-size:40px;">🧾</div>
     <div style="font-size:13px;color:var(--gold);letter-spacing:2px;">NO DATA LOADED</div>
-    <div style="font-size:11px;color:var(--muted);">Click ✦ to upload your Invoiced Sales file</div>
-    <input type="file" id="inv-file-input" accept=".xlsx,.xls,.csv" style="display:none;" onchange="handleInvSalesUpload(this)">
-    <div style="font-size:11px;color:var(--muted);margin-top:8px;">Use the ✦ star button (password required)</div>
+    <div style="font-size:11px;color:var(--muted);">Click ✦ star (bottom right) to upload</div>
   </div>
+
+  <!-- Dashboard state -->
   <div id="inv-sales-dashboard" style="display:none;">
-    <!-- Status badge + upload star -->
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-      <div id="inv-status-badge" style="background:rgba(78,203,141,0.1);border:1px solid rgba(78,203,141,0.3);padding:6px 14px;font-size:10px;color:#4ecb8d;letter-spacing:1px;">
-        ✓ LOADED — <span id="inv-last-date">—</span> — <span id="inv-file-name">—</span>
-      </div>
-      <div id="inv-status-spacer"></div>
-    </div>
-    <!-- Upload Star - Fixed Bottom Right (admin/subadmin only) -->
-    <div id="inv-star-wrap" style="position:fixed;bottom:20px;right:20px;z-index:100;display:none;">
-      <input type="file" id="inv-file-input2" accept=".xlsx,.xls,.csv" style="display:none;" onchange="handleInvSalesUpload(this)">
-      <button onclick="invShowUpload()" id="inv-star-btn" title="Upload Invoiced Sales" style="background:transparent;border:none;cursor:pointer;font-size:22px;color:var(--gold);opacity:0.25;transition:opacity 0.3s;padding:6px;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.25'">✦</button>
+    <!-- Status badge -->
+    <div id="inv-status-badge" style="background:rgba(78,203,141,0.1);border:1px solid rgba(78,203,141,0.3);padding:6px 14px;font-size:10px;color:#4ecb8d;letter-spacing:1px;margin-bottom:12px;">
+      ✓ LOADED — <span id="inv-last-date">—</span> — <span id="inv-file-name">—</span>
     </div>
 
     <!-- Filters -->
@@ -5303,6 +5299,7 @@ window.addEventListener('load', authBoot);
         <div id="inv-area-pills" style="display:flex;gap:6px;overflow-x:auto;flex:1;padding-bottom:2px;"></div>
       </div>
     </div>
+
     <!-- KPIs -->
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;" id="inv-kpis">
       <div class="box" style="padding:14px;"><div style="font-size:9px;color:var(--muted);letter-spacing:2px;margin-bottom:6px;">TOTAL VALUE</div><div style="font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:700;color:var(--gold);" id="inv-total-val">—</div><div style="font-size:10px;color:var(--muted);" id="inv-total-inv">— invoices</div></div>
@@ -5310,21 +5307,30 @@ window.addEventListener('load', authBoot);
       <div class="box" style="padding:14px;"><div style="font-size:9px;color:var(--muted);letter-spacing:2px;margin-bottom:6px;">TOP BRAND</div><div style="font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:700;color:#4ecb8d;" id="inv-top-brand">—</div><div style="font-size:10px;color:var(--muted);" id="inv-top-brand-val">—</div></div>
       <div class="box" style="padding:14px;"><div style="font-size:9px;color:var(--muted);letter-spacing:2px;margin-bottom:6px;">TOP MANAGER</div><div style="font-family:'Cormorant Garamond',serif;font-size:14px;font-weight:700;color:#e8854b;" id="inv-top-mgr">—</div><div style="font-size:10px;color:var(--muted);" id="inv-top-mgr-val">—</div></div>
     </div>
+
     <!-- Charts -->
     <div style="display:grid;grid-template-columns:1.6fr 1fr;gap:12px;margin-bottom:16px;">
       <div class="box"><div class="box-title">📊 Sales by Brand</div><canvas id="inv-brand-chart" height="140"></canvas></div>
       <div class="box"><div class="box-title">🏢 Sales by BU</div><canvas id="inv-bu-chart" height="140"></canvas></div>
     </div>
+
     <!-- Tables -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
       <div class="box"><div class="box-title">👔 Manager Performance</div><div style="overflow-x:auto;"><table class="data-table" style="min-width:280px;width:100%;"><thead><tr><th>Manager</th><th style="text-align:right;">Inv</th><th style="text-align:right;">Qty</th><th style="text-align:right;">Value</th></tr></thead><tbody id="inv-mgr-table"></tbody></table></div></div>
       <div class="box"><div class="box-title">🧑 Top Salesmen</div><div style="overflow-x:auto;"><table class="data-table" style="min-width:280px;width:100%;"><thead><tr><th>#</th><th>Salesman</th><th style="text-align:right;">Inv</th><th style="text-align:right;">Value</th></tr></thead><tbody id="inv-salesman-table"></tbody></table></div></div>
     </div>
+
     <div class="box" style="margin-bottom:16px;"><div class="box-title">🏪 Top Customers</div><div style="overflow-x:auto;"><table class="data-table" style="min-width:500px;width:100%;"><thead><tr><th>#</th><th>Customer</th><th>Group</th><th>Channel</th><th style="text-align:right;">Qty</th><th style="text-align:right;">Value</th></tr></thead><tbody id="inv-cust-table"></tbody></table></div></div>
+
     <div class="box"><div class="box-title">🔗 Brand Sales Detail</div><div style="overflow-x:auto;"><table class="data-table" style="min-width:500px;width:100%;"><thead><tr><th>Brand</th><th>BU</th><th style="text-align:center;">Inv</th><th style="text-align:right;">Qty</th><th style="text-align:right;">BNS</th><th style="text-align:right;">Value</th></tr></thead><tbody id="inv-brand-table"></tbody></table></div></div>
   </div>
-</div>
 
+  <!-- Star - Fixed Bottom Right - admin/subadmin only -->
+  <div id="inv-star-wrap" style="display:none;position:fixed;bottom:20px;right:20px;z-index:100;">
+    <button onclick="invShowUpload()" id="inv-star-btn" title="Upload Invoiced Sales" style="background:transparent;border:none;cursor:pointer;font-size:22px;color:var(--gold);opacity:0.25;transition:opacity 0.3s;padding:6px;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.25'">✦</button>
+  </div>
+
+</div>
 <div id="bl-pwd-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9999;align-items:center;justify-content:center;">
   <div style="background:var(--surface);border:1px solid var(--gold);padding:32px;min-width:340px;max-width:400px;position:relative;">
     <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--gold),transparent);"></div>
