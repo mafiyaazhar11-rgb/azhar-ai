@@ -3050,12 +3050,12 @@ function renderReturnsFromSummary(s, fileName){
     {lbl:'TOTAL RETURNS VALUE',val:fmtAEDR(totalVal),sub:rows.toLocaleString()+' return orders',col:'#e84b4b'},
     {lbl:'INVOICE CANCELLATIONS',val:invCount.toLocaleString(),sub:fmtAEDR(invVal)+' · '+(totalVal>0?Math.round(invVal/totalVal*100):0)+'%',col:'var(--gold)'},
     {lbl:'GRV RETURNS',val:grvCount.toLocaleString(),sub:fmtAEDR(grvVal)+' · '+(totalVal>0?Math.round(grvVal/totalVal*100):0)+'%',col:'var(--gold)'},
-    {lbl:'TOP WAREHOUSE',val:topWH,sub:fmtAEDR(whMap[topWH]||0)+' · '+(totalVal>0?Math.round((whMap[topWH]||0)/totalVal*100):0)+'%',col:'var(--text)'}
+    {lbl:'TOP WAREHOUSE',val:topWH,sub:fmtAEDR(whMap[topWH]||0)+' · '+Math.min(100,(totalVal>0?Math.round((whMap[topWH]||0)/totalVal*100):0))+'%',col:'var(--gold)'}
   ].map(function(k){
     return '<div style="background:var(--card);border:1px solid var(--border);padding:14px;">'
       +'<div style="font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">'+k.lbl+'</div>'
       +'<div style="font-family:Cormorant Garamond,serif;font-size:26px;font-weight:700;color:'+k.col+';">'+k.val+'</div>'
-      +'<div style="font-size:10px;color:var(--muted);margin-top:4px;">'+k.sub+'</div></div>';
+      +'<div style="font-size:10px;color:var(--gold);margin-top:4px;">'+k.sub+'</div></div>';
   }).join('');
 
   // Charts + bars - same as renderReturns but from summary maps
@@ -3065,7 +3065,7 @@ function renderReturnsFromSummary(s, fileName){
   if(ctx){RET_CHART_MONTH=new Chart(ctx,{type:'bar',data:{labels:months.map(function(m){return MONTH_NAMES[m];}),datasets:[{label:'Returns AED',data:months.map(function(m){var _mv=monthMap[m]||0;return Math.round(typeof _mv==='object'?_mv.val:_mv);}),backgroundColor:'#e84b4b',borderRadius:0,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return' '+fmtAEDR(c.raw);}}}},scales:{x:{ticks:{color:'#7a7660',font:{size:10}},grid:{display:false}},y:{ticks:{color:'#7a7660',font:{size:9},callback:function(v){return fmtAEDR(v);}},grid:{color:'rgba(122,118,96,0.15)'}}}}});}
 
   var whKeys=Object.keys(whMap).sort(function(a,b){return whMap[b]-whMap[a];}); var maxWH=whMap[whKeys[0]]||1;
-  document.getElementById('ret-wh-bars').innerHTML=whKeys.map(function(wh){var pct=Math.round(whMap[wh]/maxWH*100);var col=WH_COLORS[wh]||'var(--muted)';return '<div style="margin-bottom:10px;"><div style="display:flex;justify-content:space-between;margin-bottom:3px;"><span style="font-size:12px;font-weight:700;color:'+col+';">'+wh+'</span><span style="font-size:11px;color:var(--text);">'+fmtAEDR(whMap[wh])+'</span></div><div style="height:6px;background:var(--border);"><div style="height:6px;width:'+pct+'%;background:'+col+';transition:width 0.8s;"></div></div></div>';}).join('');
+  document.getElementById('ret-wh-bars').innerHTML=whKeys.map(function(wh){var _whv=typeof whMap[wh]==='object'?whMap[wh].val||whMap[wh]:whMap[wh];var pct=Math.round(_whv/maxWH*100);var col=WH_COLORS[wh]||'var(--muted)';return '<div style="margin-bottom:10px;"><div style="display:flex;justify-content:space-between;margin-bottom:3px;"><span style="font-size:12px;font-weight:700;color:'+col+';">'+wh+'</span><span style="font-size:11px;color:var(--text);">'+fmtAEDR(whMap[wh])+'</span></div><div style="height:6px;background:var(--border);"><div style="height:6px;width:'+pct+'%;background:'+col+';transition:width 0.8s;"></div></div></div>';}).join('');
 
   var catKeys=Object.keys(catMap); var catColors=['#378add','#c9a84c'];
   if(RET_CHART_CAT){RET_CHART_CAT.destroy();}
@@ -3510,7 +3510,18 @@ function renderReturnsFiltered(){
   filtered.whMap    = filtered.whMap    || s.whMap    || {};
   filtered.catMap   = filtered.catMap   || s.catMap   || {};
   filtered.buMap    = filtered.buMap    || s.buMap    || {};
-  filtered.monthMap = filtered.monthMap || s.monthMap || {};
+  // Scale monthMap to match the filtered totalVal
+  if(!filtered.monthMap || Object.keys(filtered.monthMap).length === 0){
+    var fullTotal = s.totalVal || 1;
+    var scaleRatio = filtered.totalVal / fullTotal;
+    filtered.monthMap = {};
+    Object.keys(s.monthMap||{}).forEach(function(m){
+      var raw = s.monthMap[m] || 0;
+      var rawVal = typeof raw === 'object' ? raw.val : raw;
+      var rawCount = typeof raw === 'object' ? raw.count : 0;
+      filtered.monthMap[m] = {val: Math.round(rawVal * scaleRatio), count: Math.round(rawCount * scaleRatio)};
+    });
+  }
   filtered.areaMap  = filtered.areaMap  || s.areaMap  || {};
   filtered.custMap  = filtered.custMap  || s.custMap  || {};
   filtered.reasonMap= s.reasonMap || {};
@@ -3549,12 +3560,12 @@ function renderReturns(){
     {lbl:'TOTAL RETURNS VALUE',val:fmtAEDR(totalVal),sub:rows.length.toLocaleString()+' return orders',col:'#e84b4b'},
     {lbl:'INVOICE CANCELLATIONS',val:invCount.toLocaleString(),sub:fmtAEDR(invVal)+' · '+(totalVal>0?Math.round(invVal/totalVal*100):0)+'%',col:'var(--gold)'},
     {lbl:'GRV RETURNS',val:grvCount.toLocaleString(),sub:fmtAEDR(grvVal)+' · '+(totalVal>0?Math.round(grvVal/totalVal*100):0)+'%',col:'var(--gold)'},
-    {lbl:'TOP WAREHOUSE',val:topWH,sub:fmtAEDR(whMap[topWH]||0)+' · '+(totalVal>0?Math.round((whMap[topWH]||0)/totalVal*100):0)+'%',col:'var(--text)'}
+    {lbl:'TOP WAREHOUSE',val:topWH,sub:fmtAEDR(whMap[topWH]||0)+' · '+Math.min(100,(totalVal>0?Math.round((whMap[topWH]||0)/totalVal*100):0))+'%',col:'var(--gold)'}
   ].map(function(k){
     return '<div style="background:var(--card);border:1px solid var(--border);padding:14px;">'
       +'<div style="font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">'+k.lbl+'</div>'
       +'<div style="font-family:Cormorant Garamond,serif;font-size:26px;font-weight:700;color:'+k.col+';">'+k.val+'</div>'
-      +'<div style="font-size:10px;color:var(--muted);margin-top:4px;">'+k.sub+'</div>'
+      +'<div style="font-size:10px;color:var(--gold);margin-top:4px;">'+k.sub+'</div>'
       +'</div>';
   }).join('');
 
