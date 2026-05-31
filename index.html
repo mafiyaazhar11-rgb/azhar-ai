@@ -468,8 +468,7 @@ footer span{color:var(--gold);}
   <button class="sb-item" onclick="goTab('backlog',this)"><span class="icon">📦</span> WH Backlog</button>
   <button class="sb-item" onclick="goTab('returns',this)"><span class="icon">🔄</span> Market Returns</button>
   <button class="sb-item" onclick="goTab('sales',this)"><span class="icon">📊</span> Order Summary</button>
-      <button class="sb-item" onclick="goTab('invsales',this)"><span class="icon">🧾</span> Invoiced Today Sales</button>
-</aside>
+      </aside>
 
 <div class="main" id="mainContent">
     <div class="topbar">
@@ -1128,15 +1127,10 @@ function goTab(id,btn){
   loadBacklogFromServer();
   loadReturnsFromServer();
   if(id==='sales') loadSalesFromServer();
-  if(id==='invsales') loadInvSalesFromServer();
   // Update JARVIS current tab
   VC_CURRENT_TAB = id;
   // Show/hide inv star based on tab and role
-  var invStar = document.getElementById('inv-star-wrap');
-  if (invStar) {
-    var canUpload = AUTH_USER && (AUTH_USER.role === 'superadmin' || AUTH_USER.role === 'subadmin');
-    invStar.style.display = (id === 'invsales' && canUpload) ? 'block' : 'none';
-  }
+
 }
 
 //  UTILS 
@@ -4081,364 +4075,6 @@ function loadSalesFromServer(){
 loadSalesFromServer();
 
 
-// ═══════════════ INVOICED TODAY SALES DASHBOARD ═══════════════
-var INV_RAW = [];
-var INV_FILTERS = { manager:'all', brand:'all', area:'all' };
-var INV_CHARTS = {};
-var INV_SUMMARY = null;
-
-function handleInvSalesUpload(input) {
-  var file = input.files[0]; if (!file) return;
-  var reader = new FileReader();
-  reader.onload = function(e) {
-    try {
-      var data = new Uint8Array(e.target.result);
-      var wb = XLSX.read(data, { type:'array' });
-      var rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval:'' });
-      if (!rows.length) { alert('No data found'); return; }
-      INV_RAW = rows;
-      INV_FILTERS = { manager:'all', brand:'all', area:'all' };
-      renderInvSales();
-      // Check if data is old (>24 hours)
-      checkInvDataAge(rows);
-      // Update status
-      var dateStr = getInvDate(rows);
-      document.getElementById('inv-last-date').textContent = dateStr;
-      document.getElementById('inv-file-name').textContent = file.name;
-      document.getElementById('inv-sales-nodata').style.display = 'none';
-      document.getElementById('inv-sales-dashboard').style.display = 'block';
-      // Save to DB for persistence
-      saveInvSalesToServer(file.name);
-    } catch(e) { alert('Error reading file: ' + e.message); }
-  };
-  reader.readAsArrayBuffer(file);
-}
-
-function getInvDate(rows) {
-  if (!rows || !rows.length) return '—';
-  var row = rows[0];
-  var keys = Object.keys(row);
-  var dateKey = keys.find(function(k){ return k.toUpperCase().includes('INVOICE_DATE') || k.toUpperCase().includes('INVOICE DATE'); });
-  if (dateKey && row[dateKey]) return String(row[dateKey]).split(' ')[0];
-  return '—';
-}
-
-function checkInvDataAge(rows) {
-  var dateStr = getInvDate(rows);
-  if (!dateStr || dateStr === '—') return;
-  try {
-    var parts = dateStr.split('/');
-    var invoiceDate;
-    if (parts.length === 3) {
-      // M/D/YYYY format
-      invoiceDate = new Date(parseInt(parts[2]), parseInt(parts[0])-1, parseInt(parts[1]));
-    } else {
-      invoiceDate = new Date(dateStr);
-    }
-    var now = new Date();
-    var diffHours = (now - invoiceDate) / (1000 * 60 * 60);
-    if (diffHours > 24) {
-      var warning = document.getElementById('inv-old-warning');
-      var msg = document.getElementById('inv-old-date-msg');
-      if (warning && msg) {
-        var d = invoiceDate.toLocaleDateString('en-AE', {day:'numeric',month:'long',year:'numeric'});
-        msg.textContent = 'Data is from ' + d + ' — more than 24 hours old. Please upload today file.';
-        warning.style.display = 'block';
-      }
-    }
-  } catch(e) {}
-}
-
-function invFilter(type, val) {
-  INV_FILTERS[type] = val;
-  // Update pill styles
-  var maps = { manager:'inv-manager-pills', brand:'inv-brand-pills', area:'inv-area-pills' };
-  var container = document.getElementById(maps[type]);
-  if (container) {
-    container.querySelectorAll('.ret-pill').forEach(function(btn) {
-      btn.classList.toggle('on', btn.getAttribute('data-val') === val);
-    });
-  }
-  renderInvSales();
-}
-
-function getFilteredInvRows() {
-  return INV_RAW.filter(function(row) {
-    var keys = Object.keys(row);
-    function fc() { var names=Array.prototype.slice.call(arguments); return keys.find(function(k){ return names.some(function(n){ return k.toUpperCase().includes(n.toUpperCase()); })||null; }); }
-    var mgrKey = fc('MANAGER');
-    var brandKey = fc('BRAND');
-    var areaKey = fc('AREA');
-    if (INV_FILTERS.manager !== 'all' && mgrKey && String(row[mgrKey]).trim() !== INV_FILTERS.manager) return false;
-    if (INV_FILTERS.brand !== 'all' && brandKey && String(row[brandKey]).trim() !== INV_FILTERS.brand) return false;
-    if (INV_FILTERS.area !== 'all' && areaKey && String(row[areaKey]).trim() !== INV_FILTERS.area) return false;
-    return true;
-  });
-}
-
-function renderInvSales() {
-  if (!INV_RAW.length) return;
-  var rows = getFilteredInvRows();
-  var keys = Object.keys(INV_RAW[0]);
-
-  function fc() { var names=Array.prototype.slice.call(arguments); return keys.find(function(k){ return names.some(function(n){ return k.toUpperCase().includes(n.toUpperCase()); })||null; }) || null; }
-
-  var C = {
-    brand:    fc('BRAND'),
-    bu:       fc('BUSINESS_UNIT','BUSINESS UNIT','BU'),
-    cust:     fc('CUSTOMER_NAME','CUSTOMER NAME','CUSTOMER'),
-    group:    fc('GROUP'),
-    channel:  fc('CHANNEL'),
-    area:     fc('AREA'),
-    manager:  fc('MANAGER'),
-    salesman: fc('SALESMAN'),
-    qty:      fc('QUANTITY','QTY'),
-    bns:      fc('BNS'),
-    value:    fc('VALUE',' VALUE','AMOUNT'),
-    invoiceNo:fc('INVOICE_NO','INVOICE NO','INVOICE NUMBER'),
-    invDate:  fc('INVOICE_DATE','INVOICE DATE'),
-    status:   fc('SALES_STATUS','SALES STATUS','STATUS'),
-  };
-
-  // Build aggregations
-  var totalVal=0, totalQty=0, totalBNS=0, invoiceSet=new Set(), custSet=new Set();
-  var brandMap={}, buMap={}, mgrMap={}, salesmanMap={}, custMap={}, areaMap={};
-
-  rows.forEach(function(row) {
-    var val = Math.abs(parseFloat(String(row[C.value]||'0').replace(/,/g,''))||0);
-    var qty = parseFloat(String(row[C.qty]||'0').replace(/,/g,''))||0;
-    var bns = parseFloat(String(row[C.bns]||'0').replace(/,/g,''))||0;
-    var brand = String(row[C.brand]||'').trim();
-    var bu = String(row[C.bu]||'').trim();
-    var mgr = String(row[C.manager]||'').trim();
-    var salesman = String(row[C.salesman]||'').trim();
-    var cust = String(row[C.cust]||'').trim();
-    var group = String(row[C.group]||'').trim();
-    var channel = String(row[C.channel]||'').trim();
-    var area = String(row[C.area]||'').trim();
-    var invNo = String(row[C.invoiceNo]||'').trim();
-
-    totalVal += val; totalQty += qty; totalBNS += bns;
-    if (invNo) invoiceSet.add(invNo);
-    if (cust) custSet.add(cust);
-
-    if (brand) { if(!brandMap[brand]) brandMap[brand]={val:0,qty:0,bns:0,inv:new Set(),bu:bu}; brandMap[brand].val+=val; brandMap[brand].qty+=qty; brandMap[brand].bns+=bns; if(invNo)brandMap[brand].inv.add(invNo); }
-    if (bu) { if(!buMap[bu]) buMap[bu]={val:0,qty:0}; buMap[bu].val+=val; buMap[bu].qty+=qty; }
-    if (mgr) { if(!mgrMap[mgr]) mgrMap[mgr]={val:0,qty:0,inv:new Set()}; mgrMap[mgr].val+=val; mgrMap[mgr].qty+=qty; if(invNo)mgrMap[mgr].inv.add(invNo); }
-    if (salesman) { if(!salesmanMap[salesman]) salesmanMap[salesman]={val:0,inv:new Set(),mgr:mgr}; salesmanMap[salesman].val+=val; if(invNo)salesmanMap[salesman].inv.add(invNo); }
-    if (cust) { if(!custMap[cust]) custMap[cust]={val:0,qty:0,group:group,channel:channel}; custMap[cust].val+=val; custMap[cust].qty+=qty; }
-    if (area) { if(!areaMap[area]) areaMap[area]=0; areaMap[area]+=val; }
-  });
-
-  // Store summary for JARVIS
-  INV_SUMMARY = { totalVal:totalVal, totalQty:totalQty, totalBNS:totalBNS, invoiceCount:invoiceSet.size, custCount:custSet.size, brandMap:brandMap, buMap:buMap, mgrMap:mgrMap, salesmanMap:salesmanMap };
-
-  // Helper
-  function fmtV(v){ return v>=1000000?(v/1000000).toFixed(2)+'M':v>=1000?Math.round(v/1000)+'K':Math.round(v).toString(); }
-  function fmtFull(v){ return 'AED '+Math.round(v).toLocaleString(); }
-
-  // KPIs
-  document.getElementById('inv-total-val').textContent = 'AED ' + fmtV(totalVal);
-  document.getElementById('inv-total-inv').textContent = invoiceSet.size.toLocaleString() + ' invoices';
-  document.getElementById('inv-total-qty').textContent = Math.round(totalQty).toLocaleString();
-  document.getElementById('inv-total-cust').textContent = custSet.size.toLocaleString() + ' customers';
-
-  var topBrand = Object.keys(brandMap).sort(function(a,b){return brandMap[b].val-brandMap[a].val;})[0];
-  if (topBrand) { document.getElementById('inv-top-brand').textContent = topBrand; document.getElementById('inv-top-brand-val').textContent = fmtFull(brandMap[topBrand].val); }
-
-  var topMgr = Object.keys(mgrMap).sort(function(a,b){return mgrMap[b].val-mgrMap[a].val;})[0];
-  if (topMgr) { document.getElementById('inv-top-mgr').textContent = topMgr.split(' ').slice(-2).join(' '); document.getElementById('inv-top-mgr-val').textContent = fmtFull(mgrMap[topMgr].val); }
-
-  // Build filter pills
-  function buildPills(containerId, type, vals, current) {
-    var el = document.getElementById(containerId); if (!el) return;
-    var all = [];
-    all.push('<button class="ret-pill' + (current==='all'?' on':'') + '" data-val="all" onclick="invFilter(\'' + type + '\',\'all\')">ALL</button>');
-    vals.forEach(function(v){ 
-      var sv = v.replace(/'/g,'');
-      all.push('<button class="ret-pill' + (current===v?' on':'') + '" data-val="' + sv + '" onclick="invFilter(\'' + type + '\',\'' + sv + '\')">' + v + '</button>'); 
-    });
-    el.innerHTML = all.join('');
-  }
-  buildPills('inv-manager-pills','manager',Object.keys(mgrMap).sort(),INV_FILTERS.manager);
-  buildPills('inv-brand-pills','brand',Object.keys(brandMap).sort(),INV_FILTERS.brand);
-  buildPills('inv-area-pills','area',Object.keys(areaMap).sort(),INV_FILTERS.area);
-
-  // Brand chart — use requestAnimationFrame so wrapper div is rendered first
-  var brandsSorted = Object.keys(brandMap).sort(function(a,b){return brandMap[b].val-brandMap[a].val;}).slice(0,10);
-  var bColors = ['#c9a84c','#5b8dee','#4ecb8d','#e84b4b','#e8854b','#9b59b6','#c9a84c','#5b8dee','#4ecb8d','#e84b4b'];
-  var buKeys = Object.keys(buMap).sort(function(a,b){return buMap[b].val-buMap[a].val;});
-  setTimeout(function(){
-    var bEl = document.getElementById('inv-brand-chart');
-    var buEl = document.getElementById('inv-bu-chart');
-    if (bEl) {
-      if (INV_CHARTS.brand) INV_CHARTS.brand.destroy();
-      INV_CHARTS.brand = new Chart(bEl.getContext('2d'), { type:'bar', data:{ labels:brandsSorted, datasets:[{ data:brandsSorted.map(function(b){return Math.round(brandMap[b].val);}), backgroundColor:bColors, borderRadius:3 }] }, options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ x:{ticks:{color:'#7a7660',font:{size:8},maxRotation:45}}, y:{ticks:{color:'#7a7660',font:{size:8},callback:function(v){return 'AED '+fmtV(v);}}}} } });
-    }
-    if (buEl) {
-      if (INV_CHARTS.bu) INV_CHARTS.bu.destroy();
-      INV_CHARTS.bu = new Chart(buEl.getContext('2d'), { type:'doughnut', data:{ labels:buKeys, datasets:[{ data:buKeys.map(function(b){return Math.round(buMap[b].val);}), backgroundColor:bColors, borderWidth:1 }] }, options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom',labels:{color:'#7a7660',font:{size:8},boxWidth:8}}} } });
-    }
-  }, 50);
-
-  // Manager table
-  var mgrSorted = Object.keys(mgrMap).sort(function(a,b){return mgrMap[b].val-mgrMap[a].val;});
-  document.getElementById('inv-mgr-table').innerHTML = mgrSorted.map(function(m,i){
-    var d = mgrMap[m];
-    var col = i===0?'#c9a84c':i===1?'#5b8dee':i===2?'#4ecb8d':'#f5f0e8';
-    return '<tr><td style="color:'+col+';font-weight:'+(i<3?'700':'400')+';">'+m+'</td><td style="text-align:right;color:var(--muted);">'+((d.inv&&d.inv.size!==undefined)?d.inv.size:(d.invCount||0))+'</td>'+'<td style="text-align:right;color:var(--muted);">'+Math.round(d.qty).toLocaleString()+'</td><td style="text-align:right;color:'+col+';font-weight:600;">'+fmtFull(d.val)+'</td></tr>';
-  }).join('');
-
-  // Salesman table
-  var salesSorted = Object.keys(salesmanMap).sort(function(a,b){return salesmanMap[b].val-salesmanMap[a].val;}).slice(0,10);
-  document.getElementById('inv-salesman-table').innerHTML = salesSorted.map(function(s,i){
-    var d = salesmanMap[s];
-    return '<tr><td style="color:var(--muted);text-align:center;">'+(i+1)+'</td><td style="color:#f5f0e8;">'+s+'</td><td style="text-align:right;color:var(--muted);">'+((d.inv&&d.inv.size!==undefined)?d.inv.size:(d.invCount||0))+'</td>'+'<td style="text-align:right;color:var(--gold);font-weight:600;">'+fmtFull(d.val)+'</td></tr>';
-  }).join('');
-
-  // Top customers
-  var custSorted = Object.keys(custMap).sort(function(a,b){return custMap[b].val-custMap[a].val;}).slice(0,15);
-  document.getElementById('inv-cust-table').innerHTML = custSorted.map(function(c,i){
-    var d = custMap[c];
-    return '<tr><td style="color:var(--muted);">'+(i+1)+'</td><td style="color:#f5f0e8;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+c+'</td><td style="color:var(--muted);font-size:10px;">'+d.group+'</td><td style="color:var(--muted);font-size:10px;">'+d.channel+'</td><td style="text-align:right;color:var(--muted);">'+Math.round(d.qty).toLocaleString()+'</td><td style="text-align:right;color:var(--gold);font-weight:600;">'+fmtFull(d.val)+'</td></tr>';
-  }).join('');
-
-  // Brand detail table
-  var brandAllSorted = Object.keys(brandMap).sort(function(a,b){return brandMap[b].val-brandMap[a].val;});
-  document.getElementById('inv-brand-table').innerHTML = brandAllSorted.map(function(b){
-    var d = brandMap[b];
-    return '<tr><td style="color:var(--gold);font-weight:600;">'+b+'</td><td style="color:var(--muted);font-size:10px;">'+d.bu+'</td><td style="text-align:center;color:#f5f0e8;">'+d.inv.size+'</td><td style="text-align:right;color:var(--muted);">'+Math.round(d.qty).toLocaleString()+'</td><td style="text-align:right;color:var(--muted);">'+Math.round(d.bns).toLocaleString()+'</td><td style="text-align:right;color:var(--gold);font-weight:600;">'+fmtFull(d.val)+'</td></tr>';
-  }).join('');
-
-  document.getElementById('inv-sales-nodata').style.display = 'none';
-  document.getElementById('inv-sales-dashboard').style.display = 'block';
-}
-
-// ── INV SALES UPLOAD PASSWORD ──
-function invShowUpload() {
-  document.getElementById('inv-pwd-modal').style.display = 'flex';
-  document.getElementById('inv-pwd-input').value = '';
-  document.getElementById('inv-pwd-error').style.display = 'none';
-  setTimeout(function(){ document.getElementById('inv-pwd-input').focus(); }, 100);
-}
-
-function invPwdConfirm() {
-  var pwd = document.getElementById('inv-pwd-input').value;
-  fetch('/api/backlog/check-password', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-auth-token': AUTH_TOKEN },
-    body: JSON.stringify({ password: pwd })
-  })
-  .then(function(r){ return r.json(); })
-  .then(function(d){
-    if (d.ok) {
-      document.getElementById('inv-pwd-modal').style.display = 'none';
-      document.getElementById('inv-file-input').click();
-    } else {
-      document.getElementById('inv-pwd-error').style.display = 'block';
-      document.getElementById('inv-pwd-input').value = '';
-      document.getElementById('inv-pwd-input').focus();
-    }
-  })
-  .catch(function(){ document.getElementById('inv-pwd-error').style.display = 'block'; });
-}
-
-function invPwdCancel() {
-  document.getElementById('inv-pwd-modal').style.display = 'none';
-  document.getElementById('inv-pwd-input').value = '';
-}
-
-// ── INVSALES DB SAVE / LOAD ──
-function saveInvSalesToServer(fileName) {
-  if (!INV_RAW || !INV_RAW.length) return;
-  // Build a serializable summary (no Sets)
-  var keys = Object.keys(INV_RAW[0]);
-  function fc() { var names = Array.prototype.slice.call(arguments); return keys.find(function(k){ return names.some(function(n){ return k.toUpperCase().includes(n.toUpperCase()); }); }) || null; }
-  var C = { brand:fc('BRAND'), bu:fc('BUSINESS_UNIT','BUSINESS UNIT','BU'), cust:fc('CUSTOMER_NAME','CUSTOMER NAME','CUSTOMER'), group:fc('GROUP'), channel:fc('CHANNEL'), area:fc('AREA'), manager:fc('MANAGER'), salesman:fc('SALESMAN'), qty:fc('QUANTITY','QTY'), bns:fc('BNS'), value:fc('VALUE','AMOUNT'), invNo:fc('INVOICE_NO','INVOICE NO','INVOICE NUMBER'), invDate:fc('INVOICE_DATE','INVOICE DATE') };
-  var totalVal=0, totalQty=0, invoiceSet=new Set(), custSet=new Set();
-  var brandMap={}, buMap={}, mgrMap={}, salesMap={}, custMap={}, areaMap={};
-  INV_RAW.forEach(function(row) {
-    var val=Math.abs(parseFloat(String(row[C.value]||'0').replace(/,/g,''))||0);
-    var qty=parseFloat(String(row[C.qty]||'0').replace(/,/g,''))||0;
-    var bns=parseFloat(String(row[C.bns]||'0').replace(/,/g,''))||0;
-    var brand=String(row[C.brand]||'').trim(), bu=String(row[C.bu]||'').trim(), mgr=String(row[C.manager]||'').trim();
-    var salesman=String(row[C.salesman]||'').trim(), cust=String(row[C.cust]||'').trim();
-    var group=String(row[C.group]||'').trim(), channel=String(row[C.channel]||'').trim(), area=String(row[C.area]||'').trim();
-    var invNo=String(row[C.invNo]||'').trim();
-    totalVal+=val; totalQty+=qty;
-    if(invNo) invoiceSet.add(invNo); if(cust) custSet.add(cust);
-    if(brand){if(!brandMap[brand])brandMap[brand]={val:0,qty:0,bns:0,invCount:0,bu:bu};brandMap[brand].val+=val;brandMap[brand].qty+=qty;brandMap[brand].bns+=bns;if(invNo)brandMap[brand].invCount++;}
-    if(bu){if(!buMap[bu])buMap[bu]={val:0,qty:0};buMap[bu].val+=val;buMap[bu].qty+=qty;}
-    if(mgr){if(!mgrMap[mgr])mgrMap[mgr]={val:0,qty:0,invCount:0};mgrMap[mgr].val+=val;mgrMap[mgr].qty+=qty;if(invNo)mgrMap[mgr].invCount++;}
-    if(salesman){if(!salesMap[salesman])salesMap[salesman]={val:0,invCount:0,mgr:mgr};salesMap[salesman].val+=val;if(invNo)salesMap[salesman].invCount++;}
-    if(cust){if(!custMap[cust])custMap[cust]={val:0,qty:0,group:group,channel:channel};custMap[cust].val+=val;custMap[cust].qty+=qty;}
-    if(area){if(!areaMap[area])areaMap[area]=0;areaMap[area]+=val;}
-  });
-  var summary = { version:'v1', totalVal:totalVal, totalQty:totalQty, invoiceCount:invoiceSet.size, custCount:custSet.size, brandMap:brandMap, buMap:buMap, mgrMap:mgrMap, salesMap:salesMap, custMap:custMap, areaMap:areaMap, dateStr:getInvDate(INV_RAW) };
-  try {
-    fetch('/api/invsales/upload', {
-      method:'POST', headers:{'Content-Type':'application/json','x-auth-token':AUTH_TOKEN},
-      body: JSON.stringify({ summary:summary, fileName:fileName, uploadedBy:'Admin', totalOrders:summary.invoiceCount })
-    }).then(function(r){return r.json();}).then(function(d){
-      if(d&&d.success) console.log('InvSales saved to DB');
-      else console.error('InvSales save failed:', d);
-    }).catch(function(e){console.error('InvSales save error:',e.message);});
-  } catch(e) { console.error('InvSales save error:', e.message); }
-}
-
-function loadInvSalesFromServer() {
-  if (!AUTH_TOKEN) return;
-  fetch('/api/invsales/status', { headers: { 'x-auth-token': AUTH_TOKEN } })
-  .then(function(r){ return r.json(); })
-  .then(function(d) {
-    if (!d || !d.hasData || !d.summary || d.summary.version !== 'v1') return;
-    var s = d.summary;
-    // Restore display from saved summary
-    var brandMap=s.brandMap||{}, mgrMap=s.mgrMap||{}, buMap=s.buMap||{}, salesMap=s.salesMap||{}, custMap=s.custMap||{};
-    function fmtV(v){ return v>=1000000?(v/1000000).toFixed(2)+'M':v>=1000?Math.round(v/1000)+'K':Math.round(v).toString(); }
-    function fmtFull(v){ return 'AED '+Math.round(v).toLocaleString(); }
-    // KPIs
-    document.getElementById('inv-total-val').textContent = 'AED ' + fmtV(s.totalVal||0);
-    document.getElementById('inv-total-inv').textContent = (s.invoiceCount||0).toLocaleString() + ' invoices';
-    document.getElementById('inv-total-qty').textContent = Math.round(s.totalQty||0).toLocaleString();
-    document.getElementById('inv-total-cust').textContent = (s.custCount||0).toLocaleString() + ' customers';
-    var topBrand=Object.keys(brandMap).sort(function(a,b){return brandMap[b].val-brandMap[a].val;})[0];
-    if(topBrand){document.getElementById('inv-top-brand').textContent=topBrand;document.getElementById('inv-top-brand-val').textContent=fmtFull(brandMap[topBrand].val);}
-    var topMgr=Object.keys(mgrMap).sort(function(a,b){return mgrMap[b].val-mgrMap[a].val;})[0];
-    if(topMgr){document.getElementById('inv-top-mgr').textContent=topMgr.split(' ').slice(-2).join(' ');document.getElementById('inv-top-mgr-val').textContent=fmtFull(mgrMap[topMgr].val);}
-    // Status
-    document.getElementById('inv-last-date').textContent = s.dateStr||'—';
-    document.getElementById('inv-file-name').textContent = d.fileName||'—';
-    // Pills
-    function buildPill(cid, type, vals) {
-      var el=document.getElementById(cid); if(!el) return;
-      var html='<button class="ret-pill on" data-type="'+type+'" data-val="all">ALL</button>';
-      vals.forEach(function(v){
-        var sv=v.replace(/"/g,'');
-        html+='<button class="ret-pill" data-type="'+type+'" data-val="'+sv+'">'+v+'</button>';
-      });
-      el.innerHTML=html;
-      el.querySelectorAll('.ret-pill').forEach(function(btn){
-        btn.addEventListener('click',function(){invFilter(this.dataset.type,this.dataset.val);});
-      });
-    }
-    buildPill('inv-manager-pills','manager',Object.keys(mgrMap).sort());
-    buildPill('inv-brand-pills','brand',Object.keys(brandMap).sort());
-    buildPill('inv-area-pills','area',Object.keys(s.areaMap||{}).sort());
-    // Manager table
-    document.getElementById('inv-mgr-table').innerHTML=Object.keys(mgrMap).sort(function(a,b){return mgrMap[b].val-mgrMap[a].val;}).map(function(m,i){var v=mgrMap[m];var col=i===0?'#c9a84c':i===1?'#5b8dee':i===2?'#4ecb8d':'#f5f0e8';return '<tr><td style="color:'+col+';font-weight:'+(i<3?700:400)+';">'+m+'</td><td style="text-align:right;color:var(--muted);">'+(v.invCount||0)+'</td><td style="text-align:right;color:var(--muted);">'+Math.round(v.qty||0).toLocaleString()+'</td><td style="text-align:right;color:'+col+';font-weight:600;">'+fmtFull(v.val)+'</td></tr>';}).join('');
-    // Salesmen table
-    document.getElementById('inv-salesman-table').innerHTML=Object.keys(salesMap).sort(function(a,b){return salesMap[b].val-salesMap[a].val;}).slice(0,10).map(function(s,i){var v=salesMap[s];return '<tr><td style="color:var(--muted);text-align:center;">'+(i+1)+'</td><td style="color:#f5f0e8;">'+s+'</td><td style="text-align:right;color:var(--muted);">'+(v.invCount||0)+'</td><td style="text-align:right;color:var(--gold);font-weight:600;">'+fmtFull(v.val)+'</td></tr>';}).join('');
-    // Customers table
-    document.getElementById('inv-cust-table').innerHTML=Object.keys(custMap).sort(function(a,b){return custMap[b].val-custMap[a].val;}).slice(0,15).map(function(c,i){var v=custMap[c];return '<tr><td style="color:var(--muted);">'+(i+1)+'</td><td style="color:#f5f0e8;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+c+'</td><td style="color:var(--muted);font-size:10px;">'+v.group+'</td><td style="color:var(--muted);font-size:10px;">'+v.channel+'</td><td style="text-align:right;color:var(--muted);">'+Math.round(v.qty||0).toLocaleString()+'</td><td style="text-align:right;color:var(--gold);font-weight:600;">'+fmtFull(v.val)+'</td></tr>';}).join('');
-    // Brand table
-    document.getElementById('inv-brand-table').innerHTML=Object.keys(brandMap).sort(function(a,b){return brandMap[b].val-brandMap[a].val;}).map(function(b){var v=brandMap[b];return '<tr><td style="color:var(--gold);font-weight:600;">'+b+'</td><td style="color:var(--muted);font-size:10px;">'+v.bu+'</td><td style="text-align:center;color:#f5f0e8;">'+(v.invCount||0)+'</td><td style="text-align:right;color:var(--muted);">'+Math.round(v.qty||0).toLocaleString()+'</td><td style="text-align:right;color:var(--muted);">'+Math.round(v.bns||0).toLocaleString()+'</td><td style="text-align:right;color:var(--gold);font-weight:600;">'+fmtFull(v.val)+'</td></tr>';}).join('');
-    document.getElementById('inv-sales-nodata').style.display = 'none';
-    document.getElementById('inv-sales-dashboard').style.display = 'block';
-  })
-  .catch(function(e){ console.log('InvSales load error:', e.message); });
-}
-
 
 // ═══════════════ VOICE COMMAND SYSTEM ═══════════════
 var vcListening = false;
@@ -4502,16 +4138,7 @@ var JARVIS_QUICK_CMDS = {
     'What is SharkNinja sales?',
     'What is GSEB sales?'
   ],
-  invsales: [
-    'What is total invoiced sales today?',
-    'What is BLT brand sales?',
-    'Who is the top manager today?',
-    'Who are the top salesmen?',
-    'What is the top brand today?',
-    'Who are the top customers?',
-    'What is sales by business unit?',
-    'What is total quantity sold?'
-  ],
+
   summary: ['Give me operations summary today'],
   email: ['Help me write an email'],
   invoice: ['Help me create an invoice']
@@ -5092,38 +4719,6 @@ function buildVoiceContext() {
       }
     }
 
-    if (VC_CURRENT_TAB === 'invsales') {
-      if (INV_SUMMARY) {
-        var is = INV_SUMMARY;
-        ctx += 'Invoiced Today Sales Dashboard. | ';
-        ctx += 'Total Value: AED ' + Math.round(is.totalVal||0).toLocaleString() + ' | ';
-        ctx += 'Total Invoices: ' + (is.invoiceCount||0) + ' | ';
-        ctx += 'Total Qty: ' + Math.round(is.totalQty||0).toLocaleString() + ' | ';
-        ctx += 'Customers: ' + (is.custCount||0) + ' | ';
-        if (is.brandMap) {
-          ctx += 'Sales by Brand: ';
-          Object.keys(is.brandMap).sort(function(a,b){return is.brandMap[b].val-is.brandMap[a].val;}).slice(0,10).forEach(function(b){ ctx += b + ':AED ' + Math.round(is.brandMap[b].val).toLocaleString() + '(' + is.brandMap[b].inv.size + ' inv) '; });
-          ctx += ' | ';
-        }
-        if (is.mgrMap) {
-          ctx += 'Sales by Manager: ';
-          Object.keys(is.mgrMap).sort(function(a,b){return is.mgrMap[b].val-is.mgrMap[a].val;}).forEach(function(m){ ctx += m + ':AED ' + Math.round(is.mgrMap[m].val).toLocaleString() + ' '; });
-          ctx += ' | ';
-        }
-        if (is.salesmanMap) {
-          ctx += 'Top Salesmen: ';
-          Object.keys(is.salesmanMap).sort(function(a,b){return is.salesmanMap[b].val-is.salesmanMap[a].val;}).slice(0,5).forEach(function(s){ ctx += s + ':AED ' + Math.round(is.salesmanMap[s].val).toLocaleString() + ' '; });
-          ctx += ' | ';
-        }
-        if (is.buMap) {
-          ctx += 'Sales by BU: ';
-          Object.keys(is.buMap).forEach(function(b){ ctx += b + ':AED ' + Math.round(is.buMap[b].val).toLocaleString() + ' '; });
-          ctx += ' | ';
-        }
-      } else {
-        ctx += 'Invoiced Sales dashboard. No data uploaded yet. | ';
-      }
-    }
 
     if (VC_CURRENT_TAB === 'sales' && typeof SALES_DATA !== 'undefined' && SALES_DATA) {
       var sd = SALES_DATA;
@@ -5319,7 +4914,6 @@ function showApp() {
   addUserInfoTopbar();
   showDemoBanner();
   loadSalesFromServer();
-  loadInvSalesFromServer();
   if(AUTH_USER && AUTH_USER.must_change_password) {
     document.getElementById('change-pwd-modal').style.display = 'flex';
   }
@@ -5367,9 +4961,7 @@ function applyUploadAccess() {
     var el = document.getElementById(id);
     if(el) el.style.display = canUpload ? 'block' : 'none';
   });
-  // inv star only shows on invsales tab
-  var invStar = document.getElementById('inv-star-wrap');
-  if(invStar) invStar.style.display = (canUpload && VC_CURRENT_TAB === 'invsales') ? 'block' : 'none';
+
 }
 
 function addUserInfoTopbar() {
@@ -5633,83 +5225,7 @@ function startInactivityWatcher() {
 window.addEventListener('load', authBoot);
 </script>
 <!-- WH Backlog Password Modal -->
-<div id="invsales" class="panel">
 
-  <!-- Old data warning popup -->
-  <div id="inv-old-warning" style="display:none;position:fixed;top:70px;left:50%;transform:translateX(-50%);background:#1a0a00;border:2px solid #e84b4b;padding:12px 24px;z-index:999;text-align:center;min-width:300px;">
-    <div style="font-size:11px;color:#e84b4b;font-weight:700;letter-spacing:1px;">⚠ OLD DATA WARNING</div>
-    <div id="inv-old-date-msg" style="font-size:11px;color:#f5f0e8;margin-top:4px;"></div>
-    <button onclick="document.getElementById('inv-old-warning').style.display='none'" style="margin-top:8px;background:transparent;border:1px solid rgba(232,75,75,0.4);color:#e84b4b;font-size:9px;padding:3px 12px;cursor:pointer;font-family:Montserrat,sans-serif;">DISMISS</button>
-  </div>
-
-  <!-- Single hidden file input used by both star clicks -->
-  <input type="file" id="inv-file-input" accept=".xlsx,.xls,.csv" style="display:none;" onchange="handleInvSalesUpload(this)">
-
-  <!-- No data state -->
-  <div id="inv-sales-nodata" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:60vh;gap:16px;">
-    <div style="font-size:40px;">🧾</div>
-    <div style="font-size:13px;color:var(--gold);letter-spacing:2px;">NO DATA LOADED</div>
-    <div style="font-size:11px;color:var(--muted);">Click ✦ star (bottom right) to upload</div>
-  </div>
-
-  <!-- Dashboard state -->
-  <div id="inv-sales-dashboard" style="display:none;">
-
-    <!-- Status badge -->
-    <div id="inv-status-badge" style="background:rgba(78,203,141,0.1);border:1px solid rgba(78,203,141,0.3);padding:5px 14px;font-size:10px;color:#4ecb8d;letter-spacing:1px;margin-bottom:10px;">
-      ✓ LOADED — <span id="inv-last-date">—</span> — <span id="inv-file-name">—</span>
-    </div>
-
-    <!-- Filters — single compact scrollable row per filter -->
-    <div style="background:var(--surface);border:1px solid var(--border);border-top:2px solid var(--gold);padding:8px 12px;margin-bottom:12px;">
-      <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
-        <span style="font-size:9px;color:var(--muted);letter-spacing:1px;width:60px;flex-shrink:0;text-transform:uppercase;">Manager</span>
-        <div id="inv-manager-pills" style="display:flex;gap:4px;overflow-x:auto;flex:1;scrollbar-width:none;white-space:nowrap;"></div>
-      </div>
-      <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
-        <span style="font-size:9px;color:var(--muted);letter-spacing:1px;width:60px;flex-shrink:0;text-transform:uppercase;">Brand</span>
-        <div id="inv-brand-pills" style="display:flex;gap:4px;overflow-x:auto;flex:1;scrollbar-width:none;white-space:nowrap;"></div>
-      </div>
-      <div style="display:flex;align-items:center;gap:6px;">
-        <span style="font-size:9px;color:var(--muted);letter-spacing:1px;width:60px;flex-shrink:0;text-transform:uppercase;">Area</span>
-        <div id="inv-area-pills" style="display:flex;gap:4px;overflow-x:auto;flex:1;scrollbar-width:none;white-space:nowrap;"></div>
-      </div>
-    </div>
-
-    <!-- KPIs — 4 equal columns, minmax so they never overflow -->
-    <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:12px;" id="inv-kpis">
-      <div class="box" style="padding:12px 14px;min-width:0;"><div style="font-size:8px;color:var(--muted);letter-spacing:1px;margin-bottom:4px;text-transform:uppercase;">Total Value</div><div style="font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:700;color:var(--gold);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" id="inv-total-val">—</div><div style="font-size:10px;color:var(--muted);" id="inv-total-inv">— invoices</div></div>
-      <div class="box" style="padding:12px 14px;min-width:0;"><div style="font-size:8px;color:var(--muted);letter-spacing:1px;margin-bottom:4px;text-transform:uppercase;">Total Qty</div><div style="font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:700;color:#5b8dee;" id="inv-total-qty">—</div><div style="font-size:10px;color:var(--muted);" id="inv-total-cust">— customers</div></div>
-      <div class="box" style="padding:12px 14px;min-width:0;"><div style="font-size:8px;color:var(--muted);letter-spacing:1px;margin-bottom:4px;text-transform:uppercase;">Top Brand</div><div style="font-family:'Cormorant Garamond',serif;font-size:16px;font-weight:700;color:#4ecb8d;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" id="inv-top-brand">—</div><div style="font-size:10px;color:var(--muted);" id="inv-top-brand-val">—</div></div>
-      <div class="box" style="padding:12px 14px;min-width:0;"><div style="font-size:8px;color:var(--muted);letter-spacing:1px;margin-bottom:4px;text-transform:uppercase;">Top Manager</div><div style="font-family:'Cormorant Garamond',serif;font-size:13px;font-weight:700;color:#e8854b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" id="inv-top-mgr">—</div><div style="font-size:10px;color:var(--muted);" id="inv-top-mgr-val">—</div></div>
-    </div>
-
-    <!-- Charts — equal columns, proper height wrapper so Chart.js renders correctly -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
-      <div class="box" style="min-width:0;"><div class="box-title">📊 Sales by Brand</div><div style="position:relative;height:130px;"><canvas id="inv-brand-chart"></canvas></div></div>
-      <div class="box" style="min-width:0;"><div class="box-title">🏢 Sales by BU</div><div style="position:relative;height:130px;"><canvas id="inv-bu-chart"></canvas></div></div>
-    </div>
-
-    <!-- Manager + Salesmen side by side -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
-      <div class="box" style="min-width:0;"><div class="box-title">👔 Manager Performance</div><div style="overflow-x:auto;"><table class="data-table" style="width:100%;"><thead><tr><th>Manager</th><th style="text-align:right;">Inv</th><th style="text-align:right;">Qty</th><th style="text-align:right;">Value</th></tr></thead><tbody id="inv-mgr-table"></tbody></table></div></div>
-      <div class="box" style="min-width:0;"><div class="box-title">🧑 Top Salesmen</div><div style="overflow-x:auto;"><table class="data-table" style="width:100%;"><thead><tr><th>#</th><th>Salesman</th><th style="text-align:right;">Inv</th><th style="text-align:right;">Value</th></tr></thead><tbody id="inv-salesman-table"></tbody></table></div></div>
-    </div>
-
-    <!-- Top Customers -->
-    <div class="box" style="margin-bottom:12px;min-width:0;"><div class="box-title">🏪 Top Customers</div><div style="overflow-x:auto;"><table class="data-table" style="width:100%;min-width:480px;"><thead><tr><th>#</th><th>Customer</th><th>Group</th><th>Channel</th><th style="text-align:right;">Qty</th><th style="text-align:right;">Value</th></tr></thead><tbody id="inv-cust-table"></tbody></table></div></div>
-
-    <!-- Brand Detail -->
-    <div class="box" style="margin-bottom:24px;min-width:0;"><div class="box-title">🔗 Brand Sales Detail</div><div style="overflow-x:auto;"><table class="data-table" style="width:100%;min-width:440px;"><thead><tr><th>Brand</th><th>BU</th><th style="text-align:center;">Inv</th><th style="text-align:right;">Qty</th><th style="text-align:right;">BNS</th><th style="text-align:right;">Value</th></tr></thead><tbody id="inv-brand-table"></tbody></table></div></div>
-
-  </div>
-
-  <!-- Star - Fixed Bottom Right - admin/subadmin only -->
-  <div id="inv-star-wrap" style="display:none;position:fixed;bottom:20px;right:20px;z-index:100;">
-    <button onclick="invShowUpload()" id="inv-star-btn" title="Upload Invoiced Sales" style="background:transparent;border:none;cursor:pointer;font-size:22px;color:var(--gold);opacity:0.25;transition:opacity 0.3s;padding:6px;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.25'">✦</button>
-  </div>
-
-</div>
 <div id="bl-pwd-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9999;align-items:center;justify-content:center;">
   <div style="background:var(--surface);border:1px solid var(--gold);padding:32px;min-width:340px;max-width:400px;position:relative;">
     <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--gold),transparent);"></div>
