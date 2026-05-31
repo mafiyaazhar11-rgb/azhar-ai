@@ -3969,6 +3969,118 @@ var INV_FILTERS = { manager:'all', brand:'all', area:'all' };
 var INV_CHARTS = {};
 var INV_SUMMARY = null;
 
+function saveInvSalesToServer(fileName) {
+  if (!INV_RAW.length) return;
+  // Compress: send a structured summary instead of raw rows (avoids 10MB limit)
+  var summary = buildInvSalesSummary();
+  summary.version = 'v1';
+  summary.dateStr = getInvDate(INV_RAW);
+  fetch('/api/invsales/upload', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-auth-token': AUTH_TOKEN },
+    body: JSON.stringify({ summary: summary, fileName: fileName, uploadedBy: 'Admin', totalOrders: summary.invoiceCount || INV_RAW.length })
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(d){ if(d && d.success) console.log('InvSales saved to server'); })
+  .catch(function(e){ console.log('InvSales save error:', e.message); });
+}
+
+function buildInvSalesSummary() {
+  if (!INV_RAW.length) return {};
+  var rows = INV_RAW;
+  var keys = Object.keys(rows[0]);
+  function fc() { var names = Array.prototype.slice.call(arguments); return keys.find(function(k){ return names.some(function(n){ return k.toUpperCase().includes(n.toUpperCase()); }); }) || null; }
+  var C = { brand:fc('BRAND'), bu:fc('BUSINESS_UNIT','BUSINESS UNIT','BU'), cust:fc('CUSTOMER_NAME','CUSTOMER NAME','CUSTOMER'), group:fc('GROUP'), channel:fc('CHANNEL'), area:fc('AREA'), manager:fc('MANAGER'), salesman:fc('SALESMAN'), qty:fc('QUANTITY','QTY'), bns:fc('BNS'), value:fc('VALUE',' VALUE','AMOUNT'), invoiceNo:fc('INVOICE_NO','INVOICE NO','INVOICE NUMBER'), invDate:fc('INVOICE_DATE','INVOICE DATE') };
+  var totalVal=0, totalQty=0, totalBNS=0, invoiceSet=new Set(), custSet=new Set();
+  var brandMap={}, buMap={}, mgrMap={}, salesmanMap={}, custMap={}, areaMap={};
+  rows.forEach(function(row) {
+    var val = Math.abs(parseFloat(String(row[C.value]||'0').replace(/,/g,''))||0);
+    var qty = parseFloat(String(row[C.qty]||'0').replace(/,/g,''))||0;
+    var bns = parseFloat(String(row[C.bns]||'0').replace(/,/g,''))||0;
+    var brand=String(row[C.brand]||'').trim(), bu=String(row[C.bu]||'').trim(), mgr=String(row[C.manager]||'').trim();
+    var salesman=String(row[C.salesman]||'').trim(), cust=String(row[C.cust]||'').trim();
+    var group=String(row[C.group]||'').trim(), channel=String(row[C.channel]||'').trim(), area=String(row[C.area]||'').trim();
+    var invNo=String(row[C.invoiceNo]||'').trim();
+    totalVal+=val; totalQty+=qty; totalBNS+=bns;
+    if(invNo) invoiceSet.add(invNo); if(cust) custSet.add(cust);
+    if(brand){if(!brandMap[brand])brandMap[brand]={val:0,qty:0,bns:0,invCount:0,bu:bu};brandMap[brand].val+=val;brandMap[brand].qty+=qty;brandMap[brand].bns+=bns;if(invNo)brandMap[brand].invCount++;}
+    if(bu){if(!buMap[bu])buMap[bu]={val:0,qty:0};buMap[bu].val+=val;buMap[bu].qty+=qty;}
+    if(mgr){if(!mgrMap[mgr])mgrMap[mgr]={val:0,qty:0,invCount:0};mgrMap[mgr].val+=val;mgrMap[mgr].qty+=qty;if(invNo)mgrMap[mgr].invCount++;}
+    if(salesman){if(!salesmanMap[salesman])salesmanMap[salesman]={val:0,invCount:0,mgr:mgr};salesmanMap[salesman].val+=val;if(invNo)salesmanMap[salesman].invCount++;}
+    if(cust){if(!custMap[cust])custMap[cust]={val:0,qty:0,group:group,channel:channel};custMap[cust].val+=val;custMap[cust].qty+=qty;}
+    if(area){if(!areaMap[area])areaMap[area]=0;areaMap[area]+=val;}
+  });
+  return { totalVal:totalVal, totalQty:totalQty, totalBNS:totalBNS, invoiceCount:invoiceSet.size, custCount:custSet.size, brandMap:brandMap, buMap:buMap, mgrMap:mgrMap, salesmanMap:salesmanMap, custMap:custMap, areaMap:areaMap };
+}
+
+function loadInvSalesFromServer() {
+  fetch('/api/invsales/status', { headers: { 'x-auth-token': AUTH_TOKEN } })
+    .then(function(r){ var ct=r.headers.get('content-type')||''; if(!ct.includes('json')) return null; return r.json(); })
+    .then(function(d) {
+      if (!d || !d.hasData || !d.summary || d.summary.version !== 'v1') return;
+      var s = d.summary;
+      // Restore from summary (no raw rows — filters won't work, but display will)
+      INV_SUMMARY = s;
+      renderInvSalesFromSummary(s, d.fileName, d.uploadedAt);
+    })
+    .catch(function(e){ console.log('InvSales load error:', e.message); });
+}
+
+function renderInvSalesFromSummary(s, fileName, uploadedAt) {
+  if (!s) return;
+  function fmtV(v){ return v>=1000000?(v/1000000).toFixed(2)+'M':v>=1000?Math.round(v/1000)+'K':Math.round(v).toString(); }
+  function fmtFull(v){ return 'AED '+Math.round(v).toLocaleString(); }
+  // Status badge
+  var dateStr = s.dateStr || (uploadedAt ? new Date(uploadedAt).toLocaleDateString('en-AE') : '—');
+  document.getElementById('inv-last-date').textContent = dateStr;
+  document.getElementById('inv-file-name').textContent = fileName || '—';
+  // KPIs
+  document.getElementById('inv-total-val').textContent = 'AED ' + fmtV(s.totalVal||0);
+  document.getElementById('inv-total-inv').textContent = (s.invoiceCount||0).toLocaleString() + ' invoices';
+  document.getElementById('inv-total-qty').textContent = Math.round(s.totalQty||0).toLocaleString();
+  document.getElementById('inv-total-cust').textContent = (s.custCount||0).toLocaleString() + ' customers';
+  var brandMap = s.brandMap || {}, mgrMap = s.mgrMap || {}, buMap = s.buMap || {}, salesmanMap = s.salesmanMap || {}, custMap = s.custMap || {};
+  var topBrand = Object.keys(brandMap).sort(function(a,b){return brandMap[b].val-brandMap[a].val;})[0];
+  if(topBrand){ document.getElementById('inv-top-brand').textContent=topBrand; document.getElementById('inv-top-brand-val').textContent=fmtFull(brandMap[topBrand].val); }
+  var topMgr = Object.keys(mgrMap).sort(function(a,b){return mgrMap[b].val-mgrMap[a].val;})[0];
+  if(topMgr){ document.getElementById('inv-top-mgr').textContent=topMgr.split(' ').slice(-2).join(' '); document.getElementById('inv-top-mgr-val').textContent=fmtFull(mgrMap[topMgr].val); }
+  // Filter pills (read-only from summary keys)
+  var bColors = ['#c9a84c','#5b8dee','#4ecb8d','#e84b4b','#e8854b','#9b59b6','#c9a84c','#5b8dee','#4ecb8d','#e84b4b'];
+  function buildStaticPills(containerId, vals) {
+    var el = document.getElementById(containerId); if(!el) return;
+    el.innerHTML = '<button class="ret-pill on">ALL</button>' + vals.map(function(v){ return '<button class="ret-pill">'+v+'</button>'; }).join('');
+  }
+  buildStaticPills('inv-manager-pills', Object.keys(mgrMap).sort());
+  buildStaticPills('inv-brand-pills', Object.keys(brandMap).sort());
+  buildStaticPills('inv-area-pills', Object.keys(s.areaMap||{}).sort());
+  // Brand chart
+  var brandsSorted = Object.keys(brandMap).sort(function(a,b){return brandMap[b].val-brandMap[a].val;}).slice(0,10);
+  if(INV_CHARTS.brand) INV_CHARTS.brand.destroy();
+  var bCtx = document.getElementById('inv-brand-chart').getContext('2d');
+  INV_CHARTS.brand = new Chart(bCtx, { type:'bar', data:{ labels:brandsSorted, datasets:[{ data:brandsSorted.map(function(b){return Math.round(brandMap[b].val);}), backgroundColor:bColors, borderRadius:3 }] }, options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ x:{ticks:{color:'#7a7660',font:{size:8},maxRotation:45}}, y:{ticks:{color:'#7a7660',font:{size:8},callback:function(v){return 'AED '+fmtV(v);}}}}} });
+  // BU chart
+  var buKeys = Object.keys(buMap).sort(function(a,b){return buMap[b].val-buMap[a].val;});
+  if(INV_CHARTS.bu) INV_CHARTS.bu.destroy();
+  var buCtx = document.getElementById('inv-bu-chart').getContext('2d');
+  INV_CHARTS.bu = new Chart(buCtx, { type:'doughnut', data:{ labels:buKeys, datasets:[{ data:buKeys.map(function(b){return Math.round(buMap[b].val);}), backgroundColor:bColors, borderWidth:1 }] }, options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom',labels:{color:'#7a7660',font:{size:8},boxWidth:8}}} } });
+  // Manager table
+  var mgrSorted = Object.keys(mgrMap).sort(function(a,b){return mgrMap[b].val-mgrMap[a].val;});
+  document.getElementById('inv-mgr-table').innerHTML = mgrSorted.map(function(m,i){ var d=mgrMap[m]; var col=i===0?'#c9a84c':i===1?'#5b8dee':i===2?'#4ecb8d':'#f5f0e8'; return '<tr><td style="color:'+col+';font-weight:'+(i<3?'700':'400')+';">'+m+'</td><td style="text-align:right;color:var(--muted);">'+(d.invCount||0)+'</td><td style="text-align:right;color:var(--muted);">'+Math.round(d.qty||0).toLocaleString()+'</td><td style="text-align:right;color:'+col+';font-weight:600;">'+fmtFull(d.val)+'</td></tr>'; }).join('');
+  // Salesman table
+  var salesSorted = Object.keys(salesmanMap).sort(function(a,b){return salesmanMap[b].val-salesmanMap[a].val;}).slice(0,10);
+  document.getElementById('inv-salesman-table').innerHTML = salesSorted.map(function(s,i){ var d=salesmanMap[s]; return '<tr><td style="color:var(--muted);text-align:center;">'+(i+1)+'</td><td style="color:#f5f0e8;">'+s+'</td><td style="text-align:right;color:var(--muted);">'+(d.invCount||0)+'</td><td style="text-align:right;color:var(--gold);font-weight:600;">'+fmtFull(d.val)+'</td></tr>'; }).join('');
+  // Top customers
+  var custSorted = Object.keys(custMap).sort(function(a,b){return custMap[b].val-custMap[a].val;}).slice(0,15);
+  document.getElementById('inv-cust-table').innerHTML = custSorted.map(function(c,i){ var d=custMap[c]; return '<tr><td style="color:var(--muted);">'+(i+1)+'</td><td style="color:#f5f0e8;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+c+'</td><td style="color:var(--muted);font-size:10px;">'+d.group+'</td><td style="color:var(--muted);font-size:10px;">'+d.channel+'</td><td style="text-align:right;color:var(--muted);">'+Math.round(d.qty||0).toLocaleString()+'</td><td style="text-align:right;color:var(--gold);font-weight:600;">'+fmtFull(d.val)+'</td></tr>'; }).join('');
+  // Brand detail table
+  var brandAllSorted = Object.keys(brandMap).sort(function(a,b){return brandMap[b].val-brandMap[a].val;});
+  document.getElementById('inv-brand-table').innerHTML = brandAllSorted.map(function(b){ var d=brandMap[b]; return '<tr><td style="color:var(--gold);font-weight:600;">'+b+'</td><td style="color:var(--muted);font-size:10px;">'+d.bu+'</td><td style="text-align:center;color:#f5f0e8;">'+(d.invCount||0)+'</td><td style="text-align:right;color:var(--muted);">'+Math.round(d.qty||0).toLocaleString()+'</td><td style="text-align:right;color:var(--muted);">'+Math.round(d.bns||0).toLocaleString()+'</td><td style="text-align:right;color:var(--gold);font-weight:600;">'+fmtFull(d.val)+'</td></tr>'; }).join('');
+  document.getElementById('inv-sales-nodata').style.display = 'none';
+  document.getElementById('inv-sales-dashboard').style.display = 'block';
+}
+
+loadInvSalesFromServer();
+
 function handleInvSalesUpload(input) {
   var file = input.files[0]; if (!file) return;
   var reader = new FileReader();
@@ -3989,6 +4101,8 @@ function handleInvSalesUpload(input) {
       document.getElementById('inv-file-name').textContent = file.name;
       document.getElementById('inv-sales-nodata').style.display = 'none';
       document.getElementById('inv-sales-dashboard').style.display = 'block';
+      // ✅ SAVE TO SERVER for persistence across refreshes
+      saveInvSalesToServer(file.name);
     } catch(e) { alert('Error reading file: ' + e.message); }
   };
   reader.readAsArrayBuffer(file);
@@ -5317,7 +5431,7 @@ window.addEventListener('load', authBoot);
     </div>
 
     <!-- KPIs -->
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;" id="inv-kpis">
+    <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:16px;" id="inv-kpis">
       <div class="box" style="padding:14px;"><div style="font-size:9px;color:var(--muted);letter-spacing:2px;margin-bottom:6px;">TOTAL VALUE</div><div style="font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:700;color:var(--gold);" id="inv-total-val">—</div><div style="font-size:10px;color:var(--muted);" id="inv-total-inv">— invoices</div></div>
       <div class="box" style="padding:14px;"><div style="font-size:9px;color:var(--muted);letter-spacing:2px;margin-bottom:6px;">TOTAL QTY</div><div style="font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:700;color:#5b8dee;" id="inv-total-qty">—</div><div style="font-size:10px;color:var(--muted);" id="inv-total-cust">— customers</div></div>
       <div class="box" style="padding:14px;"><div style="font-size:9px;color:var(--muted);letter-spacing:2px;margin-bottom:6px;">TOP BRAND</div><div style="font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:700;color:#4ecb8d;" id="inv-top-brand">—</div><div style="font-size:10px;color:var(--muted);" id="inv-top-brand-val">—</div></div>
@@ -5326,8 +5440,8 @@ window.addEventListener('load', authBoot);
 
     <!-- Charts -->
     <div style="display:grid;grid-template-columns:1.6fr 1fr;gap:12px;margin-bottom:16px;">
-      <div class="box"><div class="box-title">📊 Sales by Brand</div><canvas id="inv-brand-chart" style="max-height:160px;"></canvas></div>
-      <div class="box"><div class="box-title">🏢 Sales by BU</div><canvas id="inv-bu-chart" style="max-height:160px;"></canvas></div>
+      <div class="box"><div class="box-title">📊 Sales by Brand</div><div style="position:relative;height:220px;"><canvas id="inv-brand-chart"></canvas></div></div>
+      <div class="box"><div class="box-title">🏢 Sales by BU</div><div style="position:relative;height:220px;"><canvas id="inv-bu-chart"></canvas></div></div>
     </div>
 
     <!-- Tables -->
