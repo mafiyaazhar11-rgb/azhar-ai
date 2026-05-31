@@ -4264,32 +4264,36 @@ function renderInvSales() {
   buildPills('inv-brand-pills','brand',Object.keys(brandMap).sort(),INV_FILTERS.brand);
   buildPills('inv-area-pills','area',Object.keys(areaMap).sort(),INV_FILTERS.area);
 
-  // Brand chart
+  // Brand chart — use requestAnimationFrame so wrapper div is rendered first
   var brandsSorted = Object.keys(brandMap).sort(function(a,b){return brandMap[b].val-brandMap[a].val;}).slice(0,10);
   var bColors = ['#c9a84c','#5b8dee','#4ecb8d','#e84b4b','#e8854b','#9b59b6','#c9a84c','#5b8dee','#4ecb8d','#e84b4b'];
-  if (INV_CHARTS.brand) INV_CHARTS.brand.destroy();
-  var bCtx = document.getElementById('inv-brand-chart').getContext('2d');
-  INV_CHARTS.brand = new Chart(bCtx, { type:'bar', data:{ labels:brandsSorted, datasets:[{ data:brandsSorted.map(function(b){return Math.round(brandMap[b].val);}), backgroundColor:bColors, borderRadius:3 }] }, options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ x:{ticks:{color:'#7a7660',font:{size:8},maxRotation:45}}, y:{ticks:{color:'#7a7660',font:{size:8},callback:function(v){return 'AED '+fmtV(v);}}}} } });
-
-  // BU chart
   var buKeys = Object.keys(buMap).sort(function(a,b){return buMap[b].val-buMap[a].val;});
-  if (INV_CHARTS.bu) INV_CHARTS.bu.destroy();
-  var buCtx = document.getElementById('inv-bu-chart').getContext('2d');
-  INV_CHARTS.bu = new Chart(buCtx, { type:'doughnut', data:{ labels:buKeys, datasets:[{ data:buKeys.map(function(b){return Math.round(buMap[b].val);}), backgroundColor:bColors, borderWidth:1 }] }, options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom',labels:{color:'#7a7660',font:{size:8},boxWidth:8}}} } });
+  setTimeout(function(){
+    var bEl = document.getElementById('inv-brand-chart');
+    var buEl = document.getElementById('inv-bu-chart');
+    if (bEl) {
+      if (INV_CHARTS.brand) INV_CHARTS.brand.destroy();
+      INV_CHARTS.brand = new Chart(bEl.getContext('2d'), { type:'bar', data:{ labels:brandsSorted, datasets:[{ data:brandsSorted.map(function(b){return Math.round(brandMap[b].val);}), backgroundColor:bColors, borderRadius:3 }] }, options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ x:{ticks:{color:'#7a7660',font:{size:8},maxRotation:45}}, y:{ticks:{color:'#7a7660',font:{size:8},callback:function(v){return 'AED '+fmtV(v);}}}} } });
+    }
+    if (buEl) {
+      if (INV_CHARTS.bu) INV_CHARTS.bu.destroy();
+      INV_CHARTS.bu = new Chart(buEl.getContext('2d'), { type:'doughnut', data:{ labels:buKeys, datasets:[{ data:buKeys.map(function(b){return Math.round(buMap[b].val);}), backgroundColor:bColors, borderWidth:1 }] }, options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom',labels:{color:'#7a7660',font:{size:8},boxWidth:8}}} } });
+    }
+  }, 50);
 
   // Manager table
   var mgrSorted = Object.keys(mgrMap).sort(function(a,b){return mgrMap[b].val-mgrMap[a].val;});
   document.getElementById('inv-mgr-table').innerHTML = mgrSorted.map(function(m,i){
     var d = mgrMap[m];
     var col = i===0?'#c9a84c':i===1?'#5b8dee':i===2?'#4ecb8d':'#f5f0e8';
-    return '<tr><td style="color:'+col+';font-weight:'+(i<3?'700':'400')+';">'+m+'</td><td style="text-align:right;color:var(--muted);">'+d.inv.size+'</td><td style="text-align:right;color:var(--muted);">'+Math.round(d.qty).toLocaleString()+'</td><td style="text-align:right;color:'+col+';font-weight:600;">'+fmtFull(d.val)+'</td></tr>';
+    return '<tr><td style="color:'+col+';font-weight:'+(i<3?'700':'400')+';">'+m+'</td><td style="text-align:right;color:var(--muted);">'+((d.inv&&d.inv.size!==undefined)?d.inv.size:(d.invCount||0))+'</td>'+'<td style="text-align:right;color:var(--muted);">'+Math.round(d.qty).toLocaleString()+'</td><td style="text-align:right;color:'+col+';font-weight:600;">'+fmtFull(d.val)+'</td></tr>';
   }).join('');
 
   // Salesman table
   var salesSorted = Object.keys(salesmanMap).sort(function(a,b){return salesmanMap[b].val-salesmanMap[a].val;}).slice(0,10);
   document.getElementById('inv-salesman-table').innerHTML = salesSorted.map(function(s,i){
     var d = salesmanMap[s];
-    return '<tr><td style="color:var(--muted);text-align:center;">'+(i+1)+'</td><td style="color:#f5f0e8;">'+s+'</td><td style="text-align:right;color:var(--muted);">'+d.inv.size+'</td><td style="text-align:right;color:var(--gold);font-weight:600;">'+fmtFull(d.val)+'</td></tr>';
+    return '<tr><td style="color:var(--muted);text-align:center;">'+(i+1)+'</td><td style="color:#f5f0e8;">'+s+'</td><td style="text-align:right;color:var(--muted);">'+((d.inv&&d.inv.size!==undefined)?d.inv.size:(d.invCount||0))+'</td>'+'<td style="text-align:right;color:var(--gold);font-weight:600;">'+fmtFull(d.val)+'</td></tr>';
   }).join('');
 
   // Top customers
@@ -5333,11 +5337,16 @@ function showDemoBanner(){
     '<span style="font-size:10px;color:#7a7660;font-family:Montserrat,sans-serif;">This is a personal initiative dashboard — not an official IT production system</span>' +
     '<span style="font-size:10px;color:#c9a84c;letter-spacing:2px;font-family:Montserrat,sans-serif;font-weight:700;">⚠ DEMO VERSION</span>';
   document.body.prepend(banner);
-  // Push content down so banner doesn't overlap topbar
-  var topbar = document.querySelector('.topbar');
-  if(topbar) topbar.style.top = banner.offsetHeight + 'px';
-  var sidebar = document.querySelector('.sidebar');
-  if(sidebar) sidebar.style.top = banner.offsetHeight + 'px';
+  // Push layout down so banner doesn't overlap
+  requestAnimationFrame(function(){
+    var h = banner.offsetHeight;
+    // Sidebar shifts down
+    var sidebar = document.querySelector('.sidebar');
+    if(sidebar){ sidebar.style.top = h+'px'; sidebar.style.height = 'calc(100vh - '+h+'px)'; }
+    // Main shifts down and shrinks — sticky topbar inside stays at top of main
+    var main = document.getElementById('mainContent');
+    if(main){ main.style.marginTop = h+'px'; main.style.height = 'calc(100vh - '+h+'px)'; }
+  });
 }
 
 function applyDashboardAccess() {
