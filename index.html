@@ -203,6 +203,7 @@ footer span{color:var(--gold);}
   /* ── CORE LAYOUT ── */
   body { overflow: hidden; }
   .hamburger { display: flex; }
+  .hamburger { width: 44px !important; height: 44px !important; font-size: 22px !important; }
   .sidebar { transform: translateX(-100%); transition: transform 0.3s ease; z-index: 99; width: 240px; }
   .sidebar.open { transform: translateX(0); }
   .sidebar-overlay.open { display: block; }
@@ -211,9 +212,14 @@ footer span{color:var(--gold);}
 
   /* ── TOPBAR ── */
   .topbar { padding: 0 10px 0 52px; height: 52px; }
+  #demo-banner { font-size: 8px !important; padding: 4px 8px !important; }
+  #demo-banner span { font-size: 8px !important; }
   .topbar-left h2 { font-size: 13px; }
   .topbar-left p { display: none; }
   .topbar-right { gap: 6px; font-size: 10px; }
+  #vc-mic-btn { display: flex !important; width: 38px !important; height: 38px !important; font-size: 18px !important; flex-shrink: 0 !important; }
+  .topbar-date span { display: none; }
+  .dot-live { display: none; }
   .topbar-date strong { font-size: 10px; }
   .topbar-date span { display: none; }
 
@@ -3932,8 +3938,13 @@ function startVoiceCommand() {
 
   vcRecognition = new SpeechRecognition();
   vcRecognition.lang = 'en-US';
-  vcRecognition.continuous = false;
+  vcRecognition.continuous = true;   // Keep listening until user stops
   vcRecognition.interimResults = true;
+  vcRecognition.maxAlternatives = 1;
+
+  // Auto-stop after 20 seconds of silence
+  var vcSilenceTimer = null;
+  var vcFinalReceived = false;
 
   vcListening = true;
   var micBtn = document.getElementById('vc-mic-btn');
@@ -3951,7 +3962,26 @@ function startVoiceCommand() {
     }
     var interimEl = document.getElementById('vc-interim');
     if (interimEl) interimEl.textContent = interim || final;
-    if (final) processVoiceCommand(final.trim());
+    
+    // Reset silence timer on any speech
+    if (vcSilenceTimer) clearTimeout(vcSilenceTimer);
+    
+    if (final) {
+      vcFinalReceived = true;
+      // Wait 1.5 seconds after last word before processing
+      vcSilenceTimer = setTimeout(function() {
+        if (vcFinalReceived) {
+          vcFinalReceived = false;
+          processVoiceCommand(final.trim());
+        }
+      }, 1500);
+    } else if (interim) {
+      // Reset 20 second max timer on activity
+      if (vcSilenceTimer) clearTimeout(vcSilenceTimer);
+      vcSilenceTimer = setTimeout(function() {
+        stopVoiceCommand();
+      }, 20000);
+    }
   };
 
   vcRecognition.onerror = function(e) {
@@ -4041,86 +4071,108 @@ async function processVoiceCommand(text) {
 
 function buildVoiceContext() {
   var ctx = 'Dashboard: ' + VC_CURRENT_TAB + ' | ';
-  
+
   try {
-    // Dispatch context
     if (VC_CURRENT_TAB === 'dispatch' && typeof currentDispatch !== 'undefined' && currentDispatch) {
       var s = currentDispatch.summary || {};
-      ctx += 'Total Orders: ' + (s.total_orders || 0) + ' | ';
-      ctx += 'Total Value: AED ' + (s.total_value || 0).toLocaleString() + ' | ';
-      ctx += 'Total Drops: ' + (s.total_drops || 0) + ' | ';
-      ctx += 'Routes: ' + JSON.stringify(s.routes || []) + ' | ';
-      ctx += 'Top Customers: ' + JSON.stringify((s.topCustomers || []).slice(0,5)) + ' | ';
-      ctx += 'Top Drivers: ' + JSON.stringify((s.topDrivers || []).slice(0,5)) + ' | ';
-      ctx += 'Cities: ' + JSON.stringify(s.cities || {}) + ' | ';
-      // Include raw row data for column-specific queries
-      if (typeof DS_RAW !== 'undefined' && DS_RAW && DS_RAW.length > 0) {
-        ctx += 'Available data columns: ' + Object.keys(DS_RAW[0]).join(', ') + ' | ';
-        ctx += 'Sample data (first 3 rows): ' + JSON.stringify(DS_RAW.slice(0,3)) + ' | ';
+      ctx += 'Total Orders: ' + (s.total_orders||0) + ' | ';
+      ctx += 'Total Value: AED ' + Math.round(s.total_value||0).toLocaleString() + ' | ';
+      ctx += 'Total Drops: ' + (s.total_drops||0) + ' | ';
+      ctx += 'Drivers: ' + (s.total_drivers||0) + ' | ';
+      // Routes
+      if (s.routes && s.routes.length) {
+        ctx += 'Routes: ';
+        s.routes.forEach(function(r) {
+          ctx += r.route + '(' + r.orders + ' orders, ' + r.drops + ' drops, AED ' + Math.round(r.value||0).toLocaleString() + ') ';
+        });
+        ctx += ' | ';
       }
+      // Top drivers
+      if (s.topDrivers && s.topDrivers.length) {
+        ctx += 'Top Drivers: ';
+        s.topDrivers.forEach(function(d) {
+          ctx += d.name + '(' + (d.drops||d.orders) + ' drops, AED ' + Math.round(d.value||0).toLocaleString() + ') ';
+        });
+        ctx += ' | ';
+      }
+      // Top customers
+      if (s.topCustomers && s.topCustomers.length) {
+        ctx += 'Top Customers: ';
+        s.topCustomers.slice(0,5).forEach(function(c) {
+          ctx += c.name + '(AED ' + Math.round(c.value||0).toLocaleString() + ') ';
+        });
+        ctx += ' | ';
+      }
+      // Cities
+      if (s.cities) {
+        ctx += 'Orders by City: ';
+        Object.keys(s.cities).forEach(function(city) {
+          ctx += city + ':' + s.cities[city] + ' ';
+        });
+        ctx += ' | ';
+      }
+      // Food/NonFood split
+      if (s.food_orders) ctx += 'Food Orders: ' + s.food_orders + ' (AED ' + Math.round(s.food_value||0).toLocaleString() + ') | ';
+      if (s.nonfood_orders) ctx += 'NonFood Orders: ' + s.nonfood_orders + ' (AED ' + Math.round(s.nonfood_value||0).toLocaleString() + ') | ';
     }
-    // Rejection context
-    if (VC_CURRENT_TAB === 'rejection') {
-      ctx += 'Rejection dashboard is active. Contains YTD rejection data by BU, ORG, and month. ';
-    }
-    // Returns context
+
     if (VC_CURRENT_TAB === 'returns' && typeof RET_FULL_SUMMARY !== 'undefined' && RET_FULL_SUMMARY) {
       var rs = RET_FULL_SUMMARY;
-      ctx += 'Total Returns Value: AED ' + (rs.totalVal || 0).toLocaleString() + ' | ';
-      ctx += 'Invoice Cancellations: ' + (rs.invCount || 0) + ' — AED ' + (rs.invVal || 0).toLocaleString() + ' | ';
-      ctx += 'GRV Returns: ' + (rs.grvCount || 0) + ' — AED ' + (rs.grvVal || 0).toLocaleString() + ' | ';
-      ctx += 'By Warehouse: ' + JSON.stringify(rs.whMap || {}) + ' | ';
+      ctx += 'Total Returns: AED ' + Math.round(rs.totalVal||0).toLocaleString() + ' (' + (rs.totalOrders||0) + ' orders) | ';
+      ctx += 'Invoice Cancellations: ' + (rs.invCount||0) + ' orders AED ' + Math.round(rs.invVal||0).toLocaleString() + ' | ';
+      ctx += 'GRV Returns: ' + (rs.grvCount||0) + ' orders AED ' + Math.round(rs.grvVal||0).toLocaleString() + ' | ';
+      if (rs.whMap) { ctx += 'By Warehouse: '; Object.keys(rs.whMap).forEach(function(w){ ctx += w + ':AED ' + Math.round(rs.whMap[w]).toLocaleString() + ' '; }); ctx += ' | '; }
+      if (rs.buMap) { ctx += 'By BU: '; Object.keys(rs.buMap).forEach(function(b){ ctx += b + ':AED ' + Math.round(rs.buMap[b]).toLocaleString() + ' '; }); ctx += ' | '; }
     }
-    // Backlog context
+
+    if (VC_CURRENT_TAB === 'rejection' && typeof ORG_DATA !== 'undefined') {
+      ctx += 'Rejection YTD dashboard active. Contains BU, ORG and monthly rejection data. | ';
+    }
+
     if (VC_CURRENT_TAB === 'backlog' && typeof BL_FULL_DATA !== 'undefined' && BL_FULL_DATA) {
-      ctx += 'WH Backlog data available. Contains ORG, category, customer, and value breakdown. ';
+      ctx += 'WH Backlog dashboard active. Contains ORG, category, RSD aging, customer risk data. | ';
     }
-  } catch(e) {}
+
+    if (VC_CURRENT_TAB === 'sales' && typeof SALES_DATA !== 'undefined' && SALES_DATA) {
+      var sd = SALES_DATA;
+      ctx += 'Total Sales Orders: ' + (sd.totalOrders||0) + ' | ';
+      ctx += 'Total Sales Value: AED ' + Math.round(sd.totalValue||0).toLocaleString() + ' | ';
+    }
+
+  } catch(e) { ctx += 'Error reading context: ' + e.message; }
 
   return ctx;
 }
 
+
 function jarvisSpeak(text) {
   if (!window.speechSynthesis) return;
-  window.speechSynthesis.cancel(); // Stop any current speech
+  window.speechSynthesis.cancel();
   var utter = new SpeechSynthesisUtterance(text);
   utter.lang = 'en-US';
-  utter.rate = 0.92;   // Slightly slower — more authoritative
-  utter.pitch = 0.8;   // Lower pitch — male bold voice
+  utter.rate = 0.92;
+  utter.pitch = 0.8;
   utter.volume = 1.0;
-
-  // Try to find a deep male voice
   var voices = window.speechSynthesis.getVoices();
-  var preferred = ['Google UK English Male','Microsoft David','Alex','Daniel','Google US English'];
+  var preferred = ['Google UK English Male','Microsoft David','Alex','Daniel'];
   var chosen = null;
   for (var i = 0; i < preferred.length; i++) {
-    chosen = voices.find(function(v) { return v.name.includes(preferred[i]) || v.name === preferred[i]; });
+    chosen = voices.find(function(v){ return v.name.includes(preferred[i]); });
     if (chosen) break;
   }
-  // Fallback: pick any male-sounding voice
-  if (!chosen) {
-    chosen = voices.find(function(v) {
-      return !v.name.toLowerCase().includes('female') &&
-             !v.name.toLowerCase().includes('woman') &&
-             v.lang.startsWith('en');
-    });
-  }
+  if (!chosen) chosen = voices.find(function(v){ return !v.name.toLowerCase().includes('female') && v.lang.startsWith('en'); });
   if (chosen) utter.voice = chosen;
-
-  // Add mic pulsing while speaking
   var micBtn = document.getElementById('vc-mic-btn');
-  utter.onstart = function() { if (micBtn) micBtn.style.color = '#c9a84c'; };
-  utter.onend = function() { if (micBtn) micBtn.style.color = ''; };
-
+  utter.onstart = function(){ if(micBtn) micBtn.style.color='#c9a84c'; };
+  utter.onend = function(){ if(micBtn) micBtn.style.color=''; };
   window.speechSynthesis.speak(utter);
 }
 
-// Preload voices (Chrome loads async)
 if (window.speechSynthesis) {
   window.speechSynthesis.getVoices();
-  window.speechSynthesis.onvoiceschanged = function() {
-    window.speechSynthesis.getVoices(); // cache
-  };
+  if (window.speechSynthesis.onvoiceschanged !== undefined) {
+    window.speechSynthesis.onvoiceschanged = function(){ window.speechSynthesis.getVoices(); };
+  }
 }
 
 function executeVoiceAction(action, detail) {
