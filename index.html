@@ -443,7 +443,7 @@ footer span{color:var(--gold);}
   <div class="sb-sub">CST-Operations Intelligence</div>
 </div>
   </div>
-  <div class="sb-section">AI Command Centre</div>
+  <div class="sb-section">Command Centre</div>
   <button class="sb-item on" onclick="goTab('dispatch',this)"><span class="icon">🚚</span> Daily Dispatch</button>
   <button class="sb-item" onclick="goTab('rejection',this)"><span class="icon">📊</span> Rejection YTD</button>
   <button class="sb-item" onclick="goTab('summary',this)"><span class="icon">📋</span> Executive Summary</button>
@@ -458,7 +458,7 @@ footer span{color:var(--gold);}
 
 <div class="main" id="mainContent">
     <div class="topbar">
-      <div class="topbar-left"><h2 id="topbar-title"></h2><p id="topbar-sub">Operations &amp; Customer Service AI Command Centre</p></div>
+      <div class="topbar-left"><h2 id="topbar-title"></h2><p id="topbar-sub">Operations &amp; Customer Service Command Centre</p></div>
     <div class="topbar-right">
       <div class="dot-live">System Active</div>
       <!-- VOICE COMMAND MIC -->
@@ -1070,7 +1070,7 @@ footer span{color:var(--gold);}
     <div class="panel" id="excel"><div class="box"><div class="box-title">📐 Excel Support &amp; Data Analysis</div><div class="upload" onclick="document.getElementById('xl-file').click()"><div style="font-size:22px;margin-bottom:6px;">📊</div><div style="font-size:11px;color:var(--muted);">Upload .csv or .xlsx file</div><div style="font-size:10px;color:var(--muted);margin-top:3px;" id="xl-file-name">File → Save As → CSV first</div></div><input type="file" id="xl-file" accept=".csv,.txt,.xlsx" style="display:none" onchange="loadFileExcel(this)"/><label class="lbl">Your Formula or Question</label><textarea id="xl-q" placeholder="e.g. Fix my VLOOKUP returning #N/A&#10;e.g. Analyse this data and give key insights"></textarea><label class="lbl">Context (Optional)</label><textarea id="xl-ctx" style="min-height:55px;" placeholder="e.g. Column A = Date, Column B = Customer, Column C = Amount..."></textarea><button class="btn" id="xl-btn" onclick="doExcel()"><span>Analyse &amp; Fix Excel</span></button><div class="loader" id="xl-loader"><div class="ring"></div><div class="ring-txt">Analysing your data...</div></div><div class="out" id="xl-out"><div class="out-head"><span class="out-lbl">✦ Excel Analysis</span><button class="copy" onclick="doCopy('xl-answer')">Copy</button></div><div class="out-body" id="xl-answer"></div></div></div></div>
 
   </div>
-  <footer>✦ &nbsp; Operations &amp; Customer Service Intelligence Platform &nbsp;·&nbsp; Control Tower &nbsp;·&nbsp; V 4.0</footer>
+  <footer>✦ &nbsp; Operations &amp; Customer Service Intelligence Platform &nbsp;·&nbsp; Control Tower &nbsp;·&nbsp; Powered by Azhar &nbsp;·&nbsp; V 4.0</footer>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
@@ -1090,7 +1090,7 @@ updateClock(); setInterval(updateClock,1000);
 
 //  TAB NAV 
 const TITLES={
-  dispatch:  ['Welcome back, Azhar','Operations & Customer Service AI Command Centre'],
+  dispatch:  ['Welcome back, Azhar','Operations & Customer Service Command Centre'],
   rejection: ['Rejection YTD Analysis','YTD Jan–May 2026 · BU Contribution Dashboard'],
   summary:   ['Executive Summary Generator','Create professional summaries for leadership'],
   email:     ['Professional Email Writer','Write and refine business correspondence'],
@@ -1106,7 +1106,7 @@ function goTab(id,btn){
   document.querySelectorAll('.sb-item').forEach(b=>b.classList.remove('on'));
   document.getElementById(id).classList.add('on');
   if(btn) btn.classList.add('on');
-  const t=TITLES[id]||['AZHAR-AI',''];
+  const t=TITLES[id]||['Operations Intelligence',''];
   document.getElementById('topbar-title').textContent=t[0];
   document.getElementById('topbar-sub').textContent=t[1];
   if(id==='rejection') rejLoadFromServer();
@@ -5260,9 +5260,9 @@ window.addEventListener('load', authBoot);
   <div id="inv-sales-nodata" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:60vh;gap:16px;">
     <div style="font-size:40px;">🧾</div>
     <div style="font-size:13px;color:var(--gold);letter-spacing:2px;">NO DATA LOADED</div>
-    <div style="font-size:11px;color:var(--muted);">Upload your Invoiced Sales Excel file</div>
+    <div style="font-size:11px;color:var(--muted);">Click ✦ to upload your Invoiced Sales file</div>
     <input type="file" id="inv-file-input" accept=".xlsx,.xls,.csv" style="display:none;" onchange="handleInvSalesUpload(this)">
-    <button onclick="invShowUpload()" style="background:rgba(201,168,76,0.1);border:1px solid #c9a84c;color:#c9a84c;font-size:10px;letter-spacing:2px;padding:10px 24px;cursor:pointer;font-family:Montserrat,sans-serif;">✦ UPLOAD FILE</button>
+    <div style="font-size:11px;color:var(--muted);margin-top:8px;">Use the ✦ star button (password required)</div>
   </div>
   <div id="inv-sales-dashboard" style="display:none;">
     <!-- Status badge + upload star -->
@@ -5272,7 +5272,9 @@ window.addEventListener('load', authBoot);
       </div>
       <div>
         <input type="file" id="inv-file-input2" accept=".xlsx,.xls,.csv" style="display:none;" onchange="handleInvSalesUpload(this)">
-        <button onclick="invShowUpload()" id="inv-star-btn" style="background:transparent;border:none;cursor:pointer;font-size:18px;color:var(--gold);opacity:0.25;transition:opacity 0.3s;padding:4px;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.25'">✦</button>
+        <span id="inv-star-wrap">
+          <button onclick="invShowUpload()" id="inv-star-btn" style="background:transparent;border:none;cursor:pointer;font-size:20px;color:var(--gold);opacity:0.25;transition:opacity 0.3s;padding:4px;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.25'">✦</button>
+        </span>
       </div>
     </div>
     <!-- Filters -->
