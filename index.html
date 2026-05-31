@@ -3969,18 +3969,27 @@ var INV_SUMMARY = null;
 
 function saveInvSalesToServer(fileName) {
   if (!INV_RAW.length) return;
-  // Compress: send a structured summary instead of raw rows (avoids 10MB limit)
   var summary = buildInvSalesSummary();
   summary.version = 'v1';
   summary.dateStr = getInvDate(INV_RAW);
+  var payload;
+  try {
+    payload = JSON.stringify({ summary: summary, fileName: fileName, uploadedBy: 'Admin', totalOrders: summary.invoiceCount || INV_RAW.length });
+  } catch(e) { console.error('InvSales JSON error:', e.message); return; }
   fetch('/api/invsales/upload', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-auth-token': AUTH_TOKEN },
-    body: JSON.stringify({ summary: summary, fileName: fileName, uploadedBy: 'Admin', totalOrders: summary.invoiceCount || INV_RAW.length })
+    body: payload
   })
   .then(function(r){ return r.json(); })
-  .then(function(d){ if(d && d.success) console.log('InvSales saved to server'); })
-  .catch(function(e){ console.log('InvSales save error:', e.message); });
+  .then(function(d){
+    if(d && d.success) {
+      console.log('InvSales saved to DB successfully');
+    } else {
+      console.error('InvSales save failed:', d);
+    }
+  })
+  .catch(function(e){ console.error('InvSales save error:', e.message); });
 }
 
 function buildInvSalesSummary() {
@@ -4391,17 +4400,10 @@ function renderInvSales() {
   invAdjustStickyTop();
 }
 
-// ── INV STICKY TOP ADJUST ──
-// Adjusts sticky filter row top to account for demo banner height
+// ── INV BADGE SHOW ──
 function invAdjustStickyTop() {
   var badge = document.getElementById('inv-status-badge');
   if (badge) badge.style.display = 'block';
-  var header = document.getElementById('inv-sticky-header');
-  if (!header) return;
-  var banner = document.getElementById('demo-banner');
-  var bannerH = banner ? banner.offsetHeight : 0;
-  var topbarH = 64;
-  header.style.top = (bannerH + topbarH) + 'px';
 }
 
 // ── INV SALES UPLOAD PASSWORD ──
@@ -5516,47 +5518,48 @@ window.addEventListener('load', authBoot);
   <!-- Dashboard state -->
   <div id="inv-sales-dashboard" style="display:none;">
 
-    <!-- Sticky header: status + filters — always visible below topbar -->
-    <div id="inv-sticky-header" style="position:sticky;top:64px;z-index:40;background:var(--surface);border-bottom:1px solid var(--border);margin:0 -28px 12px -28px;padding:6px 16px 8px;">
-      <!-- Status badge row -->
-      <div id="inv-status-badge" style="display:none;background:rgba(78,203,141,0.08);padding:4px 0;font-size:10px;color:#4ecb8d;letter-spacing:1px;margin-bottom:6px;border-bottom:1px solid rgba(78,203,141,0.15);padding-bottom:6px;">
-        ✓ LOADED — <span id="inv-last-date">—</span> — <span id="inv-file-name">—</span>
+    <!-- Status badge -->
+    <div id="inv-status-badge" style="display:none;background:rgba(78,203,141,0.1);border:1px solid rgba(78,203,141,0.3);padding:5px 14px;font-size:10px;color:#4ecb8d;letter-spacing:1px;margin-bottom:10px;">
+      ✓ LOADED — <span id="inv-last-date">—</span> — <span id="inv-file-name">—</span>
+    </div>
+
+    <!-- Filters — single compact row per filter, horizontal scroll, no wrap -->
+    <div id="inv-sticky-header" style="background:var(--surface);border:1px solid var(--border);padding:8px 12px;margin-bottom:12px;">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+        <span style="font-size:9px;color:var(--muted);letter-spacing:1px;width:60px;flex-shrink:0;">MANAGER</span>
+        <div id="inv-manager-pills" style="display:flex;gap:4px;overflow-x:auto;flex:1;padding-bottom:1px;scrollbar-width:none;-ms-overflow-style:none;"></div>
       </div>
-      <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;">
-        <span style="font-size:9px;color:var(--muted);letter-spacing:1px;width:65px;flex-shrink:0;">MANAGER</span>
-        <div id="inv-manager-pills" style="display:flex;gap:5px;overflow-x:auto;flex:1;padding-bottom:2px;white-space:nowrap;scrollbar-width:none;"></div>
-      </div>
-      <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;">
-        <span style="font-size:9px;color:var(--muted);letter-spacing:1px;width:65px;flex-shrink:0;">BRAND</span>
-        <div id="inv-brand-pills" style="display:flex;gap:5px;overflow-x:auto;flex:1;padding-bottom:2px;white-space:nowrap;scrollbar-width:none;"></div>
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+        <span style="font-size:9px;color:var(--muted);letter-spacing:1px;width:60px;flex-shrink:0;">BRAND</span>
+        <div id="inv-brand-pills" style="display:flex;gap:4px;overflow-x:auto;flex:1;padding-bottom:1px;scrollbar-width:none;-ms-overflow-style:none;"></div>
       </div>
       <div style="display:flex;align-items:center;gap:6px;">
-        <span style="font-size:9px;color:var(--muted);letter-spacing:1px;width:65px;flex-shrink:0;">AREA</span>
-        <div id="inv-area-pills" style="display:flex;gap:5px;overflow-x:auto;flex:1;padding-bottom:2px;white-space:nowrap;scrollbar-width:none;"></div>
+        <span style="font-size:9px;color:var(--muted);letter-spacing:1px;width:60px;flex-shrink:0;">AREA</span>
+        <div id="inv-area-pills" style="display:flex;gap:4px;overflow-x:auto;flex:1;padding-bottom:1px;scrollbar-width:none;-ms-overflow-style:none;"></div>
       </div>
     </div>
 
     <!-- KPIs -->
-    <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:16px;" id="inv-kpis">
-      <div class="box" style="padding:14px;"><div style="font-size:9px;color:var(--muted);letter-spacing:2px;margin-bottom:6px;">TOTAL VALUE</div><div style="font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:700;color:var(--gold);" id="inv-total-val">—</div><div style="font-size:10px;color:var(--muted);" id="inv-total-inv">— invoices</div></div>
-      <div class="box" style="padding:14px;"><div style="font-size:9px;color:var(--muted);letter-spacing:2px;margin-bottom:6px;">TOTAL QTY</div><div style="font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:700;color:#5b8dee;" id="inv-total-qty">—</div><div style="font-size:10px;color:var(--muted);" id="inv-total-cust">— customers</div></div>
-      <div class="box" style="padding:14px;"><div style="font-size:9px;color:var(--muted);letter-spacing:2px;margin-bottom:6px;">TOP BRAND</div><div style="font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:700;color:#4ecb8d;" id="inv-top-brand">—</div><div style="font-size:10px;color:var(--muted);" id="inv-top-brand-val">—</div></div>
-      <div class="box" style="padding:14px;"><div style="font-size:9px;color:var(--muted);letter-spacing:2px;margin-bottom:6px;">TOP MANAGER</div><div style="font-family:'Cormorant Garamond',serif;font-size:14px;font-weight:700;color:#e8854b;" id="inv-top-mgr">—</div><div style="font-size:10px;color:var(--muted);" id="inv-top-mgr-val">—</div></div>
+    <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:12px;" id="inv-kpis">
+      <div class="box" style="padding:12px;"><div style="font-size:9px;color:var(--muted);letter-spacing:2px;margin-bottom:4px;">TOTAL VALUE</div><div style="font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:700;color:var(--gold);" id="inv-total-val">—</div><div style="font-size:10px;color:var(--muted);" id="inv-total-inv">— invoices</div></div>
+      <div class="box" style="padding:12px;"><div style="font-size:9px;color:var(--muted);letter-spacing:2px;margin-bottom:4px;">TOTAL QTY</div><div style="font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:700;color:#5b8dee;" id="inv-total-qty">—</div><div style="font-size:10px;color:var(--muted);" id="inv-total-cust">— customers</div></div>
+      <div class="box" style="padding:12px;"><div style="font-size:9px;color:var(--muted);letter-spacing:2px;margin-bottom:4px;">TOP BRAND</div><div style="font-family:'Cormorant Garamond',serif;font-size:16px;font-weight:700;color:#4ecb8d;" id="inv-top-brand">—</div><div style="font-size:10px;color:var(--muted);" id="inv-top-brand-val">—</div></div>
+      <div class="box" style="padding:12px;"><div style="font-size:9px;color:var(--muted);letter-spacing:2px;margin-bottom:4px;">TOP MANAGER</div><div style="font-family:'Cormorant Garamond',serif;font-size:13px;font-weight:700;color:#e8854b;" id="inv-top-mgr">—</div><div style="font-size:10px;color:var(--muted);" id="inv-top-mgr-val">—</div></div>
     </div>
 
-    <!-- Charts: stack vertically so each fills full width, no cutoff -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
-      <div class="box"><div class="box-title">📊 Sales by Brand</div><div style="position:relative;height:240px;"><canvas id="inv-brand-chart"></canvas></div></div>
-      <div class="box"><div class="box-title">🏢 Sales by BU</div><div style="position:relative;height:240px;"><canvas id="inv-bu-chart"></canvas></div></div>
+    <!-- Charts — compact height -->
+    <div style="display:grid;grid-template-columns:1.6fr 1fr;gap:10px;margin-bottom:12px;">
+      <div class="box"><div class="box-title">📊 Sales by Brand</div><div style="position:relative;height:150px;"><canvas id="inv-brand-chart"></canvas></div></div>
+      <div class="box"><div class="box-title">🏢 Sales by BU</div><div style="position:relative;height:150px;"><canvas id="inv-bu-chart"></canvas></div></div>
     </div>
 
-    <!-- Tables row -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+    <!-- Manager + Salesmen side by side -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
       <div class="box"><div class="box-title">👔 Manager Performance</div><div style="overflow-x:auto;"><table class="data-table" style="min-width:280px;width:100%;"><thead><tr><th>Manager</th><th style="text-align:right;">Inv</th><th style="text-align:right;">Qty</th><th style="text-align:right;">Value</th></tr></thead><tbody id="inv-mgr-table"></tbody></table></div></div>
       <div class="box"><div class="box-title">🧑 Top Salesmen</div><div style="overflow-x:auto;"><table class="data-table" style="min-width:280px;width:100%;"><thead><tr><th>#</th><th>Salesman</th><th style="text-align:right;">Inv</th><th style="text-align:right;">Value</th></tr></thead><tbody id="inv-salesman-table"></tbody></table></div></div>
     </div>
 
-    <div class="box" style="margin-bottom:16px;"><div class="box-title">🏪 Top Customers</div><div style="overflow-x:auto;"><table class="data-table" style="min-width:500px;width:100%;"><thead><tr><th>#</th><th>Customer</th><th>Group</th><th>Channel</th><th style="text-align:right;">Qty</th><th style="text-align:right;">Value</th></tr></thead><tbody id="inv-cust-table"></tbody></table></div></div>
+    <div class="box" style="margin-bottom:12px;"><div class="box-title">🏪 Top Customers</div><div style="overflow-x:auto;"><table class="data-table" style="min-width:500px;width:100%;"><thead><tr><th>#</th><th>Customer</th><th>Group</th><th>Channel</th><th style="text-align:right;">Qty</th><th style="text-align:right;">Value</th></tr></thead><tbody id="inv-cust-table"></tbody></table></div></div>
 
     <div class="box" style="margin-bottom:24px;"><div class="box-title">🔗 Brand Sales Detail</div><div style="overflow-x:auto;"><table class="data-table" style="min-width:500px;width:100%;"><thead><tr><th>Brand</th><th>BU</th><th style="text-align:center;">Inv</th><th style="text-align:right;">Qty</th><th style="text-align:right;">BNS</th><th style="text-align:right;">Value</th></tr></thead><tbody id="inv-brand-table"></tbody></table></div></div>
 
