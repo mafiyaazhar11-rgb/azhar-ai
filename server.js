@@ -6,6 +6,8 @@ const XLSX = require('xlsx');
 const path = require('path');
 const fs = require('fs');
 const { Pool } = require('pg');
+const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 
 const app = express();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 150 * 1024 * 1024 } });
@@ -74,6 +76,47 @@ async function initDB() {
       total_orders INT,
       summary JSONB
     )`);
+    // AUTH TABLES
+    await pool.query(`CREATE TABLE IF NOT EXISTS users (
+      id SERIAL PRIMARY KEY,
+      username TEXT UNIQUE NOT NULL,
+      password_hash TEXT NOT NULL,
+      full_name TEXT,
+      role TEXT NOT NULL DEFAULT 'viewer',
+      dashboards JSONB DEFAULT '["dispatch","rejection","summary","email","invoice","backlog","returns","sales"]'::jsonb,
+      active BOOLEAN DEFAULT true,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      created_by TEXT DEFAULT 'system',
+      last_login TIMESTAMPTZ,
+      must_change_password BOOLEAN DEFAULT false
+    )`);
+    await pool.query(`CREATE TABLE IF NOT EXISTS sessions (
+      id SERIAL PRIMARY KEY,
+      token TEXT UNIQUE NOT NULL,
+      user_id INT REFERENCES users(id) ON DELETE CASCADE,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      expires_at TIMESTAMPTZ NOT NULL,
+      ip_address TEXT
+    )`);
+    await pool.query(`CREATE TABLE IF NOT EXISTS audit_log (
+      id SERIAL PRIMARY KEY,
+      user_id INT,
+      username TEXT,
+      action TEXT NOT NULL,
+      details TEXT,
+      ip_address TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )`);
+    // Create default super admin if not exists
+    var adminCheck = await pool.query("SELECT id FROM users WHERE username = 'azhar'");
+    if (adminCheck.rows.length === 0) {
+      var hash = await bcrypt.hash('YAmaha100@', 10);
+      await pool.query(
+        "INSERT INTO users (username, password_hash, full_name, role) VALUES ($1,$2,$3,$4)",
+        ['azhar', hash, 'Mohammed Azharuddin', 'superadmin']
+      );
+      console.log('Default super admin created: azhar / azhar2026');
+    }
     console.log('DB tables ready');
   } catch(e) {
     console.error('DB init error:', e.message);
@@ -822,6 +865,189 @@ app.get('/api/returns/status', function(req, res) {
     summary: returnsData.summary
   });
 });
+
+// ─── AUTH SYSTEM ──────────────────────────────────────────────────────────
+
+// Audit log helper
+async function auditLog(userId, username, action, details, ip) {
+  try {
+    await pool.query(
+      'INSERT INTO audit_log (user_id, username, action, details, ip_address) VALUES ($1,$2,$3,$4,$5)',
+      [userId||null, username||'system', action, details||'', ip||'']
+    );
+  } catch(e) { console.error('Audit log error:', e.message); }
+}
+
+// Auth middleware
+async function requireAuth(req, res, next) {
+  var token = req.headers['x-auth-token'] || req.headers['authorization'];
+  if (token && token.startsWith('Bearer ')) token = token.slice(7);
+  if (!token) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    var sess = await pool.query(
+      'SELECT s.*, u.id as uid, u.username, u.role, u.dashboards, u.full_name, u.active, u.must_change_password FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token=$1 AND s.expires_at>NOW()',
+      [token]
+    );
+    if (!sess.rows[0]) return res.status(401).json({ error: 'Session expired' });
+    if (!sess.rows[0].active) return res.status(403).json({ error: 'Account disabled' });
+    req.user = sess.rows[0];
+    next();
+  } catch(e) { res.status(500).json({ error: e.message }); }
+}
+
+function requireRole(...roles) {
+  return function(req, res, next) {
+    if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
+    if (!roles.includes(req.user.role)) return res.status(403).json({ error: 'Access denied' });
+    next();
+  };
+}
+
+// ── LOGIN ──
+app.post('/api/auth/login', async function(req, res) {
+  try {
+    var { username, password } = req.body;
+    if (!username || !password) return res.status(400).json({ error: 'Username and password required' });
+    var result = await pool.query('SELECT * FROM users WHERE username=$1', [username.toLowerCase().trim()]);
+    var user = result.rows[0];
+    if (!user) return res.status(401).json({ error: 'Invalid username or password' });
+    if (!user.active) return res.status(403).json({ error: 'Account is disabled. Contact admin.' });
+    var match = await bcrypt.compare(password, user.password_hash);
+    if (!match) return res.status(401).json({ error: 'Invalid username or password' });
+    // Create session token
+    var token = crypto.randomBytes(32).toString('hex');
+    var expires = new Date(Date.now() + 8 * 60 * 60 * 1000); // 8 hours
+    var ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
+    await pool.query('INSERT INTO sessions (token, user_id, expires_at, ip_address) VALUES ($1,$2,$3,$4)',
+      [token, user.id, expires, ip]);
+    // Update last login
+    await pool.query('UPDATE users SET last_login=NOW() WHERE id=$1', [user.id]);
+    // Audit
+    await auditLog(user.id, user.username, 'LOGIN', 'Successful login', ip);
+    res.json({
+      success: true,
+      token: token,
+      user: {
+        id: user.id,
+        username: user.username,
+        full_name: user.full_name,
+        role: user.role,
+        dashboards: user.dashboards,
+        must_change_password: user.must_change_password
+      }
+    });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── LOGOUT ──
+app.post('/api/auth/logout', requireAuth, async function(req, res) {
+  try {
+    var token = req.headers['x-auth-token'] || (req.headers['authorization']||'').replace('Bearer ','');
+    await pool.query('DELETE FROM sessions WHERE token=$1', [token]);
+    await auditLog(req.user.uid, req.user.username, 'LOGOUT', '', req.headers['x-forwarded-for']||'');
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── GET ME ──
+app.get('/api/auth/me', requireAuth, function(req, res) {
+  res.json({
+    id: req.user.uid,
+    username: req.user.username,
+    full_name: req.user.full_name,
+    role: req.user.role,
+    dashboards: req.user.dashboards,
+    must_change_password: req.user.must_change_password
+  });
+});
+
+// ── CHANGE PASSWORD ──
+app.post('/api/auth/change-password', requireAuth, async function(req, res) {
+  try {
+    var { current_password, new_password } = req.body;
+    if (!new_password || new_password.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    var result = await pool.query('SELECT password_hash FROM users WHERE id=$1', [req.user.uid]);
+    var match = await bcrypt.compare(current_password, result.rows[0].password_hash);
+    if (!match) return res.status(401).json({ error: 'Current password incorrect' });
+    var hash = await bcrypt.hash(new_password, 10);
+    await pool.query('UPDATE users SET password_hash=$1, must_change_password=false WHERE id=$2', [hash, req.user.uid]);
+    await auditLog(req.user.uid, req.user.username, 'CHANGE_PASSWORD', 'Password changed by user', '');
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── USER MANAGEMENT (superadmin only) ──
+app.get('/api/users', requireAuth, requireRole('superadmin'), async function(req, res) {
+  try {
+    var result = await pool.query('SELECT id, username, full_name, role, dashboards, active, created_at, last_login, must_change_password FROM users ORDER BY created_at');
+    res.json({ users: result.rows });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/users', requireAuth, requireRole('superadmin'), async function(req, res) {
+  try {
+    var { username, password, full_name, role, dashboards } = req.body;
+    if (!username || !password) return res.status(400).json({ error: 'Username and password required' });
+    var hash = await bcrypt.hash(password, 10);
+    var dbs = dashboards || ['dispatch','rejection','summary','email','invoice','backlog','returns','sales'];
+    var result = await pool.query(
+      'INSERT INTO users (username, password_hash, full_name, role, dashboards, created_by) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id',
+      [username.toLowerCase().trim(), hash, full_name||username, role||'viewer', JSON.stringify(dbs), req.user.username]
+    );
+    await auditLog(req.user.uid, req.user.username, 'CREATE_USER', 'Created user: '+username+' role: '+role, '');
+    res.json({ success: true, id: result.rows[0].id });
+  } catch(e) {
+    if (e.message.includes('unique')) return res.status(400).json({ error: 'Username already exists' });
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.put('/api/users/:id', requireAuth, requireRole('superadmin'), async function(req, res) {
+  try {
+    var { full_name, role, dashboards, active } = req.body;
+    var dbs = dashboards ? JSON.stringify(dashboards) : null;
+    await pool.query(
+      'UPDATE users SET full_name=COALESCE($1,full_name), role=COALESCE($2,role), dashboards=COALESCE($3::jsonb,dashboards), active=COALESCE($4,active) WHERE id=$5',
+      [full_name||null, role||null, dbs, active!=null?active:null, req.params.id]
+    );
+    await auditLog(req.user.uid, req.user.username, 'UPDATE_USER', 'Updated user ID: '+req.params.id, '');
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/users/:id', requireAuth, requireRole('superadmin'), async function(req, res) {
+  try {
+    if (parseInt(req.params.id) === req.user.uid) return res.status(400).json({ error: 'Cannot delete your own account' });
+    var u = await pool.query('SELECT username FROM users WHERE id=$1', [req.params.id]);
+    await pool.query('DELETE FROM users WHERE id=$1', [req.params.id]);
+    await auditLog(req.user.uid, req.user.username, 'DELETE_USER', 'Deleted user: '+(u.rows[0]||{}).username, '');
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/users/:id/reset-password', requireAuth, requireRole('superadmin'), async function(req, res) {
+  try {
+    var { new_password } = req.body;
+    if (!new_password || new_password.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    var hash = await bcrypt.hash(new_password, 10);
+    await pool.query('UPDATE users SET password_hash=$1, must_change_password=true WHERE id=$2', [hash, req.params.id]);
+    var u = await pool.query('SELECT username FROM users WHERE id=$1', [req.params.id]);
+    await auditLog(req.user.uid, req.user.username, 'RESET_PASSWORD', 'Reset password for: '+(u.rows[0]||{}).username, '');
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── AUDIT LOG ──
+app.get('/api/audit', requireAuth, requireRole('superadmin'), async function(req, res) {
+  try {
+    var result = await pool.query('SELECT * FROM audit_log ORDER BY created_at DESC LIMIT 500');
+    res.json({ logs: result.rows });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── AUDIT UPLOAD ACTIONS ──
+// Patch existing upload endpoints to log actions
+// (handled via middleware injection in each upload route)
 
 // STATIC - MUST BE LAST
 app.get('/', function(req, res) {
