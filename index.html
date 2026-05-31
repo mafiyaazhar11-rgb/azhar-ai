@@ -70,6 +70,9 @@ body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--tex
 .d-status-txt{font-size:11px;color:var(--muted);}
 .date-pills{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;}
 .dpill{padding:5px 12px;background:var(--surface);border:1px solid var(--border);color:var(--muted);font-family:'Montserrat',sans-serif;font-size:10px;cursor:pointer;transition:all 0.2s;}
+#ds-missing-banner{overflow:hidden;}
+#ds-banner-text{display:inline-block;animation:marquee-scroll 20s linear infinite;white-space:nowrap;}
+@keyframes marquee-scroll{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
 .dpill:hover{border-color:var(--gold);color:var(--gold);}
 .dpill.on{background:var(--gold);color:var(--black);border-color:var(--gold);font-weight:700;}
 .dpill.today{border-color:var(--green);color:var(--green);}
@@ -455,7 +458,21 @@ footer span{color:var(--gold);}
     <div class="panel on" id="dispatch">
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px;">
         <div class="d-status" id="ds-status" style="flex:1;min-width:260px;margin:0;"><span style="font-size:16px;">⏳</span><span class="d-status-txt">Checking for today's dispatch data...</span></div>
-        <div id="ds-date-wrap" style="display:none;"><div class="date-pills" id="ds-date-pills" style="margin:0;"></div></div>
+        <div id="ds-date-wrap" style="display:none;">
+  <!-- Rotating banner for missing today dispatch -->
+  <div id="ds-missing-banner" style="display:none;background:linear-gradient(90deg,rgba(232,75,75,0.15),rgba(201,168,76,0.15),rgba(232,75,75,0.15));border:1px solid rgba(232,75,75,0.4);padding:8px 16px;margin-bottom:10px;overflow:hidden;position:relative;">
+    <div id="ds-banner-text" style="font-size:10px;color:#e84b4b;letter-spacing:1px;white-space:nowrap;display:inline-block;">⚠ TODAY'S DISPATCH REPORT NOT YET RECEIVED — SHOWING LAST AVAILABLE DATA &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ⚠ TODAY'S DISPATCH REPORT NOT YET RECEIVED — SHOWING LAST AVAILABLE DATA</div>
+  </div>
+  <!-- Month tabs -->
+  <div id="ds-month-tabs" style="display:flex;gap:4px;margin-bottom:8px;flex-wrap:wrap;"></div>
+  <!-- Date pills for selected month -->
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+    <div class="date-pills" id="ds-date-pills" style="margin:0;flex:1;overflow-x:auto;flex-wrap:wrap;gap:4px;"></div>
+    <button id="ds-compare-btn" onclick="toggleCompareMode()" style="display:none;background:transparent;border:1px solid rgba(201,168,76,0.3);color:#c9a84c;font-size:9px;padding:5px 10px;cursor:pointer;font-family:Montserrat,sans-serif;letter-spacing:1px;white-space:nowrap;">📊 COMPARE</button>
+  </div>
+  <!-- Selected dates display -->
+  <div id="ds-selected-dates" style="display:none;font-size:10px;color:var(--muted);margin-bottom:6px;"></div>
+</div>
       </div>
       <div class="kpi-row" id="ds-kpis" style="display:none;">
         <div class="kpi-card"><div class="kpi-icon" style="background:rgba(201,168,76,0.1);">📦</div><div class="kpi-label">Total Orders</div><div class="kpi-value" id="k-orders">—</div><div class="kpi-sub" id="k-routes-sub">— routes · — drivers</div><div class="kpi-sub" style="color:var(--green);" id="k-drops">— total drops</div></div>
@@ -1077,19 +1094,167 @@ async function loadStatus(){
   }
 }
 
-function buildDatePills(dates,current){
-  const wrap=document.getElementById('ds-date-wrap');
-  const pills=document.getElementById('ds-date-pills');
-  wrap.style.display='block'; pills.innerHTML='';
-  const today=new Date().toISOString().split('T')[0];
-  dates.slice(0,30).forEach(dk=>{
-    const btn=document.createElement('button');
-    const d=new Date(dk);
-    btn.className='dpill'+(dk===today?' today':'')+(dk===current?' on':'');
-    btn.textContent=dk===today?'Today':d.toLocaleDateString('en-AE',{day:'numeric',month:'short'});
-    btn.onclick=()=>loadDate(dk);
+// Date navigation state
+var DS_ALL_DATES = [];
+var DS_SELECTED_MONTH = null;
+var DS_SELECTED_DATES = [];
+var DS_COMPARE_MODE = false;
+
+function buildDatePills(dates, current){
+  DS_ALL_DATES = dates.slice().sort().reverse();
+  const wrap = document.getElementById('ds-date-wrap');
+  wrap.style.display = 'block';
+  
+  const today = new Date().toISOString().split('T')[0];
+  const todayHasData = dates.indexOf(today) !== -1;
+  
+  // Show/hide missing banner with animation
+  const banner = document.getElementById('ds-missing-banner');
+  if(!todayHasData && banner){
+    banner.style.display = 'block';
+    animateBanner();
+  } else if(banner){
+    banner.style.display = 'none';
+  }
+  
+  // Group dates by month
+  var monthGroups = {};
+  var monthOrder = [];
+  DS_ALL_DATES.forEach(function(dk){
+    var d = new Date(dk);
+    var mKey = d.getFullYear()+'-'+(d.getMonth()+1);
+    var mLabel = d.toLocaleDateString('en-AE',{month:'short',year:'numeric'});
+    if(!monthGroups[mKey]){ monthGroups[mKey]={label:mLabel,dates:[]}; monthOrder.push(mKey); }
+    monthGroups[mKey].dates.push(dk);
+  });
+  
+  // Set default selected month to latest
+  if(!DS_SELECTED_MONTH || !monthGroups[DS_SELECTED_MONTH]){
+    DS_SELECTED_MONTH = monthOrder[0];
+  }
+  
+  // Render month tabs
+  var monthTabsEl = document.getElementById('ds-month-tabs');
+  monthTabsEl.innerHTML = '';
+  monthOrder.forEach(function(mKey){
+    var btn = document.createElement('button');
+    btn.textContent = monthGroups[mKey].label + ' (' + monthGroups[mKey].dates.length + ')';
+    btn.className = 'dpill' + (mKey === DS_SELECTED_MONTH ? ' on' : '');
+    btn.style.cssText = 'font-size:10px;padding:5px 12px;';
+    btn.onclick = function(){ DS_SELECTED_MONTH = mKey; DS_SELECTED_DATES = []; renderDatePillsForMonth(monthGroups, today, current); };
+    monthTabsEl.appendChild(btn);
+  });
+  
+  // Show compare button
+  var compareBtn = document.getElementById('ds-compare-btn');
+  if(compareBtn) compareBtn.style.display = 'block';
+  
+  renderDatePillsForMonth(monthGroups, today, current);
+}
+
+function renderDatePillsForMonth(monthGroups, today, current){
+  var pills = document.getElementById('ds-date-pills');
+  pills.innerHTML = '';
+  
+  // Update month tab styles
+  var monthTabsEl = document.getElementById('ds-month-tabs');
+  if(monthTabsEl) monthTabsEl.querySelectorAll('button').forEach(function(btn,i){
+    btn.className = 'dpill' + (Object.keys(monthGroups)[i] === DS_SELECTED_MONTH ? ' on' : '');
+  });
+  
+  var monthDates = monthGroups[DS_SELECTED_MONTH] ? monthGroups[DS_SELECTED_MONTH].dates : [];
+  
+  monthDates.forEach(function(dk){
+    var btn = document.createElement('button');
+    var d = new Date(dk);
+    var isToday = dk === today;
+    var isSelected = DS_SELECTED_DATES.indexOf(dk) !== -1 || (!DS_COMPARE_MODE && dk === current);
+    btn.className = 'dpill' + (isToday ? ' today' : '') + (isSelected ? ' on' : '');
+    btn.textContent = isToday ? 'Today' : d.toLocaleDateString('en-AE',{day:'numeric',month:'short'});
+    btn.onclick = function(){
+      if(DS_COMPARE_MODE){
+        var idx = DS_SELECTED_DATES.indexOf(dk);
+        if(idx === -1){ DS_SELECTED_DATES.push(dk); }
+        else { DS_SELECTED_DATES.splice(idx,1); }
+        if(DS_SELECTED_DATES.length > 0) loadMultipleDates(DS_SELECTED_DATES);
+        renderDatePillsForMonth(monthGroups, today, current);
+      } else {
+        DS_SELECTED_DATES = [dk];
+        loadDate(dk);
+        renderDatePillsForMonth(monthGroups, today, dk);
+      }
+    };
     pills.appendChild(btn);
   });
+  
+  // Show selected dates info
+  var selEl = document.getElementById('ds-selected-dates');
+  if(selEl && DS_COMPARE_MODE && DS_SELECTED_DATES.length > 0){
+    selEl.style.display = 'block';
+    selEl.textContent = 'Comparing: ' + DS_SELECTED_DATES.map(function(dk){
+      return new Date(dk).toLocaleDateString('en-AE',{day:'numeric',month:'short'});
+    }).join(' vs ');
+  } else if(selEl){
+    selEl.style.display = 'none';
+  }
+}
+
+function toggleCompareMode(){
+  DS_COMPARE_MODE = !DS_COMPARE_MODE;
+  DS_SELECTED_DATES = [];
+  var btn = document.getElementById('ds-compare-btn');
+  if(btn) btn.style.cssText = DS_COMPARE_MODE ? 
+    'background:rgba(201,168,76,0.2);border:1px solid #c9a84c;color:#c9a84c;font-size:9px;padding:5px 10px;cursor:pointer;font-family:Montserrat,sans-serif;letter-spacing:1px;white-space:nowrap;' :
+    'background:transparent;border:1px solid rgba(201,168,76,0.3);color:#c9a84c;font-size:9px;padding:5px 10px;cursor:pointer;font-family:Montserrat,sans-serif;letter-spacing:1px;white-space:nowrap;';
+  if(btn) btn.textContent = DS_COMPARE_MODE ? '✕ CANCEL' : '📊 COMPARE';
+  // Re-render pills
+  var pills = document.getElementById('ds-date-pills');
+  if(pills) pills.querySelectorAll('button').forEach(function(b){ b.classList.remove('on'); });
+}
+
+var _bannerInterval = null;
+function animateBanner(){
+  var el = document.getElementById('ds-banner-text');
+  if(!el) return;
+  if(_bannerInterval) clearInterval(_bannerInterval);
+  var pos = 0;
+  var speed = 1;
+  _bannerInterval = setInterval(function(){
+    pos -= speed;
+    var w = el.scrollWidth / 2;
+    if(Math.abs(pos) >= w) pos = 0;
+    el.style.transform = 'translateX('+pos+'px)';
+  }, 20);
+}
+
+async function loadMultipleDates(dateKeys){
+  try{
+    var results = await Promise.all(dateKeys.map(function(dk){
+      return fetch('/api/dispatch/date/'+dk).then(function(r){return r.json();});
+    }));
+    var valid = results.filter(function(r){return r.hasData;});
+    if(valid.length === 0){ alert('No data for selected dates'); return; }
+    if(valid.length === 1){ buildDashboard(valid[0]); return; }
+    // Merge summaries for comparison
+    buildComparisonDashboard(valid, dateKeys);
+  }catch(e){ alert('Error: '+e.message); }
+}
+
+function buildComparisonDashboard(results, dateKeys){
+  // Show comparison header
+  var titles = dateKeys.map(function(dk){
+    return new Date(dk).toLocaleDateString('en-AE',{day:'numeric',month:'short'});
+  });
+  // For now load the most recent - future: side by side comparison
+  buildDashboard(results[0]);
+  // Show comparison note
+  var kpiEl = document.getElementById('ds-kpi-row');
+  if(kpiEl){
+    var note = document.createElement('div');
+    note.style.cssText = 'grid-column:1/-1;font-size:10px;color:#c9a84c;padding:8px;background:rgba(201,168,76,0.1);border:1px solid rgba(201,168,76,0.2);';
+    note.textContent = '📊 Comparing: ' + titles.join(' vs ') + ' — Showing latest. Full comparison coming soon.';
+    kpiEl.prepend(note);
+  }
 }
 
 async function loadDate(dk){
@@ -3751,10 +3916,29 @@ function showApp() {
   applyDashboardAccess();
   applyUploadAccess();
   addUserInfoTopbar();
+  showDemoBanner();
   if(AUTH_USER && AUTH_USER.must_change_password) {
     document.getElementById('change-pwd-modal').style.display = 'flex';
   }
   startInactivityWatcher();
+}
+
+function showDemoBanner(){
+  var existing = document.getElementById('demo-banner');
+  if(existing) return;
+  var banner = document.createElement('div');
+  banner.id = 'demo-banner';
+  banner.style.cssText = 'position:fixed;top:0;left:0;width:100%;z-index:9990;background:rgba(201,168,76,0.15);border-bottom:2px solid #c9a84c;padding:6px 16px;display:flex;align-items:center;justify-content:center;gap:12px;';
+  banner.innerHTML = 
+    '<span style="font-size:10px;color:#c9a84c;letter-spacing:2px;font-family:Montserrat,sans-serif;font-weight:700;">⚠ DEMO VERSION</span>' +
+    '<span style="font-size:10px;color:#7a7660;font-family:Montserrat,sans-serif;">This is a personal initiative dashboard — not an official IT production system</span>' +
+    '<span style="font-size:10px;color:#c9a84c;letter-spacing:2px;font-family:Montserrat,sans-serif;font-weight:700;">⚠ DEMO VERSION</span>';
+  document.body.prepend(banner);
+  // Push content down so banner doesn't overlap topbar
+  var topbar = document.querySelector('.topbar');
+  if(topbar) topbar.style.top = banner.offsetHeight + 'px';
+  var sidebar = document.querySelector('.sidebar');
+  if(sidebar) sidebar.style.top = banner.offsetHeight + 'px';
 }
 
 function applyDashboardAccess() {
