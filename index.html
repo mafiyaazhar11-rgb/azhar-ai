@@ -1311,7 +1311,10 @@ async function loadDate(dk){
   try{const r=await fetch('/api/dispatch/date/'+dk);const d=await r.json();if(d.hasData){buildDashboard(d);loadStatus();}else alert('No data for '+dk);}catch(e){alert('Error: '+e.message);}
 }
 
+var DS_CURRENT_SUMMARY = null; // Global store for JARVIS to read
+
 function buildDashboard(d){
+  DS_CURRENT_SUMMARY = d.summary; // Store for JARVIS voice context
   const s=d.summary;
   const today=new Date().toISOString().split('T')[0];
   const lbl=d.date===today?'Today':d.date;
@@ -4270,8 +4273,10 @@ function buildVoiceContext() {
   var ctx = 'Dashboard: ' + VC_CURRENT_TAB + ' | ';
 
   try {
-    if (VC_CURRENT_TAB === 'dispatch' && typeof currentDispatch !== 'undefined' && currentDispatch) {
-      var s = currentDispatch.summary || {};
+    if (VC_CURRENT_TAB === 'dispatch') {
+      var s = DS_CURRENT_SUMMARY || {};
+      if (!DS_CURRENT_SUMMARY) { ctx += 'No dispatch data loaded yet. | '; }
+      else {
       ctx += 'Total Orders: ' + (s.total_orders||0) + ' | ';
       ctx += 'Total Value: AED ' + Math.round(s.total_value||0).toLocaleString() + ' | ';
       ctx += 'Total Drops: ' + (s.total_drops||0) + ' | ';
@@ -4311,6 +4316,11 @@ function buildVoiceContext() {
       // Food/NonFood split
       if (s.food_orders) ctx += 'Food Orders: ' + s.food_orders + ' (AED ' + Math.round(s.food_value||0).toLocaleString() + ') | ';
       if (s.nonfood_orders) ctx += 'NonFood Orders: ' + s.nonfood_orders + ' (AED ' + Math.round(s.nonfood_value||0).toLocaleString() + ') | ';
+      // Top customers
+      if (s.top_customers) { ctx += 'Top Customers: '; s.top_customers.slice(0,5).forEach(function(c){ ctx += c.name + '(AED ' + Math.round(c.value||0).toLocaleString() + ') '; }); ctx += ' | '; }
+      // Top drivers  
+      if (s.top_drivers) { ctx += 'Top Drivers: '; s.top_drivers.slice(0,5).forEach(function(d){ ctx += d.name + '(' + (d.drops||d.orders) + ' drops, AED ' + Math.round(d.value||0).toLocaleString() + ') '; }); ctx += ' | '; }
+      }
     }
 
     if (VC_CURRENT_TAB === 'returns' && typeof RET_FULL_SUMMARY !== 'undefined' && RET_FULL_SUMMARY) {
