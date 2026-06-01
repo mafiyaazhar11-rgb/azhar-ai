@@ -335,13 +335,13 @@ function parseDispatch(buffer) {
     location: findCol('LOCATION_ID', 'LOCATION'),
     keep:     findCol('KEEP TOGETHER', 'KEEP_TOGETHER', 'KEEPTOGETHER', 'KEEP'),
     type:     findCol('TYPE'),
-    org:      findCol('ROUTE') || findCol('BU') || findCol('ORGANIZATION') || findCol('ORG-BU') || findCol('ORG')
+    org:      findCol('ORG') || findCol('BU') || findCol('ORGANIZATION') || findCol('ORG-BU')
   };
   console.log('Dispatch cols:', JSON.stringify(C));
 
   var totalOrders=0, totalValue=0, foodOrders=0, foodValue=0, nonFoodOrders=0, nonFoodValue=0, plOrders=0, vanOrders=0;
   var cities={}, customers={}, routes={}, driverSet={};
-  var orgStats={ DCV:{o:0,v:0}, DCF:{o:0,v:0}, DGC:{o:0,v:0}, DGS:{o:0,v:0}, DSN:{o:0,v:0}, DPS:{o:0,v:0}, HCP:{o:0,v:0} };
+  var orgStats={ DCV:{o:0,v:0}, DCF:{o:0,v:0}, DGC:{o:0,v:0}, DGS:{o:0,v:0}, DSN:{o:0,v:0}, DPS:{o:0,v:0}, DPB:{o:0,v:0}, HCP:{o:0,v:0} };
 
   for (var i = 0; i < rows.length; i++) {
     var row = rows[i];
@@ -437,6 +437,7 @@ function parseDispatch(buffer) {
       DGS: { orders:orgStats.DGS.o, value:Math.round(orgStats.DGS.v) },
       DSN: { orders:orgStats.DSN.o, value:Math.round(orgStats.DSN.v) },
       DPS: { orders:orgStats.DPS.o, value:Math.round(orgStats.DPS.v) },
+      DPB: { orders:orgStats.DPB.o, value:Math.round(orgStats.DPB.v) },
       HCP: { orders:orgStats.HCP.o, value:Math.round(orgStats.HCP.v) }
     },
     by_city: byCity, top_customers: topCustomers,
