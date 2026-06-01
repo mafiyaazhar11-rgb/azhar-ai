@@ -468,6 +468,7 @@ footer span{color:var(--gold);}
   <button class="sb-item" onclick="goTab('backlog',this)"><span class="icon">📦</span> WH Backlog</button>
   <button class="sb-item" onclick="goTab('returns',this)"><span class="icon">🔄</span> Market Returns</button>
   <button class="sb-item" onclick="goTab('sales',this)"><span class="icon">📊</span> Order Summary</button>
+  <button class="sb-item" onclick="goTab('geninfo',this)"><span class="icon">👥</span> General Info</button>
       </aside>
 
 <div class="main" id="mainContent">
@@ -1083,6 +1084,92 @@ footer span{color:var(--gold);}
     <!-- ══ EXCEL SUPPORT ════════════════════════════════ -->
     <div class="panel" id="excel"><div class="box"><div class="box-title">📐 Excel Support &amp; Data Analysis</div><div class="upload" onclick="document.getElementById('xl-file').click()"><div style="font-size:22px;margin-bottom:6px;">📊</div><div style="font-size:11px;color:var(--muted);">Upload .csv or .xlsx file</div><div style="font-size:10px;color:var(--muted);margin-top:3px;" id="xl-file-name">File → Save As → CSV first</div></div><input type="file" id="xl-file" accept=".csv,.txt,.xlsx" style="display:none" onchange="loadFileExcel(this)"/><label class="lbl">Your Formula or Question</label><textarea id="xl-q" placeholder="e.g. Fix my VLOOKUP returning #N/A&#10;e.g. Analyse this data and give key insights"></textarea><label class="lbl">Context (Optional)</label><textarea id="xl-ctx" style="min-height:55px;" placeholder="e.g. Column A = Date, Column B = Customer, Column C = Amount..."></textarea><button class="btn" id="xl-btn" onclick="doExcel()"><span>Analyse &amp; Fix Excel</span></button><div class="loader" id="xl-loader"><div class="ring"></div><div class="ring-txt">Analysing your data...</div></div><div class="out" id="xl-out"><div class="out-head"><span class="out-lbl">✦ Excel Analysis</span><button class="copy" onclick="doCopy('xl-answer')">Copy</button></div><div class="out-body" id="xl-answer"></div></div></div></div>
 
+    <!-- ══ GENERAL INFO DASHBOARD ══════════════════════════════════ -->
+    <div class="panel" id="geninfo">
+      <input type="file" id="gi-file-input" accept=".xlsx,.xls,.csv" style="display:none;" onchange="handleGIUpload(this)">
+
+      <!-- Upload Box -->
+      <div id="gi-upload-box" style="display:none;background:var(--surface);border:1px solid var(--gold);padding:14px 20px;margin-bottom:14px;flex-direction:row;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+        <div>
+          <div style="font-size:11px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:3px;">General Info Upload</div>
+          <div style="font-size:10px;color:var(--muted);">Upload Team_Directory Excel file</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <span id="gi-last-upload" style="font-size:10px;color:var(--muted);"></span>
+          <button onclick="giClearData()" style="padding:7px 14px;background:transparent;border:1px solid #e84b4b;color:#e84b4b;font-size:10px;letter-spacing:1px;cursor:pointer;font-family:Montserrat,sans-serif;">🗑 CLEAR</button>
+          <button onclick="document.getElementById('gi-file-input').click()" style="padding:7px 16px;background:var(--glow);border:1px solid var(--gold);color:var(--gold);font-size:10px;letter-spacing:1px;cursor:pointer;font-family:Montserrat,sans-serif;">📋 UPLOAD FILE</button>
+        </div>
+      </div>
+
+      <!-- No Data -->
+      <div id="gi-nodata" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:300px;text-align:center;padding:40px;">
+        <div style="font-size:48px;margin-bottom:16px;opacity:0.3;">👥</div>
+        <div style="font-size:14px;color:var(--gold);margin-bottom:8px;letter-spacing:2px;">NO TEAM DATA LOADED</div>
+        <div style="font-size:11px;color:var(--muted);">Click ✦ star to upload Team_Directory file</div>
+      </div>
+
+      <!-- Dashboard -->
+      <div id="gi-dashboard" style="display:none;">
+
+        <!-- Search + Filter -->
+        <div style="background:var(--surface);border:1px solid var(--border);border-top:2px solid var(--gold);padding:10px 14px;margin-bottom:14px;">
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+            <input id="gi-search" type="text" placeholder="🔍  Search name, outlet, designation..." oninput="giSearch(this.value)"
+              style="flex:1;min-width:180px;background:var(--black);border:1px solid var(--border);color:var(--text);padding:7px 12px;font-size:11px;font-family:Montserrat,sans-serif;outline:none;"/>
+            <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;">
+              <span style="font-size:9px;color:var(--muted);letter-spacing:1px;">UNIT</span>
+              <div id="gi-unit-pills" style="display:flex;gap:4px;flex-wrap:wrap;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- KPI Cards -->
+        <div id="gi-kpis" style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:14px;"></div>
+
+        <!-- Team Table -->
+        <div style="background:var(--surface);border:1px solid var(--border);padding:14px;margin-bottom:14px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+            <div style="font-size:9px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;">👥 Team Directory</div>
+            <div id="gi-count" style="font-size:10px;color:var(--muted);"></div>
+          </div>
+          <div style="overflow-x:auto;">
+            <table class="data-table" style="width:100%;min-width:900px;">
+              <thead>
+                <tr>
+                  <th>Name</th><th>Designation</th><th>Unit</th><th>Dept</th>
+                  <th style="text-align:center;">Contact</th>
+                  <th>Responsibility</th><th>Outlet / Area</th>
+                  <th style="text-align:center;">Branch</th>
+                  <th>Reporting To</th>
+                  <th style="text-align:center;">BU Type</th>
+                  <th style="text-align:center;">Acct No.</th>
+                </tr>
+              </thead>
+              <tbody id="gi-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Merchandiser Cards -->
+        <div id="gi-merch-section" style="display:none;margin-bottom:14px;">
+          <div style="font-size:9px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;">🏪 Merchandiser Outlet Map</div>
+          <div id="gi-merch-cards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;"></div>
+        </div>
+
+        <!-- Dispatch Link -->
+        <div id="gi-dispatch-section" style="display:none;background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--gold);padding:14px;margin-bottom:28px;">
+          <div style="font-size:9px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;">🚚 Dispatch Link</div>
+          <div id="gi-dispatch-content"></div>
+        </div>
+
+      </div>
+
+      <!-- Star -->
+      <div id="gi-star-wrap" style="display:none;position:fixed;bottom:20px;right:20px;z-index:100;">
+        <button onclick="giToggleUpload()" style="background:transparent;border:none;cursor:pointer;font-size:22px;color:var(--gold);opacity:0.25;transition:opacity 0.3s;padding:6px;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.25'">✦</button>
+      </div>
+    </div>
+
   </div>
   <footer>✦ &nbsp; Operations &amp; Customer Service Intelligence Platform &nbsp;·&nbsp; Control Tower &nbsp;·&nbsp; Powered by Azhar &nbsp;·&nbsp; V 4.0</footer>
 </div>
@@ -1112,6 +1199,7 @@ const TITLES={
   excel:     ['Excel Support & Data Analysis','Fix formulas and analyse spreadsheet data'],
   returns:   ['Market Returns & Invoice Cancellation','GRV Returns · Invoice Cancellations · BU-wise Analysis'],
     sales:     ['Order Process Summary','Food - Non-Food - ORG - Warehouse Value Breakdown'],
+  geninfo:   ['General Information','Team Directory · Merchandisers · Outlets · Dispatch Link'],
   backlog:   ['WH Backlog Risk Command Center','Pure Risk · Advance Orders · Credit Hold · Frozen Pool · BU Ownership'],
   returns:   ['Daily Returns Dashboard','Invoice Cancellations - GRV Returns - BU-wise Analysis']
 };
@@ -1127,6 +1215,8 @@ function goTab(id,btn){
   loadBacklogFromServer();
   loadReturnsFromServer();
   if(id==='sales') loadSalesFromServer();
+  if(id==='geninfo') loadGIFromServer();
+    var giStarW=document.getElementById('gi-star-wrap');if(giStarW){var cuGI=AUTH_USER&&(AUTH_USER.role==='superadmin'||AUTH_USER.role==='subadmin');giStarW.style.display=(id==='geninfo'&&cuGI)?'block':'none';}
   // Update JARVIS current tab
   VC_CURRENT_TAB = id;
   // Show/hide inv star based on tab and role
@@ -4076,6 +4166,227 @@ loadSalesFromServer();
 
 
 
+// ═══════════════ GENERAL INFO DASHBOARD ═══════════════
+var GI_RAW = [];
+var GI_FILTER = { unit:'all', search:'' };
+
+function giToggleUpload(){
+  var b=document.getElementById('gi-upload-box');
+  if(b) b.style.display=b.style.display==='flex'?'none':'flex';
+}
+
+function giClearData(){
+  GI_RAW=[];
+  document.getElementById('gi-nodata').style.display='flex';
+  document.getElementById('gi-dashboard').style.display='none';
+  document.getElementById('gi-upload-box').style.display='none';
+  fetch('/api/geninfo/clear',{method:'DELETE',headers:{'x-auth-token':AUTH_TOKEN}}).catch(function(){});
+}
+
+function handleGIUpload(input){
+  var file=input.files[0]; if(!file) return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var data=new Uint8Array(e.target.result);
+      var wb=XLSX.read(data,{type:'array'});
+      var sheetName=wb.SheetNames.find(function(n){return n.toLowerCase().includes('team')||n.toLowerCase().includes('directory');})||wb.SheetNames[0];
+      var ws=wb.Sheets[sheetName];
+      var allRows=XLSX.utils.sheet_to_json(ws,{defval:'',range:2});
+      if(!allRows.length){alert('No data found');return;}
+      GI_RAW=allRows;
+      GI_FILTER={unit:'all',search:''};
+      renderGIDashboard();
+      saveGIToServer(file.name);
+      var le=document.getElementById('gi-last-upload');
+      if(le) le.textContent='Loaded: '+file.name+' ('+allRows.length+' members)';
+    }catch(ex){alert('Error: '+ex.message);}
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function giGetVal(row, key){
+  var targets={
+    dept:'DEPT', unit:'UNIT', name:'NAME', designation:'DESIGNATION',
+    contact:'CONTACT', email:'EMAIL', responsibility:'RESPONSIBILITY',
+    outlet:'OUTLET / AREA', branch:'BRANCH', reportTo:'REPORTING TO',
+    notes:'NOTES', buType:'BU_TYPE', acctNo:'ACCT_NO'
+  };
+  var target=(targets[key]||key).toUpperCase();
+  var found=Object.keys(row).find(function(k){return k.trim().toUpperCase()===target;});
+  return found?String(row[found]||'').trim():'';
+}
+
+var GI_UNIT_COLORS={'Merchandisers':'#4ecb8d','Drivers':'#5b8dee','Sales Team':'#c9a84c','Customer Service':'#e8854b','Managers':'#e84b4b'};
+
+function renderGIDashboard(){
+  document.getElementById('gi-nodata').style.display='none';
+  document.getElementById('gi-dashboard').style.display='block';
+  var units={};
+  GI_RAW.forEach(function(r){var u=giGetVal(r,'unit');if(u)units[u]=1;});
+  giRebuildPills(Object.keys(units).sort());
+  giRenderKPIs();
+  giApplyFilters();
+}
+
+function giRebuildPills(unitList){
+  var el=document.getElementById('gi-unit-pills'); if(!el) return;
+  var cur=GI_FILTER.unit;
+  var html='<button class="ret-pill'+(cur==='all'?' on':'')+'" data-val="all">ALL</button>';
+  unitList.forEach(function(v){
+    html+='<button class="ret-pill'+(cur===v?' on':'')+'" data-val="'+v.replace(/"/g,'')+'">'+v+'</button>';
+  });
+  el.innerHTML=html;
+  el.querySelectorAll('.ret-pill').forEach(function(b){
+    b.addEventListener('click',function(){
+      GI_FILTER.unit=this.dataset.val;
+      el.querySelectorAll('.ret-pill').forEach(function(x){x.classList.remove('on');});
+      this.classList.add('on');
+      giApplyFilters();
+    });
+  });
+}
+
+function giRenderKPIs(){
+  var byUnit={};
+  GI_RAW.forEach(function(r){var u=giGetVal(r,'unit')||'Other';byUnit[u]=(byUnit[u]||0)+1;});
+  var kpis=[
+    {icon:'👥',label:'TOTAL TEAM',val:GI_RAW.length,col:'var(--gold)'},
+    {icon:'🧑',label:'SALES TEAM',val:byUnit['Sales Team']||0,col:'#c9a84c'},
+    {icon:'🏪',label:'MERCHANDISERS',val:byUnit['Merchandisers']||0,col:'#4ecb8d'},
+    {icon:'🚚',label:'DRIVERS',val:byUnit['Drivers']||0,col:'#5b8dee'},
+    {icon:'📞',label:'CUSTOMER SVC',val:byUnit['Customer Service']||0,col:'#e8854b'},
+  ];
+  document.getElementById('gi-kpis').innerHTML=kpis.map(function(k){
+    return '<div style="background:var(--card);border:1px solid var(--border);padding:12px 14px;">'
+      +'<div style="font-size:20px;margin-bottom:4px;">'+k.icon+'</div>'
+      +'<div style="font-size:8px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">'+k.label+'</div>'
+      +'<div style="font-size:28px;font-weight:700;color:'+k.col+';font-family:Cormorant Garamond,serif;line-height:1;">'+k.val+'</div>'
+      +'</div>';
+  }).join('');
+}
+
+function giSearch(val){
+  GI_FILTER.search=val.toLowerCase();
+  giApplyFilters();
+}
+
+function giApplyFilters(){
+  var rows=GI_RAW.filter(function(r){
+    if(GI_FILTER.unit!=='all'&&giGetVal(r,'unit')!==GI_FILTER.unit) return false;
+    if(GI_FILTER.search){
+      var s=GI_FILTER.search;
+      var hay=(giGetVal(r,'name')+giGetVal(r,'designation')+giGetVal(r,'outlet')+giGetVal(r,'branch')+giGetVal(r,'responsibility')).toLowerCase();
+      if(!hay.includes(s)) return false;
+    }
+    return true;
+  });
+  giRenderTable(rows);
+  giRenderMerchCards(rows);
+  document.getElementById('gi-count').textContent=rows.length+' of '+GI_RAW.length+' members';
+}
+
+function giRenderTable(rows){
+  var tbody=document.getElementById('gi-table-body');
+  if(!rows.length){tbody.innerHTML='<tr><td colspan="11" style="text-align:center;color:var(--muted);padding:20px;">No records found</td></tr>';return;}
+  tbody.innerHTML=rows.map(function(r){
+    var name=giGetVal(r,'name'), desig=giGetVal(r,'designation'), unit=giGetVal(r,'unit');
+    var dept=giGetVal(r,'dept'), contact=giGetVal(r,'contact'), resp=giGetVal(r,'responsibility');
+    var outlet=giGetVal(r,'outlet'), branch=giGetVal(r,'branch'), reportTo=giGetVal(r,'reportTo');
+    var buType=giGetVal(r,'buType'), acctNo=giGetVal(r,'acctNo');
+    var col=GI_UNIT_COLORS[unit]||'var(--text)';
+    var buColor=(buType&&!buType.toLowerCase().includes('non'))?'#4ecb8d':'#5b8dee';
+    var buBadge=buType?('<span style="color:'+buColor+';font-size:9px;border:1px solid '+buColor+';padding:1px 5px;">'+buType+'</span>'):'';
+    return '<tr>'
+      +'<td style="color:'+col+';font-weight:600;">'+name+'</td>'
+      +'<td style="color:var(--muted);font-size:10px;">'+desig+'</td>'
+      +'<td style="color:'+col+';font-size:10px;font-weight:600;">'+unit+'</td>'
+      +'<td style="color:var(--muted);font-size:10px;">'+dept+'</td>'
+      +'<td style="text-align:center;"><a href="tel:'+contact+'" style="color:#4ecb8d;font-size:10px;text-decoration:none;">📞 '+contact+'</a></td>'
+      +'<td style="color:var(--muted);font-size:10px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+resp+'</td>'
+      +'<td style="color:var(--muted);font-size:10px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+outlet+'</td>'
+      +'<td style="text-align:center;color:var(--gold);font-size:10px;font-weight:600;">'+branch+'</td>'
+      +'<td style="color:var(--muted);font-size:10px;">'+reportTo+'</td>'
+      +'<td style="text-align:center;">'+buBadge+'</td>'
+      +'<td style="text-align:center;color:var(--muted);font-size:10px;">'+acctNo+'</td>'
+      +'</tr>';
+  }).join('');
+}
+
+function giRenderMerchCards(rows){
+  var merch=rows.filter(function(r){return giGetVal(r,'unit')==='Merchandisers';});
+  var sec=document.getElementById('gi-merch-section');
+  if(!merch.length){sec.style.display='none';return;}
+  sec.style.display='block';
+  var container=document.getElementById('gi-merch-cards');
+  container.innerHTML=merch.map(function(r){
+    var name=giGetVal(r,'name'), contact=giGetVal(r,'contact'), outlet=giGetVal(r,'outlet');
+    var branch=giGetVal(r,'branch'), buType=giGetVal(r,'buType'), acctNo=giGetVal(r,'acctNo');
+    var desig=giGetVal(r,'designation');
+    var outlets=outlet?outlet.split(',').map(function(o){return o.trim();}).filter(Boolean):[];
+    var buColor=(buType&&!buType.toLowerCase().includes('non'))?'#4ecb8d':'#5b8dee';
+    var safeN=name.replace(/"/g,''), safeBr=branch.replace(/"/g,''), safeAc=acctNo.replace(/"/g,'');
+    return '<div class="gi-mcard" data-name="'+safeN+'" data-branch="'+safeBr+'" data-acct="'+safeAc+'" '
+      +'style="background:var(--card);border:1px solid var(--border);border-top:2px solid #4ecb8d;padding:14px;cursor:pointer;">'
+      +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">'
+      +'<div>'
+      +'<div style="font-size:13px;font-weight:700;color:#4ecb8d;margin-bottom:2px;">'+name+'</div>'
+      +'<div style="font-size:10px;color:var(--muted);">'+desig+'</div>'
+      +'</div>'
+      +'<a href="tel:'+contact+'" style="background:rgba(78,203,141,0.1);border:1px solid rgba(78,203,141,0.3);color:#4ecb8d;padding:5px 10px;font-size:10px;text-decoration:none;" onclick="event.stopPropagation()">📞 Call</a>'
+      +'</div>'
+      +(buType?'<div style="margin-bottom:8px;"><span style="color:'+buColor+';font-size:9px;border:1px solid '+buColor+';padding:2px 8px;">'+buType+'</span>'+(acctNo?' <span style="color:var(--muted);font-size:9px;">Acct: '+acctNo+'</span>':'')+'</div>':'')
+      +'<div style="font-size:9px;color:var(--muted);margin-bottom:4px;">BRANCH: <span style="color:var(--gold);">'+branch+'</span></div>'
+      +'<div style="font-size:9px;color:var(--muted);margin-bottom:6px;">OUTLETS ('+outlets.length+'):</div>'
+      +'<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px;">'
+      +outlets.map(function(o){return '<span style="background:rgba(201,168,76,0.08);border:1px solid rgba(201,168,76,0.2);color:var(--muted);font-size:9px;padding:2px 6px;">'+o+'</span>';}).join('')
+      +'</div>'
+      +'<div style="border-top:1px solid var(--border);padding-top:6px;font-size:9px;color:rgba(201,168,76,0.5);text-align:center;letter-spacing:1px;">CLICK FOR DISPATCH ORDERS</div>'
+      +'</div>';
+  }).join('');
+  container.querySelectorAll('.gi-mcard').forEach(function(card){
+    card.addEventListener('click',function(){
+      giShowDispatch(this.dataset.name, this.dataset.branch, this.dataset.acct);
+    });
+  });
+}
+
+function giShowDispatch(name, branch, acctNo){
+  var sec=document.getElementById('gi-dispatch-section');
+  var cnt=document.getElementById('gi-dispatch-content');
+  sec.style.display='block';
+  sec.scrollIntoView({behavior:'smooth',block:'nearest'});
+  cnt.innerHTML='<div style="color:var(--gold);font-weight:600;margin-bottom:8px;">'+name+' — Branch: '+branch+(acctNo?' | Acct: '+acctNo:'')+'</div>'
+    +'<div style="color:var(--muted);font-size:11px;">Upload todays dispatch file. Orders matching this merchandiser will appear here with driver name and contact number.</div>'
+    +'<div style="margin-top:10px;font-size:10px;color:rgba(201,168,76,0.5);">TIP: Ask JARVIS — What are the orders for '+name+' today?</div>';
+}
+
+// ── DB SAVE / LOAD ──
+function saveGIToServer(fileName){
+  if(!GI_RAW.length) return;
+  fetch('/api/geninfo/upload',{
+    method:'POST', headers:{'Content-Type':'application/json','x-auth-token':AUTH_TOKEN},
+    body:JSON.stringify({rows:GI_RAW,fileName:fileName,totalMembers:GI_RAW.length})
+  }).then(function(r){return r.json();})
+  .then(function(d){if(d&&d.success)console.log('GenInfo saved');else console.error('GenInfo save failed',d);})
+  .catch(function(e){console.error('GenInfo save error',e.message);});
+}
+
+function loadGIFromServer(){
+  if(!AUTH_TOKEN) return;
+  fetch('/api/geninfo/status',{headers:{'x-auth-token':AUTH_TOKEN}})
+  .then(function(r){return r.json();})
+  .then(function(d){
+    if(!d||!d.hasData||!d.rows||!d.rows.length) return;
+    GI_RAW=d.rows;
+    GI_FILTER={unit:'all',search:''};
+    renderGIDashboard();
+    var le=document.getElementById('gi-last-upload');
+    if(le) le.textContent='Loaded: '+d.fileName+' ('+d.rows.length+' members)';
+  }).catch(function(e){console.log('GenInfo load error',e.message);});
+}
+
+
 // ═══════════════ VOICE COMMAND SYSTEM ═══════════════
 var vcListening = false;
 var vcRecognition = null;
@@ -4598,6 +4909,17 @@ function buildVoiceContext() {
       }
     }
 
+    if (VC_CURRENT_TAB === 'geninfo' && GI_RAW && GI_RAW.length) {
+      ctx += 'General Info - Team Directory. '+GI_RAW.length+' members. ';
+      var gu={};
+      GI_RAW.forEach(function(r){var u=giGetVal(r,'unit')||'Other';gu[u]=(gu[u]||0)+1;});
+      Object.keys(gu).forEach(function(u){ctx+=u+':'+gu[u]+'. ';});
+      ctx += 'Members: ';
+      GI_RAW.forEach(function(r){
+        ctx+=giGetVal(r,'name')+'('+giGetVal(r,'unit')+','+giGetVal(r,'designation')+','+giGetVal(r,'contact')+(giGetVal(r,'branch')?','+giGetVal(r,'branch'):'')+(giGetVal(r,'outlet')?',outlets:'+giGetVal(r,'outlet'):'')+(giGetVal(r,'buType')?',BU:'+giGetVal(r,'buType'):'')+(giGetVal(r,'acctNo')?',Acct:'+giGetVal(r,'acctNo'):'')+') ';
+      });
+      ctx += ' | ';
+    }
     if (VC_CURRENT_TAB === 'rejection' && typeof ORG_DATA !== 'undefined') {
       var MNAMES_R={1:'January',2:'February',3:'March',4:'April',5:'May',6:'June',7:'July',8:'August',9:'September',10:'October',11:'November',12:'December'};
       try {
@@ -4914,6 +5236,7 @@ function showApp() {
   addUserInfoTopbar();
   showDemoBanner();
   loadSalesFromServer();
+  loadGIFromServer();
   if(AUTH_USER && AUTH_USER.must_change_password) {
     document.getElementById('change-pwd-modal').style.display = 'flex';
   }
@@ -4962,6 +5285,7 @@ function applyUploadAccess() {
     if(el) el.style.display = canUpload ? 'block' : 'none';
   });
 
+  var giStar=document.getElementById('gi-star-wrap');if(giStar)giStar.style.display=(canUpload&&VC_CURRENT_TAB==='geninfo')?'block':'none';
 }
 
 function addUserInfoTopbar() {
