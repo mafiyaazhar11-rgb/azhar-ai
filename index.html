@@ -7,7 +7,25 @@
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600;700&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
-:root{--black:#050505;--surface:#0f0f0d;--card:#161612;--card2:#1a1a16;--border:#2a2a1e;--gold:#c9a84c;--gold2:#e8c878;--gold3:#f5e0a0;--glow:rgba(201,168,76,0.1);--text:#f0ece0;--muted:#7a7660;--white:#faf8f0;--green:#4ecb8d;--red:#e84b4b;--blue:#5b8dee;--orange:#e8854b;--sidebar:220px;}
+:root{
+  --black:#050505;
+  --surface:#0f0f0d;
+  --card:#161612;
+  --card2:#1a1a16;
+  --border:#3a3820;
+  --gold:#e8c060;
+  --gold2:#f5d070;
+  --gold3:#fff0b0;
+  --glow:rgba(232,192,96,0.12);
+  --text:#f5e8a0;
+  --muted:#c8b870;
+  --white:#fff8e0;
+  --green:#4ecb8d;
+  --red:#e84b4b;
+  --blue:#5b8dee;
+  --orange:#e8854b;
+  --sidebar:220px;
+}
 body{font-family:'Montserrat',sans-serif;background:var(--black);color:var(--text);min-height:100vh;display:flex;overflow:hidden;height:100vh;scrollbar-width:thin;scrollbar-color:var(--border) transparent;}
 .sidebar{width:var(--sidebar);min-height:100vh;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;position:fixed;left:0;top:0;bottom:0;z-index:100;}
 .sb-logo{padding:20px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;}
@@ -148,7 +166,7 @@ textarea{resize:vertical;min-height:100px;line-height:1.7;}
 .rej-pill.on{background:var(--gold);color:var(--black);border-color:var(--gold);font-weight:700;}
 .ret-pill{padding:5px 14px;border-radius:20px;border:1px solid var(--border);background:transparent;font-size:10px;cursor:pointer;color:var(--muted);transition:all 0.2s;font-family:'Montserrat',sans-serif;letter-spacing:1px;text-transform:uppercase;}
 .ret-pill:hover{border-color:var(--gold);color:var(--gold);}
-.ret-pill.on{background:var(--glow);border-color:var(--gold);color:var(--gold);}
+.ret-pill.on{background:rgba(232,192,96,0.15);border-color:var(--gold);color:var(--gold);font-weight:700;}
 .rej-pill:hover:not(.on){border-color:var(--gold);color:var(--gold);}
 .org-card{background:var(--surface);border:1px solid var(--border);padding:10px 14px;display:flex;flex-direction:column;gap:4px;cursor:pointer;transition:all 0.2s;}
 .org-card:hover{border-color:var(--gold);}
@@ -199,6 +217,19 @@ footer span{color:var(--gold);}
 }
 
 @media (max-width: 768px) {
+  /* ── PRESENTATION / CEO VIEW ── */
+  .data-table td { font-size: 13px !important; padding: 10px 12px !important; }
+  .data-table th { font-size: 11px !important; padding: 9px 12px !important; }
+  .kpi-val { font-size: 34px !important; }
+  .kpi-lbl { font-size: 10px !important; }
+  .kpi-sub { font-size: 12px !important; }
+  .box-title { font-size: 11px !important; }
+  .ret-pill { font-size: 11px !important; padding: 7px 14px !important; }
+  .topbar-left h2 { font-size: 18px !important; }
+  #topbar-sub { font-size: 10px !important; }
+  .sb-item { font-size: 12px !important; padding: 13px 16px !important; }
+  .lbl { font-size: 11px !important; }
+
 
   /* ── CORE LAYOUT ── */
   body { overflow: hidden; }
@@ -432,6 +463,76 @@ footer span{color:var(--gold);}
   100% { background-position: 200% center; }
 }
 
+
+/* ══ CEO PRESENTATION — GLOBAL GOLD OVERRIDE ══ */
+
+/* All muted text → bright gold */
+[style*="color:var(--muted)"],
+[style*="color: var(--muted)"] {
+  color: var(--gold2) !important;
+}
+
+/* All inline white text stays bright */
+[style*="color:var(--text)"],
+[style*="color: var(--text)"] {
+  color: var(--text) !important;
+}
+
+/* KPI sub-text in boxes */
+.box [style*="font-size:10px"],
+.box [style*="font-size: 10px"] {
+  font-size: 12px !important;
+}
+
+/* Percentage numbers — make gold and bigger */
+[style*="color:var(--muted)"][style*="%"] {
+  color: var(--gold) !important;
+  font-weight: 600;
+}
+
+/* Sidebar active */
+.sb-item.on { color: var(--gold) !important; background: rgba(232,192,96,0.1) !important; }
+.sb-item:hover { color: var(--gold) !important; background: rgba(232,192,96,0.07) !important; }
+
+/* Topbar user info */
+#tb-user, #tb-role { color: var(--gold2) !important; }
+.dot-live { color: var(--green) !important; font-size: 11px !important; }
+
+/* Panel heading labels */
+[style*="letter-spacing:2px"][style*="color:var(--muted)"],
+[style*="letter-spacing:1px"][style*="color:var(--muted)"] {
+  color: var(--gold) !important;
+  font-weight: 600 !important;
+}
+
+/* KPI card values in Market Returns, Rejection etc */
+[style*="font-size:26px"], [style*="font-size:28px"], [style*="font-size:24px"] {
+  font-size: 30px !important;
+}
+
+/* Small percentage labels (47%, 53% etc) */
+[style*="font-size:9px"] { font-size: 11px !important; }
+[style*="font-size:8px"] { font-size: 10px !important; }
+
+/* Table alternating rows */
+.data-table tr:nth-child(even) td { background: rgba(232,192,96,0.03); }
+
+/* Scrollbar gold tint */
+::-webkit-scrollbar-thumb { background: rgba(232,192,96,0.3) !important; }
+::-webkit-scrollbar-thumb:hover { background: rgba(232,192,96,0.5) !important; }
+
+/* Mobile specific presentation fixes */
+@media (max-width: 768px) {
+  [style*="font-size:9px"]  { font-size: 12px !important; }
+  [style*="font-size:10px"] { font-size: 13px !important; }
+  [style*="font-size:11px"] { font-size: 13px !important; }
+  [style*="font-size:12px"] { font-size: 14px !important; }
+  [style*="font-size:13px"] { font-size: 14px !important; }
+  .box { padding: 14px !important; }
+  .kpi-val { font-size: 30px !important; }
+  .topbar { height: 56px !important; padding: 0 14px !important; }
+  .content { padding: 14px 12px !important; }
+}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
