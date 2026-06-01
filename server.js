@@ -1201,53 +1201,5 @@ app.post('/api/sales/upload', async function(req, res) {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
-// ─── GENERAL INFO DASHBOARD ────────────────────────────────────────────────
-var genInfoData = null;
-
-async function loadGenInfoFromDB() {
-  try {
-    await pool.query(`CREATE TABLE IF NOT EXISTS geninfo_data (
-      id SERIAL PRIMARY KEY, uploaded_at TIMESTAMPTZ DEFAULT NOW(),
-      file_name TEXT, total_members INT, rows JSONB
-    )`);
-    var r = await pool.query('SELECT * FROM geninfo_data ORDER BY uploaded_at DESC LIMIT 1');
-    if (r.rows[0]) {
-      genInfoData = { fileName: r.rows[0].file_name, totalMembers: r.rows[0].total_members, rows: r.rows[0].rows };
-      console.log('Loaded GenInfo from DB:', genInfoData.fileName, genInfoData.totalMembers, 'members');
-    }
-  } catch(e) { console.error('DB load geninfo:', e.message); }
-}
-loadGenInfoFromDB();
-
-app.get('/api/geninfo/status', requireAuth, function(req, res) {
-  if (!genInfoData) return res.json({ hasData: false });
-  res.json({ hasData: true, fileName: genInfoData.fileName, totalMembers: genInfoData.totalMembers, rows: genInfoData.rows });
-});
-
-app.post('/api/geninfo/upload', requireAuth, requireRole('superadmin','subadmin'), async function(req, res) {
-  try {
-    var { rows, fileName, totalMembers } = req.body;
-    if (!rows || !rows.length) return res.status(400).json({ error: 'No rows provided' });
-    genInfoData = { rows, fileName: fileName || 'team_directory.xlsx', totalMembers: totalMembers || rows.length };
-    try {
-      await pool.query('CREATE TABLE IF NOT EXISTS geninfo_data (id SERIAL PRIMARY KEY, uploaded_at TIMESTAMPTZ DEFAULT NOW(), file_name TEXT, total_members INT, rows JSONB)');
-      await pool.query('DELETE FROM geninfo_data');
-      await pool.query('INSERT INTO geninfo_data (file_name, total_members, rows) VALUES ($1,$2,$3)',
-        [genInfoData.fileName, genInfoData.totalMembers, JSON.stringify(rows)]);
-      console.log('GenInfo saved to DB:', rows.length, 'members');
-    } catch(dbErr) { console.error('GenInfo DB save:', dbErr.message); }
-    await auditLog(req.user.uid, req.user.username, 'UPLOAD', 'GenInfo: ' + genInfoData.fileName, '');
-    res.json({ success: true });
-  } catch(e) { res.status(500).json({ error: e.message }); }
-});
-
-app.delete('/api/geninfo/clear', requireAuth, requireRole('superadmin','subadmin'), async function(req, res) {
-  try {
-    await pool.query('DELETE FROM geninfo_data');
-    genInfoData = null;
-    res.json({ success: true });
-  } catch(e) { res.status(500).json({ error: e.message }); }
-});
-
 var PORT=process.env.PORT||3000;
 app.listen(PORT,function(){console.log('AZHAR-AI server running on port '+PORT+(process.env.DATABASE_URL?' with PostgreSQL':' file-only mode'));});
