@@ -1310,9 +1310,67 @@ footer span{color:var(--gold);}
         </div>
 
         <!-- Dispatch Link -->
-        <div id="gi-dispatch-section" style="display:none;background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--gold);padding:14px;margin-bottom:28px;">
+        <div id="gi-dispatch-section" style="display:none;background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--gold);padding:14px;margin-bottom:14px;">
           <div style="font-size:9px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;">🚚 Dispatch Link</div>
           <div id="gi-dispatch-content"></div>
+        </div>
+
+        <!-- VOIP CALL PANEL -->
+        <div id="gi-voip-panel" style="background:var(--surface);border:1px solid rgba(78,203,141,0.4);border-top:2px solid #4ecb8d;padding:16px;margin-bottom:28px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+            <div>
+              <div style="font-size:10px;color:#4ecb8d;letter-spacing:2px;text-transform:uppercase;font-weight:700;">📞 VoIP Direct Call — Powered by Twilio</div>
+              <div style="font-size:10px;color:var(--muted);margin-top:3px;">Browser-to-mobile calling · No app needed on driver side</div>
+            </div>
+            <div id="voip-status-badge" style="font-size:9px;padding:4px 12px;border:1px solid #e84b4b;color:#e84b4b;letter-spacing:1px;">⚠ NOT CONFIGURED</div>
+          </div>
+
+          <!-- Call UI -->
+          <div id="voip-call-ui" style="display:none;">
+            <!-- Caller info -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+              <div style="background:var(--card);border:1px solid var(--border);padding:12px;">
+                <div style="font-size:9px;color:var(--muted);letter-spacing:1px;margin-bottom:6px;">FROM (YOU)</div>
+                <div style="font-size:13px;font-weight:700;color:var(--gold);" id="voip-caller-name">—</div>
+                <div style="font-size:10px;color:var(--muted);" id="voip-caller-number">—</div>
+              </div>
+              <div style="background:var(--card);border:1px solid var(--border);padding:12px;">
+                <div style="font-size:9px;color:var(--muted);letter-spacing:1px;margin-bottom:6px;">TO (DRIVER)</div>
+                <div style="font-size:13px;font-weight:700;color:#5b8dee;" id="voip-callee-name">—</div>
+                <div style="font-size:10px;color:var(--muted);" id="voip-callee-number">—</div>
+              </div>
+            </div>
+            <!-- Call button + status -->
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+              <button id="voip-call-btn" onclick="voipStartCall()"
+                style="padding:12px 28px;background:rgba(78,203,141,0.15);border:2px solid #4ecb8d;color:#4ecb8d;font-size:11px;letter-spacing:2px;cursor:pointer;font-family:Montserrat,sans-serif;font-weight:700;transition:all 0.2s;">
+                📞 START CALL
+              </button>
+              <button id="voip-hangup-btn" onclick="voipHangup()" style="display:none;padding:12px 28px;background:rgba(232,75,75,0.15);border:2px solid #e84b4b;color:#e84b4b;font-size:11px;letter-spacing:2px;cursor:pointer;font-family:Montserrat,sans-serif;font-weight:700;">
+                📵 HANG UP
+              </button>
+              <div id="voip-call-status" style="font-size:11px;color:var(--muted);letter-spacing:1px;"></div>
+              <div id="voip-call-timer" style="font-size:18px;font-weight:700;color:#4ecb8d;font-family:Cormorant Garamond,serif;display:none;">0:00</div>
+            </div>
+          </div>
+
+          <!-- Not configured message -->
+          <div id="voip-not-configured" style="padding:12px;background:rgba(232,75,75,0.05);border:1px solid rgba(232,75,75,0.2);">
+            <div style="font-size:11px;color:var(--gold);font-weight:600;margin-bottom:6px;">🔧 Setup Required — Coming Soon</div>
+            <div style="font-size:10px;color:var(--muted);line-height:1.8;">
+              To activate VoIP calling:<br>
+              1. Get Twilio Account SID + Auth Token from twilio.com<br>
+              2. Get a Twilio UAE-compatible phone number<br>
+              3. Add credentials to server environment variables<br>
+              4. VoIP calls will work instantly — driver's mobile rings directly
+            </div>
+            <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
+              <div style="font-size:9px;color:var(--muted);border:1px solid var(--border);padding:3px 10px;">TWILIO_ACCOUNT_SID</div>
+              <div style="font-size:9px;color:var(--muted);border:1px solid var(--border);padding:3px 10px;">TWILIO_AUTH_TOKEN</div>
+              <div style="font-size:9px;color:var(--muted);border:1px solid var(--border);padding:3px 10px;">TWILIO_PHONE_NUMBER</div>
+              <div style="font-size:9px;color:var(--muted);border:1px solid var(--border);padding:3px 10px;">TWILIO_TWIML_APP_SID</div>
+            </div>
+          </div>
         </div>
 
       </div>
@@ -1328,6 +1386,10 @@ footer span{color:var(--gold);}
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<!-- Twilio Voice SDK — loads only when VoIP is activated -->
+<script id="twilio-sdk-script">
+// Twilio SDK will be loaded dynamically when credentials are configured
+</script>
 <script>
 //  PASSWORD 
 const ADMIN_PWD = 'azhar2026';
@@ -4821,6 +4883,173 @@ function merchLookupVoice() {
   rec.start();
 }
 
+
+
+// ═══════════════ VOIP — TWILIO INTEGRATION ═══════════════
+// STATUS: READY FOR ACTIVATION — Awaiting Twilio credentials
+// To activate: Set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN,
+//              TWILIO_PHONE_NUMBER, TWILIO_TWIML_APP_SID
+//              in Render environment variables
+
+var VOIP_DEVICE = null;
+var VOIP_CALL = null;
+var VOIP_TIMER = null;
+var VOIP_SECONDS = 0;
+var VOIP_READY = false;
+
+// Check if Twilio is configured on server
+function voipCheckStatus() {
+  fetch('/api/voip/status', { headers: { 'x-auth-token': AUTH_TOKEN } })
+  .then(function(r){ return r.json(); })
+  .then(function(d) {
+    var badge = document.getElementById('voip-status-badge');
+    var notConf = document.getElementById('voip-not-configured');
+    var callUI = document.getElementById('voip-call-ui');
+    if (d && d.configured) {
+      VOIP_READY = true;
+      if (badge) { badge.textContent = '✅ ACTIVE'; badge.style.borderColor = '#4ecb8d'; badge.style.color = '#4ecb8d'; }
+      if (notConf) notConf.style.display = 'none';
+      if (callUI) callUI.style.display = 'block';
+      voipLoadSDKAndInit(d.token);
+    } else {
+      if (badge) { badge.textContent = '⚠ NOT CONFIGURED'; badge.style.borderColor = '#e84b4b'; badge.style.color = '#e84b4b'; }
+      if (notConf) notConf.style.display = 'block';
+      if (callUI) callUI.style.display = 'none';
+    }
+  }).catch(function(){ /* Twilio not configured yet */ });
+}
+
+function voipLoadSDKAndInit(token) {
+  // Load Twilio Voice SDK dynamically
+  if (window.Twilio && window.Twilio.Device) {
+    voipInitDevice(token);
+    return;
+  }
+  var script = document.createElement('script');
+  script.src = 'https://sdk.twilio.com/js/client/v1.14/twilio.js';
+  script.onload = function() { voipInitDevice(token); };
+  document.head.appendChild(script);
+}
+
+function voipInitDevice(token) {
+  try {
+    VOIP_DEVICE = new Twilio.Device(token, {
+      codecPreferences: ['opus', 'pcmu'],
+      fakeLocalDTMF: true,
+      enableRingingState: true,
+      debug: false
+    });
+    VOIP_DEVICE.on('ready', function() {
+      console.log('Twilio VoIP device ready');
+      voipUpdateStatus('Ready to call', '#4ecb8d');
+    });
+    VOIP_DEVICE.on('error', function(e) {
+      console.error('Twilio error:', e.message);
+      voipUpdateStatus('Error: ' + e.message, '#e84b4b');
+    });
+    VOIP_DEVICE.on('connect', function(conn) {
+      VOIP_CALL = conn;
+      voipOnConnected();
+    });
+    VOIP_DEVICE.on('disconnect', function() {
+      voipOnDisconnected();
+    });
+  } catch(e) {
+    console.error('Twilio init error:', e.message);
+  }
+}
+
+function voipSetupCall(callerName, callerNumber, calleeName, calleeNumber) {
+  document.getElementById('voip-caller-name').textContent = callerName || 'Me';
+  document.getElementById('voip-caller-number').textContent = callerNumber || '—';
+  document.getElementById('voip-callee-name').textContent = calleeName || '—';
+  document.getElementById('voip-callee-number').textContent = calleeNumber || '—';
+  // Scroll to call panel
+  var panel = document.getElementById('gi-voip-panel');
+  if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function voipStartCall() {
+  if (!VOIP_READY || !VOIP_DEVICE) {
+    alert('VoIP not configured yet. See setup instructions below.');
+    return;
+  }
+  var toNumber = document.getElementById('voip-callee-number').textContent;
+  if (!toNumber || toNumber === '—') {
+    alert('No phone number set for this contact.');
+    return;
+  }
+  voipUpdateStatus('Calling...', '#c9a84c');
+  var btn = document.getElementById('voip-call-btn');
+  if (btn) { btn.style.display = 'none'; }
+  try {
+    VOIP_DEVICE.connect({ To: toNumber, CallerId: 'AZHAR-AI Operations' });
+  } catch(e) {
+    voipUpdateStatus('Call failed: ' + e.message, '#e84b4b');
+    if (btn) btn.style.display = 'block';
+  }
+}
+
+function voipHangup() {
+  if (VOIP_CALL) { VOIP_CALL.disconnect(); }
+  else if (VOIP_DEVICE) { VOIP_DEVICE.disconnectAll(); }
+  voipOnDisconnected();
+}
+
+function voipOnConnected() {
+  voipUpdateStatus('Connected', '#4ecb8d');
+  var hangup = document.getElementById('voip-hangup-btn');
+  var timer = document.getElementById('voip-call-timer');
+  if (hangup) hangup.style.display = 'block';
+  if (timer) timer.style.display = 'block';
+  VOIP_SECONDS = 0;
+  VOIP_TIMER = setInterval(function() {
+    VOIP_SECONDS++;
+    var m = Math.floor(VOIP_SECONDS / 60);
+    var s = VOIP_SECONDS % 60;
+    if (timer) timer.textContent = m + ':' + (s < 10 ? '0' : '') + s;
+  }, 1000);
+}
+
+function voipOnDisconnected() {
+  VOIP_CALL = null;
+  if (VOIP_TIMER) { clearInterval(VOIP_TIMER); VOIP_TIMER = null; }
+  voipUpdateStatus('Call ended', '#7a7660');
+  var callBtn = document.getElementById('voip-call-btn');
+  var hangup = document.getElementById('voip-hangup-btn');
+  var timer = document.getElementById('voip-call-timer');
+  if (callBtn) callBtn.style.display = 'block';
+  if (hangup) hangup.style.display = 'none';
+  if (timer) { timer.style.display = 'none'; timer.textContent = '0:00'; }
+}
+
+function voipUpdateStatus(msg, color) {
+  var el = document.getElementById('voip-call-status');
+  if (el) { el.textContent = msg; el.style.color = color || 'var(--muted)'; }
+}
+
+// Called from merchandiser card or driver row
+function voipCallDriver(driverName, driverNumber, myName, myNumber) {
+  // Show General Info tab if not already there
+  if (typeof goTab === 'function' && VC_CURRENT_TAB !== 'geninfo') {
+    goTab('geninfo', document.querySelector('[onclick*="geninfo"]'));
+  }
+  voipSetupCall(myName || 'Merchandiser', myNumber || '', driverName, driverNumber);
+  var panel = document.getElementById('gi-voip-panel');
+  if (panel) {
+    panel.style.border = '2px solid #4ecb8d';
+    setTimeout(function(){ panel.style.border = '1px solid rgba(78,203,141,0.4)'; }, 2000);
+  }
+  // If configured, start call immediately; else show setup
+  if (VOIP_READY) {
+    voipStartCall();
+  }
+}
+
+// Run status check when on geninfo tab
+function initVoIP() {
+  voipCheckStatus();
+}
 
 
 // ═══════════════ VOICE COMMAND SYSTEM ═══════════════
