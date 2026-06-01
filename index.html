@@ -1083,6 +1083,99 @@ footer span{color:var(--gold);}
     <!-- ══ EXCEL SUPPORT ════════════════════════════════ -->
     <div class="panel" id="excel"><div class="box"><div class="box-title">📐 Excel Support &amp; Data Analysis</div><div class="upload" onclick="document.getElementById('xl-file').click()"><div style="font-size:22px;margin-bottom:6px;">📊</div><div style="font-size:11px;color:var(--muted);">Upload .csv or .xlsx file</div><div style="font-size:10px;color:var(--muted);margin-top:3px;" id="xl-file-name">File → Save As → CSV first</div></div><input type="file" id="xl-file" accept=".csv,.txt,.xlsx" style="display:none" onchange="loadFileExcel(this)"/><label class="lbl">Your Formula or Question</label><textarea id="xl-q" placeholder="e.g. Fix my VLOOKUP returning #N/A&#10;e.g. Analyse this data and give key insights"></textarea><label class="lbl">Context (Optional)</label><textarea id="xl-ctx" style="min-height:55px;" placeholder="e.g. Column A = Date, Column B = Customer, Column C = Amount..."></textarea><button class="btn" id="xl-btn" onclick="doExcel()"><span>Analyse &amp; Fix Excel</span></button><div class="loader" id="xl-loader"><div class="ring"></div><div class="ring-txt">Analysing your data...</div></div><div class="out" id="xl-out"><div class="out-head"><span class="out-lbl">✦ Excel Analysis</span><button class="copy" onclick="doCopy('xl-answer')">Copy</button></div><div class="out-body" id="xl-answer"></div></div></div></div>
 
+<div id="geninfo" class="panel">
+  <input type="file" id="gi-file-input" accept=".xlsx,.xls,.csv" style="display:none;" onchange="handleGIUpload(this)">
+
+  <!-- Upload Box -->
+  <div id="gi-upload-box" style="display:none;background:var(--surface);border:1px solid var(--gold);padding:14px 20px;margin-bottom:14px;display:none;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+    <div>
+      <div style="font-size:11px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:3px;">General Info Upload</div>
+      <div style="font-size:10px;color:var(--muted);">Upload Team_Directory Excel file (Sheet: Team_Directory)</div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <span id="gi-last-upload" style="font-size:10px;color:var(--muted);"></span>
+      <button onclick="giClearData()" style="padding:7px 14px;background:transparent;border:1px solid #e84b4b;color:#e84b4b;font-size:10px;letter-spacing:1px;cursor:pointer;font-family:Montserrat,sans-serif;">🗑 CLEAR</button>
+      <button onclick="document.getElementById('gi-file-input').click()" style="padding:7px 16px;background:var(--glow);border:1px solid var(--gold);color:var(--gold);font-size:10px;letter-spacing:1px;cursor:pointer;font-family:Montserrat,sans-serif;">📋 UPLOAD FILE</button>
+    </div>
+  </div>
+
+  <!-- No Data -->
+  <div id="gi-nodata" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:300px;text-align:center;padding:40px;">
+    <div style="font-size:48px;margin-bottom:16px;opacity:0.3;">👥</div>
+    <div style="font-size:14px;color:var(--gold);margin-bottom:8px;letter-spacing:2px;">NO TEAM DATA LOADED</div>
+    <div style="font-size:11px;color:var(--muted);">Click ✦ star to upload Team_Directory file</div>
+  </div>
+
+  <!-- Dashboard -->
+  <div id="gi-dashboard" style="display:none;">
+
+    <!-- SEARCH + FILTERS -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-top:2px solid var(--gold);padding:12px 16px;margin-bottom:14px;">
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+        <input id="gi-search" type="text" placeholder="🔍  Search by name, designation, outlet..." oninput="giSearch(this.value)"
+          style="flex:1;min-width:200px;background:var(--black);border:1px solid var(--border);color:var(--text);padding:8px 12px;font-size:11px;font-family:Montserrat,sans-serif;outline:none;"/>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <span style="font-size:9px;color:var(--muted);letter-spacing:1px;">UNIT</span>
+          <div id="gi-unit-pills" style="display:flex;gap:4px;flex-wrap:wrap;"></div>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <span style="font-size:9px;color:var(--muted);letter-spacing:1px;">DEPT</span>
+          <div id="gi-dept-pills" style="display:flex;gap:4px;flex-wrap:wrap;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- KPI CARDS -->
+    <div id="gi-kpis" style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:14px;"></div>
+
+    <!-- TEAM TABLE -->
+    <div style="background:var(--surface);border:1px solid var(--border);padding:14px;margin-bottom:14px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <div style="font-size:9px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;">👥 Team Directory</div>
+        <div id="gi-count" style="font-size:10px;color:var(--muted);"></div>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="data-table" style="width:100%;min-width:900px;">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Designation</th>
+              <th>Unit</th>
+              <th>Dept</th>
+              <th style="text-align:center;">Contact</th>
+              <th>Responsibility</th>
+              <th>Outlet / Area</th>
+              <th style="text-align:center;">Branch</th>
+              <th>Reporting To</th>
+              <th style="text-align:center;">BU Type</th>
+              <th style="text-align:center;">Acct No.</th>
+            </tr>
+          </thead>
+          <tbody id="gi-table-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- MERCHANDISER DETAIL CARDS -->
+    <div id="gi-merch-section" style="display:none;margin-bottom:14px;">
+      <div style="font-size:9px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;">🏪 Merchandiser Outlet Map</div>
+      <div id="gi-merch-cards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;"></div>
+    </div>
+
+    <!-- DISPATCH LINK SECTION -->
+    <div id="gi-dispatch-section" style="background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--gold);padding:14px;margin-bottom:14px;display:none;">
+      <div style="font-size:9px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;">🚚 Dispatch Link — Merchandiser Today's Orders</div>
+      <div id="gi-dispatch-content"></div>
+    </div>
+
+  </div>
+
+  <!-- Star -->
+  <div id="gi-star-wrap" style="display:none;position:fixed;bottom:20px;right:20px;z-index:100;">
+    <button onclick="giToggleUpload()" style="background:transparent;border:none;cursor:pointer;font-size:22px;color:var(--gold);opacity:0.25;transition:opacity 0.3s;padding:6px;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.25'">✦</button>
+  </div>
+</div>
+
   </div>
   <footer>✦ &nbsp; Operations &amp; Customer Service Intelligence Platform &nbsp;·&nbsp; Control Tower &nbsp;·&nbsp; Powered by Azhar &nbsp;·&nbsp; V 4.0</footer>
 </div>
@@ -5601,98 +5694,6 @@ window.addEventListener('load', authBoot);
 </script>
 <!-- WH Backlog Password Modal -->
 
-<div id="geninfo" class="panel">
-  <input type="file" id="gi-file-input" accept=".xlsx,.xls,.csv" style="display:none;" onchange="handleGIUpload(this)">
-
-  <!-- Upload Box -->
-  <div id="gi-upload-box" style="display:none;background:var(--surface);border:1px solid var(--gold);padding:14px 20px;margin-bottom:14px;display:none;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
-    <div>
-      <div style="font-size:11px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:3px;">General Info Upload</div>
-      <div style="font-size:10px;color:var(--muted);">Upload Team_Directory Excel file (Sheet: Team_Directory)</div>
-    </div>
-    <div style="display:flex;gap:8px;align-items:center;">
-      <span id="gi-last-upload" style="font-size:10px;color:var(--muted);"></span>
-      <button onclick="giClearData()" style="padding:7px 14px;background:transparent;border:1px solid #e84b4b;color:#e84b4b;font-size:10px;letter-spacing:1px;cursor:pointer;font-family:Montserrat,sans-serif;">🗑 CLEAR</button>
-      <button onclick="document.getElementById('gi-file-input').click()" style="padding:7px 16px;background:var(--glow);border:1px solid var(--gold);color:var(--gold);font-size:10px;letter-spacing:1px;cursor:pointer;font-family:Montserrat,sans-serif;">📋 UPLOAD FILE</button>
-    </div>
-  </div>
-
-  <!-- No Data -->
-  <div id="gi-nodata" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:300px;text-align:center;padding:40px;">
-    <div style="font-size:48px;margin-bottom:16px;opacity:0.3;">👥</div>
-    <div style="font-size:14px;color:var(--gold);margin-bottom:8px;letter-spacing:2px;">NO TEAM DATA LOADED</div>
-    <div style="font-size:11px;color:var(--muted);">Click ✦ star to upload Team_Directory file</div>
-  </div>
-
-  <!-- Dashboard -->
-  <div id="gi-dashboard" style="display:none;">
-
-    <!-- SEARCH + FILTERS -->
-    <div style="background:var(--surface);border:1px solid var(--border);border-top:2px solid var(--gold);padding:12px 16px;margin-bottom:14px;">
-      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-        <input id="gi-search" type="text" placeholder="🔍  Search by name, designation, outlet..." oninput="giSearch(this.value)"
-          style="flex:1;min-width:200px;background:var(--black);border:1px solid var(--border);color:var(--text);padding:8px 12px;font-size:11px;font-family:Montserrat,sans-serif;outline:none;"/>
-        <div style="display:flex;gap:6px;align-items:center;">
-          <span style="font-size:9px;color:var(--muted);letter-spacing:1px;">UNIT</span>
-          <div id="gi-unit-pills" style="display:flex;gap:4px;flex-wrap:wrap;"></div>
-        </div>
-        <div style="display:flex;gap:6px;align-items:center;">
-          <span style="font-size:9px;color:var(--muted);letter-spacing:1px;">DEPT</span>
-          <div id="gi-dept-pills" style="display:flex;gap:4px;flex-wrap:wrap;"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- KPI CARDS -->
-    <div id="gi-kpis" style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:14px;"></div>
-
-    <!-- TEAM TABLE -->
-    <div style="background:var(--surface);border:1px solid var(--border);padding:14px;margin-bottom:14px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-        <div style="font-size:9px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;">👥 Team Directory</div>
-        <div id="gi-count" style="font-size:10px;color:var(--muted);"></div>
-      </div>
-      <div style="overflow-x:auto;">
-        <table class="data-table" style="width:100%;min-width:900px;">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Designation</th>
-              <th>Unit</th>
-              <th>Dept</th>
-              <th style="text-align:center;">Contact</th>
-              <th>Responsibility</th>
-              <th>Outlet / Area</th>
-              <th style="text-align:center;">Branch</th>
-              <th>Reporting To</th>
-              <th style="text-align:center;">BU Type</th>
-              <th style="text-align:center;">Acct No.</th>
-            </tr>
-          </thead>
-          <tbody id="gi-table-body"></tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- MERCHANDISER DETAIL CARDS -->
-    <div id="gi-merch-section" style="display:none;margin-bottom:14px;">
-      <div style="font-size:9px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;">🏪 Merchandiser Outlet Map</div>
-      <div id="gi-merch-cards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;"></div>
-    </div>
-
-    <!-- DISPATCH LINK SECTION -->
-    <div id="gi-dispatch-section" style="background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--gold);padding:14px;margin-bottom:14px;display:none;">
-      <div style="font-size:9px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;">🚚 Dispatch Link — Merchandiser Today's Orders</div>
-      <div id="gi-dispatch-content"></div>
-    </div>
-
-  </div>
-
-  <!-- Star -->
-  <div id="gi-star-wrap" style="display:none;position:fixed;bottom:20px;right:20px;z-index:100;">
-    <button onclick="giToggleUpload()" style="background:transparent;border:none;cursor:pointer;font-size:22px;color:var(--gold);opacity:0.25;transition:opacity 0.3s;padding:6px;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.25'">✦</button>
-  </div>
-</div>
 
 <div id="bl-pwd-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9999;align-items:center;justify-content:center;">
   <div style="background:var(--surface);border:1px solid var(--gold);padding:32px;min-width:340px;max-width:400px;position:relative;">
