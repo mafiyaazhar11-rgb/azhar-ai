@@ -808,6 +808,8 @@ app.post('/api/voice', requireAuth, async function(req, res) {
       '\n- If asking to go to another dashboard: set action=navigate.' +
       '\n- If no data uploaded yet: say please upload the file first.' +
       '\n- Keep answer under 3 sentences. Use exact numbers. Speak like a confident male professional.' +
+      '\n- GENERAL INFO: When asked for contact or phone number, read the PHONE field as a phone number, not as a numeric value. Always say it as a phone number.' +
+      '\n- GENERAL INFO: To find who handles an outlet, check Outlets field and return name and PHONE.' +
       '\n\nReply ONLY with valid JSON, no markdown, no extra text:' +
       '\n{"answer":"precise answer with exact numbers","action":"none or filter or navigate","action_detail":"value","action_label":"action description"}';
 
