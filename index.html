@@ -477,7 +477,7 @@ footer span{color:var(--gold);}
       <div class="dot-live">System Active</div>
       <!-- VOICE COMMAND MIC -->
       <button id="vc-mic-btn" onclick="toggleVoiceCommand()" title="Voice Command" style="background:transparent;border:1px solid rgba(201,168,76,0.3);border-radius:50%;width:34px;height:34px;cursor:pointer;font-size:16px;color:var(--gold);display:flex;align-items:center;justify-content:center;transition:all 0.3s;flex-shrink:0;" onmouseover="this.style.background='rgba(201,168,76,0.15)'" onmouseout="if(!vcListening)this.style.background='transparent'">🎤</button>
-      <button onclick="dsToggleUpload()" title="" style="background:transparent;border:none;cursor:pointer;font-size:18px;color:var(--gold);opacity:0.25;transition:opacity 0.3s;padding:4px;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.25'">✦</button>
+      
       <div class="topbar-date"><strong id="tb-date">—</strong><span id="tb-time">—</span></div>
       <div class="sb-avatar" style="width:36px;height:36px;font-size:12px;">A</div>
     </div>
@@ -557,6 +557,11 @@ footer span{color:var(--gold);}
       <div class="box" id="ds-ask-box" style="display:none;margin-bottom:16px;"><div class="box-title">✦ Ask AI About Today's Dispatch</div><div class="qbtns" style="margin-bottom:12px;"><button class="qbtn cust" onclick="doAsk('All LULU orders today — total count, value, branches')">🟡 Lulu</button><button class="qbtn cust" onclick="doAsk('All CARREFOUR orders — count and value')">🔵 Carrefour</button><button class="qbtn cust" onclick="doAsk('All UNION COOP orders — count and value')">🟢 Union Coop</button><button class="qbtn cust" onclick="doAsk('All SPINNEYS orders — count and value')">🟣 Spinneys</button><button class="qbtn cust" onclick="doAsk('All CHOITHRAMS orders — count and value')">🟠 Choithrams</button><button class="qbtn city" onclick="doAsk('Total orders and value for DUBAI today')">📍 Dubai</button><button class="qbtn city" onclick="doAsk('Total orders and value for ABU DHABI today')">📍 Abu Dhabi</button><button class="qbtn city" onclick="doAsk('Total orders and value for SHARJAH today')">📍 Sharjah</button><button class="qbtn city" onclick="doAsk('Total orders and value for FUJAIRAH today')">📍 Fujairah</button><button class="qbtn city" onclick="doAsk('Total orders and value for AL AIN today')">📍 Al Ain</button><button class="qbtn stat" onclick="doAsk('Top 5 drivers by deliveries today')">🚚 Top Drivers</button><button class="qbtn stat" onclick="doAsk('Summary of all routes with drops and values')">🗺️ All Routes</button></div><div class="ask-row"><textarea id="ds-ask" class="ask-inp" placeholder="Ask anything about today's dispatch..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();doAsk(this.value);this.value=''}" rows="2"></textarea><button class="send-btn" id="ds-send" onclick="doAsk(document.getElementById('ds-ask').value);document.getElementById('ds-ask').value=''">→</button></div><div class="out" id="ds-out" style="margin-top:12px;"><div class="out-head"><span class="out-lbl">✦ Dispatch Intelligence</span><button class="copy" onclick="doCopy('ds-answer')">Copy</button></div><div class="out-body" id="ds-answer"></div></div></div>
 
       <!-- ADMIN UPLOAD — hidden, click ✦ star in topbar to reveal -->
+      <!-- Dispatch upload star - fixed bottom right -->
+      <div id="ds-star-wrap" style="display:none;position:fixed;bottom:20px;right:20px;z-index:100;">
+        <button onclick="dsToggleUpload()" title="Upload dispatch file" style="background:transparent;border:none;cursor:pointer;font-size:22px;color:var(--gold);opacity:0.25;transition:opacity 0.3s;padding:6px;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.25'">✦</button>
+      </div>
+
       <div class="box" id="ds-upload-box" style="display:none;"><div class="box-title">🔒 Admin — Upload Today's Dispatch File</div>
         <div id="admin-lock" style="display:flex;gap:8px;align-items:center;">
           <input type="password" id="admin-pwd" placeholder="Enter admin password..." style="flex:1;height:42px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:Montserrat,sans-serif;font-size:13px;outline:none;" onkeydown="if(event.key==='Enter')checkPwd()"/>
@@ -1216,6 +1221,7 @@ function goTab(id,btn){
   if(id==='sales') loadSalesFromServer();
   if(id==='geninfo') loadGIFromServer();
     var giStarW=document.getElementById('gi-star-wrap');if(giStarW){var cuGI=AUTH_USER&&(AUTH_USER.role==='superadmin'||AUTH_USER.role==='subadmin');giStarW.style.display=(id==='geninfo'&&cuGI)?'block':'none';}
+  var dsStar=document.getElementById('ds-star-wrap');if(dsStar){var cuDS=AUTH_USER&&(AUTH_USER.role==='superadmin'||AUTH_USER.role==='subadmin');dsStar.style.display=(id==='dispatch'&&cuDS)?'block':'none';}
   // Update JARVIS current tab
   VC_CURRENT_TAB = id;
   // Show/hide inv star based on tab and role
@@ -4910,12 +4916,22 @@ function buildVoiceContext() {
 
     if (VC_CURRENT_TAB === 'geninfo' && GI_RAW && GI_RAW.length) {
       ctx += 'General Info - Team Directory. '+GI_RAW.length+' members. ';
+      ctx += 'IMPORTANT: When asked for contact or phone number, read the PHONE field exactly as shown. ';
       var gu={};
       GI_RAW.forEach(function(r){var u=giGetVal(r,'unit')||'Other';gu[u]=(gu[u]||0)+1;});
       Object.keys(gu).forEach(function(u){ctx+=u+':'+gu[u]+'. ';});
-      ctx += 'Members: ';
+      ctx += 'Team members with contact details: ';
       GI_RAW.forEach(function(r){
-        ctx+=giGetVal(r,'name')+'('+giGetVal(r,'unit')+','+giGetVal(r,'designation')+','+giGetVal(r,'contact')+(giGetVal(r,'branch')?','+giGetVal(r,'branch'):'')+(giGetVal(r,'outlet')?',outlets:'+giGetVal(r,'outlet'):'')+(giGetVal(r,'buType')?',BU:'+giGetVal(r,'buType'):'')+(giGetVal(r,'acctNo')?',Acct:'+giGetVal(r,'acctNo'):'')+') ';
+        var name=giGetVal(r,'name');
+        var unit=giGetVal(r,'unit');
+        var desig=giGetVal(r,'designation');
+        var phone=giGetVal(r,'contact');
+        var branch=giGetVal(r,'branch');
+        var outlet=giGetVal(r,'outlet');
+        var buType=giGetVal(r,'buType');
+        var acctNo=giGetVal(r,'acctNo');
+        var resp=giGetVal(r,'responsibility');
+        ctx += name+' | Unit:'+unit+' | Role:'+desig+' | PHONE:'+phone+(branch?' | Branch:'+branch:'')+(resp?' | Responsibility:'+resp:'')+(outlet?' | Outlets:'+outlet:'')+(buType?' | BU:'+buType:'')+(acctNo?' | AccountNo:'+acctNo:'')+'. ';
       });
       ctx += ' | ';
     }
@@ -5285,6 +5301,7 @@ function applyUploadAccess() {
   });
 
   var giStar=document.getElementById('gi-star-wrap');if(giStar)giStar.style.display=(canUpload&&VC_CURRENT_TAB==='geninfo')?'block':'none';
+  var dsStar2=document.getElementById('ds-star-wrap');if(dsStar2)dsStar2.style.display=(canUpload&&VC_CURRENT_TAB==='dispatch')?'block':'none';
 }
 
 function addUserInfoTopbar() {
