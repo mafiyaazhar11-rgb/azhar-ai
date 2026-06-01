@@ -721,6 +721,45 @@ footer span{color:var(--gold);}
     <div class="loader" id="sum-loader"><div class="ring"></div><div class="ring-txt">Processing document...</div></div>
     <div class="out" id="sum-out"><div class="out-head"><span class="out-lbl">✦ Executive Summary</span><button class="copy" onclick="doCopy('sum-answer')">Copy</button></div><div class="out-body" id="sum-answer"></div></div>
   </div>
+
+  <!-- MERCHANDISER DELIVERY LOOKUP -->
+  <div class="box" style="margin-top:16px;border:1px solid var(--gold);background:rgba(201,168,76,0.03);">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <div class="box-title" style="color:var(--gold);letter-spacing:2px;margin:0;">🏪 MERCHANDISER DAILY DELIVERY LOOKUP</div>
+      <div id="merch-today-date" style="font-size:10px;color:var(--muted);letter-spacing:1px;"></div>
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:14px;">Type or speak a merchandiser name — see today's assigned deliveries, driver info, and download their summary.</div>
+
+    <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+      <input id="merch-search-input" type="text" placeholder="🔍  Search merchandiser name..."
+        oninput="merchLookup(this.value)"
+        style="flex:1;min-width:200px;background:var(--black);border:1px solid var(--gold);color:var(--gold);padding:10px 14px;font-size:12px;font-family:Montserrat,sans-serif;outline:none;"/>
+      <button id="merch-mic-btn" onclick="merchLookupVoice()"
+        style="padding:10px 16px;background:var(--glow);border:1px solid var(--gold);color:var(--gold);font-size:10px;letter-spacing:1px;cursor:pointer;font-family:Montserrat,sans-serif;">🎤 SPEAK</button>
+      <button onclick="merchClear()"
+        style="padding:10px 14px;background:transparent;border:1px solid var(--border);color:var(--muted);font-size:10px;cursor:pointer;font-family:Montserrat,sans-serif;">✕ CLEAR</button>
+    </div>
+
+    <div id="merch-name-pills" style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px;min-height:20px;"></div>
+
+    <div id="merch-result-box" style="display:none;">
+      <div id="merch-header-card" style="background:var(--surface);border:2px solid var(--gold);padding:18px;margin-bottom:12px;"></div>
+      <div style="display:flex;gap:8px;margin-bottom:12px;">
+        <button onclick="merchDownload()" style="padding:9px 20px;background:var(--glow);border:1px solid var(--gold);color:var(--gold);font-size:10px;letter-spacing:1px;cursor:pointer;font-family:Montserrat,sans-serif;">⬇ DOWNLOAD SUMMARY</button>
+        <button onclick="merchAskJarvis()" style="padding:9px 20px;background:rgba(78,203,141,0.1);border:1px solid #4ecb8d;color:#4ecb8d;font-size:10px;letter-spacing:1px;cursor:pointer;font-family:Montserrat,sans-serif;">🤖 ASK JARVIS</button>
+      </div>
+      <div id="merch-orders-section" style="display:none;background:var(--surface);border:1px solid var(--border);padding:14px;">
+        <div id="merch-orders-title" style="font-size:9px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;">📦 DELIVERY ORDERS</div>
+        <div style="overflow-x:auto;">
+          <table class="data-table" style="width:100%;min-width:600px;">
+            <thead><tr><th>#</th><th>Order Code</th><th>Customer</th><th>City</th><th>Route</th><th>Driver</th><th style="text-align:right;">Amount (AED)</th></tr></thead>
+            <tbody id="merch-orders-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </div>
 
     <!-- ══ EMAIL WRITER ═════════════════════════════════ -->
@@ -4403,31 +4442,52 @@ function loadGIFromServer(){
 
 
 // ═══════════════ MERCHANDISER DELIVERY LOOKUP ═══════════════
+var MERCH_CURRENT = null;
+
+function merchClear() {
+  document.getElementById('merch-search-input').value = '';
+  document.getElementById('merch-result-box').style.display = 'none';
+  MERCH_CURRENT = null;
+}
+
 function initMerchLookup() {
-  // Build pills from GI_RAW merchandisers
+  // Set today date display
+  var today = new Date();
+  var dd = String(today.getDate()).padStart(2,'0');
+  var mm = String(today.getMonth()+1).padStart(2,'0');
+  var yyyy = today.getFullYear();
+  var el = document.getElementById('merch-today-date');
+  if (el) el.textContent = 'DATE: ' + dd + '/' + mm + '/' + yyyy;
+
+  // Build name pills from GI_RAW
   var pills = document.getElementById('merch-name-pills');
   if (!pills) return;
   if (typeof GI_RAW === 'undefined' || !GI_RAW.length) {
-    pills.innerHTML = '<span style="font-size:10px;color:var(--muted);">Upload General Info file first to see merchandiser names</span>';
+    pills.innerHTML = '<span style="font-size:10px;color:var(--muted);">Upload General Info file first to see merchandiser names here</span>';
     return;
   }
   var merch = GI_RAW.filter(function(r){ return giGetVal(r,'unit') === 'Merchandisers'; });
   if (!merch.length) {
-    pills.innerHTML = '<span style="font-size:10px;color:var(--muted);">No merchandisers found in General Info</span>';
+    pills.innerHTML = '<span style="font-size:10px;color:var(--muted);">No merchandisers in General Info</span>';
     return;
   }
   pills.innerHTML = merch.map(function(r){
-    var name = giGetVal(r,'name');
-    var safe = name.replace(/"/g,'');
-    return '<button class="ret-pill merch-pill" style="font-size:10px;" data-name="'+safe+'">'+name+'</button>';
+    var nm = giGetVal(r,'name');
+    return '<button class="ret-pill merch-pill" data-name="'+nm.replace(/"/g,'')+'">'+nm+'</button>';
   }).join('');
   pills.querySelectorAll('.merch-pill').forEach(function(b){
-    b.addEventListener('click',function(){
-      var n=this.dataset.name;
-      document.getElementById('merch-search-input').value=n;
-      merchLookup(n);
+    b.addEventListener('click', function(){
+      document.getElementById('merch-search-input').value = this.dataset.name;
+      merchLookup(this.dataset.name);
     });
   });
+
+  // Update status bar
+  var giStat = document.getElementById('sum-gi-status');
+  if (giStat) giStat.textContent = GI_RAW.length + ' members loaded';
+  var dStat = document.getElementById('sum-dispatch-status');
+  if (dStat && typeof DS_CURRENT_SUMMARY !== 'undefined' && DS_CURRENT_SUMMARY)
+    dStat.textContent = (DS_CURRENT_SUMMARY.total_orders||0) + ' orders loaded';
 }
 
 function merchLookup(name) {
@@ -4436,100 +4496,230 @@ function merchLookup(name) {
   var headerCard = document.getElementById('merch-header-card');
   var ordersSection = document.getElementById('merch-orders-section');
   var ordersBody = document.getElementById('merch-orders-body');
+  var ordersTitle = document.getElementById('merch-orders-title');
+
   resultBox.style.display = 'block';
 
-  // Get merchandiser info from GI_RAW
-  var merchInfo = null;
-  if (typeof GI_RAW !== 'undefined' && GI_RAW.length) {
-    merchInfo = GI_RAW.find(function(r){
+  // ── Find merchandiser in GI_RAW ──
+  var mi = null;
+  if (typeof GI_RAW !== 'undefined') {
+    mi = GI_RAW.find(function(r){
       return giGetVal(r,'name').toLowerCase().includes(name.toLowerCase());
     });
   }
+  MERCH_CURRENT = mi || { name: name };
 
-  // Build header card
-  var headerHTML = '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:14px;">';
-  if (merchInfo) {
-    var mName    = giGetVal(merchInfo,'name');
-    var mDesig   = giGetVal(merchInfo,'designation');
-    var mContact = giGetVal(merchInfo,'contact');
-    var mBranch  = giGetVal(merchInfo,'branch');
-    var mOutlet  = giGetVal(merchInfo,'outlet');
-    var mBU      = giGetVal(merchInfo,'buType');
-    var mAcct    = giGetVal(merchInfo,'acctNo');
-    if (mContact && !mContact.startsWith('+')) mContact = '+' + mContact;
-    headerHTML += '<div>'
-      + '<div style="font-size:22px;font-weight:700;color:var(--gold);font-family:Cormorant Garamond,serif;margin-bottom:4px;">'+mName+'</div>'
-      + '<div style="font-size:11px;color:var(--muted);margin-bottom:8px;">'+mDesig+'</div>'
-      + (mBU ? '<span style="color:'+(mBU.toLowerCase().includes('non')?'#5b8dee':'#4ecb8d')+';font-size:10px;border:1px solid '+(mBU.toLowerCase().includes('non')?'#5b8dee':'#4ecb8d')+';padding:2px 8px;margin-right:8px;">'+mBU+'</span>' : '')
-      + (mAcct ? '<span style="color:var(--muted);font-size:10px;">Acct: '+mAcct+'</span>' : '')
+  // ── Profile header ──
+  var mName    = mi ? giGetVal(mi,'name')           : name;
+  var mDesig   = mi ? giGetVal(mi,'designation')    : '—';
+  var mContact = mi ? giGetVal(mi,'contact')        : '—';
+  var mBranch  = mi ? giGetVal(mi,'branch')         : '—';
+  var mOutlet  = mi ? giGetVal(mi,'outlet')         : '';
+  var mBU      = mi ? giGetVal(mi,'buType')         : '';
+  var mAcct    = mi ? giGetVal(mi,'acctNo')         : '';
+  if (mContact && !mContact.startsWith('+')) mContact = '+' + mContact;
+  var buColor  = (mBU && !mBU.toLowerCase().includes('non')) ? '#4ecb8d' : '#5b8dee';
+  var outlets  = mOutlet ? mOutlet.split(',').map(function(o){return o.trim();}).filter(Boolean) : [];
+
+  // Today's date string for display
+  var now = new Date();
+  var dateStr = String(now.getDate()).padStart(2,'0')+'/'+String(now.getMonth()+1).padStart(2,'0')+'/'+now.getFullYear();
+
+  var hdr = '<div style="display:grid;grid-template-columns:1fr auto;gap:14px;align-items:start;margin-bottom:14px;">'
+    + '<div>'
+    + '<div style="font-size:24px;font-weight:700;color:var(--gold);font-family:Cormorant Garamond,serif;margin-bottom:3px;">'+mName+'</div>'
+    + '<div style="font-size:11px;color:var(--muted);margin-bottom:8px;">'+mDesig+'</div>'
+    + (mBU ? '<span style="color:'+buColor+';font-size:9px;border:1px solid '+buColor+';padding:2px 8px;margin-right:6px;letter-spacing:1px;">'+mBU+'</span>' : '')
+    + (mAcct ? '<span style="color:var(--muted);font-size:9px;">Account No: <span style="color:var(--gold);">'+mAcct+'</span></span>' : '')
+    + '</div>'
+    + '<div style="text-align:right;">'
+    + (mContact !== '—' ? '<a href="tel:'+mContact+'" style="display:block;font-size:18px;font-weight:700;color:#4ecb8d;text-decoration:none;margin-bottom:4px;">📞 '+mContact+'</a>' : '')
+    + '<div style="font-size:10px;color:var(--muted);">Branch: <span style="color:var(--gold);">'+mBranch+'</span></div>'
+    + '</div>'
+    + '</div>';
+
+  // Outlets
+  if (outlets.length) {
+    hdr += '<div style="border-top:1px solid var(--border);padding-top:10px;margin-bottom:14px;">'
+      + '<div style="font-size:9px;color:var(--muted);letter-spacing:1px;margin-bottom:6px;text-transform:uppercase;">Assigned Outlets ('+outlets.length+')</div>'
+      + '<div style="display:flex;flex-wrap:wrap;gap:4px;">'
+      + outlets.map(function(o){return '<span style="background:rgba(201,168,76,0.08);border:1px solid rgba(201,168,76,0.2);color:var(--muted);font-size:9px;padding:2px 8px;">'+o+'</span>';}).join('')
+      + '</div></div>';
+  }
+
+  // ── Dispatch orders for today ──
+  // Match by outlet names against CUSTOMER field in dispatch
+  var matchedOrders = [];
+  var totalAmt = 0;
+  var driversFound = {};
+
+  if (typeof DS_CURRENT_SUMMARY !== 'undefined' && DS_CURRENT_SUMMARY) {
+    var dsData = DS_CURRENT_SUMMARY;
+    // We have summary-level data — show top drivers and route summary
+    // Match outlets to top customers if possible
+    var topCusts = dsData.top_customers || [];
+    var matchedCusts = [];
+    if (outlets.length) {
+      matchedCusts = topCusts.filter(function(c){
+        return outlets.some(function(o){
+          return c.name.toLowerCase().includes(o.toLowerCase().substring(0,6)) ||
+                 o.toLowerCase().includes(c.name.toLowerCase().substring(0,6));
+        });
+      });
+    }
+
+    var drivers = dsData.top_drivers || [];
+    var routes  = dsData.top_routes  || [];
+
+    hdr += '<div style="border-top:1px solid var(--border);padding-top:12px;">'
+      + '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px;">'
+      + '<div style="background:rgba(201,168,76,0.06);border:1px solid rgba(201,168,76,0.2);padding:10px;text-align:center;">'
+      + '<div style="font-size:9px;color:var(--muted);letter-spacing:1px;margin-bottom:4px;">TOTAL ORDERS TODAY</div>'
+      + '<div style="font-size:22px;font-weight:700;color:var(--gold);font-family:Cormorant Garamond,serif;">'+(dsData.total_orders||0)+'</div>'
       + '</div>'
-      + '<div style="text-align:right;">'
-      + '<div style="font-size:9px;color:var(--muted);letter-spacing:1px;margin-bottom:4px;">CONTACT</div>'
-      + '<a href="tel:'+mContact+'" style="font-size:16px;font-weight:700;color:#4ecb8d;text-decoration:none;">📞 '+mContact+'</a>'
-      + (mBranch ? '<div style="font-size:10px;color:var(--muted);margin-top:4px;">Branch: <span style="color:var(--gold);">'+mBranch+'</span></div>' : '')
+      + '<div style="background:rgba(78,203,141,0.06);border:1px solid rgba(78,203,141,0.2);padding:10px;text-align:center;">'
+      + '<div style="font-size:9px;color:var(--muted);letter-spacing:1px;margin-bottom:4px;">TOTAL VALUE</div>'
+      + '<div style="font-size:18px;font-weight:700;color:#4ecb8d;font-family:Cormorant Garamond,serif;">AED '+Math.round(dsData.total_value||0).toLocaleString()+'</div>'
+      + '</div>'
+      + '<div style="background:rgba(91,141,238,0.06);border:1px solid rgba(91,141,238,0.2);padding:10px;text-align:center;">'
+      + '<div style="font-size:9px;color:var(--muted);letter-spacing:1px;margin-bottom:4px;">DRIVERS ON DUTY</div>'
+      + '<div style="font-size:22px;font-weight:700;color:#5b8dee;font-family:Cormorant Garamond,serif;">'+(dsData.total_drivers||0)+'</div>'
+      + '</div>'
       + '</div>';
-    if (mOutlet) {
-      var outlets = mOutlet.split(',').map(function(o){return o.trim();}).filter(Boolean);
-      headerHTML += '</div><div style="width:100%;border-top:1px solid var(--border);padding-top:10px;margin-top:4px;">'
-        + '<div style="font-size:9px;color:var(--muted);letter-spacing:1px;margin-bottom:6px;">ASSIGNED OUTLETS ('+outlets.length+')</div>'
-        + '<div style="display:flex;flex-wrap:wrap;gap:4px;">'
-        + outlets.map(function(o){return '<span style="background:rgba(201,168,76,0.08);border:1px solid rgba(201,168,76,0.2);color:var(--muted);font-size:9px;padding:2px 8px;">'+o+'</span>';}).join('')
+
+    // Drivers list
+    if (drivers.length) {
+      hdr += '<div style="font-size:9px;color:var(--gold);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Drivers On Duty Today</div>'
+        + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px;margin-bottom:12px;">'
+        + drivers.map(function(d){
+            return '<div style="background:rgba(91,141,238,0.08);border:1px solid rgba(91,141,238,0.25);padding:8px 10px;">'
+              +'<div style="font-size:12px;font-weight:700;color:#5b8dee;margin-bottom:2px;">'+d.name+'</div>'
+              +'<div style="font-size:9px;color:var(--muted);">'+d.drops+' drops &nbsp;|&nbsp; '+d.orders+' orders &nbsp;|&nbsp; AED '+Math.round(d.value||0).toLocaleString()+'</div>'
+              +'</div>';
+          }).join('')
         + '</div>';
     }
-  } else {
-    headerHTML += '<div style="color:var(--gold);font-size:18px;font-family:Cormorant Garamond,serif;">'+name+'</div><div style="font-size:10px;color:var(--muted);">Not found in General Info — searching dispatch only</div>';
-  }
-  headerHTML += '</div>';
 
-  // Get orders from dispatch
-  var orders = [];
-  if (typeof DS_CURRENT_SUMMARY !== 'undefined' && DS_CURRENT_SUMMARY && typeof currentDispatch !== 'undefined' && currentDispatch) {
-    // Try to match by name in the raw dispatch data context
-    // We only have summary — show driver info from routes
-    var acctNo = merchInfo ? giGetVal(merchInfo,'acctNo') : '';
-    var branch = merchInfo ? giGetVal(merchInfo,'branch') : '';
-    // Search dispatch routes for matching drivers/areas
-    var routes = DS_CURRENT_SUMMARY.top_routes || [];
-    var drivers = DS_CURRENT_SUMMARY.top_drivers || [];
-    // Show top drivers info
-    headerHTML += '<div style="width:100%;border-top:1px solid var(--border);padding-top:12px;margin-top:8px;">'
-      + '<div style="font-size:9px;color:var(--gold);letter-spacing:1px;margin-bottom:8px;">🚚 TODAYS DISPATCH — DRIVERS ON DUTY</div>'
-      + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;">'
-      + drivers.map(function(d){
-          return '<div style="background:rgba(91,141,238,0.08);border:1px solid rgba(91,141,238,0.3);padding:10px;">'
-            +'<div style="font-size:12px;font-weight:700;color:#5b8dee;margin-bottom:2px;">'+d.name+'</div>'
-            +'<div style="font-size:10px;color:var(--muted);">'+d.drops+' drops · '+d.orders+' orders · AED '+Math.round(d.value||0).toLocaleString()+'</div>'
-            +'</div>';
-        }).join('')
-      + '</div>'
-      + '<div style="margin-top:10px;font-size:10px;color:var(--muted);">Total today: <span style="color:var(--gold);font-weight:700;">'+(DS_CURRENT_SUMMARY.total_orders||0)+' orders · AED '+Math.round(DS_CURRENT_SUMMARY.total_value||0).toLocaleString()+'</span> across <span style="color:#5b8dee;">'+(DS_CURRENT_SUMMARY.total_routes||0)+' routes · '+(DS_CURRENT_SUMMARY.total_drivers||0)+' drivers</span></div>'
-      + '</div>';
+    // Matched customers from outlets
+    if (matchedCusts.length) {
+      hdr += '<div style="font-size:9px;color:var(--gold);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Matching Outlet Orders Today</div>'
+        + '<div style="overflow-x:auto;"><table class="data-table" style="width:100%;"><thead><tr><th>Customer</th><th style="text-align:right;">Orders</th><th style="text-align:right;">Value (AED)</th></tr></thead><tbody>'
+        + matchedCusts.map(function(c){return '<tr><td style="color:var(--gold);">'+c.name+'</td><td style="text-align:right;color:var(--muted);">'+c.orders+'</td><td style="text-align:right;color:var(--gold);font-weight:600;">'+Math.round(c.value||0).toLocaleString()+'</td></tr>';}).join('')
+        + '</tbody></table></div>';
+    }
+
+    hdr += '</div>';
+
+    // Store for download
+    MERCH_CURRENT._dispatch = { total_orders: dsData.total_orders, total_value: dsData.total_value, drivers: drivers, routes: routes, date: dateStr };
   } else {
-    headerHTML += '<div style="width:100%;border-top:1px solid rgba(201,168,76,0.2);padding-top:10px;margin-top:8px;font-size:10px;color:var(--muted);">No dispatch data loaded. Upload todays dispatch report to see delivery assignments.</div>';
+    hdr += '<div style="border-top:1px solid var(--border);padding-top:10px;font-size:10px;color:var(--muted);">No dispatch data loaded. Go to Daily Dispatch and upload todays report, then come back here.</div>';
   }
 
-  headerCard.innerHTML = headerHTML;
+  headerCard.innerHTML = hdr;
   ordersSection.style.display = 'none';
 }
 
+function merchAskJarvis() {
+  if (!MERCH_CURRENT) return;
+  var name = MERCH_CURRENT.name || 'this merchandiser';
+  var question = 'What deliveries does ' + name + ' have today and who is the assigned driver?';
+  // Open voice panel with pre-filled question
+  if (typeof openJarvisFullscreen === 'function') {
+    openJarvisFullscreen();
+    setTimeout(function(){
+      var interim = document.getElementById('jarvis-interim-fs');
+      if (interim) interim.textContent = question;
+      if (typeof processVoiceCommandFS === 'function') processVoiceCommandFS(question);
+    }, 600);
+  }
+}
+
+function merchDownload() {
+  if (!MERCH_CURRENT) return;
+  var m = MERCH_CURRENT;
+  var name    = m.name || 'Merchandiser';
+  var desig   = m.designation || '';
+  var contact = m.contact || '';
+  var branch  = m.branch || '';
+  var outlet  = m.outlet || '';
+  var buType  = m.buType || '';
+  var acctNo  = m.acctNo || '';
+  var now = new Date();
+  var dateStr = String(now.getDate()).padStart(2,'0')+'/'+String(now.getMonth()+1).padStart(2,'0')+'/'+now.getFullYear();
+  var disp = m._dispatch || {};
+
+  var lines = [
+    'AZHAR-AI — MERCHANDISER DAILY DELIVERY SUMMARY',
+    '================================================',
+    'Date: ' + dateStr,
+    'Generated: ' + now.toLocaleTimeString(),
+    '',
+    'MERCHANDISER PROFILE',
+    '--------------------',
+    'Name:        ' + name,
+    'Designation: ' + desig,
+    'Contact:     ' + (contact.startsWith('+')?contact:'+'+contact),
+    'Branch:      ' + branch,
+    'BU Type:     ' + buType,
+    'Account No:  ' + acctNo,
+    '',
+    'ASSIGNED OUTLETS',
+    '----------------',
+  ];
+  if (outlet) outlet.split(',').forEach(function(o,i){ lines.push((i+1)+'. '+o.trim()); });
+  else lines.push('No outlets listed');
+  lines.push('');
+  lines.push('TODAYS DISPATCH SUMMARY');
+  lines.push('-----------------------');
+  if (disp.total_orders) {
+    lines.push('Total Orders: ' + disp.total_orders);
+    lines.push('Total Value:  AED ' + Math.round(disp.total_value||0).toLocaleString());
+    lines.push('Date:         ' + (disp.date||dateStr));
+    lines.push('');
+    lines.push('DRIVERS ON DUTY');
+    lines.push('---------------');
+    (disp.drivers||[]).forEach(function(d,i){
+      lines.push((i+1)+'. '+d.name+' — '+d.drops+' drops, '+d.orders+' orders, AED '+Math.round(d.value||0).toLocaleString());
+    });
+  } else {
+    lines.push('No dispatch data loaded. Upload todays dispatch report first.');
+  }
+  lines.push('');
+  lines.push('================================================');
+  lines.push('AZHAR-AI V4.0 | CST-Operations Intelligence Platform');
+
+  var blob = new Blob([lines.join(String.fromCharCode(10))], {type:'text/plain'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = name.replace(/\s+/g,'-') + '-Delivery-Summary-' + dateStr.replace(/\//g,'-') + '.txt';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 function merchLookupVoice() {
-  if (!window.SpeechRecognition && !window.webkitSpeechRecognition) { alert('Voice not supported'); return; }
+  var btn = document.getElementById('merch-mic-btn');
+  if (!window.SpeechRecognition && !window.webkitSpeechRecognition) { alert('Voice not supported on this browser'); return; }
   var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   var rec = new SR();
   rec.lang = 'en-US'; rec.maxAlternatives = 1;
-  var btn = document.querySelector('[onclick="merchLookupVoice()"]');
-  if (btn) { btn.textContent = '🎤 LISTENING...'; btn.style.color = '#e84b4b'; btn.style.borderColor = '#e84b4b'; }
+  if (btn) { btn.textContent = '🔴 LISTENING...'; btn.style.color = '#e84b4b'; btn.style.borderColor = '#e84b4b'; }
   rec.onresult = function(e) {
     var said = e.results[0][0].transcript;
     document.getElementById('merch-search-input').value = said;
     merchLookup(said);
-    if (btn) { btn.textContent = '🎤 SPEAK NAME'; btn.style.color = 'var(--gold)'; btn.style.borderColor = 'var(--gold)'; }
+    if (btn) { btn.textContent = '🎤 SPEAK'; btn.style.color = 'var(--gold)'; btn.style.borderColor = 'var(--gold)'; }
   };
   rec.onerror = function() {
-    if (btn) { btn.textContent = '🎤 SPEAK NAME'; btn.style.color = 'var(--gold)'; btn.style.borderColor = 'var(--gold)'; }
+    if (btn) { btn.textContent = '🎤 SPEAK'; btn.style.color = 'var(--gold)'; btn.style.borderColor = 'var(--gold)'; }
+  };
+  rec.onend = function() {
+    if (btn && btn.textContent === '🔴 LISTENING...') { btn.textContent = '🎤 SPEAK'; btn.style.color = 'var(--gold)'; btn.style.borderColor = 'var(--gold)'; }
   };
   rec.start();
 }
+
 
 
 // ═══════════════ VOICE COMMAND SYSTEM ═══════════════
