@@ -1249,5 +1249,86 @@ app.delete('/api/geninfo/clear', requireAuth, requireRole('superadmin','subadmin
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
+
+// ─── TWILIO VOIP ────────────────────────────────────────────────────────────
+// STATUS: READY — Set these 4 env vars in Render to activate:
+//   TWILIO_ACCOUNT_SID   → from twilio.com console
+//   TWILIO_AUTH_TOKEN    → from twilio.com console
+//   TWILIO_PHONE_NUMBER  → your Twilio number e.g. +12015551234
+//   TWILIO_TWIML_APP_SID → create TwiML App in Twilio console, set Voice URL to:
+//                          https://azr-operations.com/api/voip/twiml
+
+var TWILIO_CONFIGURED = !!(
+  process.env.TWILIO_ACCOUNT_SID &&
+  process.env.TWILIO_AUTH_TOKEN &&
+  process.env.TWILIO_PHONE_NUMBER &&
+  process.env.TWILIO_TWIML_APP_SID
+);
+
+if (TWILIO_CONFIGURED) {
+  console.log('✅ Twilio VoIP: CONFIGURED and ready');
+} else {
+  console.log('⚠ Twilio VoIP: Not configured (set env vars to activate)');
+}
+
+// Check VoIP status + issue browser token
+app.get('/api/voip/status', requireAuth, async function(req, res) {
+  if (!TWILIO_CONFIGURED) {
+    return res.json({ configured: false });
+  }
+  try {
+    var twilio = require('twilio');
+    var AccessToken = twilio.jwt.AccessToken;
+    var VoiceGrant = AccessToken.VoiceGrant;
+    var voiceGrant = new VoiceGrant({
+      outgoingApplicationSid: process.env.TWILIO_TWIML_APP_SID,
+      incomingAllow: true
+    });
+    var token = new AccessToken(
+      process.env.TWILIO_ACCOUNT_SID,
+      process.env.TWILIO_API_KEY || process.env.TWILIO_ACCOUNT_SID,
+      process.env.TWILIO_API_SECRET || process.env.TWILIO_AUTH_TOKEN,
+      { identity: req.user.username || 'azhar-ai-user' }
+    );
+    token.addGrant(voiceGrant);
+    res.json({ configured: true, token: token.toJwt() });
+  } catch(e) {
+    console.error('Twilio token error:', e.message);
+    res.json({ configured: false, error: e.message });
+  }
+});
+
+// TwiML — tells Twilio what to do when call connects (dial out to real number)
+app.post('/api/voip/twiml', function(req, res) {
+  var to = req.body.To || req.query.To;
+  res.set('Content-Type', 'text/xml');
+  if (to && to.startsWith('+')) {
+    res.send('<?xml version="1.0" encoding="UTF-8"?><Response><Dial callerId="' +
+      (process.env.TWILIO_PHONE_NUMBER || '') + '">' + to + '</Dial></Response>');
+  } else {
+    res.send('<?xml version="1.0" encoding="UTF-8"?><Response><Say>Call configuration error.</Say></Response>');
+  }
+});
+
+// Initiate outbound call from server (alternative method)
+app.post('/api/voip/call', requireAuth, async function(req, res) {
+  if (!TWILIO_CONFIGURED) return res.status(503).json({ error: 'VoIP not configured' });
+  try {
+    var twilio = require('twilio');
+    var client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+    var { to, from_name } = req.body;
+    if (!to) return res.status(400).json({ error: 'No destination number' });
+    var call = await client.calls.create({
+      to: to,
+      from: process.env.TWILIO_PHONE_NUMBER,
+      url: 'https://azr-operations.com/api/voip/twiml'
+    });
+    await auditLog(req.user.uid, req.user.username, 'VOIP_CALL', 'Called: ' + to, '');
+    res.json({ success: true, callSid: call.sid });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 var PORT=process.env.PORT||3000;
 app.listen(PORT,function(){console.log('AZHAR-AI server running on port '+PORT+(process.env.DATABASE_URL?' with PostgreSQL':' file-only mode'));});
