@@ -4925,7 +4925,7 @@ function buildVoiceContext() {
         var name=giGetVal(r,'name');
         var unit=giGetVal(r,'unit');
         var desig=giGetVal(r,'designation');
-        var phone=giGetVal(r,'contact');
+        var phone=giGetVal(r,'contact'); if(phone&&!phone.startsWith('+'))phone='+'+phone;
         var branch=giGetVal(r,'branch');
         var outlet=giGetVal(r,'outlet');
         var buType=giGetVal(r,'buType');
