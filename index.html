@@ -608,7 +608,7 @@ footer span{color:var(--gold);}
         </div>
         <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;">
         <button onclick="closeVoicePanel()" style="background:transparent;border:none;color:#7a7660;font-size:18px;cursor:pointer;padding:0 4px;line-height:1;">×</button>
-        <button id="vc-stop-btn" onclick="jarvisStop()" style="display:none;background:rgba(232,75,75,0.15);border:1px solid #e84b4b;color:#e84b4b;font-size:9px;padding:4px 8px;cursor:pointer;font-family:Montserrat,sans-serif;letter-spacing:1px;white-space:nowrap;">⏹ STOP</button>
+        <button id="vc-stop-btn" onclick="jarvisStopAll()" style="display:none;background:rgba(232,75,75,0.15);border:1px solid #e84b4b;color:#e84b4b;font-size:9px;padding:4px 8px;cursor:pointer;font-family:Montserrat,sans-serif;letter-spacing:1px;white-space:nowrap;">⏹ STOP</button>
       </div>
       </div>
     </div>
@@ -5001,6 +5001,11 @@ function startJarvisRecognition() {
   setJarvisOrb('listening');
   document.getElementById('jarvis-status').textContent = 'JARVIS LISTENING...';
   document.getElementById('jarvis-status').style.color = '#e84b4b';
+  // Show stop-listening button
+  var slBtn = document.getElementById('jarvis-stop-listen-btn');
+  if (slBtn) slBtn.style.display = 'block';
+  var ssBtn = document.getElementById('jarvis-stop-speak-btn');
+  if (ssBtn) ssBtn.style.display = 'none';
   document.getElementById('jarvis-answer-fs').style.display = 'none';
   document.getElementById('jarvis-interim-fs').textContent = '';
 
@@ -5045,6 +5050,8 @@ async function processVoiceCommandFS(text) {
   setJarvisOrb('thinking');
   document.getElementById('jarvis-status').textContent = 'JARVIS THINKING...';
   document.getElementById('jarvis-status').style.color = '#c9a84c';
+  var slBtn2 = document.getElementById('jarvis-stop-listen-btn');
+  if (slBtn2) slBtn2.style.display = 'none';
   document.getElementById('jarvis-interim-fs').textContent = '"' + text + '"';
 
   var context = buildVoiceContext();
@@ -5514,18 +5521,43 @@ function buildVoiceContext() {
 }
 
 
-function jarvisStop() {
+function jarvisStopAll() {
+  // Stop speaking
   if (window.speechSynthesis) window.speechSynthesis.cancel();
-  var stopBtn = document.getElementById('vc-stop-btn');
-  if (stopBtn) stopBtn.style.display = 'none';
+  // Stop listening
+  if (typeof vcListening !== 'undefined' && vcListening) {
+    vcListening = false;
+    if (typeof vcRecognition !== 'undefined' && vcRecognition) {
+      try { vcRecognition.stop(); } catch(e) {}
+    }
+    setJarvisOrb('idle');
+    var statusEl = document.getElementById('jarvis-status');
+    if (statusEl) { statusEl.textContent = 'TAP MIC TO SPEAK'; statusEl.style.color = '#c9a84c'; }
+    var interimEl = document.getElementById('jarvis-interim-fs');
+    if (interimEl) interimEl.textContent = '';
+    var micFs = document.getElementById('jarvis-mic-fs');
+    if (micFs) { micFs.style.background = 'rgba(201,168,76,0.1)'; micFs.style.borderColor = '#c9a84c'; micFs.style.color = '#c9a84c'; }
+  }
+  // Hide all stop buttons
+  ['vc-stop-btn','jarvis-stop-listen-btn','jarvis-stop-speak-btn'].forEach(function(id){
+    var el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
 }
+
+// Keep old name as alias
+function jarvisStop() { jarvisStopAll(); }
 
 function jarvisSpeak(text) {
   if (!window.speechSynthesis) return;
   window.speechSynthesis.cancel();
-  // Show stop button while speaking
-  var stopBtn = document.getElementById('vc-stop-btn');
-  if (stopBtn) stopBtn.style.display = 'block';
+  // Show stop buttons while speaking
+  ['vc-stop-btn','jarvis-stop-speak-btn'].forEach(function(id){
+    var el = document.getElementById(id);
+    if (el) { el.style.display = 'flex'; }
+  });
+  var slBtn = document.getElementById('jarvis-stop-listen-btn');
+  if (slBtn) slBtn.style.display = 'none';
 
   function doSpeak(voices) {
     var utter = new SpeechSynthesisUtterance(text);
@@ -6055,8 +6087,11 @@ window.addEventListener('load', authBoot);
     <div style="font-size:9px;color:#7a7660;letter-spacing:3px;margin-top:4px;">OPERATIONS INTELLIGENCE</div>
   </div>
 
-  <!-- Status text -->
-  <div id="jarvis-status" style="font-size:11px;color:#e84b4b;letter-spacing:3px;font-family:Montserrat,sans-serif;margin-bottom:20px;min-height:20px;text-align:center;">TAP MIC TO SPEAK</div>
+  <!-- Status + Stop Listening button -->
+  <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:20px;min-height:32px;">
+    <div id="jarvis-status" style="font-size:11px;color:#e84b4b;letter-spacing:3px;font-family:Montserrat,sans-serif;text-align:center;">TAP MIC TO SPEAK</div>
+    <button id="jarvis-stop-listen-btn" onclick="jarvisStopAll()" style="display:none;background:rgba(232,75,75,0.2);border:1px solid #e84b4b;color:#e84b4b;font-size:10px;padding:5px 14px;cursor:pointer;font-family:Montserrat,sans-serif;letter-spacing:1px;border-radius:2px;">⏹ STOP</button>
+  </div>
 
   <!-- Interim speech text -->
   <div id="jarvis-interim-fs" style="font-size:14px;color:rgba(201,168,76,0.5);font-family:Montserrat,sans-serif;font-style:italic;text-align:center;min-height:24px;margin-bottom:24px;padding:0 16px;"></div>
@@ -6079,8 +6114,9 @@ window.addEventListener('load', authBoot);
     <div id="jarvis-cmd-pills" style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;"></div>
   </div>
 
-  <!-- Mic button at bottom -->
-  <div style="position:absolute;bottom:24px;left:0;width:100%;display:flex;justify-content:center;">
+  <!-- Mic + Stop Speaking buttons at bottom -->
+  <div style="position:absolute;bottom:24px;left:0;width:100%;display:flex;justify-content:center;align-items:center;gap:16px;">
+    <button id="jarvis-stop-speak-btn" onclick="jarvisStopAll()" style="display:none;width:56px;height:56px;border-radius:50%;background:rgba(232,75,75,0.2);border:2px solid #e84b4b;color:#e84b4b;font-size:22px;cursor:pointer;display:none;align-items:center;justify-content:center;transition:all 0.3s;" title="Stop speaking">⏹</button>
     <button id="jarvis-mic-fs" onclick="toggleJarvisFS()" style="width:70px;height:70px;border-radius:50%;background:rgba(201,168,76,0.1);border:2px solid #c9a84c;color:#c9a84c;font-size:28px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.3s;">🎤</button>
   </div>
 
