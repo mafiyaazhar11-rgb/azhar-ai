@@ -5013,7 +5013,15 @@ document.addEventListener('click', function(e) {
 });
 
 function voipCheckStatus() {
-  var token = AUTH_TOKEN || localStorage.getItem('azhar_token') || '';
+  // Always read fresh token
+  var token = AUTH_TOKEN;
+  if (!token) token = localStorage.getItem('azhar_token');
+  if (!token) token = localStorage.getItem('token');
+  if (!token) {
+    voipUpdateStatus('❌ Session expired — please logout and login again', '#e84b4b');
+    if(btn) btn.style.display='block';
+    return;
+  }
   if (!token) {
     console.log('VoIP: no auth token yet, retrying...');
     setTimeout(voipCheckStatus, 1500);
