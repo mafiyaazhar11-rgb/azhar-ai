@@ -1273,41 +1273,35 @@ if (TWILIO_CONFIGURED) {
 
 // Check VoIP status + issue browser token
 app.get('/api/voip/status', requireAuth, async function(req, res) {
-  if (!TWILIO_CONFIGURED) {
-    return res.json({ configured: false, reason: 'Missing env vars' });
-  }
+  if (!TWILIO_CONFIGURED) return res.json({ configured: false, reason: 'Missing env vars' });
   var twilio;
   try { twilio = require('twilio'); } catch(e) {
-    return res.json({ configured: false, reason: 'Twilio package not installed' });
+    return res.json({ configured: false, reason: 'twilio package missing' });
   }
   try {
-    // Use API Key if available (SK...), otherwise use Capability Token
-    var apiKey    = process.env.TWILIO_API_KEY;
-    var apiSecret = process.env.TWILIO_API_SECRET;
     var accountSid  = process.env.TWILIO_ACCOUNT_SID;
-    var authToken   = process.env.TWILIO_AUTH_TOKEN;
+    var apiKey      = process.env.TWILIO_API_KEY;
+    var apiSecret   = process.env.TWILIO_API_SECRET;
     var twimlAppSid = process.env.TWILIO_TWIML_APP_SID;
-    var identity = (req.user.username || 'azhar-ai-user').replace(/[^a-zA-Z0-9_]/g, '_');
+    var identity    = (req.user.username || 'azhar_user').replace(/[^a-zA-Z0-9_]/g, '_');
 
-    if (apiKey && apiKey.startsWith('SK') && apiSecret) {
-      // Proper AccessToken with API Key (recommended)
-      var AccessToken = twilio.jwt.AccessToken;
-      var VoiceGrant  = AccessToken.VoiceGrant;
-      var grant = new VoiceGrant({ outgoingApplicationSid: twimlAppSid, incomingAllow: false });
-      var token = new AccessToken(accountSid, apiKey, apiSecret, { identity: identity, ttl: 3600 });
-      token.addGrant(grant);
-      console.log('✅ VoIP AccessToken (API Key) generated for:', identity);
-      return res.json({ configured: true, token: token.toJwt(), method: 'access_token' });
-    } else {
-      // Fallback: Capability Token (works with just SID + Auth Token)
-      var CapabilityToken = twilio.jwt.ClientCapability;
-      var capability = new CapabilityToken({ accountSid: accountSid, authToken: authToken, ttl: 3600 });
-      capability.addScope(new CapabilityToken.OutgoingClientScope({ applicationSid: twimlAppSid, clientName: identity }));
-      console.log('✅ VoIP CapabilityToken generated for:', identity);
-      return res.json({ configured: true, token: capability.toJwt(), method: 'capability_token' });
-    }
+    // AccessToken with API Key — required for Twilio JS SDK v1.x and v2.x
+    var AccessToken = twilio.jwt.AccessToken;
+    var VoiceGrant  = AccessToken.VoiceGrant;
+    var grant = new VoiceGrant({
+      outgoingApplicationSid: twimlAppSid,
+      incomingAllow: false
+    });
+    var token = new AccessToken(accountSid, apiKey, apiSecret, {
+      identity: identity,
+      ttl: 3600
+    });
+    token.addGrant(grant);
+    var jwt = token.toJwt();
+    console.log('✅ VoIP token generated for:', identity);
+    res.json({ configured: true, token: jwt });
   } catch(e) {
-    console.error('❌ Twilio token error:', e.message);
+    console.error('❌ VoIP token error:', e.message);
     res.json({ configured: false, error: e.message });
   }
 });
