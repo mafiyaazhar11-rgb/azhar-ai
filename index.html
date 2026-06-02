@@ -4899,9 +4899,17 @@ var VOIP_READY = false;
 
 // Check if Twilio is configured on server
 function voipCheckStatus() {
-  fetch('/api/voip/status', { headers: { 'x-auth-token': AUTH_TOKEN } })
+  var token = AUTH_TOKEN || localStorage.getItem('azhar_token') || '';
+  if (!token) {
+    console.log('VoIP: no auth token yet, retrying...');
+    setTimeout(voipCheckStatus, 1500);
+    return;
+  }
+  console.log('VoIP: checking status with token...');
+  fetch('/api/voip/status', { headers: { 'x-auth-token': token } })
   .then(function(r){ return r.json(); })
   .then(function(d) {
+    console.log('VoIP status response:', d);
     var badge = document.getElementById('voip-status-badge');
     var notConf = document.getElementById('voip-not-configured');
     var callUI = document.getElementById('voip-call-ui');
@@ -4912,11 +4920,12 @@ function voipCheckStatus() {
       if (callUI) callUI.style.display = 'block';
       voipLoadSDKAndInit(d.token);
     } else {
+      console.log('VoIP not configured:', d);
       if (badge) { badge.textContent = '⚠ NOT CONFIGURED'; badge.style.borderColor = '#e84b4b'; badge.style.color = '#e84b4b'; }
       if (notConf) notConf.style.display = 'block';
       if (callUI) callUI.style.display = 'none';
     }
-  }).catch(function(){ /* Twilio not configured yet */ });
+  }).catch(function(e){ console.log('VoIP check error:', e.message); });
 }
 
 function voipLoadSDKAndInit(token) {
@@ -5942,6 +5951,8 @@ function showLogin() {
 }
 
 function showApp() {
+  // Start VoIP check after app loads (token is now available)
+  setTimeout(voipCheckStatus, 2000);
   document.getElementById('login-page').style.display = 'none';
   var sidebar = document.querySelector('.sidebar');
   var main = document.querySelector('.main');
@@ -5953,7 +5964,7 @@ function showApp() {
   showDemoBanner();
   loadSalesFromServer();
   loadGIFromServer();
-  if(typeof voipCheckStatus==='function') setTimeout(voipCheckStatus,1000);
+
   if(AUTH_USER && AUTH_USER.must_change_password) {
     document.getElementById('change-pwd-modal').style.display = 'flex';
   }
