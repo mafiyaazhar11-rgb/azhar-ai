@@ -1344,9 +1344,10 @@ footer span{color:var(--gold);}
             <!-- Caller info -->
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
               <div style="background:var(--card);border:1px solid var(--border);padding:12px;">
-                <div style="font-size:9px;color:var(--muted);letter-spacing:1px;margin-bottom:6px;">FROM (YOU)</div>
-                <div style="font-size:13px;font-weight:700;color:var(--gold);" id="voip-caller-name">Mohammed Azhar</div>
-                <div style="font-size:10px;color:var(--muted);" id="voip-caller-number">Admin</div>
+                <div style="font-size:9px;color:var(--gold);letter-spacing:1px;margin-bottom:6px;font-weight:700;">📱 YOUR MOBILE NUMBER</div>
+                <input id="voip-caller-number" type="tel" placeholder="+971XXXXXXXXX"
+                  style="width:100%;background:transparent;border:none;border-bottom:2px solid var(--gold);color:var(--gold);font-size:16px;font-weight:700;font-family:Montserrat,sans-serif;outline:none;padding:4px 0;box-sizing:border-box;"/>
+                <div style="font-size:9px;color:var(--muted);margin-top:6px;">⚡ Enter once — your phone rings first, then driver</div>
               </div>
               <div style="background:var(--card);border:1px solid var(--border);padding:12px;">
                 <div style="font-size:9px;color:var(--muted);letter-spacing:1px;margin-bottom:6px;">TO (DRIVER / TEAM)</div>
@@ -5099,71 +5100,50 @@ function voipSetupCall(callerName, callerNumber, calleeName, calleeNumber) {
 }
 
 function voipStartCall() {
-  var toNumber = (document.getElementById('voip-callee-number').value || '').trim();
-  if (!toNumber) { alert('Please enter a phone number'); return; }
-  if (!toNumber.startsWith('+')) toNumber = '+' + toNumber;
-  var toName = document.getElementById('voip-callee-name').value || toNumber;
+  var toNumber   = (document.getElementById('voip-callee-number').value || '').trim();
+  var fromNumber = (document.getElementById('voip-caller-number').value || '').trim();
+  var toName     = (document.getElementById('voip-callee-name').value || '').trim();
+
+  if (!toNumber)   { alert('Please search and select who you want to call'); return; }
+  if (!fromNumber) { alert('Please enter YOUR mobile number in the FROM field'); return; }
+  if (!toNumber.startsWith('+'))   toNumber   = '+' + toNumber;
+  if (!fromNumber.startsWith('+')) fromNumber = '+' + fromNumber;
+
   var btn    = document.getElementById('voip-call-btn');
   var hangup = document.getElementById('voip-hangup-btn');
   var timer  = document.getElementById('voip-call-timer');
-
   if (btn) btn.style.display = 'none';
-  voipUpdateStatus('Connecting...', '#c9a84c');
+  voipUpdateStatus('📞 Connecting... Your phone will ring first!', '#c9a84c');
 
-  // BROWSER SDK ONLY — 2-way audio via WebRTC
-  // voipInitDevice must have been called first by voipCheckStatus
-  if (!VOIP_DEVICE) {
-    voipUpdateStatus('Device not ready. Please wait...', '#e84b4b');
-    voipCheckStatus();
-    setTimeout(function(){
-      if (VOIP_DEVICE) voipStartCall();
-      else { voipUpdateStatus('❌ Device failed to load', '#e84b4b'); if(btn) btn.style.display='block'; }
-    }, 3000);
-    return;
-  }
-
-  try {
-    var params = { To: toNumber };
-    var callPromise = VOIP_DEVICE.connect({ params: params });
-
-    // Handle both SDK v1 and v2
-    if (callPromise && typeof callPromise.then === 'function') {
-      // SDK v2
-      callPromise.then(function(call) {
-        VOIP_CALL = call;
-        voipUpdateStatus('📞 Connected with ' + toName, '#4ecb8d');
-        if (hangup) hangup.style.display = 'block';
-        if (timer) timer.style.display = 'block';
-        voipStartTimer(timer);
-        call.on('disconnect', voipOnDisconnected);
-        call.on('error', function(e) {
-          voipUpdateStatus('❌ ' + e.message, '#e84b4b');
-          voipOnDisconnected();
-        });
-      }).catch(function(e) {
-        voipUpdateStatus('❌ ' + e.message, '#e84b4b');
-        if (btn) btn.style.display = 'block';
-      });
-    } else {
-      // SDK v1 — returns connection object directly
-      VOIP_CALL = callPromise;
-      voipUpdateStatus('📞 Calling ' + toName + '...', '#4ecb8d');
+  var token = AUTH_TOKEN || localStorage.getItem('azhar_token') || '';
+  fetch('/api/voip/call', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
+    body: JSON.stringify({ to: toNumber, from_number: fromNumber, from_name: toName })
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(d){
+    if (d.success) {
+      voipUpdateStatus('📞 Answer your phone → ' + toName + ' will connect!', '#4ecb8d');
       if (hangup) hangup.style.display = 'block';
       if (timer) timer.style.display = 'block';
-      voipStartTimer(timer);
-      if (VOIP_CALL) {
-        VOIP_CALL.on('disconnect', voipOnDisconnected);
-        VOIP_CALL.on('error', function(e) {
-          voipUpdateStatus('❌ ' + e.message, '#e84b4b');
-          voipOnDisconnected();
-        });
-      }
+      if (VOIP_TIMER) clearInterval(VOIP_TIMER);
+      VOIP_SECONDS = 0;
+      VOIP_TIMER = setInterval(function(){
+        VOIP_SECONDS++;
+        var m=Math.floor(VOIP_SECONDS/60), s=VOIP_SECONDS%60;
+        if(timer) timer.textContent=m+':'+(s<10?'0':'')+s;
+      }, 1000);
+    } else {
+      voipUpdateStatus('❌ '+(d.error||'Call failed'), '#e84b4b');
+      if (btn) btn.style.display = 'block';
     }
-  } catch(e) {
-    voipUpdateStatus('❌ ' + e.message, '#e84b4b');
+  }).catch(function(e){
+    voipUpdateStatus('❌ Error: '+e.message, '#e84b4b');
     if (btn) btn.style.display = 'block';
-  }
+  });
 }
+
 
 function voipStartTimer(timer) {
   if (VOIP_TIMER) clearInterval(VOIP_TIMER);
