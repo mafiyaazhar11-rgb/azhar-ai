@@ -1328,15 +1328,35 @@ app.post('/api/voip/twiml', function(req, res) {
 app.post('/api/voip/call', requireAuth, async function(req, res) {
   if (!TWILIO_CONFIGURED) return res.status(503).json({ error: 'VoIP not configured' });
   try {
-    var twilio = require('twilio');
-    var client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
     var { to, from_name } = req.body;
     if (!to) return res.status(400).json({ error: 'No destination number' });
+
+    // ── SECURITY: Only allow calls to registered General Info numbers ──
+    if (genInfoData && genInfoData.rows && genInfoData.rows.length) {
+      var cleanTo = to.replace(/\s+/g, '').replace(/^00/, '+');
+      var allowed = genInfoData.rows.some(function(row) {
+        var contact = String(row['CONTACT'] || row['contact'] || '').replace(/\s+/g, '');
+        if (!contact) return false;
+        if (!contact.startsWith('+')) contact = '+' + contact;
+        return contact === cleanTo ||
+               contact.replace('+','') === cleanTo.replace('+','') ||
+               cleanTo.endsWith(contact.slice(-9));
+      });
+      if (!allowed) {
+        console.log('VoIP BLOCKED: ' + to + ' not in General Info by ' + req.user.username);
+        await auditLog(req.user.uid, req.user.username, 'VOIP_BLOCKED', 'Blocked call to: ' + to, '');
+        return res.status(403).json({ error: 'Number not registered in General Info. Only team members can be called.' });
+      }
+    }
+
+    var twilio = require('twilio');
+    var client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
     var call = await client.calls.create({
       to: to,
       from: process.env.TWILIO_PHONE_NUMBER,
       url: 'https://azr-operations.com/api/voip/twiml'
     });
+    console.log('VoIP CALL: ' + req.user.username + ' called ' + to + ' SID:' + call.sid);
     await auditLog(req.user.uid, req.user.username, 'VOIP_CALL', 'Called: ' + to, '');
     res.json({ success: true, callSid: call.sid });
   } catch(e) {
