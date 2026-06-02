@@ -1344,5 +1344,19 @@ app.post('/api/voip/call', requireAuth, async function(req, res) {
   }
 });
 
+// ─── VOIP DEBUG (temporary) ─────────────────────────────────────────────────
+app.get('/api/voip/debug', function(req, res) {
+  res.json({
+    configured: TWILIO_CONFIGURED,
+    has_sid: !!process.env.TWILIO_ACCOUNT_SID,
+    has_token: !!process.env.TWILIO_AUTH_TOKEN,
+    has_phone: !!process.env.TWILIO_PHONE_NUMBER,
+    has_twiml: !!process.env.TWILIO_TWIML_APP_SID,
+    has_api_key: !!process.env.TWILIO_API_KEY,
+    has_api_secret: !!process.env.TWILIO_API_SECRET,
+    twilio_pkg: (function(){ try{ require('twilio'); return 'OK'; }catch(e){ return e.message; }})()
+  });
+});
+
 var PORT=process.env.PORT||3000;
 app.listen(PORT,function(){console.log('AZHAR-AI server running on port '+PORT+(process.env.DATABASE_URL?' with PostgreSQL':' file-only mode'));});
