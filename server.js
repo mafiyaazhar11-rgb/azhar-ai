@@ -1363,18 +1363,14 @@ app.post('/api/voip/call', requireAuth, async function(req, res) {
     var baseUrl = 'https://azr-operations.com';
 
     if (from_number && from_number.startsWith('+')) {
-      // Bridge call — call both phones, connect via conference
+      // Call caller first — when they answer, Twilio dials the destination
+      var encodedTo = encodeURIComponent(to);
       var c1 = await client.calls.create({
         to: from_number,
         from: process.env.TWILIO_PHONE_NUMBER,
-        url: baseUrl + '/api/voip/conference?room=' + conferenceName
+        url: baseUrl + '/api/voip/dial?to=' + encodedTo
       });
-      var c2 = await client.calls.create({
-        to: to,
-        from: process.env.TWILIO_PHONE_NUMBER,
-        url: baseUrl + '/api/voip/conference?room=' + conferenceName
-      });
-      console.log('VoIP BRIDGE: ' + from_number + ' <-> ' + to);
+      console.log('VoIP BRIDGE: ' + from_number + ' -> ' + to);
       await auditLog(req.user.uid, req.user.username, 'VOIP_BRIDGE', from_number + ' <-> ' + to, '');
       res.json({ success: true, mode: 'bridge' });
     } else {
@@ -1399,6 +1395,17 @@ app.post('/api/voip/call', requireAuth, async function(req, res) {
 });
 
 // ── CONFERENCE BRIDGE TwiML ──
+app.get('/api/voip/dial', function(req, res) {
+  var to = req.query.to || '';
+  res.set('Content-Type', 'text/xml');
+  if (to) {
+    res.send('<?xml version="1.0" encoding="UTF-8"?><Response><Dial callerId="' + 
+      (process.env.TWILIO_PHONE_NUMBER || '') + '" timeout="30">' + to + '</Dial></Response>');
+  } else {
+    res.send('<?xml version="1.0" encoding="UTF-8"?><Response><Say>Connection error.</Say></Response>');
+  }
+});
+
 app.get('/api/voip/conference', function(req, res) {
   var room = req.query.room || 'azhar-default';
   res.set('Content-Type', 'text/xml');
