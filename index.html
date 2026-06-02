@@ -5103,72 +5103,23 @@ function voipStartCall() {
   var hangup = document.getElementById('voip-hangup-btn');
   var timer = document.getElementById('voip-call-timer');
   if (btn) btn.style.display = 'none';
-  voipUpdateStatus('Requesting microphone...', '#c9a84c');
+  voipUpdateStatus('📞 Calling ' + toName + '...', '#c9a84c');
 
-  // Request microphone permission first
-  navigator.mediaDevices.getUserMedia({ audio: true })
-  .then(function(stream) {
-    stream.getTracks().forEach(function(t){ t.stop(); }); // release, SDK will re-acquire
-    voipUpdateStatus('Connecting...', '#c9a84c');
-
-    // Use Twilio Device for two-way audio
-    if (VOIP_DEVICE) {
-      var connectOptions = { params: { To: toNumber } };
-      var callPromise = VOIP_DEVICE.connect(connectOptions);
-      if (callPromise && callPromise.then) {
-        callPromise.then(function(call) {
-          VOIP_CALL = call;
-          voipUpdateStatus('📞 Connected — ' + toName, '#4ecb8d');
-          if (hangup) hangup.style.display = 'block';
-          if (timer) { timer.style.display = 'block'; }
-          VOIP_SECONDS = 0;
-          VOIP_TIMER = setInterval(function() {
-            VOIP_SECONDS++;
-            var m = Math.floor(VOIP_SECONDS/60), s = VOIP_SECONDS%60;
-            if (timer) timer.textContent = m+':'+(s<10?'0':'')+s;
-          }, 1000);
-          call.on('disconnect', function(){ voipOnDisconnected(); });
-          call.on('error', function(e){ voipUpdateStatus('❌ '+e.message,'#e84b4b'); voipOnDisconnected(); });
-        }).catch(function(e){
-          voipFallbackCall(toNumber, toName, btn, hangup, timer);
-        });
-      } else {
-        // SDK v1 style
-        VOIP_CALL = callPromise;
-        voipUpdateStatus('📞 Calling ' + toName + '...', '#4ecb8d');
-        if (hangup) hangup.style.display = 'block';
-        VOIP_SECONDS = 0;
-        VOIP_TIMER = setInterval(function() {
-          VOIP_SECONDS++;
-          var m = Math.floor(VOIP_SECONDS/60), s = VOIP_SECONDS%60;
-          if (timer) timer.textContent = m+':'+(s<10?'0':'')+s;
-        }, 1000);
-      }
-    } else {
-      voipFallbackCall(toNumber, toName, btn, hangup, timer);
-    }
-  })
-  .catch(function(e) {
-    // No microphone — fall back to server-side call
-    voipUpdateStatus('No mic access — using outbound call', '#c9a84c');
-    voipFallbackCall(toNumber, toName, btn, hangup, timer);
-  });
-}
-
-function voipFallbackCall(toNumber, toName, btn, hangup, timer) {
-  // Server-side outbound call (phone rings, no browser audio)
+  // SINGLE call via server REST only — clean, reliable, no double call
+  var token = AUTH_TOKEN || localStorage.getItem('azhar_token') || '';
   fetch('/api/voip/call', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-auth-token': AUTH_TOKEN || localStorage.getItem('azhar_token') || '' },
-    body: JSON.stringify({ to: toNumber, from_name: 'AZHAR-AI' })
+    headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
+    body: JSON.stringify({ to: toNumber, from_name: toName })
   })
   .then(function(r){ return r.json(); })
   .then(function(d){
     if (d.success) {
-      voipUpdateStatus('📞 ' + toName + ' is ringing! (outbound only)', '#4ecb8d');
+      voipUpdateStatus('📞 ' + toName + ' is ringing!', '#4ecb8d');
       if (hangup) hangup.style.display = 'block';
       if (timer) timer.style.display = 'block';
       VOIP_SECONDS = 0;
+      if (VOIP_TIMER) clearInterval(VOIP_TIMER);
       VOIP_TIMER = setInterval(function(){
         VOIP_SECONDS++;
         var m=Math.floor(VOIP_SECONDS/60), s=VOIP_SECONDS%60;
