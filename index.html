@@ -1431,7 +1431,7 @@ function goTab(id,btn){
   loadReturnsFromServer();
   if(id==='sales') loadSalesFromServer();
   if(id==='summary') initMerchLookup();
-  if(id==='geninfo') loadGIFromServer();
+  if(id==='geninfo') { loadGIFromServer(); setTimeout(voipCheckStatus, 500); }
     var giStarW=document.getElementById('gi-star-wrap');if(giStarW){var cuGI=AUTH_USER&&(AUTH_USER.role==='superadmin'||AUTH_USER.role==='subadmin');giStarW.style.display=(id==='geninfo'&&cuGI)?'block':'none';}
   var dsStar=document.getElementById('ds-star-wrap');if(dsStar){var cuDS=AUTH_USER&&(AUTH_USER.role==='superadmin'||AUTH_USER.role==='subadmin');dsStar.style.display=(id==='dispatch'&&cuDS)?'block':'none';}
   // Update JARVIS current tab
@@ -5953,6 +5953,7 @@ function showApp() {
   showDemoBanner();
   loadSalesFromServer();
   loadGIFromServer();
+  if(typeof voipCheckStatus==='function') setTimeout(voipCheckStatus,1000);
   if(AUTH_USER && AUTH_USER.must_change_password) {
     document.getElementById('change-pwd-modal').style.display = 'flex';
   }
