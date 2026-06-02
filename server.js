@@ -1351,25 +1351,63 @@ app.post('/api/voip/call', requireAuth, async function(req, res) {
                cleanTo.endsWith(contact.slice(-9));
       });
       if (!allowed) {
-        console.log('VoIP BLOCKED: ' + to + ' not in General Info by ' + req.user.username);
-        await auditLog(req.user.uid, req.user.username, 'VOIP_BLOCKED', 'Blocked call to: ' + to, '');
-        return res.status(403).json({ error: 'Number not registered in General Info. Only team members can be called.' });
+        await auditLog(req.user.uid, req.user.username, 'VOIP_BLOCKED', 'Blocked: ' + to, '');
+        return res.status(403).json({ error: 'Number not registered in General Info.' });
       }
     }
 
     var twilio = require('twilio');
     var client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-    var call = await client.calls.create({
-      to: to,
-      from: process.env.TWILIO_PHONE_NUMBER,
-      url: 'https://azr-operations.com/api/voip/twiml'
-    });
-    console.log('VoIP CALL: ' + req.user.username + ' called ' + to + ' SID:' + call.sid);
-    await auditLog(req.user.uid, req.user.username, 'VOIP_CALL', 'Called: ' + to, '');
-    res.json({ success: true, callSid: call.sid });
+
+    var { from_number } = req.body;
+    var twilio = require('twilio');
+    var client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+    var conferenceName = 'bridge-' + Date.now();
+    var baseUrl = 'https://azr-operations.com';
+
+    if (from_number && from_number.startsWith('+')) {
+      // Bridge call — call both phones, connect via conference
+      var c1 = await client.calls.create({
+        to: from_number,
+        from: process.env.TWILIO_PHONE_NUMBER,
+        url: baseUrl + '/api/voip/conference?room=' + conferenceName
+      });
+      var c2 = await client.calls.create({
+        to: to,
+        from: process.env.TWILIO_PHONE_NUMBER,
+        url: baseUrl + '/api/voip/conference?room=' + conferenceName
+      });
+      console.log('VoIP BRIDGE: ' + from_number + ' <-> ' + to);
+      await auditLog(req.user.uid, req.user.username, 'VOIP_BRIDGE', from_number + ' <-> ' + to, '');
+      res.json({ success: true, mode: 'bridge' });
+    } else {
+      // Outbound only
+      var call = await client.calls.create({
+        to: to,
+        from: process.env.TWILIO_PHONE_NUMBER,
+        url: baseUrl + '/api/voip/twiml'
+      });
+      console.log('VoIP OUTBOUND: ' + req.user.username + ' -> ' + to);
+      await auditLog(req.user.uid, req.user.username, 'VOIP_CALL', 'Called: ' + to, '');
+      res.json({ success: true, mode: 'outbound' });
+    }
   } catch(e) {
+    console.error('VoIP call error:', e.message);
     res.status(500).json({ error: e.message });
   }
+});
+
+// ── CONFERENCE BRIDGE TwiML ──
+app.get('/api/voip/conference', function(req, res) {
+  var room = req.query.room || 'azhar-default';
+  res.set('Content-Type', 'text/xml');
+  res.send('<?xml version="1.0" encoding="UTF-8"?>' +
+    '<Response>' +
+      '<Dial>' +
+        '<Conference waitUrl="" startConferenceOnEnter="true" endConferenceOnExit="true" ' +
+          'maxParticipants="2" record="do-not-record">' + room + '</Conference>' +
+      '</Dial>' +
+    '</Response>');
 });
 
 // ─── VOIP DEBUG (temporary) ─────────────────────────────────────────────────
