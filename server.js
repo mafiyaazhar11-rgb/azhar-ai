@@ -1402,13 +1402,13 @@ app.post('/api/voip/call', requireAuth, async function(req, res) {
 app.get('/api/voip/conference', function(req, res) {
   var room = req.query.room || 'azhar-default';
   res.set('Content-Type', 'text/xml');
-  res.send('<?xml version="1.0" encoding="UTF-8"?>' +
-    '<Response>' +
-      '<Dial>' +
-        '<Conference waitUrl="" startConferenceOnEnter="true" endConferenceOnExit="true" ' +
-          'maxParticipants="2" record="do-not-record">' + room + '</Conference>' +
-      '</Dial>' +
-    '</Response>');
+  res.send('<?xml version="1.0" encoding="UTF-8"?><Response><Dial><Conference startConferenceOnEnter="true" endConferenceOnExit="true" maxParticipants="2" record="do-not-record">' + room + '</Conference></Dial></Response>');
+});
+
+app.post('/api/voip/conference', function(req, res) {
+  var room = req.query.room || req.body.room || 'azhar-default';
+  res.set('Content-Type', 'text/xml');
+  res.send('<?xml version="1.0" encoding="UTF-8"?><Response><Dial><Conference startConferenceOnEnter="true" endConferenceOnExit="true" maxParticipants="2" record="do-not-record">' + room + '</Conference></Dial></Response>');
 });
 
 // ─── VOIP DEBUG (temporary) ─────────────────────────────────────────────────
