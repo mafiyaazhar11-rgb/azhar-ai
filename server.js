@@ -1336,7 +1336,8 @@ app.post('/api/voip/twiml', function(req, res) {
 app.post('/api/voip/call', requireAuth, async function(req, res) {
   if (!TWILIO_CONFIGURED) return res.status(503).json({ error: 'VoIP not configured' });
   try {
-    var { to, from_name } = req.body;
+    var { to, from_number, from_name } = req.body;
+    console.log('VoIP call request - to:', to, 'from:', from_number);
     if (!to) return res.status(400).json({ error: 'No destination number' });
 
     // ── SECURITY: Only allow calls to registered General Info numbers ──
@@ -1358,7 +1359,6 @@ app.post('/api/voip/call', requireAuth, async function(req, res) {
 
     var twilio = require('twilio');
     var client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-    var { from_number } = req.body;
     var conferenceName = 'bridge-' + Date.now();
     var baseUrl = 'https://azr-operations.com';
 
