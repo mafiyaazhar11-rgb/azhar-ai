@@ -464,6 +464,7 @@ footer span{color:var(--gold);}
 }
 
 
+.voip-result-item:hover { background: rgba(201,168,76,0.1) !important; }
 /* ══ CEO PRESENTATION — GLOBAL GOLD OVERRIDE ══ */
 
 /* All muted text → bright gold */
@@ -1327,6 +1328,19 @@ footer span{color:var(--gold);}
 
           <!-- Call UI -->
           <div id="voip-call-ui" style="display:none;">
+            <!-- Search bar -->
+            <div style="position:relative;margin-bottom:12px;">
+              <div style="display:flex;gap:8px;">
+                <input id="voip-search" type="text" placeholder="🔍  Search or speak a name to auto-fill..."
+                  oninput="voipSearchMember(this.value)"
+                  style="flex:1;background:var(--black);border:1px solid var(--gold);color:var(--gold);padding:10px 14px;font-size:12px;font-family:Montserrat,sans-serif;outline:none;"/>
+                <button id="voip-mic-search" onclick="voipMicSearch()"
+                  style="padding:10px 16px;background:rgba(201,168,76,0.1);border:1px solid var(--gold);color:var(--gold);font-size:16px;cursor:pointer;flex-shrink:0;transition:all 0.2s;"
+                  title="Say a name">🎤</button>
+              </div>
+              <div id="voip-search-results" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--card);border:1px solid var(--gold);border-top:none;z-index:200;max-height:200px;overflow-y:auto;"></div>
+            </div>
+
             <!-- Caller info -->
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
               <div style="background:var(--card);border:1px solid var(--border);padding:12px;">
@@ -1336,10 +1350,10 @@ footer span{color:var(--gold);}
               </div>
               <div style="background:var(--card);border:1px solid var(--border);padding:12px;">
                 <div style="font-size:9px;color:var(--muted);letter-spacing:1px;margin-bottom:6px;">TO (DRIVER / TEAM)</div>
-                <input id="voip-callee-name" type="text" placeholder="Name (optional)"
-                  style="width:100%;background:transparent;border:none;border-bottom:1px solid var(--border);color:#5b8dee;font-size:12px;font-weight:700;font-family:Montserrat,sans-serif;outline:none;margin-bottom:6px;padding:2px 0;"/>
+                <input id="voip-callee-name" type="text" placeholder="Name"
+                  style="width:100%;background:transparent;border:none;border-bottom:1px solid var(--border);color:#5b8dee;font-size:12px;font-weight:700;font-family:Montserrat,sans-serif;outline:none;margin-bottom:6px;padding:2px 0;box-sizing:border-box;"/>
                 <input id="voip-callee-number" type="tel" placeholder="+971XXXXXXXXX"
-                  style="width:100%;background:transparent;border:none;border-bottom:1px solid var(--gold);color:var(--gold);font-size:12px;font-family:Montserrat,sans-serif;outline:none;padding:2px 0;"
+                  style="width:100%;background:transparent;border:none;border-bottom:1px solid var(--gold);color:var(--gold);font-size:12px;font-family:Montserrat,sans-serif;outline:none;padding:2px 0;box-sizing:border-box;"
                   onkeypress="if(event.key==='Enter')voipStartCall()"/>
               </div>
             </div>
@@ -4901,6 +4915,102 @@ var VOIP_SECONDS = 0;
 var VOIP_READY = false;
 
 // Check if Twilio is configured on server
+function voipMicSearch() {
+  var btn = document.getElementById('voip-mic-search');
+  if (!window.SpeechRecognition && !window.webkitSpeechRecognition) {
+    alert('Voice not supported on this browser');
+    return;
+  }
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  var rec = new SR();
+  rec.lang = 'en-US';
+  rec.maxAlternatives = 1;
+
+  // Show listening state
+  if (btn) { btn.textContent = '🔴'; btn.style.borderColor = '#e84b4b'; btn.style.color = '#e84b4b'; }
+  var searchInput = document.getElementById('voip-search');
+  if (searchInput) searchInput.placeholder = 'Listening...';
+
+  rec.onresult = function(e) {
+    var said = e.results[0][0].transcript;
+    console.log('VoIP mic heard:', said);
+    if (searchInput) { searchInput.value = said; }
+    voipSearchMember(said);
+    // Auto-select if only one match
+    setTimeout(function() {
+      var results = document.querySelectorAll('.voip-result-item');
+      if (results.length === 1) {
+        results[0].click();
+        // Show ready to call message
+        if (searchInput) searchInput.placeholder = '✅ ' + said + ' — Press START CALL';
+      }
+    }, 300);
+    if (btn) { btn.textContent = '🎤'; btn.style.borderColor = 'var(--gold)'; btn.style.color = 'var(--gold)'; }
+    if (searchInput) searchInput.placeholder = '🔍  Search or speak a name to auto-fill...';
+  };
+  rec.onerror = function() {
+    if (btn) { btn.textContent = '🎤'; btn.style.borderColor = 'var(--gold)'; btn.style.color = 'var(--gold)'; }
+    if (searchInput) searchInput.placeholder = '🔍  Search or speak a name to auto-fill...';
+  };
+  rec.onend = function() {
+    if (btn && btn.textContent === '🔴') {
+      btn.textContent = '🎤'; btn.style.borderColor = 'var(--gold)'; btn.style.color = 'var(--gold)';
+    }
+  };
+  rec.start();
+}
+
+function voipSearchMember(query) {
+  var resultsEl = document.getElementById('voip-search-results');
+  if (!query || query.length < 2) { resultsEl.style.display = 'none'; return; }
+  // Search from GI_RAW (General Info data)
+  var matches = [];
+  if (typeof GI_RAW !== 'undefined' && GI_RAW.length) {
+    matches = GI_RAW.filter(function(r) {
+      var name = giGetVal(r,'name').toLowerCase();
+      var desig = giGetVal(r,'designation').toLowerCase();
+      return name.includes(query.toLowerCase()) || desig.includes(query.toLowerCase());
+    }).slice(0, 8);
+  }
+  if (!matches.length) {
+    resultsEl.style.display = 'none';
+    return;
+  }
+  resultsEl.innerHTML = matches.map(function(r) {
+    var name = giGetVal(r,'name');
+    var contact = giGetVal(r,'contact');
+    var desig = giGetVal(r,'designation');
+    var unit = giGetVal(r,'unit');
+    var col = GI_UNIT_COLORS[unit] || 'var(--text)';
+    if (contact && !contact.startsWith('+')) contact = '+' + contact;
+    return '<div class="voip-result-item" data-name="'+name.replace(/"/g,'')+'" data-number="'+contact+'"'
+      +' style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;"'
+      +' class="voip-hover">'+
+      '<div><div style="font-size:12px;font-weight:700;color:'+col+';">'+name+'</div>'
+      +'<div style="font-size:10px;color:var(--muted);">'+desig+' · '+unit+'</div></div>'
+      +'<div style="font-size:11px;color:var(--gold);">'+contact+'</div>'
+      +'</div>';
+  }).join('');
+  resultsEl.style.display = 'block';
+  // Bind click
+  resultsEl.querySelectorAll('.voip-result-item').forEach(function(item) {
+    item.addEventListener('click', function() {
+      document.getElementById('voip-callee-name').value = this.dataset.name;
+      document.getElementById('voip-callee-number').value = this.dataset.number;
+      document.getElementById('voip-search').value = this.dataset.name;
+      resultsEl.style.display = 'none';
+    });
+  });
+}
+
+// Close search results when clicking outside
+document.addEventListener('click', function(e) {
+  var sr = document.getElementById('voip-search-results');
+  if (sr && !sr.contains(e.target) && e.target.id !== 'voip-search') {
+    sr.style.display = 'none';
+  }
+});
+
 function voipCheckStatus() {
   var token = AUTH_TOKEN || localStorage.getItem('azhar_token') || '';
   if (!token) {
