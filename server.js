@@ -1389,7 +1389,11 @@ app.post('/api/voip/call', requireAuth, async function(req, res) {
       res.json({ success: true, mode: 'outbound' });
     }
   } catch(e) {
-    console.error('VoIP call error:', e.message);
+    console.error('VoIP call error FULL:', JSON.stringify(e));
+    console.error('VoIP call error msg:', e.message);
+    console.error('TWILIO_ACCOUNT_SID set:', !!process.env.TWILIO_ACCOUNT_SID);
+    console.error('TWILIO_AUTH_TOKEN set:', !!process.env.TWILIO_AUTH_TOKEN);
+    console.error('TWILIO_PHONE_NUMBER set:', !!process.env.TWILIO_PHONE_NUMBER);
     res.status(500).json({ error: e.message });
   }
 });
