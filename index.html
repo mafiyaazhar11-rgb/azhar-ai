@@ -5056,26 +5056,32 @@ function voipLoadSDKAndInit(token) {
 function voipInitDevice(token) {
   try {
     VOIP_READY = true;
-    VOIP_DEVICE = new Twilio.Device(token, {
-      codecPreferences: ['opus', 'pcmu'],
-      debug: false
-    });
-    // Voice SDK v1.x events
-    VOIP_DEVICE.on('ready', function() {
-      console.log('✅ Twilio device ready');
-      voipUpdateStatus('Ready to call', '#4ecb8d');
-    });
-    VOIP_DEVICE.on('error', function(e) {
-      console.error('Twilio error:', e.message);
-      voipUpdateStatus('Error: ' + e.message, '#e84b4b');
-    });
-    VOIP_DEVICE.on('connect', function(conn) {
-      VOIP_CALL = conn;
-    });
-    VOIP_DEVICE.on('disconnect', function() {
-      voipOnDisconnected();
-    });
-    voipUpdateStatus('Ready to call', '#4ecb8d');
+    // Support both SDK v1.x and v2.x
+    var deviceOptions = { codecPreferences: ['opus', 'pcmu'], logLevel: 'error' };
+    VOIP_DEVICE = new Twilio.Device(token, deviceOptions);
+
+    // v2.x events
+    if (VOIP_DEVICE.on) {
+      VOIP_DEVICE.on('registered', function() {
+        console.log('✅ Twilio device registered (v2)');
+        voipUpdateStatus('Ready to call', '#4ecb8d');
+      });
+      VOIP_DEVICE.on('ready', function() {
+        console.log('✅ Twilio device ready (v1)');
+        voipUpdateStatus('Ready to call', '#4ecb8d');
+      });
+      VOIP_DEVICE.on('error', function(e) {
+        var msg = e.message || e.description || JSON.stringify(e);
+        console.error('Twilio error:', msg);
+        voipUpdateStatus('Error: ' + msg, '#e84b4b');
+      });
+      VOIP_DEVICE.on('disconnect', function() { voipOnDisconnected(); });
+    }
+    // v2.x requires explicit register
+    if (typeof VOIP_DEVICE.register === 'function') {
+      VOIP_DEVICE.register().catch(function(e){ console.error('Register error:', e.message); });
+    }
+    voipUpdateStatus('Connecting...', '#c9a84c');
   } catch(e) {
     console.error('Twilio init error:', e.message);
     voipUpdateStatus('Init error: ' + e.message, '#e84b4b');
