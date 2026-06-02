@@ -4935,7 +4935,7 @@ function voipLoadSDKAndInit(token) {
     return;
   }
   var script = document.createElement('script');
-  script.src = 'https://sdk.twilio.com/js/client/v1.14/twilio.js';
+  script.src = 'https://sdk.twilio.com/js/voice/releases/2.10.1/twilio.min.js';
   script.onload = function() { voipInitDevice(token); };
   document.head.appendChild(script);
 }
@@ -4944,27 +4944,26 @@ function voipInitDevice(token) {
   try {
     VOIP_DEVICE = new Twilio.Device(token, {
       codecPreferences: ['opus', 'pcmu'],
-      fakeLocalDTMF: true,
-      enableRingingState: true,
-      debug: false
+      logLevel: 1
     });
-    VOIP_DEVICE.on('ready', function() {
-      console.log('Twilio VoIP device ready');
+    // Voice SDK 2.x events
+    VOIP_DEVICE.on('registered', function() {
+      console.log('Twilio VoIP device registered');
       voipUpdateStatus('Ready to call', '#4ecb8d');
     });
     VOIP_DEVICE.on('error', function(e) {
       console.error('Twilio error:', e.message);
       voipUpdateStatus('Error: ' + e.message, '#e84b4b');
     });
-    VOIP_DEVICE.on('connect', function(conn) {
-      VOIP_CALL = conn;
-      voipOnConnected();
+    VOIP_DEVICE.on('incoming', function(call) {
+      VOIP_CALL = call;
     });
-    VOIP_DEVICE.on('disconnect', function() {
-      voipOnDisconnected();
-    });
+    // Register the device
+    VOIP_DEVICE.register();
+    voipUpdateStatus('Connecting...', '#c9a84c');
   } catch(e) {
     console.error('Twilio init error:', e.message);
+    voipUpdateStatus('Init error: ' + e.message, '#e84b4b');
   }
 }
 
@@ -4992,7 +4991,16 @@ function voipStartCall() {
   var btn = document.getElementById('voip-call-btn');
   if (btn) { btn.style.display = 'none'; }
   try {
-    VOIP_DEVICE.connect({ To: toNumber, CallerId: 'AZHAR-AI Operations' });
+    var connectOptions = { params: { To: toNumber } };
+    VOIP_DEVICE.connect(connectOptions).then(function(call) {
+      VOIP_CALL = call;
+      voipOnConnected();
+      call.on('disconnect', function() { voipOnDisconnected(); });
+      call.on('error', function(e) { voipUpdateStatus('Call error: '+e.message,'#e84b4b'); voipOnDisconnected(); });
+    }).catch(function(e) {
+      voipUpdateStatus('Call failed: ' + e.message, '#e84b4b');
+      if (btn) btn.style.display = 'block';
+    });
   } catch(e) {
     voipUpdateStatus('Call failed: ' + e.message, '#e84b4b');
     if (btn) btn.style.display = 'block';
@@ -5000,8 +5008,10 @@ function voipStartCall() {
 }
 
 function voipHangup() {
-  if (VOIP_CALL) { VOIP_CALL.disconnect(); }
-  else if (VOIP_DEVICE) { VOIP_DEVICE.disconnectAll(); }
+  try {
+    if (VOIP_CALL) { VOIP_CALL.disconnect(); }
+    else if (VOIP_DEVICE) { VOIP_DEVICE.disconnectAll(); }
+  } catch(e) { console.log('Hangup error:', e.message); }
   voipOnDisconnected();
 }
 
