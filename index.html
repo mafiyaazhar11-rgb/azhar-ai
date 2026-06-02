@@ -1331,13 +1331,16 @@ footer span{color:var(--gold);}
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
               <div style="background:var(--card);border:1px solid var(--border);padding:12px;">
                 <div style="font-size:9px;color:var(--muted);letter-spacing:1px;margin-bottom:6px;">FROM (YOU)</div>
-                <div style="font-size:13px;font-weight:700;color:var(--gold);" id="voip-caller-name">—</div>
-                <div style="font-size:10px;color:var(--muted);" id="voip-caller-number">—</div>
+                <div style="font-size:13px;font-weight:700;color:var(--gold);" id="voip-caller-name">Mohammed Azhar</div>
+                <div style="font-size:10px;color:var(--muted);" id="voip-caller-number">Admin</div>
               </div>
               <div style="background:var(--card);border:1px solid var(--border);padding:12px;">
-                <div style="font-size:9px;color:var(--muted);letter-spacing:1px;margin-bottom:6px;">TO (DRIVER)</div>
-                <div style="font-size:13px;font-weight:700;color:#5b8dee;" id="voip-callee-name">—</div>
-                <div style="font-size:10px;color:var(--muted);" id="voip-callee-number">—</div>
+                <div style="font-size:9px;color:var(--muted);letter-spacing:1px;margin-bottom:6px;">TO (DRIVER / TEAM)</div>
+                <input id="voip-callee-name" type="text" placeholder="Name (optional)"
+                  style="width:100%;background:transparent;border:none;border-bottom:1px solid var(--border);color:#5b8dee;font-size:12px;font-weight:700;font-family:Montserrat,sans-serif;outline:none;margin-bottom:6px;padding:2px 0;"/>
+                <input id="voip-callee-number" type="tel" placeholder="+971XXXXXXXXX"
+                  style="width:100%;background:transparent;border:none;border-bottom:1px solid var(--gold);color:var(--gold);font-size:12px;font-family:Montserrat,sans-serif;outline:none;padding:2px 0;"
+                  onkeypress="if(event.key==='Enter')voipStartCall()"/>
               </div>
             </div>
             <!-- Call button + status -->
@@ -4982,9 +4985,9 @@ function voipStartCall() {
     alert('VoIP not configured yet. See setup instructions below.');
     return;
   }
-  var toNumber = document.getElementById('voip-callee-number').textContent;
+  var toNumber = document.getElementById('voip-callee-number').value || document.getElementById('voip-callee-number').textContent;
   if (!toNumber || toNumber === '—') {
-    alert('No phone number set for this contact.');
+    alert('Please enter a phone number in the TO field (e.g. +971XXXXXXXXX)');
     return;
   }
   voipUpdateStatus('Calling...', '#c9a84c');
