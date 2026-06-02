@@ -5055,6 +5055,7 @@ function voipLoadSDKAndInit(token) {
 
 function voipInitDevice(token) {
   try {
+    VOIP_READY = true;
     VOIP_DEVICE = new Twilio.Device(token, {
       codecPreferences: ['opus', 'pcmu'],
       logLevel: 1
@@ -5091,8 +5092,16 @@ function voipSetupCall(callerName, callerNumber, calleeName, calleeNumber) {
 }
 
 function voipStartCall() {
-  if (!VOIP_READY || !VOIP_DEVICE) {
-    alert('VoIP not configured yet. See setup instructions below.');
+  if (!VOIP_DEVICE) {
+    // Device not ready yet - try to initialize first
+    voipCheckStatus();
+    setTimeout(function() {
+      if (!VOIP_DEVICE) {
+        alert('VoIP connecting... please wait 2 seconds and try again.');
+      } else {
+        voipStartCall();
+      }
+    }, 2000);
     return;
   }
   var toNumber = document.getElementById('voip-callee-number').value || document.getElementById('voip-callee-number').textContent;
