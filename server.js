@@ -1315,10 +1315,24 @@ app.get('/api/voip/status', requireAuth, async function(req, res) {
 // TwiML — tells Twilio what to do when call connects (dial out to real number)
 app.post('/api/voip/twiml', function(req, res) {
   var to = req.body.To || req.query.To;
+  var callerId = process.env.TWILIO_PHONE_NUMBER || '';
   res.set('Content-Type', 'text/xml');
   if (to && to.startsWith('+')) {
-    res.send('<?xml version="1.0" encoding="UTF-8"?><Response><Dial callerId="' +
-      (process.env.TWILIO_PHONE_NUMBER || '') + '">' + to + '</Dial></Response>');
+    // Dial with two-way audio bridge
+    res.send('<?xml version="1.0" encoding="UTF-8"?>' +
+      '<Response>' +
+        '<Dial callerId="' + callerId + '" timeout="30" record="do-not-record">' +
+          '<Number>' + to + '</Number>' +
+        '</Dial>' +
+      '</Response>');
+  } else if (to && to.startsWith('client:')) {
+    // Browser client call
+    res.send('<?xml version="1.0" encoding="UTF-8"?>' +
+      '<Response>' +
+        '<Dial callerId="' + callerId + '">' +
+          '<Client>' + to.replace('client:','') + '</Client>' +
+        '</Dial>' +
+      '</Response>');
   } else {
     res.send('<?xml version="1.0" encoding="UTF-8"?><Response><Say>Call configuration error.</Say></Response>');
   }
