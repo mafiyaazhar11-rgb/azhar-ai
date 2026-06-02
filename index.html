@@ -5092,41 +5092,47 @@ function voipSetupCall(callerName, callerNumber, calleeName, calleeNumber) {
 }
 
 function voipStartCall() {
-  if (!VOIP_DEVICE) {
-    // Device not ready yet - try to initialize first
-    voipCheckStatus();
-    setTimeout(function() {
-      if (!VOIP_DEVICE) {
-        alert('VoIP connecting... please wait 2 seconds and try again.');
-      } else {
-        voipStartCall();
-      }
-    }, 2000);
-    return;
-  }
-  var toNumber = document.getElementById('voip-callee-number').value || document.getElementById('voip-callee-number').textContent;
-  if (!toNumber || toNumber === '—') {
+  var toNumber = (document.getElementById('voip-callee-number').value || '').trim();
+  if (!toNumber) {
     alert('Please enter a phone number in the TO field (e.g. +971XXXXXXXXX)');
     return;
   }
-  voipUpdateStatus('Calling...', '#c9a84c');
+  if (!toNumber.startsWith('+')) toNumber = '+' + toNumber;
+  var toName = document.getElementById('voip-callee-name').value || toNumber;
   var btn = document.getElementById('voip-call-btn');
-  if (btn) { btn.style.display = 'none'; }
-  try {
-    var connectOptions = { params: { To: toNumber } };
-    VOIP_DEVICE.connect(connectOptions).then(function(call) {
-      VOIP_CALL = call;
-      voipOnConnected();
-      call.on('disconnect', function() { voipOnDisconnected(); });
-      call.on('error', function(e) { voipUpdateStatus('Call error: '+e.message,'#e84b4b'); voipOnDisconnected(); });
-    }).catch(function(e) {
-      voipUpdateStatus('Call failed: ' + e.message, '#e84b4b');
+  var hangup = document.getElementById('voip-hangup-btn');
+  var timer = document.getElementById('voip-call-timer');
+  if (btn) btn.style.display = 'none';
+  voipUpdateStatus('Calling ' + toName + '...', '#c9a84c');
+
+  // Use server-side REST call (most reliable - no browser SDK needed)
+  fetch('/api/voip/call', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-auth-token': AUTH_TOKEN || localStorage.getItem('azhar_token') || '' },
+    body: JSON.stringify({ to: toNumber, from_name: 'AZHAR-AI' })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    if (d.success) {
+      voipUpdateStatus('📞 Calling ' + toName + ' — phone is ringing!', '#4ecb8d');
+      if (hangup) hangup.style.display = 'block';
+      if (timer) timer.style.display = 'block';
+      // Start timer
+      VOIP_SECONDS = 0;
+      VOIP_TIMER = setInterval(function() {
+        VOIP_SECONDS++;
+        var m = Math.floor(VOIP_SECONDS/60), s = VOIP_SECONDS%60;
+        if (timer) timer.textContent = m+':'+(s<10?'0':'')+s;
+      }, 1000);
+    } else {
+      voipUpdateStatus('❌ ' + (d.error || 'Call failed'), '#e84b4b');
       if (btn) btn.style.display = 'block';
-    });
-  } catch(e) {
-    voipUpdateStatus('Call failed: ' + e.message, '#e84b4b');
+    }
+  })
+  .catch(function(e) {
+    voipUpdateStatus('❌ Error: ' + e.message, '#e84b4b');
     if (btn) btn.style.display = 'block';
-  }
+  });
 }
 
 function voipHangup() {
