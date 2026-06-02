@@ -1358,10 +1358,7 @@ app.post('/api/voip/call', requireAuth, async function(req, res) {
 
     var twilio = require('twilio');
     var client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-
     var { from_number } = req.body;
-    var twilio = require('twilio');
-    var client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
     var conferenceName = 'bridge-' + Date.now();
     var baseUrl = 'https://azr-operations.com';
 
