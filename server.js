@@ -1392,5 +1392,25 @@ app.get('/api/voip/debug', function(req, res) {
   });
 });
 
+// ─── SERVE TWILIO SDK ────────────────────────────────────────────────────────
+app.get('/twilio-sdk.js', function(req, res) {
+  try {
+    // Try to serve from npm package
+    var sdkPath = require.resolve('@twilio/voice-sdk/dist/twilio.js');
+    res.setHeader('Content-Type', 'application/javascript');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    require('fs').createReadStream(sdkPath).pipe(res);
+  } catch(e) {
+    try {
+      var sdkPath2 = require.resolve('@twilio/voice-sdk/dist/twilio.min.js');
+      res.setHeader('Content-Type', 'application/javascript');
+      require('fs').createReadStream(sdkPath2).pipe(res);
+    } catch(e2) {
+      // Fallback: redirect to CDN (browser can access even if server can't)
+      res.redirect('https://sdk.twilio.com/js/client/v1.14/twilio.js');
+    }
+  }
+});
+
 var PORT=process.env.PORT||3000;
 app.listen(PORT,function(){console.log('AZHAR-AI server running on port '+PORT+(process.env.DATABASE_URL?' with PostgreSQL':' file-only mode'));});
