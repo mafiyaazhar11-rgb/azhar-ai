@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Delivery Schedule Compliance</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@300;400;500;600&display=swap');
+:root{--bg:#0d1117;--surface:#161b22;--surface2:#1c2330;--border:#30363d;--accent:#e8a020;--text:#e6edf3;--muted:#7d8590;--scheduled:#238636;--oos:#da3633;--nosched:#9e6a03;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Barlow',sans-serif;font-size:13px;min-height:100vh;}
+.header{background:var(--surface);border-bottom:2px solid var(--accent);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+.header-title{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;letter-spacing:1px;color:var(--accent);text-transform:uppercase;}
+.header-sub{font-size:11px;color:var(--muted);margin-top:2px;}
+.upload-zone{margin:20px 24px;border:2px dashed var(--border);border-radius:10px;padding:28px;text-align:center;cursor:pointer;transition:all 0.2s;background:var(--surface);}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--accent);background:#1c2330;}
+.upload-zone .upload-icon{font-size:36px;margin-bottom:8px;}
+.upload-zone h3{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;color:var(--accent);}
+.upload-zone p{color:var(--muted);font-size:12px;margin-top:4px;}
+#fileInput{display:none;}
+.upload-btn{display:inline-block;margin-top:12px;padding:8px 20px;background:var(--accent);color:#000;border-radius:6px;font-weight:700;font-size:13px;cursor:pointer;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.5px;}
+.filters{display:flex;flex-wrap:wrap;gap:10px;padding:12px 24px;background:var(--surface);border-bottom:1px solid var(--border);align-items:center;}
+.filter-label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;}
+.filter-group{display:flex;align-items:center;gap:6px;}
+select{background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:5px;padding:5px 10px;font-size:12px;font-family:'Barlow',sans-serif;cursor:pointer;outline:none;}
+select:focus{border-color:var(--accent);}
+.kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;padding:16px 24px;}
+.kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px;position:relative;overflow:hidden;}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;}
+.kpi-card.total::before{background:var(--accent);}
+.kpi-card.scheduled::before{background:#238636;}
+.kpi-card.oos::before{background:#da3633;}
+.kpi-card.nosched::before{background:#9e6a03;}
+.kpi-card.compliance::before{background:#58a6ff;}
+.kpi-label{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;}
+.kpi-value{font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:800;margin-top:4px;}
+.kpi-card.total .kpi-value{color:var(--accent);}
+.kpi-card.scheduled .kpi-value{color:#3fb950;}
+.kpi-card.oos .kpi-value{color:#f85149;}
+.kpi-card.nosched .kpi-value{color:#e3b341;}
+.kpi-card.compliance .kpi-value{color:#58a6ff;}
+.kpi-sub{font-size:11px;color:var(--muted);margin-top:2px;}
+.table-container{margin:0 24px 24px;overflow-x:auto;border-radius:8px;border:1px solid var(--border);}
+table{width:100%;border-collapse:collapse;font-size:12px;min-width:900px;}
+thead th{background:#1c2330;padding:9px 8px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);border-bottom:1px solid var(--border);white-space:nowrap;}
+thead th:first-child{text-align:left;position:sticky;left:0;z-index:10;background:#1c2330;min-width:170px;}
+thead th:nth-child(2){position:sticky;left:170px;z-index:10;background:#1c2330;min-width:65px;}
+tbody tr{border-bottom:1px solid #21262d;transition:background 0.1s;}
+tbody tr:hover{background:#1c2330;}
+td{padding:6px 8px;text-align:center;white-space:nowrap;border-right:1px solid #21262d;}
+td:first-child{text-align:left;position:sticky;left:0;background:var(--bg);z-index:5;min-width:170px;font-weight:500;}
+td:nth-child(2){position:sticky;left:170px;background:var(--bg);z-index:5;font-weight:700;min-width:65px;color:var(--accent);}
+tr:hover td:first-child,tr:hover td:nth-child(2){background:#1c2330;}
+tr.group-scheduled td:first-child{color:#3fb950;font-weight:700;font-family:'Barlow Condensed',sans-serif;font-size:13px;}
+tr.group-oos td:first-child{color:#f85149;font-weight:700;font-family:'Barlow Condensed',sans-serif;font-size:13px;}
+tr.group-nosched td:first-child{color:#e3b341;font-weight:700;font-family:'Barlow Condensed',sans-serif;font-size:13px;}
+tr.sub-row td:first-child{color:var(--muted);padding-left:22px;}
+tr.grand-total td{background:#1c2330;font-weight:700;font-family:'Barlow Condensed',sans-serif;font-size:13px;color:var(--accent);border-top:2px solid var(--border);}
+tr.grand-total td:first-child,tr.grand-total td:nth-child(2){background:#1c2330;}
+tr.pct-row td{font-size:11px;}
+tr.pct-row td:first-child{color:#58a6ff;font-weight:700;font-size:11px;padding-left:0;}
+tr.pct-row td:nth-child(2){color:#58a6ff;font-weight:700;}
+.cell-zero{color:#30363d;}
+.pct-high{color:#3fb950;}
+.pct-mid{color:#e3b341;}
+.pct-low{color:#f85149;}
+.empty-state{text-align:center;padding:60px 24px;color:var(--muted);}
+.empty-state .icon{font-size:48px;margin-bottom:12px;}
+.empty-state h3{font-family:'Barlow Condensed',sans-serif;font-size:20px;color:var(--text);margin-bottom:6px;}
+.progress-wrap{margin:20px 24px;background:var(--surface);border-radius:10px;padding:28px;text-align:center;}
+.progress-title{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;color:var(--accent);margin-bottom:16px;}
+.progress-bar-bg{background:#21262d;border-radius:6px;height:10px;width:100%;max-width:500px;margin:0 auto 10px;}
+.progress-bar-fill{background:var(--accent);height:10px;border-radius:6px;transition:width 0.3s;width:0%;}
+.progress-msg{color:var(--muted);font-size:12px;margin-top:6px;}
+.section-title{font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;padding:12px 24px 6px;}
+.info-bar{display:flex;gap:16px;padding:8px 24px;background:#0d1117;border-bottom:1px solid var(--border);font-size:11px;color:var(--muted);flex-wrap:wrap;}
+.info-bar strong{color:var(--text);}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="header-title">📦 Delivery Schedule Compliance</div>
+    <div class="header-sub">AKI GROUP · Customer Service & Operations · Upload Oracle Extract to Generate Report</div>
+  </div>
+</div>
+
+<div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+  <div class="upload-icon">📂</div>
+  <h3>Upload Oracle Order Extract</h3>
+  <p>Drop your Excel file here or click to browse — supports .xlsx, .xls, .csv</p>
+  <div class="upload-btn">Choose File</div>
+  <input type="file" id="fileInput" accept=".xlsx,.xls,.csv">
+</div>
+
+<div class="progress-wrap" id="progressWrap" style="display:none">
+  <div class="progress-title">⚙️ PROCESSING FILE...</div>
+  <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressFill"></div></div>
+  <div class="progress-msg" id="progressMsg">Reading file...</div>
+</div>
+
+<div class="info-bar" id="infoBar" style="display:none"></div>
+
+<div class="filters" id="filterBar" style="display:none">
+  <div class="filter-group"><span class="filter-label">Warehouse</span><select id="fWarehouse"><option value="">All</option></select></div>
+  <div class="filter-group"><span class="filter-label">Order Type</span><select id="fOrderType"><option value="">All</option></select></div>
+  <div class="filter-group"><span class="filter-label">RSD Month</span><select id="fMonth"><option value="">All</option></select></div>
+  <div class="filter-group"><span class="filter-label">Status</span>
+    <select id="fStatus">
+      <option value="">All</option>
+      <option value="Booked">Booked</option>
+      <option value="Closed">Closed</option>
+      <option value="Cancelled">Cancelled</option>
+    </select>
+  </div>
+  <div style="margin-left:auto;display:flex;gap:8px;">
+    <button onclick="applyFilters()" style="background:var(--accent);color:#000;border:none;padding:6px 16px;border-radius:5px;font-weight:700;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:13px;">REFRESH</button>
+    <button onclick="exportCSV()" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);padding:6px 14px;border-radius:5px;font-weight:600;cursor:pointer;font-size:12px;">⬇ Export</button>
+  </div>
+</div>
+
+<div class="kpi-row" id="kpiRow" style="display:none">
+  <div class="kpi-card total"><div class="kpi-label">Total Orders</div><div class="kpi-value" id="kpiTotal">0</div><div class="kpi-sub">All order lines</div></div>
+  <div class="kpi-card scheduled"><div class="kpi-label">Scheduled</div><div class="kpi-value" id="kpiScheduled">0</div><div class="kpi-sub" id="kpiScheduledPct"></div></div>
+  <div class="kpi-card oos"><div class="kpi-label">Out of Schedule</div><div class="kpi-value" id="kpiOOS">0</div><div class="kpi-sub" id="kpiOOSPct"></div></div>
+  <div class="kpi-card nosched"><div class="kpi-label">No Schedule</div><div class="kpi-value" id="kpiNS">0</div><div class="kpi-sub" id="kpiNSPct"></div></div>
+  <div class="kpi-card compliance"><div class="kpi-label">Compliance Rate</div><div class="kpi-value" id="kpiCompliance">0%</div><div class="kpi-sub">Scheduled / Total</div></div>
+</div>
+
+<div class="section-title" id="sectionTitle" style="display:none">📊 PIVOT — DELIVERY SCHEDULE STATUS × DATE</div>
+<div class="table-container" id="tableContainer">
+  <div class="empty-state">
+    <div class="icon">📋</div>
+    <h3>No Data Loaded</h3>
+    <p>Upload your Oracle Order Booking extract above to generate the compliance pivot</p>
+  </div>
+</div>
+
+<script>
+let rawData = [];
+let filteredData = [];
+
+// UPLOAD
+const uploadZone = document.getElementById('uploadZone');
+const fileInput  = document.getElementById('fileInput');
+
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag'));
+uploadZone.addEventListener('drop', e => { e.preventDefault(); uploadZone.classList.remove('drag'); if(e.dataTransfer.files[0]) processFile(e.dataTransfer.files[0]); });
+fileInput.addEventListener('change', () => { if(fileInput.files[0]) processFile(fileInput.files[0]); });
+
+function setProgress(pct, msg) {
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressMsg').textContent = msg;
+}
+
+function processFile(file) {
+  document.getElementById('uploadZone').style.display = 'none';
+  document.getElementById('progressWrap').style.display = 'block';
+  document.getElementById('tableContainer').innerHTML = '';
+  setProgress(5, 'Reading file from disk...');
+
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    try {
+      setProgress(20, 'Parsing Excel data...');
+      // Yield to browser so UI updates
+      await sleep(50);
+
+      let data;
+      if (file.name.endsWith('.csv')) {
+        const wb = XLSX.read(e.target.result, { type: 'string' });
+        data = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' });
+      } else {
+        const wb = XLSX.read(e.target.result, { type: 'array', cellDates: true, dense: true });
+        setProgress(40, 'Converting rows...');
+        await sleep(50);
+        data = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' });
+      }
+
+      setProgress(55, `Normalizing ${data.length.toLocaleString()} rows...`);
+      await sleep(50);
+
+      rawData = await normalizeChunked(data);
+
+      setProgress(85, 'Building filters...');
+      await sleep(30);
+      populateFilters();
+
+      setProgress(95, 'Rendering pivot...');
+      await sleep(30);
+      applyFilters();
+
+      setProgress(100, 'Done!');
+      await sleep(200);
+      document.getElementById('progressWrap').style.display = 'none';
+
+    } catch(err) {
+      document.getElementById('progressWrap').style.display = 'none';
+      document.getElementById('uploadZone').style.display = 'block';
+      document.getElementById('tableContainer').innerHTML = `<div class="empty-state"><div class="icon">❌</div><h3>Error reading file</h3><p>${err.message}</p></div>`;
+    }
+  };
+  if (file.name.endsWith('.csv')) reader.readAsText(file);
+  else reader.readAsArrayBuffer(file);
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// CHUNKED NORMALIZE — process in batches so UI stays responsive
+async function normalizeChunked(data) {
+  const result = [];
+  const CHUNK = 5000;
+  for (let i = 0; i < data.length; i += CHUNK) {
+    const chunk = data.slice(i, i + CHUNK);
+    chunk.forEach(row => {
+      const r = {};
+      Object.keys(row).forEach(k => r[k.trim()] = row[k]);
+      const normalized = normalizeRow(r);
+      if (normalized) result.push(normalized);
+    });
+    const pct = 55 + Math.round((i / data.length) * 25);
+    setProgress(pct, `Processing rows ${i.toLocaleString()} / ${data.length.toLocaleString()}...`);
+    await sleep(0); // yield to browser
+  }
+  return result;
+}
+
+function normalizeRow(r) {
+  // Parse RSD date
+  let rsd = r['Request Date'] || r['RSD'] || '';
+  if (rsd instanceof Date && !isNaN(rsd)) { /* ok */ }
+  else if (typeof rsd === 'number' && rsd > 0) rsd = new Date(Math.round((rsd - 25569) * 86400 * 1000));
+  else if (typeof rsd === 'string' && rsd) rsd = new Date(rsd);
+  else rsd = null;
+
+  if (!rsd || isNaN(rsd)) return null;
+
+  const status = String(r['Status'] || '').trim();
+  if (status === 'Cancelled') return null;
+
+  const orderType = String(r['Order Type'] || '').trim();
+
+  return {
+    orderNumber:    r['Order Number'] || '',
+    customerName:   r['Customer Name'] || '',
+    status,
+    orderType,
+    warehouse:      String(r['Warehouse'] || '').trim(),
+    rsd,
+    rsdDate:        formatDate(rsd),
+    rsdMonth:       rsd.toLocaleString('en', { month: 'short', year: '2-digit' }),
+    total:          parseFloat(r['Total']) || 0,
+    shipTo:         r['Ship To'] || '',
+    scheduleStatus: deriveStatus(orderType),
+    accType:        deriveAccType(r),
+  };
+}
+
+function deriveStatus(ot) {
+  const u = ot.toUpperCase();
+  if (!ot) return 'No Schedule';
+  if (u.includes('DSN') || u.includes('DST') || u.includes('DCF') || u.includes('DCS') || u.includes('BTB')) return 'Out of Schedule';
+  if (u.includes('CN ')) return 'Scheduled';
+  return 'No Schedule';
+}
+
+function deriveAccType(r) {
+  const pl = String(r['Price List'] || '').toLowerCase();
+  const ot = String(r['Order Type'] || '').toLowerCase();
+  if (ot.includes('ecom') || ot.includes('dsn')) return 'E-commerce';
+  if (pl.includes('lulu') || pl.includes('carrefour') || pl.includes('union coop') || pl.includes('emke')) return 'Key Account';
+  if (pl.includes('perfum')) return 'Perfumery';
+  if (pl.includes('wholesale')) return 'Wholesale';
+  return 'Self Service';
+}
+
+function formatDate(d) {
+  const day = d.getDate();
+  const mon = d.toLocaleString('en', { month: 'short' });
+  return `${day}-${mon}`;
+}
+
+// FILTERS
+function populateFilters() {
+  const whs  = [...new Set(rawData.map(r => r.warehouse))].filter(Boolean).sort();
+  const ots  = [...new Set(rawData.map(r => r.orderType))].filter(Boolean).sort();
+  const mons = [...new Set(rawData.map(r => r.rsdMonth))].filter(Boolean).sort();
+  fillSelect('fWarehouse', whs);
+  fillSelect('fOrderType', ots);
+  fillSelect('fMonth', mons);
+}
+
+function fillSelect(id, vals) {
+  const sel = document.getElementById(id);
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">All</option>';
+  vals.forEach(v => sel.innerHTML += `<option value="${v}"${v===cur?' selected':''}>${v}</option>`);
+}
+
+function applyFilters() {
+  const wh = document.getElementById('fWarehouse').value;
+  const ot = document.getElementById('fOrderType').value;
+  const mo = document.getElementById('fMonth').value;
+  const st = document.getElementById('fStatus').value;
+
+  filteredData = rawData.filter(r =>
+    (!wh || r.warehouse === wh) &&
+    (!ot || r.orderType === ot) &&
+    (!mo || r.rsdMonth === mo) &&
+    (!st || r.status === st)
+  );
+
+  updateKPIs();
+  renderPivot();
+
+  ['filterBar','kpiRow','sectionTitle','infoBar'].forEach(id => {
+    document.getElementById(id).style.display = id === 'kpiRow' ? 'grid' : 'flex';
+  });
+  document.getElementById('sectionTitle').style.display = 'block';
+
+  const dates = filteredData.map(r => r.rsd).filter(Boolean);
+  const minD = dates.length ? new Date(Math.min(...dates)) : null;
+  const maxD = dates.length ? new Date(Math.max(...dates)) : null;
+  document.getElementById('infoBar').innerHTML = `
+    <span>Records: <strong>${filteredData.length.toLocaleString()}</strong></span>
+    <span>RSD Range: <strong>${minD ? formatDate(minD) : '—'} → ${maxD ? formatDate(maxD) : '—'}</strong></span>
+    <span>Warehouses: <strong>${[...new Set(filteredData.map(r=>r.warehouse))].filter(Boolean).join(', ') || 'All'}</strong></span>
+  `;
+}
+
+function updateKPIs() {
+  const total = filteredData.length;
+  const sched = filteredData.filter(r => r.scheduleStatus === 'Scheduled').length;
+  const oos   = filteredData.filter(r => r.scheduleStatus === 'Out of Schedule').length;
+  const ns    = filteredData.filter(r => r.scheduleStatus === 'No Schedule').length;
+  const pct   = total ? Math.round(sched/total*100) : 0;
+  document.getElementById('kpiTotal').textContent     = total.toLocaleString();
+  document.getElementById('kpiScheduled').textContent = sched.toLocaleString();
+  document.getElementById('kpiScheduledPct').textContent = `${total?Math.round(sched/total*100):0}% of total`;
+  document.getElementById('kpiOOS').textContent       = oos.toLocaleString();
+  document.getElementById('kpiOOSPct').textContent    = `${total?Math.round(oos/total*100):0}% of total`;
+  document.getElementById('kpiNS').textContent        = ns.toLocaleString();
+  document.getElementById('kpiNSPct').textContent     = `${total?Math.round(ns/total*100):0}% of total`;
+  document.getElementById('kpiCompliance').textContent = `${pct}%`;
+}
+
+function renderPivot() {
+  if (!filteredData.length) {
+    document.getElementById('tableContainer').innerHTML = '<div class="empty-state"><div class="icon">🔍</div><h3>No data matches filters</h3><p>Try adjusting your filter selections</p></div>';
+    return;
+  }
+
+  // Build date list
+  const dateMap = {};
+  filteredData.forEach(r => { if(r.rsdDate) dateMap[r.rsdDate] = r.rsd; });
+  const dates = Object.keys(dateMap).sort((a,b) => dateMap[a]-dateMap[b]).slice(0,40);
+
+  const accTypes = ['E-commerce','Key Account','Perfumery','Self Service','Wholesale'];
+  const statuses = ['Scheduled','Out of Schedule','No Schedule'];
+
+  // Init pivot
+  const pivot = {};
+  statuses.forEach(s => {
+    pivot[s] = { _total: { _grand: 0 } };
+    dates.forEach(d => pivot[s]._total[d] = 0);
+    accTypes.forEach(a => {
+      pivot[s][a] = { _grand: 0 };
+      dates.forEach(d => pivot[s][a][d] = 0);
+    });
+  });
+  const grand = { _grand: 0 };
+  dates.forEach(d => grand[d] = 0);
+
+  // Fill pivot
+  filteredData.forEach(r => {
+    const s = r.scheduleStatus, a = r.accType, d = r.rsdDate;
+    if (!pivot[s] || !dates.includes(d)) return;
+    pivot[s][a][d]++;
+    pivot[s][a]._grand++;
+    pivot[s]._total[d]++;
+    pivot[s]._total._grand++;
+    grand[d]++;
+    grand._grand++;
+  });
+
+  // Render
+  let html = `<table><thead><tr>
+    <th style="text-align:left">Delivery Schedule</th>
+    <th>TOTAL</th>
+    ${dates.map(d=>`<th>${d}</th>`).join('')}
+  </tr></thead><tbody>`;
+
+  statuses.forEach(s => {
+    const cls = s==='Scheduled'?'group-scheduled':s==='Out of Schedule'?'group-oos':'group-nosched';
+    const tot = pivot[s]._total._grand;
+    html += `<tr class="${cls}">
+      <td><strong>${s}</strong></td>
+      <td>${tot||''}</td>
+      ${dates.map(d => { const v=pivot[s]._total[d]; return `<td>${v?v:'<span class="cell-zero">·</span>'}</td>`; }).join('')}
+    </tr>`;
+    accTypes.forEach(a => {
+      if (!pivot[s][a]._grand) return;
+      html += `<tr class="sub-row">
+        <td>${a}</td>
+        <td style="color:var(--muted)">${pivot[s][a]._grand}</td>
+        ${dates.map(d => { const v=pivot[s][a][d]; return `<td style="color:var(--muted)">${v?v:'<span class="cell-zero">·</span>'}</td>`; }).join('')}
+      </tr>`;
+    });
+  });
+
+  // Grand Total
+  html += `<tr class="grand-total">
+    <td>Grand Total</td><td>${grand._grand}</td>
+    ${dates.map(d=>`<td>${grand[d]||''}</td>`).join('')}
+  </tr>`;
+
+  // % rows
+  const addPctRow = (label, statusKey) => {
+    const tot = grand._grand;
+    const stot = pivot[statusKey]._total._grand;
+    html += `<tr class="pct-row">
+      <td><strong>${label}</strong></td>
+      <td class="${getPctClass(stot,tot,statusKey)}">${pp(stot,tot)}</td>
+      ${dates.map(d => { const s=pivot[statusKey]._total[d],t=grand[d]; return `<td class="${getPctClass(s,t,statusKey)}">${pp(s,t)}</td>`; }).join('')}
+    </tr>`;
+  };
+  addPctRow('% Scheduled','Scheduled');
+  addPctRow('% Out of Schedule','Out of Schedule');
+  addPctRow('% No Schedule','No Schedule');
+
+  html += '</tbody></table>';
+  document.getElementById('tableContainer').innerHTML = html;
+}
+
+function pp(n,d){ if(!d) return '–'; return Math.round(n/d*100)+'%'; }
+function getPctClass(n,d,s){
+  if(!d) return '';
+  const p=n/d*100;
+  if(s==='Scheduled') return p>=80?'pct-high':p>=50?'pct-mid':'pct-low';
+  return p>20?'pct-low':p>5?'pct-mid':'';
+}
+
+function exportCSV() {
+  if (!filteredData.length) return;
+  const h = ['Order Number','Customer Name','Status','Order Type','Warehouse','RSD Date','Schedule Status','Acc Type','Total'];
+  const rows = filteredData.map(r=>[r.orderNumber,r.customerName,r.status,r.orderType,r.warehouse,r.rsdDate,r.scheduleStatus,r.accType,r.total]);
+  const csv = [h,...rows].map(r=>r.map(v=>`"${v}"`).join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+  a.download = 'delivery_compliance.csv';
+  a.click();
+}
+</script>
+</body>
+</html>
