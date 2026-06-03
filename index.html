@@ -1515,22 +1515,27 @@ footer span{color:var(--gold);}
     <!-- DELIVERY SCHEDULE COMPLIANCE PANEL                  -->
     <!-- ═══════════════════════════════════════════════════ -->
     <div class="panel" id="delivery">
-      <input type="file" id="ds-sched-input" accept=".xlsx,.xls,.xlsb,.csv" style="display:none;" onchange="handleDSScheduleUpload(this)">
-      <input type="file" id="ds-oracle-input" accept=".xlsx,.xls,.xlsb,.csv" style="display:none;" onchange="handleDSOracleUpload(this)">
+      <input type="file" id="dsc-sched-input" accept=".xlsx,.xls,.xlsb,.csv" style="display:none;" onchange="handleDSScheduleUpload(this)">
+      <input type="file" id="dsc-oracle-input" accept=".xlsx,.xls,.xlsb,.csv" style="display:none;" onchange="handleDSOracleUpload(this)">
 
       <!-- STAR UPLOAD BUTTON -->
-      <div id="ds-star-wrap" style="display:none;position:fixed;bottom:20px;right:20px;z-index:100;">
-        <div id="ds-upload-box" style="display:none;background:var(--surface);border:1px solid var(--gold);padding:16px 18px;margin-bottom:8px;min-width:280px;">
+      <div id="dsc-star-wrap" style="display:none;position:fixed;bottom:20px;right:20px;z-index:100;">
+        <div id="dsc-upload-box" style="display:none;background:var(--surface);border:1px solid var(--gold);padding:16px 18px;margin-bottom:8px;min-width:280px;">
           <div style="font-size:12px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;">Delivery Schedule Upload</div>
-          <input type="password" id="ds-pw-input" placeholder="Enter password" style="width:100%;background:#0d1117;border:1px solid var(--border);color:#f5f0e8;padding:7px 10px;font-size:13px;margin-bottom:8px;font-family:Montserrat,sans-serif;box-sizing:border-box;">
-          <button onclick="dsCheckPassword()" style="width:100%;padding:8px;background:var(--glow);border:1px solid var(--gold);color:var(--gold);font-size:11px;letter-spacing:2px;cursor:pointer;font-family:Montserrat,sans-serif;">UNLOCK UPLOAD</button>
-          <div id="ds-pw-error" style="color:#f85149;font-size:11px;margin-top:4px;display:none;">Incorrect password</div>
-          <div id="ds-file-btns" style="display:none;margin-top:10px;display:none;flex-direction:column;gap:6px;">
-            <button onclick="document.getElementById('ds-sched-input').click()" style="padding:8px;background:rgba(201,168,76,0.1);border:1px solid var(--gold);color:var(--gold);font-size:11px;cursor:pointer;font-family:Montserrat,sans-serif;letter-spacing:1px;">📋 UPLOAD SCHEDULE (One-time)</button>
-            <button onclick="document.getElementById('ds-oracle-input').click()" style="padding:8px;background:var(--gold);color:#000;border:none;font-size:11px;cursor:pointer;font-family:Montserrat,sans-serif;font-weight:700;letter-spacing:1px;">📦 UPLOAD ORACLE EXTRACT (Daily)</button>
+          <input type="password" id="dsc-pw-input" placeholder="Enter password" style="width:100%;background:#0d1117;border:1px solid var(--border);color:#f5f0e8;padding:7px 10px;font-size:13px;margin-bottom:8px;font-family:Montserrat,sans-serif;box-sizing:border-box;">
+          <button onclick="dscCheckPassword()" style="width:100%;padding:8px;background:var(--glow);border:1px solid var(--gold);color:var(--gold);font-size:11px;letter-spacing:2px;cursor:pointer;font-family:Montserrat,sans-serif;">UNLOCK UPLOAD</button>
+          <div id="dsc-pw-error" style="color:#f85149;font-size:11px;margin-top:4px;display:none;">Incorrect password</div>
+          <div id="dsc-file-btns" style="display:none;margin-top:10px;flex-direction:column;gap:6px;">
+            <div style="font-size:11px;color:var(--muted);margin-bottom:4px;border-top:1px solid var(--border);padding-top:8px;">📋 SCHEDULE MASTER (One-time / When amended)</div>
+            <div style="display:flex;gap:6px;">
+              <button onclick="document.getElementById('dsc-sched-input').click()" style="flex:1;padding:8px;background:rgba(201,168,76,0.1);border:1px solid var(--gold);color:var(--gold);font-size:11px;cursor:pointer;font-family:Montserrat,sans-serif;letter-spacing:1px;">⬆ UPLOAD / RE-UPLOAD</button>
+              <button onclick="dscClearSchedule()" style="padding:8px 12px;background:transparent;border:1px solid #ef4444;color:#ef4444;font-size:11px;cursor:pointer;font-family:Montserrat,sans-serif;">🗑 CLEAR</button>
+            </div>
+            <div style="font-size:11px;color:var(--muted);margin-top:6px;border-top:1px solid var(--border);padding-top:8px;">📦 ORACLE EXTRACT (Upload daily)</div>
+            <button onclick="document.getElementById('dsc-oracle-input').click()" style="padding:8px;background:var(--gold);color:#000;border:none;font-size:11px;cursor:pointer;font-family:Montserrat,sans-serif;font-weight:700;letter-spacing:1px;">⬆ UPLOAD ORACLE EXTRACT</button>
           </div>
         </div>
-        <button onclick="dsToggleUpload()" style="background:transparent;border:none;cursor:pointer;font-size:22px;color:var(--gold);opacity:0.2;transition:all 0.3s;float:right;" onmouseover="this.style.opacity='1'" onmouseout="if(!dsUploadVisible)this.style.opacity='0.2'">✦</button>
+        <button onclick="dscToggleUpload()" style="background:transparent;border:none;cursor:pointer;font-size:22px;color:var(--gold);opacity:0.2;transition:all 0.3s;float:right;" onmouseover="this.style.opacity='1'" onmouseout="if(!dsUploadVisible)this.style.opacity='0.2'">✦</button>
       </div>
 
       <!-- STATUS BAR -->
@@ -6478,13 +6483,13 @@ function applyUploadAccess() {
   if(!AUTH_USER) return;
   var canUpload = AUTH_USER.role === 'superadmin' || AUTH_USER.role === 'subadmin';
   // These stars always show when user can upload
-  ['ret-star-wrap','bl-star-wrap','sales-star-wrap','auto-star-wrap','ds-star-wrap'].forEach(function(id) {
+  ['ret-star-wrap','bl-star-wrap','sales-star-wrap','auto-star-wrap','dsc-star-wrap'].forEach(function(id) {
     var el = document.getElementById(id);
     if(el) el.style.display = canUpload ? 'block' : 'none';
   });
 
   var giStar=document.getElementById('gi-star-wrap');if(giStar)giStar.style.display=(canUpload&&VC_CURRENT_TAB==='geninfo')?'block':'none';
-  var dsStar2=document.getElementById('ds-star-wrap');if(dsStar2)dsStar2.style.display=(canUpload&&VC_CURRENT_TAB==='dispatch')?'block':'none';
+  var dscStar=document.getElementById('dsc-star-wrap');if(dscStar)dscStar.style.display=canUpload?'block':'none';
 }
 
 function addUserInfoTopbar() {
@@ -7568,22 +7573,35 @@ async function loadDeliveryFromServer() {
 }
 
 // ── Star button ───────────────────────────────────────────────────────
-function dsToggleUpload() {
+function dscClearSchedule() {
+  if (!confirm('Clear the delivery schedule master? You will need to re-upload it before Oracle extract works.')) return;
+  fetch('/api/delivery/schedule/clear', { method:'DELETE', headers:{'x-auth-token':AUTH_TOKEN} })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if (d.success) {
+        DS_SCHED_LOOKUP = null;
+        document.getElementById('ds-sched-status').innerHTML = '<span style="color:#f59e0b">⚠️ Schedule cleared — please re-upload</span>';
+        document.getElementById('ds-status').innerHTML = '<span style="color:#f59e0b">Schedule cleared</span>';
+      }
+    }).catch(function(e){ console.error(e); });
+}
+
+function dscToggleUpload() {
   dsUploadVisible = !dsUploadVisible;
-  var box = document.getElementById('ds-upload-box');
+  var box = document.getElementById('dsc-upload-box');
   if (box) box.style.display = dsUploadVisible ? 'block' : 'none';
 }
 
-function dsCheckPassword() {
-  if (document.getElementById('ds-pw-input').value === 'azhar2026') {
+function dscCheckPassword() {
+  if (document.getElementById('dsc-pw-input').value === 'azhar2026') {
     dsUnlocked = true;
-    document.getElementById('ds-pw-error').style.display = 'none';
-    document.getElementById('ds-pw-input').style.display = 'none';
-    document.querySelector('[onclick="dsCheckPassword()"]').style.display = 'none';
-    var fb = document.getElementById('ds-file-btns');
+    document.getElementById('dsc-pw-error').style.display = 'none';
+    document.getElementById('dsc-pw-input').style.display = 'none';
+    document.querySelector('[onclick="dscCheckPassword()"]').style.display = 'none';
+    var fb = document.getElementById('dsc-file-btns');
     fb.style.display = 'flex';
   } else {
-    document.getElementById('ds-pw-error').style.display = 'block';
+    document.getElementById('dsc-pw-error').style.display = 'block';
   }
 }
 
