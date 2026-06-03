@@ -1525,7 +1525,7 @@ footer span{color:var(--gold);}
           <input type="password" id="dsc-pw-input" placeholder="Enter password" style="width:100%;background:#0d1117;border:1px solid var(--border);color:#f5f0e8;padding:7px 10px;font-size:13px;margin-bottom:8px;font-family:Montserrat,sans-serif;box-sizing:border-box;">
           <button onclick="dscCheckPassword()" style="width:100%;padding:8px;background:var(--glow);border:1px solid var(--gold);color:var(--gold);font-size:11px;letter-spacing:2px;cursor:pointer;font-family:Montserrat,sans-serif;">UNLOCK UPLOAD</button>
           <div id="dsc-pw-error" style="color:#f85149;font-size:11px;margin-top:4px;display:none;">Incorrect password</div>
-          <div id="dsc-file-btns" style="display:none;margin-top:10px;flex-direction:column;gap:6px;">
+          <div id="dsc-file-btns" style="display:none;margin-top:10px;">
             <div style="font-size:11px;color:var(--muted);margin-bottom:4px;border-top:1px solid var(--border);padding-top:8px;">📋 SCHEDULE MASTER (One-time / When amended)</div>
             <div style="display:flex;gap:6px;">
               <button onclick="document.getElementById('dsc-sched-input').click()" style="flex:1;padding:8px;background:rgba(201,168,76,0.1);border:1px solid var(--gold);color:var(--gold);font-size:11px;cursor:pointer;font-family:Montserrat,sans-serif;letter-spacing:1px;">⬆ UPLOAD / RE-UPLOAD</button>
@@ -7599,7 +7599,7 @@ function dscCheckPassword() {
     document.getElementById('dsc-pw-input').style.display = 'none';
     document.querySelector('[onclick="dscCheckPassword()"]').style.display = 'none';
     var fb = document.getElementById('dsc-file-btns');
-    fb.style.display = 'flex';
+    fb.style.display = 'block';
   } else {
     document.getElementById('dsc-pw-error').style.display = 'block';
   }
@@ -7676,7 +7676,7 @@ function handleDSScheduleUpload(input) {
         document.getElementById('ds-sched-status').innerHTML = '<span style="color:#22c55e">✅ Schedule saved — ' + count.toLocaleString() + ' customers</span>';
         document.getElementById('ds-status').innerHTML = '<span style="color:#22c55e">✅ Schedule uploaded successfully — now upload Oracle extract daily</span>';
       }
-      dsToggleUpload();
+      dscToggleUpload();
     } catch(err) {
       document.getElementById('ds-status').innerHTML = '<span style="color:#ef4444">❌ Error: ' + err.message + '</span>';
     }
@@ -7688,7 +7688,7 @@ function handleDSScheduleUpload(input) {
 function handleDSOracleUpload(input) {
   var file = input.files[0];
   if (!file) return;
-  if (!DS_SCHED_LOOKUP) { alert('Please upload the Schedule file first before uploading Oracle extract'); return; }
+  if (!DS_SCHED_LOOKUP || Object.keys(DS_SCHED_LOOKUP).length === 0) { alert('Please upload the Schedule Master file first (click ✦ star → UPLOAD / RE-UPLOAD)'); return; }
   document.getElementById('ds-status').innerHTML = '<span style="color:var(--gold)">⚙️ Reading Oracle extract...</span>';
   var reader = new FileReader();
   reader.onload = async function(e) {
@@ -7724,7 +7724,7 @@ function handleDSOracleUpload(input) {
         : '<span style="color:#f59e0b">⚠️ ' + result.summary.total.toLocaleString() + ' orders classified (save error: ' + (saveResult.error||'') + ')</span>';
 
       dsShowData(result.summary, null);
-      dsToggleUpload();
+      dscToggleUpload();
     } catch(err) {
       document.getElementById('ds-status').innerHTML = '<span style="color:#ef4444">❌ Error: ' + err.message + '</span>';
     }
