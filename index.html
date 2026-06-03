@@ -6822,9 +6822,8 @@ var AUTO_ORG_MAP = {
 
 async function loadAutomationFromServer() {
   try {
-    var token = localStorage.getItem('azhar_token') || '';
-    if (!token) return; // not logged in yet — skip silently
-    var r = await fetch('/api/automation/status', { headers: { 'Authorization': 'Bearer ' + token } });
+    if (!AUTH_TOKEN) return; // not logged in yet — skip silently
+    var r = await fetch('/api/automation/status', { headers: { 'x-auth-token': AUTH_TOKEN } });
     if (!r.ok) return; // server returned error page — skip silently
     var text = await r.text();
     if (!text || text.trim()[0] !== '{') return; // not JSON — skip silently
@@ -6918,10 +6917,9 @@ function handleAutoUpload(input) {
       await sleep(30);
 
       // Save ONLY aggregated summary to DB — not 149K raw rows
-      var token = localStorage.getItem('azhar_token') || '';
       var saveResp = await fetch('/api/automation/upload', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        headers: { 'Content-Type': 'application/json', 'x-auth-token': AUTH_TOKEN },
         body: JSON.stringify({
           rows: aggregated.monthData,
           orgRows: aggregated.orgData,
