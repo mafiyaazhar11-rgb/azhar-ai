@@ -7663,20 +7663,50 @@ function dscToggleUpload() { dscToggleOracle(); }
 async function handleDSScheduleUpload(input) {
   var file = input.files[0];
   if (!file) return;
-  document.getElementById('ds-status').innerHTML = '<span style="color:var(--gold)">⚙️ Reading schedule file...</span>';
+
+  function dscSetStatus(msg) {
+    var el = document.getElementById('ds-status');
+    if (el) el.innerHTML = msg;
+    console.log('DS Schedule:', msg.replace(/<[^>]+>/g,''));
+  }
+
+  dscSetStatus('<span style="color:var(--gold)">⚙️ Reading schedule file: ' + file.name + '</span>');
   var reader = new FileReader();
   reader.onload = async function(e) {
     try {
-      var wb = XLSX.read(e.target.result, { type: 'array', dense: true });
+      // Support xlsb, xlsx, xls, csv
+      var wb;
+      if (file.name.toLowerCase().endsWith('.csv')) {
+        wb = XLSX.read(e.target.result, { type: 'string' });
+      } else {
+        wb = XLSX.read(e.target.result, { type: 'array' });
+      }
+
+      console.log('DS Schedule sheets:', wb.SheetNames);
+
       // Find main schedule sheet
-      var sheetName = wb.SheetNames.find(function(s){ return s.toLowerCase().includes('ambient') || s.toLowerCase().includes('frozen') || s.toLowerCase().includes('2026'); }) || wb.SheetNames[0];
-      document.getElementById('ds-status').innerHTML = '<span style="color:var(--gold)">⚙️ Building schedule lookup...</span>';
+      var sheetName = wb.SheetNames.find(function(s){
+        var sl = s.toLowerCase();
+        return sl.includes('ambient') || sl.includes('frozen') || sl.includes('2026');
+      }) || wb.SheetNames[0];
+
+      console.log('DS Schedule using sheet:', sheetName);
+      dscSetStatus('<span style="color:var(--gold)">⚙️ Building schedule lookup from: ' + sheetName + '</span>');
       await new Promise(function(r){ setTimeout(r, 50); });
 
       var rawRows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { defval: '', header: 1 });
+      console.log('DS Schedule raw rows:', rawRows.length);
+
       // Find header row (has SITE ID)
-      var headerIdx = rawRows.findIndex(function(r){ return r.some(function(v){ return String(v).trim().toUpperCase() === 'SITE ID'; }); });
-      if (headerIdx === -1) { document.getElementById('ds-status').innerHTML = '<span style="color:#ef4444">❌ Could not find SITE ID column in schedule file</span>'; return; }
+      var headerIdx = rawRows.findIndex(function(r){
+        return r.some(function(v){ return String(v).trim().toUpperCase() === 'SITE ID'; });
+      });
+
+      console.log('DS Schedule header row index:', headerIdx);
+      if (headerIdx === -1) {
+        dscSetStatus('<span style="color:#ef4444">❌ Cannot find SITE ID column. Sheets: ' + wb.SheetNames.join(', ') + '</span>');
+        return;
+      }
 
       var headers = rawRows[headerIdx].map(function(v){ return String(v||'').trim(); });
       var dataRows = rawRows.slice(headerIdx + 1);
@@ -7719,7 +7749,7 @@ async function handleDSScheduleUpload(input) {
       // Store with integer keys
       DS_SCHED_LOOKUP = {};
       Object.keys(lookup).forEach(function(k){ DS_SCHED_LOOKUP[parseInt(k)] = lookup[k]; });
-      document.getElementById('ds-status').innerHTML = '<span style="color:var(--gold)">⚙️ Saving schedule to database...</span>';
+      dscSetStatus('<span style="color:var(--gold)">⚙️ Saving ' + count.toLocaleString() + ' customers to database...</span>');
 
       // Save to server
       var resp = await fetch('/api/delivery/schedule', {
@@ -7729,12 +7759,14 @@ async function handleDSScheduleUpload(input) {
       });
       var result = await resp.json();
       if (result.success) {
-        document.getElementById('ds-sched-status').innerHTML = '<span style="color:#22c55e">✅ Schedule saved — ' + count.toLocaleString() + ' customers</span>';
-        document.getElementById('ds-status').innerHTML = '<span style="color:#22c55e">✅ Schedule uploaded — now use 📦 button daily for Oracle extract</span>';
+        var schedEl = document.getElementById('ds-sched-status');
+        if (schedEl) schedEl.innerHTML = '<span style="color:#22c55e">✅ Schedule saved — ' + count.toLocaleString() + ' customers</span>';
+        dscSetStatus('<span style="color:#22c55e">✅ Schedule uploaded (' + count.toLocaleString() + ' customers) — now use 📦 to upload Oracle extract</span>');
       }
       dscToggleSched();
     } catch(err) {
-      document.getElementById('ds-status').innerHTML = '<span style="color:#ef4444">❌ Error: ' + err.message + '</span>';
+      dscSetStatus('<span style="color:#ef4444">❌ Schedule upload error: ' + err.message + '</span>');
+      console.error('Schedule upload error:', err);
     }
   };
   reader.readAsArrayBuffer(file);
