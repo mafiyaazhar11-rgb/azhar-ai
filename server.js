@@ -1730,6 +1730,7 @@ app.post('/api/delivery/classify', requireAuth, requireRole('superadmin','subadm
 
     var DAYS = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
     var monthData = {}, channelData = {}, dayData = {}, noSchedCusts = {}, oosCusts = {};
+    var tempData = { Ambient:{scheduled:0,oos:0,noSched:0,total:0}, Frozen:{scheduled:0,oos:0,noSched:0,total:0} };
     var scheduled = 0, oos = 0, noSched = 0;
 
     data.forEach(function(row) {
@@ -1808,6 +1809,11 @@ app.post('/api/delivery/classify', requireAuth, requireRole('superadmin','subadm
       if (status === 'Scheduled') scheduled++;
       else if (status === 'Out of Schedule') oos++;
       else noSched++;
+      // Track by temperature
+      var tempKey = (temp === 'FROZEN') ? 'Frozen' : 'Ambient';
+      if (!tempData[tempKey]) tempData[tempKey] = {scheduled:0,oos:0,noSched:0,total:0};
+      tempData[tempKey][status==='Scheduled'?'scheduled':status==='Out of Schedule'?'oos':'noSched']++;
+      tempData[tempKey].total++;
 
       if (month) {
         if (!monthData[month]) monthData[month] = { scheduled:0, oos:0, noSched:0, total:0 };
@@ -1845,7 +1851,7 @@ app.post('/api/delivery/classify', requireAuth, requireRole('superadmin','subadm
     var summary = {
       total:total, scheduled:scheduled, oos:oos, noSched:noSched,
       schedPct:sp, oosPct:op, noSchedPct:np,
-      monthData:monthData, channelData:channelData, dayData:dayData,
+      monthData:monthData, channelData:channelData, dayData:dayData, tempData:tempData,
       noSchedCustomers:noSchedArr, oosCustomers:oosArr
     };
 
