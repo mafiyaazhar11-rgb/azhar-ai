@@ -570,6 +570,7 @@ footer span{color:var(--gold);}
   <button class="sb-item" onclick="goTab('returns',this)"><span class="icon">🔄</span> Market Returns</button>
   <button class="sb-item" onclick="goTab('sales',this)"><span class="icon">📊</span> Order Summary</button>
   <button class="sb-item" onclick="goTab('geninfo',this)"><span class="icon">👥</span> General Info</button>
+  <button class="sb-item" onclick="goTab('automation',this)"><span class="icon">⚡</span> Automation Track</button>
       </aside>
 
 <div class="main" id="mainContent">
@@ -1238,7 +1239,117 @@ footer span{color:var(--gold);}
     <!-- ══ EXCEL SUPPORT ════════════════════════════════ -->
     <div class="panel" id="excel"><div class="box"><div class="box-title">📐 Excel Support &amp; Data Analysis</div><div class="upload" onclick="document.getElementById('xl-file').click()"><div style="font-size:22px;margin-bottom:6px;">📊</div><div style="font-size:11px;color:var(--muted);">Upload .csv or .xlsx file</div><div style="font-size:10px;color:var(--muted);margin-top:3px;" id="xl-file-name">File → Save As → CSV first</div></div><input type="file" id="xl-file" accept=".csv,.txt,.xlsx" style="display:none" onchange="loadFileExcel(this)"/><label class="lbl">Your Formula or Question</label><textarea id="xl-q" placeholder="e.g. Fix my VLOOKUP returning #N/A&#10;e.g. Analyse this data and give key insights"></textarea><label class="lbl">Context (Optional)</label><textarea id="xl-ctx" style="min-height:55px;" placeholder="e.g. Column A = Date, Column B = Customer, Column C = Amount..."></textarea><button class="btn" id="xl-btn" onclick="doExcel()"><span>Analyse &amp; Fix Excel</span></button><div class="loader" id="xl-loader"><div class="ring"></div><div class="ring-txt">Analysing your data...</div></div><div class="out" id="xl-out"><div class="out-head"><span class="out-lbl">✦ Excel Analysis</span><button class="copy" onclick="doCopy('xl-answer')">Copy</button></div><div class="out-body" id="xl-answer"></div></div></div></div>
 
-    <!-- ══ GENERAL INFO DASHBOARD ══════════════════════════════════ -->
+    <!-- ══════════════════════════════════════════════════════ -->
+    <!-- AUTOMATION TRACKING PANEL                             -->
+    <!-- ══════════════════════════════════════════════════════ -->
+    <div class="panel" id="automation">
+      <input type="file" id="auto-file-input" accept=".xlsx,.xls,.csv" style="display:none;" onchange="handleAutoUpload(this)">
+
+      <!-- Star upload button — same pattern as other dashboards -->
+      <div id="auto-star-wrap" style="display:none;position:fixed;bottom:20px;right:20px;z-index:100;">
+        <div style="background:var(--surface);border:1px solid var(--gold);padding:14px 18px;margin-bottom:8px;min-width:260px;display:none;" id="auto-upload-box">
+          <div style="font-size:11px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;">Automation Tracking Upload</div>
+          <div style="font-size:12px;color:#c9c3b0;margin-bottom:10px;">Upload DoxtrE Auto/Manual Excel file</div>
+          <input type="password" id="auto-pw-input" placeholder="Enter password" style="width:100%;background:#0d1117;border:1px solid var(--border);color:#f5f0e8;padding:7px 10px;font-size:12px;margin-bottom:8px;font-family:Montserrat,sans-serif;box-sizing:border-box;">
+          <button onclick="autoCheckPassword()" style="width:100%;padding:8px;background:rgba(201,168,76,0.1);border:1px solid var(--gold);color:var(--gold);font-size:11px;letter-spacing:2px;cursor:pointer;font-family:Montserrat,sans-serif;">UNLOCK UPLOAD</button>
+          <div id="auto-pw-error" style="color:#f85149;font-size:11px;margin-top:4px;display:none;">Incorrect password</div>
+          <div id="auto-file-btn" style="display:none;margin-top:8px;">
+            <button onclick="document.getElementById('auto-file-input').click()" style="width:100%;padding:8px;background:var(--gold);color:#000;font-size:11px;letter-spacing:2px;cursor:pointer;font-weight:700;border:none;font-family:Montserrat,sans-serif;">⬆ CHOOSE FILE</button>
+          </div>
+        </div>
+        <button onclick="autoToggleUpload()" id="auto-star-btn" style="background:transparent;border:none;cursor:pointer;font-size:22px;color:var(--gold);opacity:0.2;transition:all 0.3s;float:right;" onmouseover="this.style.opacity='1'" onmouseout="if(!autoUploadVisible)this.style.opacity='0.2'">✦</button>
+      </div>
+
+      <!-- Upload status -->
+      <div id="auto-status" style="font-size:12px;color:var(--muted);margin-bottom:14px;padding:0 2px;"></div>
+
+      <!-- Empty state -->
+      <div id="auto-empty" style="text-align:center;padding:60px 24px;color:var(--muted);">
+        <div style="font-size:42px;margin-bottom:12px;">⚡</div>
+        <div style="font-size:15px;color:#f5f0e8;margin-bottom:6px;font-family:Montserrat,sans-serif;">No Automation Data Loaded</div>
+        <div style="font-size:13px;color:#c9c3b0;">Click the ✦ star button (bottom right) to upload your DoxtrE Excel file</div>
+      </div>
+
+      <!-- KPI Cards -->
+      <div id="auto-kpi-row" style="display:none;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px;">
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px 16px;border-top:3px solid var(--gold);">
+          <div style="font-size:11px;font-weight:600;color:var(--gold);text-transform:uppercase;letter-spacing:0.8px;">Total Orders YTD</div>
+          <div id="auto-kpi-total" style="font-family:Montserrat,sans-serif;font-size:30px;font-weight:800;color:var(--gold);margin-top:4px;">—</div>
+          <div id="auto-kpi-period" style="font-size:12px;color:#c9c3b0;margin-top:2px;">—</div>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px 16px;border-top:3px solid var(--green);">
+          <div style="font-size:11px;font-weight:600;color:var(--gold);text-transform:uppercase;letter-spacing:0.8px;">Auto Booked</div>
+          <div id="auto-kpi-auto" style="font-family:Montserrat,sans-serif;font-size:30px;font-weight:800;color:var(--green);margin-top:4px;">—</div>
+          <div id="auto-kpi-auto-pct" style="font-size:12px;color:#c9c3b0;margin-top:2px;">—</div>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px 16px;border-top:3px solid #f85149;">
+          <div style="font-size:11px;font-weight:600;color:var(--gold);text-transform:uppercase;letter-spacing:0.8px;">Manually Booked</div>
+          <div id="auto-kpi-manual" style="font-family:Montserrat,sans-serif;font-size:30px;font-weight:800;color:#f85149;margin-top:4px;">—</div>
+          <div id="auto-kpi-manual-pct" style="font-size:12px;color:#c9c3b0;margin-top:2px;">—</div>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px 16px;border-top:3px solid #58a6ff;">
+          <div style="font-size:11px;font-weight:600;color:var(--gold);text-transform:uppercase;letter-spacing:0.8px;">Automation Rate</div>
+          <div id="auto-kpi-rate" style="font-family:Montserrat,sans-serif;font-size:30px;font-weight:800;color:#58a6ff;margin-top:4px;">—</div>
+          <div style="font-size:12px;color:#c9c3b0;margin-top:2px;">YTD average</div>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px 16px;border-top:3px solid #a371f7;">
+          <div style="font-size:11px;font-weight:600;color:var(--gold);text-transform:uppercase;letter-spacing:0.8px;">Latest Month</div>
+          <div id="auto-kpi-latest" style="font-family:Montserrat,sans-serif;font-size:30px;font-weight:800;color:#a371f7;margin-top:4px;">—</div>
+          <div id="auto-kpi-latest-lbl" style="font-size:12px;color:#c9c3b0;margin-top:2px;">—</div>
+        </div>
+      </div>
+
+      <!-- Monthly table + bar chart -->
+      <div id="auto-main-grid" style="display:none;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+        <div class="box">
+          <div class="box-title">📅 Monthly Breakdown</div>
+          <div style="overflow-x:auto;">
+            <table class="data-table" style="width:100%;">
+              <thead><tr>
+                <th style="font-size:12px;color:var(--gold);">Month</th>
+                <th style="text-align:center;font-size:12px;color:var(--gold);">Total</th>
+                <th style="text-align:center;font-size:12px;color:var(--gold);">Auto</th>
+                <th style="text-align:center;font-size:12px;color:var(--gold);">Manual</th>
+                <th style="text-align:center;font-size:12px;color:var(--gold);">Auto %</th>
+              </tr></thead>
+              <tbody id="auto-monthly-body"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="box">
+          <div class="box-title">📊 Auto vs Manual by Month</div>
+          <div style="display:flex;justify-content:flex-end;gap:16px;margin-bottom:10px;font-size:12px;">
+            <span style="color:var(--green);">■ Auto Booked</span>
+            <span style="color:#f85149;">■ Manual</span>
+          </div>
+          <div id="auto-bar-chart" style="padding:4px 0;"></div>
+        </div>
+      </div>
+
+      <!-- Org breakdown -->
+      <div id="auto-org-section" class="box" style="display:none;">
+        <div class="box-title">🏢 Organisation Breakdown — Auto-mapped from Order Type</div>
+        <div style="overflow-x:auto;">
+          <table class="data-table" style="width:100%;min-width:700px;">
+            <thead><tr>
+              <th style="font-size:12px;color:var(--gold);">Organisation</th>
+              <th style="font-size:12px;color:var(--gold);">Order Type(s)</th>
+              <th style="text-align:center;font-size:12px;color:var(--gold);">Total</th>
+              <th style="text-align:center;font-size:12px;color:var(--gold);">Auto</th>
+              <th style="text-align:center;font-size:12px;color:var(--gold);">Manual</th>
+              <th style="text-align:center;font-size:12px;color:var(--gold);">Auto %</th>
+              <th style="text-align:center;font-size:12px;color:var(--gold);">Progress</th>
+            </tr></thead>
+            <tbody id="auto-org-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Upload info footer -->
+      <div id="auto-upload-info" style="display:none;margin-top:12px;padding:10px 14px;background:rgba(201,168,76,0.05);border:1px solid rgba(201,168,76,0.2);font-size:12px;color:#c9c3b0;"></div>
+    </div>
+    <!-- END AUTOMATION TRACKING PANEL -->
+
     <div class="panel" id="geninfo">
       <input type="file" id="gi-file-input" accept=".xlsx,.xls,.csv" style="display:none;" onchange="handleGIUpload(this)">
 
@@ -1433,6 +1544,7 @@ const TITLES={
   returns:   ['Market Returns & Invoice Cancellation','GRV Returns · Invoice Cancellations · BU-wise Analysis'],
     sales:     ['Order Process Summary','Food - Non-Food - ORG - Warehouse Value Breakdown'],
   geninfo:   ['General Information','Team Directory · Merchandisers · Outlets · Dispatch Link'],
+  automation:['Automation Tracking YTD','DoxtrE Auto vs Manual Booking · Organisation Breakdown · Jan–May 2026'],
   backlog:   ['WH Backlog Risk Command Center','Pure Risk · Advance Orders · Credit Hold · Frozen Pool · BU Ownership'],
   returns:   ['Daily Returns Dashboard','Invoice Cancellations - GRV Returns - BU-wise Analysis']
 };
@@ -6175,7 +6287,7 @@ function applyUploadAccess() {
   if(!AUTH_USER) return;
   var canUpload = AUTH_USER.role === 'superadmin' || AUTH_USER.role === 'subadmin';
   // These stars always show when user can upload
-  ['ret-star-wrap','bl-star-wrap','sales-star-wrap'].forEach(function(id) {
+  ['ret-star-wrap','bl-star-wrap','sales-star-wrap','auto-star-wrap'].forEach(function(id) {
     var el = document.getElementById(id);
     if(el) el.style.display = canUpload ? 'block' : 'none';
   });
@@ -6633,6 +6745,7 @@ window.addEventListener('load', authBoot);
               <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#f5f0e8;cursor:pointer;"><input type="checkbox" value="returns" checked> Daily Returns</label>
               <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#f5f0e8;cursor:pointer;"><input type="checkbox" value="sales" checked> Order Summary</label>
               <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#f5f0e8;cursor:pointer;"><input type="checkbox" value="geninfo" checked> General Info</label>
+              <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#f5f0e8;cursor:pointer;"><input type="checkbox" value="automation" checked> Automation Track</label>
             </div>
           </div>
           <div style="display:flex;gap:8px;">
@@ -6649,6 +6762,170 @@ window.addEventListener('load', authBoot);
     </div>
   </div>
 </div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+// ═══════════════════════════════════════════════════════════
+// AUTOMATION TRACKING — Full PostgreSQL + Star Upload
+// ═══════════════════════════════════════════════════════════
+
+var AUTO_DATA = null;
+var autoUploadVisible = false;
+var autoUnlocked = false;
+
+var AUTO_ORG_MAP = {
+  'CN DXB VCT':'Victory-Food','CN DXB VCT NEAREXP':'Victory-Food',
+  'CN DXB DGC':'DGC-GLORY','CN DXB DGS SALES':'DGS-Group Seb',
+  'DGS DXB':'DGS-Group Seb','CN DXB DSN SALES':'DSN-Shark Ninja',
+  'DSN DXB':'DSN-Shark Ninja','CN DXB LOM DGC':'SALON',
+  'CN DXB DCF':'Horeca','CN DXB DCF NEAREXP':'Horeca',
+  'DCG Crystal':'Growth Cap','DCG 1004Mart':'Growth Cap',
+  'DGC Crystal':'Growth Cap','DGC 1004Mart':'Growth Cap',
+  'CN BTB RTL DLL':'ZOOZ','CN BTB AUD ALL':'ZOOZ','CN BTB RTL SLL':'ZOOZ'
+};
+
+async function loadAutomationFromServer() {
+  try {
+    var token = localStorage.getItem('azhar_token') || '';
+    var r = await fetch('/api/automation/status', { headers: { 'Authorization': 'Bearer ' + token } });
+    var d = await r.json();
+    if (d.hasData && d.rows && d.rows.length) {
+      AUTO_DATA = d.rows;
+      var statusEl = document.getElementById('auto-status');
+      if (statusEl) statusEl.innerHTML = '<span style="color:var(--green)">\u2705 Loaded from server \u2014 ' + d.totalRecords.toLocaleString() + ' records \u00b7 ' + d.fileName + '</span>';
+      var emptyEl = document.getElementById('auto-empty');
+      if (emptyEl) emptyEl.style.display = 'none';
+      var infoEl = document.getElementById('auto-upload-info');
+      if (infoEl) { infoEl.style.display = 'block'; infoEl.innerHTML = '\ud83d\udcc1 <strong style="color:var(--gold)">' + d.fileName + '</strong> \u00b7 ' + d.totalRecords.toLocaleString() + ' records \u00b7 Uploaded by <strong style="color:var(--gold)">' + d.uploadedBy + '</strong>'; }
+      renderAutoTracking(d.rows);
+    }
+  } catch(e) { console.log('Automation load:', e.message); }
+}
+
+function autoToggleUpload() {
+  autoUploadVisible = !autoUploadVisible;
+  var box = document.getElementById('auto-upload-box');
+  if (box) box.style.display = autoUploadVisible ? 'block' : 'none';
+  var btn = document.getElementById('auto-star-btn');
+  if (btn) btn.style.opacity = autoUploadVisible ? '1' : '0.2';
+}
+
+function autoCheckPassword() {
+  var pw = document.getElementById('auto-pw-input').value;
+  if (pw === 'azhar2026') {
+    autoUnlocked = true;
+    document.getElementById('auto-pw-error').style.display = 'none';
+    document.getElementById('auto-file-btn').style.display = 'block';
+    document.getElementById('auto-pw-input').style.display = 'none';
+    var unlockBtn = document.querySelector('[onclick="autoCheckPassword()"]');
+    if (unlockBtn) unlockBtn.style.display = 'none';
+  } else {
+    document.getElementById('auto-pw-error').style.display = 'block';
+  }
+}
+
+function handleAutoUpload(input) {
+  var file = input.files[0];
+  if (!file) return;
+  document.getElementById('auto-status').innerHTML = '<span style="color:var(--gold)">\u2699\ufe0f Processing ' + file.name + '...</span>';
+  var reader = new FileReader();
+  reader.onload = async function(e) {
+    try {
+      var wb = XLSX.read(e.target.result, { type: 'array' });
+      var sheetName = wb.SheetNames.find(function(s){ return s !== 'sum' && s !== 'Sum'; }) || wb.SheetNames[1] || wb.SheetNames[0];
+      var data = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { defval: '' });
+      AUTO_DATA = data;
+      var colAS = Object.keys(data[0]).find(function(k){ return k.trim() === 'Auto Booking Status'; }) || '';
+      var totalAuto = data.filter(function(r){ return String(r[colAS]).trim() === 'Auto Booked'; }).length;
+      var summary = { total: data.length, auto: totalAuto, manual: data.length - totalAuto, rate: Math.round(totalAuto/data.length*100) };
+      var token = localStorage.getItem('azhar_token') || '';
+      var saveResp = await fetch('/api/automation/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({ rows: data, fileName: file.name, totalRecords: data.length, summary: summary })
+      });
+      var saveResult = await saveResp.json();
+      document.getElementById('auto-status').innerHTML = saveResult.success
+        ? '<span style="color:var(--green)">\u2705 Saved to PostgreSQL \u2014 ' + data.length.toLocaleString() + ' records</span>'
+        : '<span style="color:#f85149">\u26a0\ufe0f Save error: ' + (saveResult.error || 'Unknown') + '</span>';
+      document.getElementById('auto-empty').style.display = 'none';
+      var infoEl = document.getElementById('auto-upload-info');
+      infoEl.style.display = 'block';
+      infoEl.innerHTML = '\ud83d\udcc1 <strong style="color:var(--gold)">' + file.name + '</strong> \u00b7 ' + data.length.toLocaleString() + ' records \u00b7 Just uploaded';
+      renderAutoTracking(data);
+      autoToggleUpload();
+    } catch(err) {
+      document.getElementById('auto-status').innerHTML = '<span style="color:#f85149">\u274c Error: ' + err.message + '</span>';
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function renderAutoTracking(data) {
+  if (!data || !data.length) return;
+  var colAutoStatus = Object.keys(data[0]).find(function(k){ return k.trim() === 'Auto Booking Status'; }) || '';
+  var colMonth      = Object.keys(data[0]).find(function(k){ return k.trim() === 'Month'; }) || '';
+  var colOrderType  = Object.keys(data[0]).find(function(k){ return k.trim() === 'Order Type'; }) || '';
+  var colOrg        = Object.keys(data[0]).find(function(k){ return k.trim() === 'Organization' || k.trim() === 'Organisation'; }) || '';
+  var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var monthData = {}, orgData = {}, totalAuto = 0, totalManual = 0;
+  data.forEach(function(row) {
+    var status = String(row[colAutoStatus] || '').trim();
+    var month  = String(row[colMonth] || '').trim();
+    var ot     = String(row[colOrderType] || '').trim();
+    var org    = String(row[colOrg] || AUTO_ORG_MAP[ot] || 'Other').trim();
+    var isAuto = status === 'Auto Booked';
+    if (!monthData[month]) monthData[month] = { total:0, auto:0, manual:0 };
+    monthData[month].total++;
+    if (isAuto) { monthData[month].auto++; totalAuto++; } else { monthData[month].manual++; totalManual++; }
+    if (!orgData[org]) orgData[org] = { total:0, auto:0, manual:0, ots:[] };
+    orgData[org].total++;
+    if (orgData[org].ots.indexOf(ot) === -1) orgData[org].ots.push(ot);
+    if (isAuto) orgData[org].auto++; else orgData[org].manual++;
+  });
+  var total = totalAuto + totalManual;
+  var rate = total ? Math.round(totalAuto/total*100) : 0;
+  var sortedMonths = months.filter(function(m){ return monthData[m]; });
+  var latestMonth = sortedMonths[sortedMonths.length-1] || '\u2014';
+  var latestRate = latestMonth !== '\u2014' ? Math.round(monthData[latestMonth].auto/monthData[latestMonth].total*100) : 0;
+  document.getElementById('auto-kpi-total').textContent = total.toLocaleString();
+  document.getElementById('auto-kpi-period').textContent = (sortedMonths[0]||'') + ' \u2013 ' + latestMonth + ' 2026';
+  document.getElementById('auto-kpi-auto').textContent = totalAuto.toLocaleString();
+  document.getElementById('auto-kpi-auto-pct').textContent = rate + '% of total';
+  document.getElementById('auto-kpi-manual').textContent = totalManual.toLocaleString();
+  document.getElementById('auto-kpi-manual-pct').textContent = Math.round(totalManual/total*100) + '% of total';
+  document.getElementById('auto-kpi-rate').textContent = rate + '%';
+  document.getElementById('auto-kpi-latest').textContent = latestRate + '%';
+  document.getElementById('auto-kpi-latest-lbl').textContent = latestMonth + ' 2026 \u2191';
+  document.getElementById('auto-kpi-row').style.display = 'grid';
+  document.getElementById('auto-main-grid').style.display = 'grid';
+  document.getElementById('auto-org-section').style.display = 'block';
+  var tbody = '';
+  sortedMonths.forEach(function(m) {
+    var d = monthData[m], p = Math.round(d.auto/d.total*100);
+    var col = p>=80?'var(--green)':p>=55?'#e3b341':'#f85149';
+    tbody += '<tr><td style="font-size:13px;font-weight:600;color:#f5f0e8">'+m+'</td><td style="text-align:center;font-size:13px;color:#f5f0e8">'+d.total.toLocaleString()+'</td><td style="text-align:center;font-size:13px;color:var(--green)">'+d.auto.toLocaleString()+'</td><td style="text-align:center;font-size:13px;color:#f85149">'+d.manual.toLocaleString()+'</td><td style="text-align:center;font-size:13px;font-weight:700;color:'+col+'">'+p+'%</td></tr>';
+  });
+  tbody += '<tr style="background:rgba(201,168,76,0.08);border-top:1px solid var(--gold)"><td style="color:var(--gold);font-weight:700;font-size:13px">TOTAL</td><td style="text-align:center;color:var(--gold);font-weight:700;font-size:13px">'+total.toLocaleString()+'</td><td style="text-align:center;color:var(--green);font-weight:700;font-size:13px">'+totalAuto.toLocaleString()+'</td><td style="text-align:center;color:#f85149;font-weight:700;font-size:13px">'+totalManual.toLocaleString()+'</td><td style="text-align:center;color:#58a6ff;font-weight:700;font-size:13px">'+rate+'%</td></tr>';
+  document.getElementById('auto-monthly-body').innerHTML = tbody;
+  var bars = '';
+  sortedMonths.forEach(function(m) {
+    var d = monthData[m], p = Math.round(d.auto/d.total*100);
+    bars += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;"><div style="min-width:36px;font-size:12px;color:var(--gold);text-align:right">'+m+'</div><div style="flex:1;background:#21262d;border-radius:4px;height:22px;overflow:hidden;"><div style="background:linear-gradient(90deg,#238636,#3fb950);height:100%;width:'+p+'%;display:flex;align-items:center;justify-content:flex-end;padding-right:6px;"><span style="font-size:11px;font-weight:700;color:#fff">'+p+'%</span></div></div><div style="min-width:60px;font-size:12px;color:#c9c3b0;text-align:right">'+d.total.toLocaleString()+'</div></div>';
+  });
+  document.getElementById('auto-bar-chart').innerHTML = bars;
+  var orgRows = '';
+  Object.keys(orgData).sort(function(a,b){ return orgData[b].total-orgData[a].total; }).forEach(function(org) {
+    var d = orgData[org], p = Math.round(d.auto/d.total*100);
+    var col = p>=80?'var(--green)':p>=55?'#e3b341':'#f85149';
+    orgRows += '<tr><td style="font-size:13px;font-weight:600;color:#f5f0e8">'+org+'</td><td style="font-size:11px;color:#c9c3b0">'+d.ots.join(', ')+'</td><td style="text-align:center;font-size:13px;color:#f5f0e8">'+d.total.toLocaleString()+'</td><td style="text-align:center;font-size:13px;color:var(--green)">'+d.auto.toLocaleString()+'</td><td style="text-align:center;font-size:13px;color:#f85149">'+d.manual.toLocaleString()+'</td><td style="text-align:center;font-size:13px;font-weight:700;color:'+col+'">'+p+'%</td><td><div style="background:#21262d;border-radius:3px;height:8px;overflow:hidden"><div style="width:'+p+'%;height:100%;background:'+col+';border-radius:3px"></div></div></td></tr>';
+  });
+  orgRows += '<tr style="background:rgba(201,168,76,0.08);border-top:1px solid var(--gold)"><td style="color:var(--gold);font-weight:700;font-size:13px">GRAND TOTAL</td><td style="font-size:11px;color:#c9c3b0">All organisations</td><td style="text-align:center;color:var(--gold);font-weight:700;font-size:13px">'+total.toLocaleString()+'</td><td style="text-align:center;color:var(--green);font-weight:700;font-size:13px">'+totalAuto.toLocaleString()+'</td><td style="text-align:center;color:#f85149;font-weight:700;font-size:13px">'+totalManual.toLocaleString()+'</td><td style="text-align:center;color:#58a6ff;font-weight:700;font-size:13px">'+rate+'%</td><td><div style="background:#21262d;border-radius:3px;height:8px;overflow:hidden"><div style="width:'+rate+'%;height:100%;background:#58a6ff;border-radius:3px"></div></div></td></tr>';
+  document.getElementById('auto-org-body').innerHTML = orgRows;
+}
+
+loadAutomationFromServer();
+</script>
 
 </body>
 </html>
