@@ -571,6 +571,7 @@ footer span{color:var(--gold);}
   <button class="sb-item" onclick="goTab('sales',this)"><span class="icon">📊</span> Order Summary</button>
   <button class="sb-item" onclick="goTab('geninfo',this)"><span class="icon">👥</span> General Info</button>
   <button class="sb-item" onclick="goTab('automation',this)"><span class="icon">⚡</span> Automation Track</button>
+  <button class="sb-item" onclick="goTab('delivery',this)"><span class="icon">📦</span> Delivery Schedule</button>
       </aside>
 
 <div class="main" id="mainContent">
@@ -1510,6 +1511,145 @@ footer span{color:var(--gold);}
       </div>
     </div>
 
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- DELIVERY SCHEDULE COMPLIANCE PANEL                  -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <div class="panel" id="delivery">
+      <input type="file" id="ds-sched-input" accept=".xlsx,.xls,.xlsb,.csv" style="display:none;" onchange="handleDSScheduleUpload(this)">
+      <input type="file" id="ds-oracle-input" accept=".xlsx,.xls,.xlsb,.csv" style="display:none;" onchange="handleDSOracleUpload(this)">
+
+      <!-- STAR UPLOAD BUTTON -->
+      <div id="ds-star-wrap" style="display:none;position:fixed;bottom:20px;right:20px;z-index:100;">
+        <div id="ds-upload-box" style="display:none;background:var(--surface);border:1px solid var(--gold);padding:16px 18px;margin-bottom:8px;min-width:280px;">
+          <div style="font-size:12px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;">Delivery Schedule Upload</div>
+          <input type="password" id="ds-pw-input" placeholder="Enter password" style="width:100%;background:#0d1117;border:1px solid var(--border);color:#f5f0e8;padding:7px 10px;font-size:13px;margin-bottom:8px;font-family:Montserrat,sans-serif;box-sizing:border-box;">
+          <button onclick="dsCheckPassword()" style="width:100%;padding:8px;background:var(--glow);border:1px solid var(--gold);color:var(--gold);font-size:11px;letter-spacing:2px;cursor:pointer;font-family:Montserrat,sans-serif;">UNLOCK UPLOAD</button>
+          <div id="ds-pw-error" style="color:#f85149;font-size:11px;margin-top:4px;display:none;">Incorrect password</div>
+          <div id="ds-file-btns" style="display:none;margin-top:10px;display:none;flex-direction:column;gap:6px;">
+            <button onclick="document.getElementById('ds-sched-input').click()" style="padding:8px;background:rgba(201,168,76,0.1);border:1px solid var(--gold);color:var(--gold);font-size:11px;cursor:pointer;font-family:Montserrat,sans-serif;letter-spacing:1px;">📋 UPLOAD SCHEDULE (One-time)</button>
+            <button onclick="document.getElementById('ds-oracle-input').click()" style="padding:8px;background:var(--gold);color:#000;border:none;font-size:11px;cursor:pointer;font-family:Montserrat,sans-serif;font-weight:700;letter-spacing:1px;">📦 UPLOAD ORACLE EXTRACT (Daily)</button>
+          </div>
+        </div>
+        <button onclick="dsToggleUpload()" style="background:transparent;border:none;cursor:pointer;font-size:22px;color:var(--gold);opacity:0.2;transition:all 0.3s;float:right;" onmouseover="this.style.opacity='1'" onmouseout="if(!dsUploadVisible)this.style.opacity='0.2'">✦</button>
+      </div>
+
+      <!-- STATUS BAR -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <div id="ds-status" style="font-size:13px;color:var(--muted);"></div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <div id="ds-sched-status" style="font-size:11px;color:var(--muted);"></div>
+          <button id="ds-excel-btn" onclick="exportDSExcel()" style="display:none;background:rgba(201,168,76,0.12);border:1px solid var(--gold);color:var(--gold);font-size:12px;font-weight:700;padding:6px 16px;cursor:pointer;font-family:Montserrat,sans-serif;letter-spacing:1px;">⬇ EXCEL</button>
+        </div>
+      </div>
+
+      <!-- EMPTY STATE -->
+      <div id="ds-empty" style="text-align:center;padding:60px 24px;color:var(--muted);">
+        <div style="font-size:42px;margin-bottom:12px;">📦</div>
+        <div style="font-size:16px;color:#f5f0e8;margin-bottom:6px;font-family:Montserrat,sans-serif;font-weight:700;">No Data Loaded</div>
+        <div style="font-size:13px;">Click ✦ star → Upload Schedule file first, then Oracle extract daily</div>
+      </div>
+
+      <!-- FILTERS -->
+      <div id="ds-filters" style="display:none;background:var(--surface);border:1px solid var(--border);padding:10px 14px;margin-bottom:14px;display:none;flex-wrap:wrap;gap:12px;align-items:center;">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Category</span>
+          <button id="ds-f-all" onclick="dsSetFilter('cat','all')" style="padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;border-radius:3px;background:var(--glow);border:1px solid var(--gold);color:var(--gold);font-family:Montserrat,sans-serif;">All</button>
+          <button id="ds-f-amb" onclick="dsSetFilter('cat','Ambient')" style="padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;border-radius:3px;background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-family:Montserrat,sans-serif;">Ambient</button>
+          <button id="ds-f-frz" onclick="dsSetFilter('cat','Frozen')" style="padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;border-radius:3px;background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-family:Montserrat,sans-serif;">Frozen</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">ORG</span>
+          <select id="ds-f-org" onchange="dsApplyFilters()" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);padding:5px 10px;font-size:12px;font-family:Montserrat,sans-serif;"><option value="">All</option></select>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Channel</span>
+          <select id="ds-f-channel" onchange="dsApplyFilters()" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);padding:5px 10px;font-size:12px;font-family:Montserrat,sans-serif;"><option value="">All</option></select>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Month</span>
+          <select id="ds-f-month" onchange="dsApplyFilters()" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);padding:5px 10px;font-size:12px;font-family:Montserrat,sans-serif;"><option value="">All</option></select>
+        </div>
+      </div>
+
+      <!-- KPI CARDS -->
+      <div id="ds-kpi-row" style="display:none;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px;">
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px 16px;border-top:3px solid var(--gold);">
+          <div style="font-size:12px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:0.8px;">Total Orders</div>
+          <div id="ds-kpi-total" style="font-family:Montserrat,sans-serif;font-size:30px;font-weight:900;color:var(--gold);margin-top:4px;">—</div>
+          <div id="ds-kpi-period" style="font-size:12px;color:#c9c3b0;margin-top:2px;">—</div>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px 16px;border-top:3px solid #22c55e;">
+          <div style="font-size:12px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:0.8px;">Scheduled</div>
+          <div id="ds-kpi-sched" style="font-family:Montserrat,sans-serif;font-size:30px;font-weight:900;color:#22c55e;margin-top:4px;">—</div>
+          <div id="ds-kpi-sched-pct" style="font-size:12px;color:#c9c3b0;margin-top:2px;">—</div>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px 16px;border-top:3px solid #ef4444;">
+          <div style="font-size:12px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:0.8px;">Out of Schedule</div>
+          <div id="ds-kpi-oos" style="font-family:Montserrat,sans-serif;font-size:30px;font-weight:900;color:#ef4444;margin-top:4px;">—</div>
+          <div id="ds-kpi-oos-pct" style="font-size:12px;color:#c9c3b0;margin-top:2px;">—</div>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px 16px;border-top:3px solid #f59e0b;">
+          <div style="font-size:12px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:0.8px;">No Schedule</div>
+          <div id="ds-kpi-nosched" style="font-family:Montserrat,sans-serif;font-size:30px;font-weight:900;color:#f59e0b;margin-top:4px;">—</div>
+          <div id="ds-kpi-nosched-pct" style="font-size:12px;color:#c9c3b0;margin-top:2px;">Not in master</div>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px 16px;border-top:3px solid #3b82f6;">
+          <div style="font-size:12px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:0.8px;">Compliance Rate</div>
+          <div id="ds-kpi-rate" style="font-family:Montserrat,sans-serif;font-size:30px;font-weight:900;color:#3b82f6;margin-top:4px;">—</div>
+          <div style="font-size:12px;color:#c9c3b0;margin-top:2px;">Scheduled / Total</div>
+        </div>
+      </div>
+
+      <!-- PIVOT TABLE -->
+      <div id="ds-pivot-section" style="display:none;">
+        <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;padding:10px 0 8px;border-bottom:1px solid var(--border);margin-bottom:10px;">
+          📊 PIVOT — Status × Channel × Month
+        </div>
+        <div style="overflow-x:auto;border:1px solid var(--border);border-radius:6px;margin-bottom:16px;">
+          <table id="ds-pivot-table" style="width:100%;border-collapse:collapse;min-width:800px;">
+            <thead id="ds-pivot-head"></thead>
+            <tbody id="ds-pivot-body"></tbody>
+          </table>
+        </div>
+
+        <!-- TWO COL: Monthly + Day -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+          <!-- Monthly -->
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;overflow:hidden;">
+            <div style="padding:10px 14px;border-bottom:1px solid var(--border);font-size:13px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:1px;">📅 Monthly Compliance</div>
+            <div style="overflow-x:auto;padding:8px;">
+              <table id="ds-monthly-table" style="width:100%;border-collapse:collapse;"></table>
+            </div>
+          </div>
+          <!-- Day of Week -->
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;overflow:hidden;">
+            <div style="padding:10px 14px;border-bottom:1px solid var(--border);font-size:13px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:1px;">📆 Compliance by Day</div>
+            <div style="overflow-x:auto;padding:8px;">
+              <table id="ds-day-table" style="width:100%;border-collapse:collapse;"></table>
+            </div>
+          </div>
+        </div>
+
+        <!-- No Schedule Exceptions -->
+        <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;padding:10px 0 8px;border-bottom:1px solid var(--border);margin-bottom:10px;">
+          ❌ NO SCHEDULE — Customers Not in Delivery Master
+        </div>
+        <div style="overflow-x:auto;border:1px solid var(--border);border-radius:6px;margin-bottom:16px;">
+          <table id="ds-nosched-table" style="width:100%;border-collapse:collapse;"></table>
+        </div>
+
+        <!-- Out of Schedule Exceptions -->
+        <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;padding:10px 0 8px;border-bottom:1px solid var(--border);margin-bottom:10px;">
+          ⚠️ OUT OF SCHEDULE — Top Customers by OOS Count
+        </div>
+        <div style="overflow-x:auto;border:1px solid var(--border);border-radius:6px;margin-bottom:16px;">
+          <table id="ds-oos-table" style="width:100%;border-collapse:collapse;"></table>
+        </div>
+      </div>
+
+    </div>
+    <!-- END DELIVERY SCHEDULE PANEL -->
+
   </div>
   <footer>✦ &nbsp; Operations &amp; Customer Service Intelligence Platform &nbsp;·&nbsp; Control Tower &nbsp;·&nbsp; Powered by Azhar &nbsp;·&nbsp; V 4.0</footer>
 </div>
@@ -1545,6 +1685,7 @@ const TITLES={
     sales:     ['Order Process Summary','Food - Non-Food - ORG - Warehouse Value Breakdown'],
   geninfo:   ['General Information','Team Directory · Merchandisers · Outlets · Dispatch Link'],
   automation:['Automation Tracking YTD','DoxtrE Auto vs Manual Booking · Organisation Breakdown · Jan–May 2026'],
+  delivery:  ['Delivery Schedule Compliance','Scheduled · Out of Schedule · No Schedule · Ambient & Frozen'],
   backlog:   ['WH Backlog Risk Command Center','Pure Risk · Advance Orders · Credit Hold · Frozen Pool · BU Ownership'],
   returns:   ['Daily Returns Dashboard','Invoice Cancellations - GRV Returns - BU-wise Analysis']
 };
@@ -6022,6 +6163,15 @@ function buildVoiceContext() {
     }
 
 
+    if (VC_CURRENT_TAB === 'delivery' && DS_DATA) {
+      ctx += 'Delivery Schedule Compliance Dashboard. ';
+      ctx += 'Total Orders: ' + (DS_DATA.total||0).toLocaleString() + ' | ';
+      ctx += 'Scheduled: ' + (DS_DATA.scheduled||0).toLocaleString() + ' (' + (DS_DATA.schedPct||0) + '%) | ';
+      ctx += 'Out of Schedule: ' + (DS_DATA.oos||0).toLocaleString() + ' (' + (DS_DATA.oosPct||0) + '%) | ';
+      ctx += 'No Schedule: ' + (DS_DATA.noSched||0).toLocaleString() + ' (' + (DS_DATA.noSchedPct||0) + '%) | ';
+      ctx += 'Compliance Rate: ' + (DS_DATA.schedPct||0) + '% | ';
+    }
+
     if (VC_CURRENT_TAB === 'automation' && AUTO_DATA) {
       var ad = AUTO_DATA;
       ctx += 'Automation Tracking YTD Dashboard. ';
@@ -6283,6 +6433,7 @@ function showApp() {
   loadSalesFromServer();
   loadGIFromServer();
   loadAutomationFromServer();
+  loadDeliveryFromServer();
 
   if(AUTH_USER && AUTH_USER.must_change_password) {
     document.getElementById('change-pwd-modal').style.display = 'flex';
@@ -6327,7 +6478,7 @@ function applyUploadAccess() {
   if(!AUTH_USER) return;
   var canUpload = AUTH_USER.role === 'superadmin' || AUTH_USER.role === 'subadmin';
   // These stars always show when user can upload
-  ['ret-star-wrap','bl-star-wrap','sales-star-wrap','auto-star-wrap'].forEach(function(id) {
+  ['ret-star-wrap','bl-star-wrap','sales-star-wrap','auto-star-wrap','ds-star-wrap'].forEach(function(id) {
     var el = document.getElementById(id);
     if(el) el.style.display = canUpload ? 'block' : 'none';
   });
@@ -7385,6 +7536,583 @@ function exportReturnsExcel() {
 
   downloadHTML(html, 'Market_Returns_' + new Date().toISOString().slice(0,10) + '.xls');
 }
+
+// ═══════════════════════════════════════════════════════════════
+// DELIVERY SCHEDULE COMPLIANCE — Full System
+// ═══════════════════════════════════════════════════════════════
+
+var DS_SCHED_LOOKUP = null; // in-memory schedule master
+var DS_RAW_DATA     = null; // classified oracle rows
+var DS_DATA         = null; // aggregated summary
+var dsUploadVisible = false;
+var dsUnlocked      = false;
+var DS_FILTER = { cat: 'all', org: '', channel: '', month: '' };
+
+// ── On login: load schedule from server ──────────────────────────────
+async function loadDeliveryFromServer() {
+  try {
+    var r = await fetch('/api/delivery/status', { headers: { 'x-auth-token': AUTH_TOKEN } });
+    if (!r.ok) return;
+    var text = await r.text();
+    if (!text || text.trim()[0] !== '{') return;
+    var d = JSON.parse(text);
+    if (d.hasSchedule) {
+      DS_SCHED_LOOKUP = d.scheduleLookup;
+      document.getElementById('ds-sched-status').innerHTML = '<span style="color:#22c55e">✅ Schedule loaded — ' + (d.scheduleCustomers||0).toLocaleString() + ' customers</span>';
+    }
+    if (d.hasData && d.summary) {
+      DS_DATA = d.summary;
+      dsShowData(d.summary, d.rows);
+    }
+  } catch(e) { console.log('Delivery load:', e.message); }
+}
+
+// ── Star button ───────────────────────────────────────────────────────
+function dsToggleUpload() {
+  dsUploadVisible = !dsUploadVisible;
+  var box = document.getElementById('ds-upload-box');
+  if (box) box.style.display = dsUploadVisible ? 'block' : 'none';
+}
+
+function dsCheckPassword() {
+  if (document.getElementById('ds-pw-input').value === 'azhar2026') {
+    dsUnlocked = true;
+    document.getElementById('ds-pw-error').style.display = 'none';
+    document.getElementById('ds-pw-input').style.display = 'none';
+    document.querySelector('[onclick="dsCheckPassword()"]').style.display = 'none';
+    var fb = document.getElementById('ds-file-btns');
+    fb.style.display = 'flex';
+  } else {
+    document.getElementById('ds-pw-error').style.display = 'block';
+  }
+}
+
+// ── Upload Schedule (one-time) ────────────────────────────────────────
+function handleDSScheduleUpload(input) {
+  var file = input.files[0];
+  if (!file) return;
+  document.getElementById('ds-status').innerHTML = '<span style="color:var(--gold)">⚙️ Reading schedule file...</span>';
+  var reader = new FileReader();
+  reader.onload = async function(e) {
+    try {
+      var wb = XLSX.read(e.target.result, { type: 'array', dense: true });
+      // Find main schedule sheet
+      var sheetName = wb.SheetNames.find(function(s){ return s.toLowerCase().includes('ambient') || s.toLowerCase().includes('frozen') || s.toLowerCase().includes('2026'); }) || wb.SheetNames[0];
+      document.getElementById('ds-status').innerHTML = '<span style="color:var(--gold)">⚙️ Building schedule lookup...</span>';
+      await new Promise(function(r){ setTimeout(r, 50); });
+
+      var rawRows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { defval: '', header: 1 });
+      // Find header row (has SITE ID)
+      var headerIdx = rawRows.findIndex(function(r){ return r.some(function(v){ return String(v).trim().toUpperCase() === 'SITE ID'; }); });
+      if (headerIdx === -1) { document.getElementById('ds-status').innerHTML = '<span style="color:#ef4444">❌ Could not find SITE ID column in schedule file</span>'; return; }
+
+      var headers = rawRows[headerIdx].map(function(v){ return String(v||'').trim(); });
+      var dataRows = rawRows.slice(headerIdx + 1);
+
+      var DAY_PREFIXES = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
+      var lookup = {};
+      var count = 0;
+
+      dataRows.forEach(function(row) {
+        var siteRaw = row[headers.indexOf('SITE ID')];
+        if (!siteRaw) return;
+        var site;
+        try { site = parseInt(parseFloat(String(siteRaw))); } catch(e){ return; }
+        if (!site || isNaN(site)) return;
+
+        var daysMap = {};
+        DAY_PREFIXES.forEach(function(prefix) {
+          for (var w = 1; w <= 5; w++) {
+            var col = prefix + w;
+            var ci = headers.indexOf(col);
+            if (ci === -1) return;
+            var val = String(row[ci]||'').trim().toUpperCase().replace(/\s+/g,'').replace('&','/').replace('AMBENT','AMBIENT');
+            if (val && val !== 'NONE' && val !== 'NAN' && val !== '') {
+              if (!(prefix in daysMap)) daysMap[prefix] = val;
+            }
+          }
+        });
+
+        lookup[site] = {
+          days: daysMap,
+          accountType: String(row[headers.indexOf('Account type')]||row[headers.indexOf('Account Type')]||'').trim(),
+          region: String(row[headers.indexOf('REGION')]||'').trim(),
+          location: String(row[headers.indexOf('LOCATION')]||'').trim(),
+          org: String(row[headers.indexOf('ORG')]||'').trim(),
+          customer: String(row[headers.indexOf('CUSTOMER')]||'').trim(),
+        };
+        count++;
+      });
+
+      DS_SCHED_LOOKUP = lookup;
+      document.getElementById('ds-status').innerHTML = '<span style="color:var(--gold)">⚙️ Saving schedule to database...</span>';
+
+      // Save to server
+      var resp = await fetch('/api/delivery/schedule', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-auth-token': AUTH_TOKEN },
+        body: JSON.stringify({ lookup: lookup, fileName: file.name, customerCount: count })
+      });
+      var result = await resp.json();
+      if (result.success) {
+        document.getElementById('ds-sched-status').innerHTML = '<span style="color:#22c55e">✅ Schedule saved — ' + count.toLocaleString() + ' customers</span>';
+        document.getElementById('ds-status').innerHTML = '<span style="color:#22c55e">✅ Schedule uploaded successfully — now upload Oracle extract daily</span>';
+      }
+      dsToggleUpload();
+    } catch(err) {
+      document.getElementById('ds-status').innerHTML = '<span style="color:#ef4444">❌ Error: ' + err.message + '</span>';
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ── Upload Oracle Extract (daily) ─────────────────────────────────────
+function handleDSOracleUpload(input) {
+  var file = input.files[0];
+  if (!file) return;
+  if (!DS_SCHED_LOOKUP) { alert('Please upload the Schedule file first before uploading Oracle extract'); return; }
+  document.getElementById('ds-status').innerHTML = '<span style="color:var(--gold)">⚙️ Reading Oracle extract...</span>';
+  var reader = new FileReader();
+  reader.onload = async function(e) {
+    try {
+      var wb = XLSX.read(e.target.result, { type: 'array', dense: true, cellDates: false });
+      // Try Data sheet first, then MASTER DATA, then first sheet
+      var sheetName = wb.SheetNames.find(function(s){ return s.trim() === 'Data'; })
+        || wb.SheetNames.find(function(s){ return s.toUpperCase().includes('MASTER'); })
+        || wb.SheetNames[0];
+
+      document.getElementById('ds-status').innerHTML = '<span style="color:var(--gold)">⚙️ Parsing ' + file.name + '...</span>';
+      await new Promise(function(r){ setTimeout(r, 50); });
+
+      var data = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { defval: '' });
+      document.getElementById('ds-status').innerHTML = '<span style="color:var(--gold)">⚙️ Classifying ' + data.length.toLocaleString() + ' orders...</span>';
+      await new Promise(function(r){ setTimeout(r, 50); });
+
+      var result = await classifyOracle(data);
+      DS_DATA = result.summary;
+
+      document.getElementById('ds-status').innerHTML = '<span style="color:var(--gold)">⚙️ Saving to database...</span>';
+
+      // Save aggregated to server
+      var saveResp = await fetch('/api/delivery/data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-auth-token': AUTH_TOKEN },
+        body: JSON.stringify({ summary: result.summary, fileName: file.name, totalOrders: result.summary.total })
+      });
+      var saveResult = await saveResp.json();
+
+      document.getElementById('ds-status').innerHTML = saveResult.success
+        ? '<span style="color:#22c55e">✅ ' + result.summary.total.toLocaleString() + ' orders classified — Scheduled: ' + result.summary.schedPct + '% · OOS: ' + result.summary.oosPct + '% · No Sched: ' + result.summary.noSchedPct + '%</span>'
+        : '<span style="color:#f59e0b">⚠️ ' + result.summary.total.toLocaleString() + ' orders classified (save error: ' + (saveResult.error||'') + ')</span>';
+
+      dsShowData(result.summary, null);
+      dsToggleUpload();
+    } catch(err) {
+      document.getElementById('ds-status').innerHTML = '<span style="color:#ef4444">❌ Error: ' + err.message + '</span>';
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ── Classify Oracle rows ──────────────────────────────────────────────
+async function classifyOracle(data) {
+  if (!data.length) return { summary: { total:0, scheduled:0, oos:0, noSched:0, schedPct:0, oosPct:0, noSchedPct:0 }, rows: [] };
+
+  var keys = Object.keys(data[0]);
+  var colSiteId  = keys.find(function(k){ return /site.?id/i.test(k); }) || '';
+  var colDate    = keys.find(function(k){ return /invoice.?date|inv.?date|rsd|request.?date/i.test(k); }) || '';
+  var colTemp    = keys.find(function(k){ return /ambient|frozen|temp/i.test(k); }) || '';
+  var colOrg     = keys.find(function(k){ return k.trim().toUpperCase() === 'ORG'; }) || '';
+  var colChannel = keys.find(function(k){ return /channel/i.test(k); }) || '';
+  var colMonth   = keys.find(function(k){ return k.trim().toUpperCase() === 'MONTH'; }) || '';
+  var colCust    = keys.find(function(k){ return /customer.?name|customer_name/i.test(k); }) || '';
+
+  var DAYS = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
+  var monthData = {}, channelData = {}, dayData = {}, noSchedCusts = {}, oosCusts = {};
+  var scheduled = 0, oos = 0, noSched = 0;
+  var CHUNK = 8000;
+
+  for (var i = 0; i < data.length; i += CHUNK) {
+    var chunk = data.slice(i, i + CHUNK);
+    chunk.forEach(function(row) {
+      // Get site id
+      var siteRaw = row[colSiteId];
+      var site = null;
+      try { site = siteRaw ? parseInt(parseFloat(String(siteRaw))) : null; } catch(e){}
+
+      // Get day from date
+      var day = null;
+      var dateRaw = row[colDate];
+      if (dateRaw) {
+        var dt = null;
+        try {
+          var f = parseFloat(String(dateRaw));
+          if (f > 1000) { dt = new Date(Math.round((f - 25569) * 86400 * 1000)); }
+          else if (typeof dateRaw === 'string' && dateRaw.length > 4) { dt = new Date(dateRaw); }
+        } catch(e){}
+        if (dt && !isNaN(dt)) day = DAYS[dt.getDay()];
+      }
+
+      // Get temp
+      var temp = String(row[colTemp]||'').trim().toUpperCase();
+      var month = String(row[colMonth]||'').trim();
+      var channel = String(row[colChannel]||'').trim();
+      var org = String(row[colOrg]||'').trim();
+      var custName = String(row[colCust]||'').trim();
+
+      // Classify
+      var status;
+      if (!site || !DS_SCHED_LOOKUP[site]) {
+        status = 'No Schedule';
+        if (site) {
+          if (!noSchedCusts[site]) noSchedCusts[site] = { name: custName, orders: 0, months: new Set(), channel: channel, org: org };
+          noSchedCusts[site].orders++;
+          if (month) noSchedCusts[site].months.add(month);
+        }
+      } else {
+        var sl = DS_SCHED_LOOKUP[site];
+        var day3 = day ? day.substring(0,3) : null;
+        if (day3 && (day3 in sl.days)) {
+          var schedTemp = sl.days[day3].replace(/\s/g,'').toUpperCase();
+          if (temp === 'FROZEN') {
+            status = schedTemp.indexOf('FROZEN') !== -1 ? 'Scheduled' : 'Out of Schedule';
+          } else {
+            status = schedTemp ? 'Scheduled' : 'Out of Schedule';
+          }
+        } else {
+          status = 'Out of Schedule';
+        }
+        if (status === 'Out of Schedule') {
+          if (!oosCusts[site]) oosCusts[site] = { name: custName, orders: 0, schedDays: Object.keys(sl.days).join(', '), orderedDay: day3||'?', channel: channel, org: org };
+          oosCusts[site].orders++;
+        }
+      }
+
+      if (status === 'Scheduled')       scheduled++;
+      else if (status === 'Out of Schedule') oos++;
+      else                               noSched++;
+
+      // Aggregate
+      if (month) {
+        if (!monthData[month]) monthData[month] = { scheduled:0, oos:0, noSched:0, total:0 };
+        monthData[month][status === 'Scheduled' ? 'scheduled' : status === 'Out of Schedule' ? 'oos' : 'noSched']++;
+        monthData[month].total++;
+      }
+      if (channel) {
+        if (!channelData[channel]) channelData[channel] = { scheduled:0, oos:0, noSched:0, total:0 };
+        channelData[channel][status === 'Scheduled' ? 'scheduled' : status === 'Out of Schedule' ? 'oos' : 'noSched']++;
+        channelData[channel].total++;
+      }
+      if (day) {
+        var d3 = day.substring(0,3);
+        if (!dayData[d3]) dayData[d3] = { scheduled:0, oos:0, noSched:0, total:0 };
+        dayData[d3][status === 'Scheduled' ? 'scheduled' : status === 'Out of Schedule' ? 'oos' : 'noSched']++;
+        dayData[d3].total++;
+      }
+    });
+
+    document.getElementById('ds-status').innerHTML = '<span style="color:var(--gold)">⚙️ Classifying ' + Math.min(i+CHUNK, data.length).toLocaleString() + ' / ' + data.length.toLocaleString() + ' orders...</span>';
+    await new Promise(function(r){ setTimeout(r,0); });
+  }
+
+  var total = scheduled + oos + noSched;
+  var sp = total ? Math.round(scheduled/total*100) : 0;
+  var op = total ? Math.round(oos/total*100) : 0;
+  var np = total ? Math.round(noSched/total*100) : 0;
+
+  // Convert noSchedCusts months Set to array
+  var noSchedArr = Object.keys(noSchedCusts).map(function(site) {
+    var d = noSchedCusts[site];
+    return { site: site, name: d.name, orders: d.orders, months: Array.from(d.months).join(', '), channel: d.channel, org: d.org };
+  }).sort(function(a,b){ return b.orders - a.orders; }).slice(0, 50);
+
+  var oosArr = Object.keys(oosCusts).map(function(site) {
+    var d = oosCusts[site];
+    return { site: site, name: d.name, orders: d.orders, schedDays: d.schedDays, orderedDay: d.orderedDay, channel: d.channel, org: d.org };
+  }).sort(function(a,b){ return b.orders - a.orders; }).slice(0, 50);
+
+  return {
+    summary: {
+      total: total, scheduled: scheduled, oos: oos, noSched: noSched,
+      schedPct: sp, oosPct: op, noSchedPct: np,
+      monthData: monthData, channelData: channelData, dayData: dayData,
+      noSchedCustomers: noSchedArr, oosCustomers: oosArr
+    }
+  };
+}
+
+// ── Show data on screen ───────────────────────────────────────────────
+function dsShowData(s, rows) {
+  if (!s || !s.total) return;
+
+  document.getElementById('ds-empty').style.display = 'none';
+  document.getElementById('ds-kpi-row').style.display = 'grid';
+  document.getElementById('ds-pivot-section').style.display = 'block';
+  document.getElementById('ds-filters').style.display = 'flex';
+  document.getElementById('ds-excel-btn').style.display = 'block';
+
+  // KPIs
+  document.getElementById('ds-kpi-total').textContent   = s.total.toLocaleString();
+  document.getElementById('ds-kpi-sched').textContent   = s.scheduled.toLocaleString();
+  document.getElementById('ds-kpi-sched-pct').textContent = s.schedPct + '% compliance';
+  document.getElementById('ds-kpi-oos').textContent     = s.oos.toLocaleString();
+  document.getElementById('ds-kpi-oos-pct').textContent = s.oosPct + '% of total';
+  document.getElementById('ds-kpi-nosched').textContent = s.noSched.toLocaleString();
+  document.getElementById('ds-kpi-rate').textContent    = s.schedPct + '%';
+
+  // Period label
+  var months = s.monthData ? Object.keys(s.monthData) : [];
+  if (months.length) document.getElementById('ds-kpi-period').textContent = months[0] + ' – ' + months[months.length-1];
+
+  // Populate filter dropdowns
+  if (s.channelData) {
+    var chSel = document.getElementById('ds-f-channel');
+    chSel.innerHTML = '<option value="">All</option>';
+    Object.keys(s.channelData).forEach(function(ch) { chSel.innerHTML += '<option value="'+ch+'">'+ch+'</option>'; });
+  }
+  if (s.monthData) {
+    var moSel = document.getElementById('ds-f-month');
+    moSel.innerHTML = '<option value="">All Months</option>';
+    Object.keys(s.monthData).forEach(function(mo) { moSel.innerHTML += '<option value="'+mo+'">'+mo+'</option>'; });
+  }
+
+  dsRenderAll(s);
+}
+
+function dsSetFilter(type, val) {
+  DS_FILTER[type] = val;
+  ['ds-f-all','ds-f-amb','ds-f-frz'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) { el.style.background = 'var(--surface2)'; el.style.borderColor = 'var(--border)'; el.style.color = 'var(--muted)'; }
+  });
+  var activeId = val === 'all' ? 'ds-f-all' : val === 'Ambient' ? 'ds-f-amb' : 'ds-f-frz';
+  var activeEl = document.getElementById(activeId);
+  if (activeEl) { activeEl.style.background = 'var(--glow)'; activeEl.style.borderColor = 'var(--gold)'; activeEl.style.color = 'var(--gold)'; }
+  dsApplyFilters();
+}
+
+function dsApplyFilters() {
+  DS_FILTER.org     = document.getElementById('ds-f-org')     ? document.getElementById('ds-f-org').value : '';
+  DS_FILTER.channel = document.getElementById('ds-f-channel') ? document.getElementById('ds-f-channel').value : '';
+  DS_FILTER.month   = document.getElementById('ds-f-month')   ? document.getElementById('ds-f-month').value : '';
+  if (DS_DATA) dsRenderAll(DS_DATA);
+}
+
+function dsRenderAll(s) {
+  dsBuildPivot(s);
+  dsRenderMonthly(s.monthData);
+  dsRenderDays(s.dayData);
+  dsRenderNoSched(s.noSchedCustomers||[]);
+  dsRenderOOS(s.oosCustomers||[]);
+}
+
+// ── TH style helper ───────────────────────────────────────────────────
+function dsTH(txt, align) {
+  return '<th style="background:#181c24;padding:9px 10px;font-size:13px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:0.8px;border-bottom:1px solid var(--border);text-align:'+(align||'center')+';white-space:nowrap;">'+txt+'</th>';
+}
+function dsTD(txt, extra) {
+  return '<td style="padding:8px 10px;font-size:14px;border-bottom:1px solid #1a1e26;'+(extra||'')+'">'+(txt||'<span style="color:#2a3040">·</span>')+'</td>';
+}
+function pctCol(p) {
+  return p >= 80 ? '#22c55e' : p >= 50 ? '#f59e0b' : '#ef4444';
+}
+
+// ── Pivot Table ───────────────────────────────────────────────────────
+function dsBuildPivot(s) {
+  var months = s.monthData ? Object.keys(s.monthData) : [];
+  if (!months.length) return;
+
+  // Header
+  var head = '<tr>' + dsTH('Delivery Schedule','left') + dsTH('TOTAL');
+  months.forEach(function(m) { head += dsTH(m); });
+  head += dsTH('Rate %') + '</tr>';
+  document.getElementById('ds-pivot-head').innerHTML = head;
+
+  // Rows: 3 status groups × channels
+  var channels = s.channelData ? Object.keys(s.channelData) : [];
+  var statuses = [
+    { key:'scheduled', label:'✅ Scheduled',       color:'#22c55e', bgClass:'rgba(34,197,94,0.06)' },
+    { key:'oos',       label:'⚠️ Out of Schedule', color:'#ef4444', bgClass:'rgba(239,68,68,0.06)' },
+    { key:'noSched',   label:'❌ No Schedule',      color:'#f59e0b', bgClass:'rgba(245,158,11,0.06)' },
+  ];
+
+  var body = '';
+  statuses.forEach(function(st) {
+    var total = s[st.key] || 0;
+    var pct   = s.total ? Math.round(total/s.total*100) : 0;
+
+    // Group header row
+    body += '<tr style="background:'+st.bgClass+'">';
+    body += '<td style="padding:9px 10px;font-size:15px;font-weight:800;color:'+st.color+';border-bottom:1px solid var(--border)">'+st.label+'</td>';
+    body += '<td style="padding:9px 10px;font-size:15px;font-weight:800;color:'+st.color+';text-align:center;border-bottom:1px solid var(--border)">'+total.toLocaleString()+'</td>';
+    months.forEach(function(m) {
+      var md = s.monthData[m] || {};
+      var v = md[st.key] || 0;
+      body += '<td style="padding:9px 10px;font-size:14px;text-align:center;border-bottom:1px solid var(--border);color:'+st.color+';">'+(v||'<span style="color:#2a3040">·</span>')+'</td>';
+    });
+    body += '<td style="padding:9px 10px;font-size:15px;font-weight:800;text-align:center;border-bottom:1px solid var(--border);color:'+pctCol(pct)+'">'+pct+'%</td>';
+    body += '</tr>';
+
+    // Channel sub-rows
+    channels.forEach(function(ch) {
+      var cd = s.channelData[ch] || {};
+      var cv = cd[st.key] || 0;
+      if (!cv) return;
+      var cpct = cd.total ? Math.round(cv/cd.total*100) : 0;
+      body += '<tr>';
+      body += '<td style="padding:7px 10px 7px 22px;font-size:14px;color:var(--gold);border-bottom:1px solid #1a1e26;font-weight:600;">'+ch+'</td>';
+      body += '<td style="padding:7px 10px;font-size:14px;text-align:center;border-bottom:1px solid #1a1e26;color:#c9c3b0;">'+cv.toLocaleString()+'</td>';
+      months.forEach(function(m) {
+        body += '<td style="padding:7px 10px;font-size:13px;text-align:center;border-bottom:1px solid #1a1e26;color:#c9c3b0;"><span style="color:#2a3040">·</span></td>';
+      });
+      body += '<td style="padding:7px 10px;font-size:14px;font-weight:700;text-align:center;border-bottom:1px solid #1a1e26;color:'+pctCol(cpct)+'">'+cpct+'%</td>';
+      body += '</tr>';
+    });
+  });
+
+  // Grand total
+  body += '<tr style="background:rgba(201,168,76,0.08);border-top:2px solid var(--border)">';
+  body += '<td style="padding:9px 10px;font-size:15px;font-weight:800;color:var(--gold);">Grand Total</td>';
+  body += '<td style="padding:9px 10px;font-size:15px;font-weight:800;color:var(--gold);text-align:center;">'+s.total.toLocaleString()+'</td>';
+  months.forEach(function(m) {
+    var md = s.monthData[m] || {};
+    var v = (md.scheduled||0)+(md.oos||0)+(md.noSched||0);
+    body += '<td style="padding:9px 10px;font-size:15px;font-weight:700;text-align:center;color:var(--gold);">'+v.toLocaleString()+'</td>';
+  });
+  body += '<td style="padding:9px 10px;font-size:15px;font-weight:800;text-align:center;color:#3b82f6;">'+s.schedPct+'%</td>';
+  body += '</tr>';
+
+  document.getElementById('ds-pivot-body').innerHTML = body;
+}
+
+// ── Monthly Table ─────────────────────────────────────────────────────
+function dsRenderMonthly(md) {
+  if (!md) return;
+  var html = '<thead><tr>'+dsTH('Month','left')+dsTH('Total')+dsTH('Scheduled')+dsTH('OOS')+dsTH('No Sched')+dsTH('Rate %')+'</tr></thead><tbody>';
+  var totals = { total:0, scheduled:0, oos:0, noSched:0 };
+  Object.keys(md).forEach(function(m) {
+    var d = md[m];
+    var p = d.total ? Math.round(d.scheduled/d.total*100) : 0;
+    html += '<tr>';
+    html += '<td style="padding:8px 10px;font-size:15px;font-weight:700;color:var(--gold);border-bottom:1px solid #1a1e26;">'+m+'</td>';
+    html += '<td style="padding:8px 10px;font-size:15px;text-align:center;border-bottom:1px solid #1a1e26;color:#f5f0e8;">'+d.total.toLocaleString()+'</td>';
+    html += '<td style="padding:8px 10px;font-size:15px;text-align:center;border-bottom:1px solid #1a1e26;color:#22c55e;">'+d.scheduled.toLocaleString()+'</td>';
+    html += '<td style="padding:8px 10px;font-size:15px;text-align:center;border-bottom:1px solid #1a1e26;color:#ef4444;">'+(d.oos||0).toLocaleString()+'</td>';
+    html += '<td style="padding:8px 10px;font-size:15px;text-align:center;border-bottom:1px solid #1a1e26;color:#f59e0b;">'+(d.noSched||0).toLocaleString()+'</td>';
+    html += '<td style="padding:8px 10px;font-size:15px;font-weight:800;text-align:center;border-bottom:1px solid #1a1e26;color:'+pctCol(p)+'">'+p+'%</td>';
+    html += '</tr>';
+    totals.total += d.total; totals.scheduled += d.scheduled; totals.oos += (d.oos||0); totals.noSched += (d.noSched||0);
+  });
+  var tp = totals.total ? Math.round(totals.scheduled/totals.total*100) : 0;
+  html += '<tr style="background:rgba(201,168,76,0.08);border-top:1px solid var(--gold)">';
+  html += '<td style="padding:9px 10px;font-size:15px;font-weight:800;color:var(--gold);">TOTAL</td>';
+  html += '<td style="padding:9px 10px;font-size:15px;font-weight:800;text-align:center;color:var(--gold);">'+totals.total.toLocaleString()+'</td>';
+  html += '<td style="padding:9px 10px;font-size:15px;font-weight:800;text-align:center;color:#22c55e;">'+totals.scheduled.toLocaleString()+'</td>';
+  html += '<td style="padding:9px 10px;font-size:15px;font-weight:800;text-align:center;color:#ef4444;">'+totals.oos.toLocaleString()+'</td>';
+  html += '<td style="padding:9px 10px;font-size:15px;font-weight:800;text-align:center;color:#f59e0b;">'+totals.noSched.toLocaleString()+'</td>';
+  html += '<td style="padding:9px 10px;font-size:15px;font-weight:800;text-align:center;color:#3b82f6;">'+tp+'%</td>';
+  html += '</tr></tbody>';
+  document.getElementById('ds-monthly-table').innerHTML = html;
+}
+
+// ── Day of Week Table ─────────────────────────────────────────────────
+function dsRenderDays(dd) {
+  if (!dd) return;
+  var ORDER = ['MON','TUE','WED','THU','FRI','SAT','SUN'];
+  var html = '<thead><tr>'+dsTH('Day','left')+dsTH('Total')+dsTH('Scheduled')+dsTH('OOS')+dsTH('Rate')+dsTH('Bar')+'</tr></thead><tbody>';
+  ORDER.forEach(function(day) {
+    var d = dd[day];
+    if (!d || !d.total) return;
+    var p = Math.round(d.scheduled/d.total*100);
+    var col = pctCol(p);
+    html += '<tr>';
+    html += '<td style="padding:8px 10px;font-size:15px;font-weight:700;color:var(--gold);border-bottom:1px solid #1a1e26;">'+day+'</td>';
+    html += '<td style="padding:8px 10px;font-size:15px;text-align:center;border-bottom:1px solid #1a1e26;color:#f5f0e8;">'+d.total.toLocaleString()+'</td>';
+    html += '<td style="padding:8px 10px;font-size:15px;text-align:center;border-bottom:1px solid #1a1e26;color:#22c55e;">'+d.scheduled.toLocaleString()+'</td>';
+    html += '<td style="padding:8px 10px;font-size:15px;text-align:center;border-bottom:1px solid #1a1e26;color:#ef4444;">'+(d.oos||0).toLocaleString()+'</td>';
+    html += '<td style="padding:8px 10px;font-size:15px;font-weight:800;text-align:center;border-bottom:1px solid #1a1e26;color:'+col+'">'+p+'%</td>';
+    html += '<td style="padding:8px 10px;border-bottom:1px solid #1a1e26;min-width:80px;"><div style="background:#21262d;border-radius:3px;height:8px;overflow:hidden"><div style="width:'+p+'%;height:8px;background:'+col+';border-radius:3px"></div></div></td>';
+    html += '</tr>';
+  });
+  html += '</tbody>';
+  document.getElementById('ds-day-table').innerHTML = html;
+}
+
+// ── No Schedule Table ─────────────────────────────────────────────────
+function dsRenderNoSched(arr) {
+  if (!arr || !arr.length) {
+    document.getElementById('ds-nosched-table').innerHTML = '<tr><td style="padding:20px;text-align:center;color:var(--muted);font-size:14px;">✅ All customers found in schedule</td></tr>';
+    return;
+  }
+  var html = '<thead><tr>'+dsTH('Customer Name','left')+dsTH('Site ID')+dsTH('Channel')+dsTH('ORG')+dsTH('Orders')+dsTH('Months')+dsTH('Action')+'</tr></thead><tbody>';
+  arr.forEach(function(r) {
+    html += '<tr>';
+    html += '<td style="padding:8px 10px;font-size:15px;font-weight:700;color:var(--gold);border-bottom:1px solid #1a1e26;">'+r.name+'</td>';
+    html += '<td style="padding:8px 10px;font-size:14px;text-align:center;border-bottom:1px solid #1a1e26;color:#c9c3b0;">'+r.site+'</td>';
+    html += '<td style="padding:8px 10px;font-size:14px;text-align:center;border-bottom:1px solid #1a1e26;color:#c9c3b0;">'+r.channel+'</td>';
+    html += '<td style="padding:8px 10px;font-size:14px;text-align:center;border-bottom:1px solid #1a1e26;color:#c9c3b0;">'+r.org+'</td>';
+    html += '<td style="padding:8px 10px;font-size:15px;font-weight:700;text-align:center;border-bottom:1px solid #1a1e26;color:#f59e0b;">'+r.orders+'</td>';
+    html += '<td style="padding:8px 10px;font-size:13px;border-bottom:1px solid #1a1e26;color:#c9c3b0;">'+r.months+'</td>';
+    html += '<td style="padding:8px 10px;text-align:center;border-bottom:1px solid #1a1e26;"><span style="background:rgba(245,158,11,0.15);color:#f59e0b;padding:3px 10px;border-radius:10px;font-size:11px;font-weight:700;">Add to Schedule</span></td>';
+    html += '</tr>';
+  });
+  html += '</tbody>';
+  document.getElementById('ds-nosched-table').innerHTML = html;
+}
+
+// ── OOS Table ─────────────────────────────────────────────────────────
+function dsRenderOOS(arr) {
+  if (!arr || !arr.length) {
+    document.getElementById('ds-oos-table').innerHTML = '<tr><td style="padding:20px;text-align:center;color:var(--muted);font-size:14px;">✅ No out-of-schedule orders</td></tr>';
+    return;
+  }
+  var html = '<thead><tr>'+dsTH('Customer Name','left')+dsTH('Site ID')+dsTH('Scheduled Days')+dsTH('Ordered Day')+dsTH('OOS Orders')+dsTH('Channel')+dsTH('ORG')+dsTH('Status')+'</tr></thead><tbody>';
+  arr.forEach(function(r) {
+    html += '<tr>';
+    html += '<td style="padding:8px 10px;font-size:15px;font-weight:700;color:var(--gold);border-bottom:1px solid #1a1e26;">'+r.name+'</td>';
+    html += '<td style="padding:8px 10px;font-size:14px;text-align:center;border-bottom:1px solid #1a1e26;color:#c9c3b0;">'+r.site+'</td>';
+    html += '<td style="padding:8px 10px;font-size:14px;text-align:center;border-bottom:1px solid #1a1e26;color:#22c55e;font-weight:600;">'+r.schedDays+'</td>';
+    html += '<td style="padding:8px 10px;font-size:14px;text-align:center;border-bottom:1px solid #1a1e26;color:#ef4444;font-weight:700;">'+r.orderedDay+'</td>';
+    html += '<td style="padding:8px 10px;font-size:15px;font-weight:700;text-align:center;border-bottom:1px solid #1a1e26;color:#ef4444;">'+r.orders+'</td>';
+    html += '<td style="padding:8px 10px;font-size:14px;text-align:center;border-bottom:1px solid #1a1e26;color:#c9c3b0;">'+r.channel+'</td>';
+    html += '<td style="padding:8px 10px;font-size:14px;text-align:center;border-bottom:1px solid #1a1e26;color:#c9c3b0;">'+r.org+'</td>';
+    html += '<td style="padding:8px 10px;text-align:center;border-bottom:1px solid #1a1e26;"><span style="background:rgba(239,68,68,0.15);color:#ef4444;padding:3px 10px;border-radius:10px;font-size:11px;font-weight:700;">Out of Schedule</span></td>';
+    html += '</tr>';
+  });
+  html += '</tbody>';
+  document.getElementById('ds-oos-table').innerHTML = html;
+}
+
+// ── Excel Export ──────────────────────────────────────────────────────
+function exportDSExcel() {
+  if (!DS_DATA) { alert('No delivery schedule data loaded'); return; }
+  var s = DS_DATA;
+  var date = new Date().toLocaleDateString('en-AE');
+  var html = '<h1>📦 DELIVERY SCHEDULE COMPLIANCE</h1>';
+  html += '<div class="sub">AKI Group · Generated: ' + date + '</div>';
+  html += '<div class="kpi-table"><tr>';
+  var kpis = [
+    {label:'Total Orders',val:s.total.toLocaleString(),sub:'All orders',col:'#c9a84c'},
+    {label:'Scheduled',val:s.scheduled.toLocaleString(),sub:s.schedPct+'%',col:'#22c55e'},
+    {label:'Out of Schedule',val:s.oos.toLocaleString(),sub:s.oosPct+'%',col:'#ef4444'},
+    {label:'No Schedule',val:s.noSched.toLocaleString(),sub:s.noSchedPct+'%',col:'#f59e0b'},
+    {label:'Compliance Rate',val:s.schedPct+'%',sub:'Scheduled/Total',col:'#3b82f6'},
+  ];
+  kpis.forEach(function(k){ html += '<td><span class="kpi-label">'+k.label+'</span><span class="kpi-value" style="color:'+k.col+'">'+k.val+'</span><span class="kpi-sub">'+k.sub+'</span></td>'; });
+  html += '</tr></div>';
+  if (s.monthData) {
+    html += '<div class="section-title">📅 Monthly Breakdown</div>';
+    html += '<table><thead><tr><th>Month</th><th>Total</th><th>Scheduled</th><th>OOS</th><th>No Schedule</th><th>Rate %</th></tr></thead><tbody>';
+    Object.keys(s.monthData).forEach(function(m) {
+      var d = s.monthData[m];
+      var p = d.total ? Math.round(d.scheduled/d.total*100) : 0;
+      html += '<tr><td style="color:#c9a84c;font-weight:700">'+m+'</td><td>'+d.total.toLocaleString()+'</td><td style="color:#22c55e">'+d.scheduled.toLocaleString()+'</td><td style="color:#ef4444">'+(d.oos||0).toLocaleString()+'</td><td style="color:#f59e0b">'+(d.noSched||0).toLocaleString()+'</td><td style="color:'+pctCol(p)+';font-weight:700">'+p+'%</td></tr>';
+    });
+    html += '</tbody></table>';
+  }
+  downloadHTML(html, 'Delivery_Schedule_Compliance_' + new Date().toISOString().slice(0,10) + '.xls');
+}
+
 </script>
 
 </body>
