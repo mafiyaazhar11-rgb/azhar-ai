@@ -6787,17 +6787,34 @@ var AUTO_ORG_MAP = {
 async function loadAutomationFromServer() {
   try {
     var token = localStorage.getItem('azhar_token') || '';
+    if (!token) return; // not logged in yet — skip silently
     var r = await fetch('/api/automation/status', { headers: { 'Authorization': 'Bearer ' + token } });
-    var d = await r.json();
-    if (d.hasData && d.rows && d.rows.length) {
-      AUTO_DATA = d.rows;
+    if (!r.ok) return; // server returned error page — skip silently
+    var text = await r.text();
+    if (!text || text.trim()[0] !== '{') return; // not JSON — skip silently
+    var d = JSON.parse(text);
+    if (d.hasData && d.summary) {
       var statusEl = document.getElementById('auto-status');
-      if (statusEl) statusEl.innerHTML = '<span style="color:var(--green)">\u2705 Loaded from server \u2014 ' + d.totalRecords.toLocaleString() + ' records \u00b7 ' + d.fileName + '</span>';
+      if (statusEl) statusEl.innerHTML = '<span style="color:var(--green)">\u2705 Loaded from database \u2014 ' + (d.totalRecords||0).toLocaleString() + ' records \u00b7 ' + (d.fileName||'') + '</span>';
       var emptyEl = document.getElementById('auto-empty');
       if (emptyEl) emptyEl.style.display = 'none';
       var infoEl = document.getElementById('auto-upload-info');
-      if (infoEl) { infoEl.style.display = 'block'; infoEl.innerHTML = '\ud83d\udcc1 <strong style="color:var(--gold)">' + d.fileName + '</strong> \u00b7 ' + d.totalRecords.toLocaleString() + ' records \u00b7 Uploaded by <strong style="color:var(--gold)">' + d.uploadedBy + '</strong>'; }
-      renderAutoTracking(d.rows);
+      if (infoEl) { infoEl.style.display = 'block'; infoEl.innerHTML = '\ud83d\udcc1 <strong style="color:var(--gold)">' + (d.fileName||'') + '</strong> \u00b7 ' + (d.totalRecords||0).toLocaleString() + ' records \u00b7 Uploaded by <strong style="color:var(--gold)">' + (d.uploadedBy||'') + '</strong>'; }
+      // Reconstruct aggregated from stored monthData + orgData
+      if (d.rows && d.orgRows) {
+        var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        var sortedMonths = months.filter(function(m){ return d.rows[m]; });
+        var latestMonth = sortedMonths[sortedMonths.length-1] || '';
+        var latestRate = latestMonth ? Math.round(d.rows[latestMonth].auto/d.rows[latestMonth].total*100) : 0;
+        var agg = {
+          monthData: d.rows, orgData: d.orgRows,
+          total: d.summary.total, totalAuto: d.summary.auto, totalManual: d.summary.manual,
+          rate: d.summary.rate, sortedMonths: sortedMonths,
+          latestMonth: latestMonth, latestRate: latestRate
+        };
+        AUTO_DATA = agg;
+        renderAutoFromAggregated(agg);
+      }
     }
   } catch(e) { console.log('Automation load:', e.message); }
 }
@@ -6824,41 +6841,172 @@ function autoCheckPassword() {
   }
 }
 
+function sleep(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
+
+function setAutoStatus(msg) {
+  var el = document.getElementById('auto-status');
+  if (el) el.innerHTML = msg;
+}
+
 function handleAutoUpload(input) {
   var file = input.files[0];
   if (!file) return;
-  document.getElementById('auto-status').innerHTML = '<span style="color:var(--gold)">\u2699\ufe0f Processing ' + file.name + '...</span>';
+  setAutoStatus('<span style="color:var(--gold)">\u2699\ufe0f Reading file...</span>');
+
   var reader = new FileReader();
   reader.onload = async function(e) {
     try {
-      var wb = XLSX.read(e.target.result, { type: 'array' });
-      var sheetName = wb.SheetNames.find(function(s){ return s !== 'sum' && s !== 'Sum'; }) || wb.SheetNames[1] || wb.SheetNames[0];
-      var data = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { defval: '' });
-      AUTO_DATA = data;
-      var colAS = Object.keys(data[0]).find(function(k){ return k.trim() === 'Auto Booking Status'; }) || '';
-      var totalAuto = data.filter(function(r){ return String(r[colAS]).trim() === 'Auto Booked'; }).length;
-      var summary = { total: data.length, auto: totalAuto, manual: data.length - totalAuto, rate: Math.round(totalAuto/data.length*100) };
+      setAutoStatus('<span style="color:var(--gold)">\u2699\ufe0f Parsing Excel... (large file, please wait)</span>');
+      await sleep(50);
+
+      var data;
+      if (file.name.endsWith('.csv')) {
+        var wb = XLSX.read(e.target.result, { type: 'string' });
+        data = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' });
+      } else {
+        var wb = XLSX.read(e.target.result, { type: 'array', dense: true, cellDates: false, cellNF: false, cellHTML: false });
+        var sheetName = wb.SheetNames.find(function(s){ return s !== 'sum' && s !== 'Sum'; }) || wb.SheetNames[1] || wb.SheetNames[0];
+        setAutoStatus('<span style="color:var(--gold)">\u2699\ufe0f Converting ' + wb.Sheets[sheetName]["!ref"] + ' rows...</span>');
+        await sleep(50);
+        data = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { defval: '' });
+      }
+
+      setAutoStatus('<span style="color:var(--gold)">\u2699\ufe0f Processing ' + data.length.toLocaleString() + ' records...</span>');
+      await sleep(50);
+
+      // Aggregate in chunks — do NOT freeze browser
+      var aggregated = await aggregateAutoData(data);
+      AUTO_DATA = aggregated;
+
+      setAutoStatus('<span style="color:var(--gold)">\u2699\ufe0f Saving to database...</span>');
+      await sleep(30);
+
+      // Save ONLY aggregated summary to DB — not 149K raw rows
       var token = localStorage.getItem('azhar_token') || '';
       var saveResp = await fetch('/api/automation/upload', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-        body: JSON.stringify({ rows: data, fileName: file.name, totalRecords: data.length, summary: summary })
+        body: JSON.stringify({
+          rows: aggregated.monthData,
+          orgRows: aggregated.orgData,
+          fileName: file.name,
+          totalRecords: aggregated.total,
+          summary: { total: aggregated.total, auto: aggregated.totalAuto, manual: aggregated.totalManual, rate: aggregated.rate,
+                     latestMonth: aggregated.latestMonth, latestRate: aggregated.latestRate }
+        })
       });
       var saveResult = await saveResp.json();
-      document.getElementById('auto-status').innerHTML = saveResult.success
-        ? '<span style="color:var(--green)">\u2705 Saved to PostgreSQL \u2014 ' + data.length.toLocaleString() + ' records</span>'
-        : '<span style="color:#f85149">\u26a0\ufe0f Save error: ' + (saveResult.error || 'Unknown') + '</span>';
+
+      setAutoStatus(saveResult.success
+        ? '<span style="color:var(--green)">\u2705 Saved to PostgreSQL \u2014 ' + aggregated.total.toLocaleString() + ' records \u00b7 Months: ' + aggregated.sortedMonths.join(', ') + '</span>'
+        : '<span style="color:#f85149">\u26a0\ufe0f Save error: ' + (saveResult.error || 'Unknown') + '</span>');
+
       document.getElementById('auto-empty').style.display = 'none';
       var infoEl = document.getElementById('auto-upload-info');
       infoEl.style.display = 'block';
-      infoEl.innerHTML = '\ud83d\udcc1 <strong style="color:var(--gold)">' + file.name + '</strong> \u00b7 ' + data.length.toLocaleString() + ' records \u00b7 Just uploaded';
-      renderAutoTracking(data);
+      infoEl.innerHTML = '\ud83d\udcc1 <strong style="color:var(--gold)">' + file.name + '</strong> \u00b7 ' + aggregated.total.toLocaleString() + ' records \u00b7 Just uploaded';
+      renderAutoFromAggregated(aggregated);
       autoToggleUpload();
+
     } catch(err) {
-      document.getElementById('auto-status').innerHTML = '<span style="color:#f85149">\u274c Error: ' + err.message + '</span>';
+      setAutoStatus('<span style="color:#f85149">\u274c Error: ' + err.message + '</span>');
+      console.error('Auto upload error:', err);
     }
   };
-  reader.readAsArrayBuffer(file);
+  if (file.name.endsWith('.csv')) reader.readAsText(file);
+  else reader.readAsArrayBuffer(file);
+}
+
+async function aggregateAutoData(data) {
+  var colAutoStatus = Object.keys(data[0]).find(function(k){ return k.trim() === 'Auto Booking Status'; }) || '';
+  var colMonth      = Object.keys(data[0]).find(function(k){ return k.trim() === 'Month'; }) || '';
+  var colOrderType  = Object.keys(data[0]).find(function(k){ return k.trim() === 'Order Type'; }) || '';
+  var colOrg        = Object.keys(data[0]).find(function(k){ return k.trim() === 'Organization' || k.trim() === 'Organisation'; }) || '';
+
+  var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var monthData = {}, orgData = {}, totalAuto = 0, totalManual = 0;
+  var CHUNK = 10000;
+
+  for (var i = 0; i < data.length; i += CHUNK) {
+    var chunk = data.slice(i, i + CHUNK);
+    chunk.forEach(function(row) {
+      var status = String(row[colAutoStatus] || '').trim();
+      var month  = String(row[colMonth] || '').trim();
+      var ot     = String(row[colOrderType] || '').trim();
+      var org    = String(row[colOrg] || AUTO_ORG_MAP[ot] || 'Other').trim();
+      var isAuto = status === 'Auto Booked';
+      if (!monthData[month]) monthData[month] = { total:0, auto:0, manual:0 };
+      monthData[month].total++;
+      if (isAuto) { monthData[month].auto++; totalAuto++; } else { monthData[month].manual++; totalManual++; }
+      if (!orgData[org]) orgData[org] = { total:0, auto:0, manual:0, ots:[] };
+      orgData[org].total++;
+      if (orgData[org].ots.indexOf(ot) === -1) orgData[org].ots.push(ot);
+      if (isAuto) orgData[org].auto++; else orgData[org].manual++;
+    });
+    setAutoStatus('<span style="color:var(--gold)">\u2699\ufe0f Processing ' + Math.min(i+CHUNK, data.length).toLocaleString() + ' / ' + data.length.toLocaleString() + ' rows...</span>');
+    await sleep(0); // yield to browser
+  }
+
+  var total = totalAuto + totalManual;
+  var rate = total ? Math.round(totalAuto/total*100) : 0;
+  var sortedMonths = months.filter(function(m){ return monthData[m]; });
+  var latestMonth = sortedMonths[sortedMonths.length-1] || '';
+  var latestRate = latestMonth ? Math.round(monthData[latestMonth].auto/monthData[latestMonth].total*100) : 0;
+
+  return { monthData: monthData, orgData: orgData, total: total, totalAuto: totalAuto, totalManual: totalManual,
+           rate: rate, sortedMonths: sortedMonths, latestMonth: latestMonth, latestRate: latestRate };
+}
+
+function renderAutoFromAggregated(agg) {
+  var monthData = agg.monthData, orgData = agg.orgData;
+  var total = agg.total, totalAuto = agg.totalAuto, totalManual = agg.totalManual;
+  var rate = agg.rate, sortedMonths = agg.sortedMonths;
+  var latestMonth = agg.latestMonth, latestRate = agg.latestRate;
+
+  document.getElementById('auto-kpi-total').textContent = total.toLocaleString();
+  document.getElementById('auto-kpi-period').textContent = (sortedMonths[0]||'') + ' – ' + latestMonth + ' 2026';
+  document.getElementById('auto-kpi-auto').textContent = totalAuto.toLocaleString();
+  document.getElementById('auto-kpi-auto-pct').textContent = rate + '% of total';
+  document.getElementById('auto-kpi-manual').textContent = totalManual.toLocaleString();
+  document.getElementById('auto-kpi-manual-pct').textContent = Math.round(totalManual/total*100) + '% of total';
+  document.getElementById('auto-kpi-rate').textContent = rate + '%';
+  document.getElementById('auto-kpi-latest').textContent = latestRate + '%';
+  document.getElementById('auto-kpi-latest-lbl').textContent = latestMonth + ' 2026 ↑';
+  document.getElementById('auto-kpi-row').style.display = 'grid';
+  document.getElementById('auto-main-grid').style.display = 'grid';
+  document.getElementById('auto-org-section').style.display = 'block';
+
+  // Monthly table
+  var tbody = '';
+  sortedMonths.forEach(function(m) {
+    var d = monthData[m]; if (!d) return;
+    var p = Math.round(d.auto/d.total*100);
+    var col = p>=80?'var(--green)':p>=55?'#e3b341':'#f85149';
+    tbody += '<tr><td style="font-size:13px;font-weight:600;color:#f5f0e8">'+m+'</td><td style="text-align:center;font-size:13px;color:#f5f0e8">'+d.total.toLocaleString()+'</td><td style="text-align:center;font-size:13px;color:var(--green)">'+d.auto.toLocaleString()+'</td><td style="text-align:center;font-size:13px;color:#f85149">'+d.manual.toLocaleString()+'</td><td style="text-align:center;font-size:13px;font-weight:700;color:'+col+'">'+p+'%</td></tr>';
+  });
+  tbody += '<tr style="background:rgba(201,168,76,0.08);border-top:1px solid var(--gold)"><td style="color:var(--gold);font-weight:700;font-size:13px">TOTAL</td><td style="text-align:center;color:var(--gold);font-weight:700;font-size:13px">'+total.toLocaleString()+'</td><td style="text-align:center;color:var(--green);font-weight:700;font-size:13px">'+totalAuto.toLocaleString()+'</td><td style="text-align:center;color:#f85149;font-weight:700;font-size:13px">'+totalManual.toLocaleString()+'</td><td style="text-align:center;color:#58a6ff;font-weight:700;font-size:13px">'+rate+'%</td></tr>';
+  document.getElementById('auto-monthly-body').innerHTML = tbody;
+
+  // Bar chart
+  var bars = '';
+  sortedMonths.forEach(function(m) {
+    var d = monthData[m]; if (!d) return;
+    var p = Math.round(d.auto/d.total*100);
+    bars += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;"><div style="min-width:36px;font-size:12px;color:var(--gold);text-align:right">'+m+'</div><div style="flex:1;background:#21262d;border-radius:4px;height:22px;overflow:hidden;"><div style="background:linear-gradient(90deg,#238636,#3fb950);height:100%;width:'+p+'%;display:flex;align-items:center;justify-content:flex-end;padding-right:6px;"><span style="font-size:11px;font-weight:700;color:#fff">'+p+'%</span></div></div><div style="min-width:60px;font-size:12px;color:#c9c3b0;text-align:right">'+d.total.toLocaleString()+'</div></div>';
+  });
+  document.getElementById('auto-bar-chart').innerHTML = bars;
+
+  // Org table
+  var orgRows = '';
+  Object.keys(orgData).sort(function(a,b){ return orgData[b].total-orgData[a].total; }).forEach(function(org) {
+    var d = orgData[org]; if (!d) return;
+    var p = Math.round(d.auto/d.total*100);
+    var col = p>=80?'var(--green)':p>=55?'#e3b341':'#f85149';
+    var ots = Array.isArray(d.ots) ? d.ots.join(', ') : (d.ots||'');
+    orgRows += '<tr><td style="font-size:13px;font-weight:600;color:#f5f0e8">'+org+'</td><td style="font-size:11px;color:#c9c3b0">'+ots+'</td><td style="text-align:center;font-size:13px;color:#f5f0e8">'+d.total.toLocaleString()+'</td><td style="text-align:center;font-size:13px;color:var(--green)">'+d.auto.toLocaleString()+'</td><td style="text-align:center;font-size:13px;color:#f85149">'+d.manual.toLocaleString()+'</td><td style="text-align:center;font-size:13px;font-weight:700;color:'+col+'">'+p+'%</td><td><div style="background:#21262d;border-radius:3px;height:8px;overflow:hidden"><div style="width:'+p+'%;height:100%;background:'+col+';border-radius:3px"></div></div></td></tr>';
+  });
+  orgRows += '<tr style="background:rgba(201,168,76,0.08);border-top:1px solid var(--gold)"><td style="color:var(--gold);font-weight:700;font-size:13px">GRAND TOTAL</td><td style="font-size:11px;color:#c9c3b0">All organisations</td><td style="text-align:center;color:var(--gold);font-weight:700;font-size:13px">'+total.toLocaleString()+'</td><td style="text-align:center;color:var(--green);font-weight:700;font-size:13px">'+totalAuto.toLocaleString()+'</td><td style="text-align:center;color:#f85149;font-weight:700;font-size:13px">'+totalManual.toLocaleString()+'</td><td style="text-align:center;color:#58a6ff;font-weight:700;font-size:13px">'+rate+'%</td><td><div style="background:#21262d;border-radius:3px;height:8px;overflow:hidden"><div style="width:'+rate+'%;height:100%;background:#58a6ff;border-radius:3px"></div></div></td></tr>';
+  document.getElementById('auto-org-body').innerHTML = orgRows;
 }
 
 function renderAutoTracking(data) {
