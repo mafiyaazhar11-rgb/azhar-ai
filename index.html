@@ -7572,9 +7572,14 @@ async function loadDeliveryFromServer() {
     var text = await r.text();
     if (!text || text.trim()[0] !== '{') return;
     var d = JSON.parse(text);
-    if (d.hasSchedule) {
-      DS_SCHED_LOOKUP = d.scheduleLookup;
-      document.getElementById('ds-sched-status').innerHTML = '<span style="color:#22c55e">✅ Schedule loaded — ' + (d.scheduleCustomers||0).toLocaleString() + ' customers</span>';
+    if (d.hasSchedule && d.scheduleLookup) {
+      // Convert string keys back to integers after JSON parse
+      var rawLookup = d.scheduleLookup;
+      DS_SCHED_LOOKUP = {};
+      Object.keys(rawLookup).forEach(function(k) {
+        DS_SCHED_LOOKUP[parseInt(k)] = rawLookup[k];
+      });
+      document.getElementById('ds-sched-status').innerHTML = '<span style="color:#22c55e">✅ Schedule loaded — ' + Object.keys(DS_SCHED_LOOKUP).length.toLocaleString() + ' customers</span>';
     }
     if (d.hasData && d.summary) {
       DS_DATA = d.summary;
@@ -7655,7 +7660,7 @@ function dscClearSchedule() {
 function dscToggleUpload() { dscToggleOracle(); }
 
 // ── Upload Schedule (one-time) ────────────────────────────────────────
-function handleDSScheduleUpload(input) {
+async function handleDSScheduleUpload(input) {
   var file = input.files[0];
   if (!file) return;
   document.getElementById('ds-status').innerHTML = '<span style="color:var(--gold)">⚙️ Reading schedule file...</span>';
@@ -7711,7 +7716,9 @@ function handleDSScheduleUpload(input) {
         count++;
       });
 
-      DS_SCHED_LOOKUP = lookup;
+      // Store with integer keys
+      DS_SCHED_LOOKUP = {};
+      Object.keys(lookup).forEach(function(k){ DS_SCHED_LOOKUP[parseInt(k)] = lookup[k]; });
       document.getElementById('ds-status').innerHTML = '<span style="color:var(--gold)">⚙️ Saving schedule to database...</span>';
 
       // Save to server
@@ -7734,10 +7741,18 @@ function handleDSScheduleUpload(input) {
 }
 
 // ── Upload Oracle Extract (daily) ─────────────────────────────────────
-function handleDSOracleUpload(input) {
+async function handleDSOracleUpload(input) {
   var file = input.files[0];
   if (!file) return;
-  if (!DS_SCHED_LOOKUP || Object.keys(DS_SCHED_LOOKUP).length === 0) { alert('Please upload the Schedule Master file first (click ✦ star → UPLOAD / RE-UPLOAD)'); return; }
+  // If not in memory, try loading from server first
+  if (!DS_SCHED_LOOKUP || Object.keys(DS_SCHED_LOOKUP).length === 0) {
+    document.getElementById('ds-status').innerHTML = '<span style="color:var(--gold)">⚙️ Loading schedule from database...</span>';
+    await loadDeliveryFromServer();
+    if (!DS_SCHED_LOOKUP || Object.keys(DS_SCHED_LOOKUP).length === 0) {
+      document.getElementById('ds-status').innerHTML = '<span style="color:#ef4444">❌ Schedule not found — please upload Schedule Master first (📋 button)</span>';
+      return;
+    }
+  }
   document.getElementById('ds-status').innerHTML = '<span style="color:var(--gold)">⚙️ Reading Oracle extract...</span>';
   var reader = new FileReader();
   reader.onload = async function(e) {
@@ -7787,7 +7802,7 @@ async function classifyOracle(data) {
 
   var keys = Object.keys(data[0]);
   var colSiteId  = keys.find(function(k){ return /site.?id/i.test(k); }) || '';
-  var colDate    = keys.find(function(k){ return /invoice.?date|inv.?date|rsd|request.?date/i.test(k); }) || '';
+  var colDate    = keys.find(function(k){ return /invoice.?date|inv.?date|invoice_date|rsd|request.?date/i.test(k); }) || '';
   var colTemp    = keys.find(function(k){ return /ambient|frozen|temp/i.test(k); }) || '';
   var colOrg     = keys.find(function(k){ return k.trim().toUpperCase() === 'ORG'; }) || '';
   var colChannel = keys.find(function(k){ return /channel/i.test(k); }) || '';
