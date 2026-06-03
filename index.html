@@ -7108,68 +7108,165 @@ function renderAutoTracking(data) {
 }
 
 // ═══════════════════════════════════════════════════════════
-// EXCEL EXPORT FUNCTIONS — Automation, General Info, Order Summary, Market Returns
+// ═══════════════════════════════════════════════════════════
+// EXCEL EXPORT FUNCTIONS — Styled with colors matching dashboard
 // ═══════════════════════════════════════════════════════════
 
-function xlsxCSV(headers, rows, sheetName) {
-  var lines = [headers.join(',')];
-  rows.forEach(function(r) {
-    lines.push(r.map(function(v) {
-      var s = String(v === null || v === undefined ? '' : v);
-      return s.includes(',') || s.includes('"') || s.includes('\n') ? '"' + s.replace(/"/g,'""') + '"' : s;
-    }).join(','));
-  });
-  return lines.join('\r\n');
-}
+function downloadExcel(wb, filename) { XLSX.writeFile(wb, filename); }
 
-function downloadExcel(wb, filename) {
-  XLSX.writeFile(wb, filename);
+// Apply styles to a worksheet
+function styleSheet(ws, headerRow, dataRows, opts) {
+  opts = opts || {};
+  var range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
+
+  // Column widths
+  if (opts.colWidths) {
+    ws['!cols'] = opts.colWidths.map(function(w){ return { wch: w }; });
+  }
+
+  // Style each cell
+  for (var R = range.s.r; R <= range.e.r; R++) {
+    for (var C = range.s.c; C <= range.e.c; C++) {
+      var addr = XLSX.utils.encode_cell({r:R, c:C});
+      if (!ws[addr]) continue;
+
+      var isHeader = R === 0;
+      var isTotal  = opts.totalRows && opts.totalRows.indexOf(R) !== -1;
+      var isKPI    = opts.kpiRows   && opts.kpiRows.indexOf(R)   !== -1;
+
+      ws[addr].s = {
+        font: {
+          name: 'Calibri',
+          sz: isHeader ? 12 : isTotal ? 12 : 11,
+          bold: isHeader || isTotal,
+          color: { rgb: isHeader ? 'C9A84C' : isTotal ? 'C9A84C' : 'F5F0E8' }
+        },
+        fill: {
+          patternType: 'solid',
+          fgColor: { rgb: isHeader ? '1A1A2E' : isTotal ? '2A2410' : R % 2 === 0 ? '0D1117' : '161B22' }
+        },
+        border: {
+          bottom: { style: 'thin', color: { rgb: '30363D' } },
+          right:  { style: 'thin', color: { rgb: '30363D' } }
+        },
+        alignment: { horizontal: C === 0 ? 'left' : 'center', vertical: 'center', wrapText: true }
+      };
+
+      // Color code Auto % column (last data col before progress)
+      if (opts.pctCol !== undefined && C === opts.pctCol && !isHeader) {
+        var val = String(ws[addr].v || '');
+        var pct = parseInt(val);
+        if (!isNaN(pct)) {
+          var rgb = pct >= 80 ? '238636' : pct >= 55 ? 'D29922' : 'DA3633';
+          ws[addr].s.font.color = { rgb: rgb };
+          ws[addr].s.font.bold = true;
+        }
+      }
+    }
+  }
+  return ws;
 }
 
 function exportAutoExcel() {
   if (!AUTO_DATA) { alert('No automation data loaded'); return; }
   var ad = AUTO_DATA;
   var wb = XLSX.utils.book_new();
-
-  // Sheet 1: Summary KPIs
-  var sumRows = [
-    ['Metric', 'Value'],
-    ['Total Orders YTD', ad.total],
-    ['Auto Booked', ad.totalAuto],
-    ['Manually Booked', ad.totalManual],
-    ['Automation Rate %', ad.rate + '%'],
-    ['Latest Month', ad.latestMonth],
-    ['Latest Month Rate %', ad.latestRate + '%'],
-    ['Generated', new Date().toLocaleDateString('en-AE')]
-  ];
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(sumRows), 'Summary');
-
-  // Sheet 2: Monthly Breakdown
-  var mHeaders = ['Month', 'Total Orders', 'Auto Booked', 'Manually Booked', 'Auto %'];
-  var mRows = [];
   var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+  // ── Sheet 1: Dashboard Summary (matches screen) ──────────────────
+  var s1Data = [
+    ['AKI GROUP — AUTOMATION TRACKING YTD 2026', '', '', ''],
+    ['Generated: ' + new Date().toLocaleDateString('en-AE'), '', '', ''],
+    [''],
+    ['KPI SUMMARY', '', '', ''],
+    ['Metric', 'Value', '', ''],
+    ['Total Orders YTD', ad.total, '', ''],
+    ['Auto Booked', ad.totalAuto, '', ''],
+    ['Manually Booked', ad.totalManual, '', ''],
+    ['Automation Rate', ad.rate + '%', '', ''],
+    ['Latest Month', ad.latestMonth + ' — ' + ad.latestRate + '%', '', ''],
+    [''],
+    ['MONTHLY BREAKDOWN', '', '', '', ''],
+    ['Month', 'Total Orders', 'Auto Booked', 'Manually Booked', 'Auto %'],
+  ];
+  var monthTotalRows = [];
   months.forEach(function(m) {
     var d = ad.monthData ? ad.monthData[m] : null;
     if (!d) return;
     var p = Math.round(d.auto/d.total*100);
-    mRows.push([m, d.total, d.auto, d.manual, p + '%']);
+    s1Data.push([m, d.total, d.auto, d.manual, p + '%']);
   });
-  mRows.push(['TOTAL', ad.total, ad.totalAuto, ad.totalManual, ad.rate + '%']);
-  var mSheet = XLSX.utils.aoa_to_sheet([mHeaders].concat(mRows));
-  XLSX.utils.book_append_sheet(wb, mSheet, 'Monthly Breakdown');
+  s1Data.push(['GRAND TOTAL', ad.total, ad.totalAuto, ad.totalManual, ad.rate + '%']);
+  monthTotalRows.push(s1Data.length - 1);
 
-  // Sheet 3: Organisation Breakdown
-  var oHeaders = ['Organisation', 'Order Type(s)', 'Total Orders', 'Auto Booked', 'Manually Booked', 'Auto %'];
-  var oRows = [];
+  s1Data.push(['']);
+  s1Data.push(['ORGANISATION BREAKDOWN — AUTO-MAPPED FROM ORDER TYPE', '', '', '', '', '']);
+  s1Data.push(['Organisation', 'Order Type(s)', 'Total Orders', 'Auto Booked', 'Manually Booked', 'Auto %']);
   var orgData = ad.orgData || {};
   Object.keys(orgData).sort(function(a,b){ return orgData[b].total - orgData[a].total; }).forEach(function(org) {
     var d = orgData[org];
     var p = Math.round(d.auto/d.total*100);
     var ots = Array.isArray(d.ots) ? d.ots.join(', ') : (d.ots||'');
-    oRows.push([org, ots, d.total, d.auto, d.manual, p + '%']);
+    s1Data.push([org, ots, d.total, d.auto, d.manual, p + '%']);
   });
-  oRows.push(['GRAND TOTAL', 'All organisations', ad.total, ad.totalAuto, ad.totalManual, ad.rate + '%']);
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([oHeaders].concat(oRows)), 'Organisation Breakdown');
+  s1Data.push(['GRAND TOTAL', 'All organisations', ad.total, ad.totalAuto, ad.totalManual, ad.rate + '%']);
+  monthTotalRows.push(s1Data.length - 1);
+
+  var ws1 = XLSX.utils.aoa_to_sheet(s1Data);
+  ws1['!cols'] = [{wch:22},{wch:38},{wch:14},{wch:14},{wch:16},{wch:10}];
+  // Title row styles
+  if (ws1['A1']) ws1['A1'].s = { font:{name:'Calibri',sz:14,bold:true,color:{rgb:'C9A84C'}}, fill:{patternType:'solid',fgColor:{rgb:'0D1117'}} };
+  // Style all rows
+  for (var R = 0; R < s1Data.length; R++) {
+    var row = s1Data[R];
+    for (var Ci = 0; Ci < row.length; Ci++) {
+      var addr = XLSX.utils.encode_cell({r:R, c:Ci});
+      if (!ws1[addr]) continue;
+      var isHeaderRow = (row[0] === 'Month' || row[0] === 'Organisation' || row[0] === 'Metric' || row[0] === 'KPI SUMMARY' || row[0] === 'MONTHLY BREAKDOWN' || row[0] === 'ORGANISATION BREAKDOWN — AUTO-MAPPED FROM ORDER TYPE');
+      var isTotalRow  = (row[0] === 'GRAND TOTAL' || row[0] === 'Grand Total');
+      var isSectionHdr = (row[0] === 'AKI GROUP — AUTOMATION TRACKING YTD 2026' || row[0] === 'KPI SUMMARY' || row[0] === 'MONTHLY BREAKDOWN' || row[0] === 'ORGANISATION BREAKDOWN — AUTO-MAPPED FROM ORDER TYPE');
+      var bgColor = isTotalRow ? '2A2410' : isHeaderRow ? '1A1A2E' : R % 2 === 0 ? '0D1117' : '161B22';
+      var fgColor = isTotalRow ? 'C9A84C' : isHeaderRow ? 'C9A84C' : 'F5F0E8';
+      ws1[addr].s = {
+        font: { name:'Calibri', sz: isSectionHdr ? 12 : 11, bold: isHeaderRow || isTotalRow, color:{rgb:fgColor} },
+        fill: { patternType:'solid', fgColor:{rgb:bgColor} },
+        border: { bottom:{style:'thin',color:{rgb:'30363D'}}, right:{style:'thin',color:{rgb:'30363D'}} },
+        alignment: { horizontal: Ci === 0 ? 'left' : 'center', vertical:'center', wrapText:true }
+      };
+      // Color Auto % column
+      if ((Ci === 4 || Ci === 5) && !isHeaderRow && !isTotalRow) {
+        var pStr = String(ws1[addr].v || '');
+        var pNum = parseInt(pStr);
+        if (!isNaN(pNum)) {
+          ws1[addr].s.font.color = { rgb: pNum >= 80 ? '3FB950' : pNum >= 55 ? 'E3B341' : 'F85149' };
+          ws1[addr].s.font.bold = true;
+        }
+      }
+    }
+  }
+  XLSX.utils.book_append_sheet(wb, ws1, 'Dashboard View');
+
+  // ── Sheet 2: Raw Data ─────────────────────────────────────────────
+  var rawHeaders = ['Organisation','Order Type(s)','Total Orders','Auto Booked','Manually Booked','Auto %','Manual %'];
+  var rawRows = [];
+  Object.keys(orgData).sort(function(a,b){ return orgData[b].total-orgData[a].total; }).forEach(function(org) {
+    var d = orgData[org];
+    var autoP = Math.round(d.auto/d.total*100);
+    var manP  = 100 - autoP;
+    var ots = Array.isArray(d.ots) ? d.ots.join(', ') : (d.ots||'');
+    rawRows.push([org, ots, d.total, d.auto, d.manual, autoP/100, manP/100]);
+  });
+  rawRows.push(['GRAND TOTAL','All organisations',ad.total,ad.totalAuto,ad.totalManual,ad.rate/100,(100-ad.rate)/100]);
+  var ws2 = XLSX.utils.aoa_to_sheet([rawHeaders].concat(rawRows));
+  ws2['!cols'] = [{wch:20},{wch:40},{wch:14},{wch:14},{wch:16},{wch:10},{wch:10}];
+  // Format pct columns as %
+  for (var ri = 1; ri <= rawRows.length; ri++) {
+    var pa = XLSX.utils.encode_cell({r:ri,c:5});
+    var pb = XLSX.utils.encode_cell({r:ri,c:6});
+    if (ws2[pa]) ws2[pa].z = '0%';
+    if (ws2[pb]) ws2[pb].z = '0%';
+  }
+  XLSX.utils.book_append_sheet(wb, ws2, 'Raw Data');
 
   downloadExcel(wb, 'Automation_Tracking_YTD_' + new Date().toISOString().slice(0,10) + '.xlsx');
 }
@@ -7178,28 +7275,56 @@ function exportGIExcel() {
   if (!GI_RAW || !GI_RAW.length) { alert('No General Info data loaded'); return; }
   var wb = XLSX.utils.book_new();
 
-  // Sheet 1: Full Team Directory
-  var headers = ['Name', 'Designation', 'Unit/Dept', 'Department', 'Contact', 'Responsibility', 'Outlet', 'Branch', 'Report To', 'BU Type', 'Account No'];
-  var rows = GI_RAW.map(function(r) {
-    return [
+  // ── Sheet 1: Dashboard Summary View ──────────────────────────────
+  var s1 = [
+    ['AKI GROUP — GENERAL INFORMATION & TEAM DIRECTORY'],
+    ['Generated: ' + new Date().toLocaleDateString('en-AE') + '  |  Total Members: ' + GI_RAW.length],
+    [''],
+    ['Name','Designation','Unit / Dept','Department','Contact','Responsibility','Outlet','Branch','Report To','BU Type','Account No']
+  ];
+  GI_RAW.forEach(function(r) {
+    s1.push([
       giGetVal(r,'name'), giGetVal(r,'designation'), giGetVal(r,'unit'),
       giGetVal(r,'dept'), giGetVal(r,'contact'), giGetVal(r,'responsibility'),
       giGetVal(r,'outlet'), giGetVal(r,'branch'), giGetVal(r,'reportTo'),
       giGetVal(r,'buType'), giGetVal(r,'acctNo')
-    ];
+    ]);
   });
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([headers].concat(rows)), 'Team Directory');
+  var wsGI = XLSX.utils.aoa_to_sheet(s1);
+  wsGI['!cols'] = [{wch:22},{wch:20},{wch:16},{wch:14},{wch:16},{wch:24},{wch:20},{wch:16},{wch:18},{wch:12},{wch:14}];
+  // Style header rows
+  for (var R=0; R<s1.length; R++) {
+    for (var Ci=0; Ci<s1[R].length; Ci++) {
+      var addr = XLSX.utils.encode_cell({r:R,c:Ci});
+      if (!wsGI[addr]) continue;
+      var isTitle = R<2, isHdr = R===3;
+      wsGI[addr].s = {
+        font:{ name:'Calibri', sz: isTitle?12:11, bold:isTitle||isHdr, color:{rgb: isTitle?'C9A84C': isHdr?'C9A84C':'F5F0E8'} },
+        fill:{ patternType:'solid', fgColor:{rgb: isTitle?'0D1117': isHdr?'1A1A2E': R%2===0?'0D1117':'161B22'} },
+        border:{ bottom:{style:'thin',color:{rgb:'30363D'}}, right:{style:'thin',color:{rgb:'30363D'}} },
+        alignment:{ horizontal:Ci===0?'left':'left', vertical:'center', wrapText:true }
+      };
+    }
+  }
+  XLSX.utils.book_append_sheet(wb, wsGI, 'Team Directory');
 
-  // Sheet 2: Merchandisers only
-  var merch = GI_RAW.filter(function(r){ return giGetVal(r,'unit') === 'Merchandisers'; });
+  // ── Sheet 2: Merchandisers ────────────────────────────────────────
+  var merch = GI_RAW.filter(function(r){ return giGetVal(r,'unit')==='Merchandisers'; });
   if (merch.length) {
-    var mRows = merch.map(function(r) {
-      return [giGetVal(r,'name'), giGetVal(r,'designation'), giGetVal(r,'contact'), giGetVal(r,'outlet'), giGetVal(r,'branch'), giGetVal(r,'buType'), giGetVal(r,'acctNo')];
+    var s2 = [['Name','Designation','Contact','Outlet','Branch','BU Type','Account No']];
+    merch.forEach(function(r) {
+      s2.push([giGetVal(r,'name'),giGetVal(r,'designation'),giGetVal(r,'contact'),giGetVal(r,'outlet'),giGetVal(r,'branch'),giGetVal(r,'buType'),giGetVal(r,'acctNo')]);
     });
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['Name','Designation','Contact','Outlet','Branch','BU Type','Account No']].concat(mRows)), 'Merchandisers');
+    var wsM = XLSX.utils.aoa_to_sheet(s2);
+    wsM['!cols'] = [{wch:22},{wch:20},{wch:16},{wch:22},{wch:16},{wch:12},{wch:14}];
+    for (var Ci=0; Ci<7; Ci++) {
+      var addr = XLSX.utils.encode_cell({r:0,c:Ci});
+      if (wsM[addr]) wsM[addr].s = { font:{name:'Calibri',sz:11,bold:true,color:{rgb:'C9A84C'}}, fill:{patternType:'solid',fgColor:{rgb:'1A1A2E'}}, alignment:{horizontal:'left'} };
+    }
+    XLSX.utils.book_append_sheet(wb, wsM, 'Merchandisers');
   }
 
-  downloadExcel(wb, 'General_Info_TeamDirectory_' + new Date().toISOString().slice(0,10) + '.xlsx');
+  downloadExcel(wb, 'General_Info_' + new Date().toISOString().slice(0,10) + '.xlsx');
 }
 
 function exportSalesExcel() {
@@ -7207,41 +7332,70 @@ function exportSalesExcel() {
   var d = SALES_DATA;
   var wb = XLSX.utils.book_new();
 
-  // Sheet 1: Summary
-  var sumRows = [
-    ['Metric', 'Orders', 'Value (AED)'],
-    ['Total', d.totalOrders||0, Math.round(d.totalVal||0)],
-    ['Food', d.foodOrders||0, Math.round(d.foodVal||0)],
-    ['Non-Food', d.nfOrders||0, Math.round(d.nfVal||0)],
-    ['Frozen', d.frozenOrders||0, Math.round(d.frozenVal||0)],
-    ['Ambient', d.ambientOrders||0, Math.round(d.ambientVal||0)],
-    ['Other', d.otherOrders||0, Math.round(d.otherVal||0)],
-    ['Date', d.date||'', ''],
-    ['File', d.fileName||'', '']
+  // ── Sheet 1: Dashboard Summary ────────────────────────────────────
+  var s1 = [
+    ['AKI GROUP — ORDER SUMMARY DASHBOARD'],
+    ['Date: ' + (d.date||'') + '  |  File: ' + (d.fileName||'')],
+    [''],
+    ['OVERVIEW', 'Orders', 'Value (AED)', ''],
+    ['Total Orders', d.totalOrders||0, Math.round(d.totalVal||0), ''],
+    ['Food', d.foodOrders||0, Math.round(d.foodVal||0), ''],
+    ['Non-Food', d.nfOrders||0, Math.round(d.nfVal||0), ''],
+    ['Frozen', d.frozenOrders||0, Math.round(d.frozenVal||0), ''],
+    ['Ambient', d.ambientOrders||0, Math.round(d.ambientVal||0), ''],
+    [''],
   ];
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(sumRows), 'Summary');
-
-  // Sheet 2: By Organisation
   if (d.orgMap) {
-    var oHeaders = ['Organisation', 'Orders', 'Value (AED)'];
-    var oRows = Object.keys(d.orgMap).map(function(org) {
+    s1.push(['BY ORGANISATION','Orders','Value (AED)','']);
+    Object.keys(d.orgMap).forEach(function(org) {
       var v = d.orgMap[org];
-      return [org, v.orders||0, Math.round(v.value||0)];
+      s1.push([org, v.orders||0, Math.round(v.value||0), '']);
     });
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([oHeaders].concat(oRows)), 'By Organisation');
+    s1.push(['']);
   }
-
-  // Sheet 3: By Status
   if (d.statusMap) {
-    var sHeaders = ['Status', 'Orders', 'Value (AED)'];
-    var sRows = Object.keys(d.statusMap).map(function(st) {
+    s1.push(['BY STATUS','Orders','Value (AED)','']);
+    Object.keys(d.statusMap).forEach(function(st) {
       var v = d.statusMap[st];
-      return [st, v.orders||0, Math.round(v.value||0)];
+      s1.push([st, v.orders||0, Math.round(v.value||0), '']);
     });
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([sHeaders].concat(sRows)), 'By Status');
   }
+  var ws1 = XLSX.utils.aoa_to_sheet(s1);
+  ws1['!cols'] = [{wch:22},{wch:14},{wch:16},{wch:10}];
+  for (var R=0; R<s1.length; R++) {
+    for (var Ci=0; Ci<4; Ci++) {
+      var addr = XLSX.utils.encode_cell({r:R,c:Ci});
+      if (!ws1[addr]) continue;
+      var v0 = s1[R][0];
+      var isTitleRow = R<2;
+      var isSectionHdr = (v0==='OVERVIEW'||v0==='BY ORGANISATION'||v0==='BY STATUS');
+      var isTotalRow = (v0==='Total Orders');
+      ws1[addr].s = {
+        font:{ name:'Calibri', sz:11, bold:isTitleRow||isSectionHdr||isTotalRow, color:{rgb: isTitleRow?'C9A84C': isSectionHdr?'C9A84C': isTotalRow?'C9A84C':'F5F0E8'} },
+        fill:{ patternType:'solid', fgColor:{rgb: isTitleRow?'0D1117': isSectionHdr?'1A1A2E': isTotalRow?'2A2410': R%2===0?'0D1117':'161B22'} },
+        border:{ bottom:{style:'thin',color:{rgb:'30363D'}}, right:{style:'thin',color:{rgb:'30363D'}} },
+        alignment:{ horizontal: Ci===0?'left':'center', vertical:'center' }
+      };
+      if (Ci===2 && !isTitleRow && !isSectionHdr && typeof ws1[addr].v === 'number') ws1[addr].z = '#,##0';
+    }
+  }
+  XLSX.utils.book_append_sheet(wb, ws1, 'Dashboard Summary');
 
-  downloadExcel(wb, 'Order_Summary_' + (d.date||'').replace(/\//g,'-') + '.xlsx');
+  // ── Sheet 2: Raw Data ─────────────────────────────────────────────
+  var rawH = ['Category','Sub-Category','Orders','Value (AED)'];
+  var rawD = [
+    ['Food','Total',d.foodOrders||0,Math.round(d.foodVal||0)],
+    ['Non-Food','Total',d.nfOrders||0,Math.round(d.nfVal||0)],
+    ['Frozen','Total',d.frozenOrders||0,Math.round(d.frozenVal||0)],
+    ['Ambient','Total',d.ambientOrders||0,Math.round(d.ambientVal||0)],
+  ];
+  if (d.orgMap) Object.keys(d.orgMap).forEach(function(org){ var v=d.orgMap[org]; rawD.push(['Organisation',org,v.orders||0,Math.round(v.value||0)]); });
+  if (d.statusMap) Object.keys(d.statusMap).forEach(function(st){ var v=d.statusMap[st]; rawD.push(['Status',st,v.orders||0,Math.round(v.value||0)]); });
+  var ws2 = XLSX.utils.aoa_to_sheet([rawH].concat(rawD));
+  ws2['!cols'] = [{wch:18},{wch:22},{wch:12},{wch:16}];
+  XLSX.utils.book_append_sheet(wb, ws2, 'Raw Data');
+
+  downloadExcel(wb, 'Order_Summary_' + (d.date||new Date().toISOString().slice(0,10)).replace(/\//g,'-') + '.xlsx');
 }
 
 function exportReturnsExcel() {
@@ -7249,45 +7403,74 @@ function exportReturnsExcel() {
   var s = RET_FULL_SUMMARY;
   var wb = XLSX.utils.book_new();
 
-  // Sheet 1: Summary
-  var sumRows = [
-    ['Metric', 'Count', 'Value (AED)'],
-    ['Total Returns', (s.invCount||0)+(s.grvCount||0), Math.round(s.totalVal||0)],
+  // ── Sheet 1: Dashboard Summary ────────────────────────────────────
+  var totalCount = (s.invCount||0) + (s.grvCount||0);
+  var s1 = [
+    ['AKI GROUP — MARKET RETURNS DASHBOARD'],
+    ['Generated: ' + new Date().toLocaleDateString('en-AE')],
+    [''],
+    ['OVERVIEW','Count','Value (AED)'],
+    ['Total Returns', totalCount, Math.round(s.totalVal||0)],
     ['Invoice Cancellations', s.invCount||0, Math.round(s.invVal||0)],
-    ['GRV Returns', s.grvCount||0, Math.round(s.grvVal||0)]
+    ['GRV Returns', s.grvCount||0, Math.round(s.grvVal||0)],
+    [''],
   ];
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(sumRows), 'Summary');
-
-  // Sheet 2: By Warehouse
   if (s.byWH) {
-    var wHeaders = ['Warehouse', 'Total', 'Value (AED)', 'Invoice Cancel', 'GRV'];
-    var wRows = Object.keys(s.byWH).map(function(wh) {
-      var v = s.byWH[wh];
-      return [wh, v.count||0, Math.round(v.val||0), v.inv||0, v.grv||0];
+    s1.push(['BY WAREHOUSE','Count','Value (AED)','Invoice Cancel','GRV']);
+    Object.keys(s.byWH).forEach(function(wh) {
+      var v=s.byWH[wh];
+      s1.push([wh, v.count||0, Math.round(v.val||0), v.inv||0, v.grv||0]);
     });
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([wHeaders].concat(wRows)), 'By Warehouse');
+    s1.push(['']);
   }
-
-  // Sheet 3: By Month
   if (s.byMonth) {
-    var mHeaders = ['Month', 'Total', 'Value (AED)', 'Invoice Cancel', 'GRV'];
-    var mRows = Object.keys(s.byMonth).sort().map(function(mo) {
-      var v = s.byMonth[mo];
-      var mn = MONTH_NAMES[parseInt(mo)] || mo;
-      return [mn, v.count||0, Math.round(v.val||0), v.inv||0, v.grv||0];
+    s1.push(['BY MONTH','Count','Value (AED)','Invoice Cancel','GRV']);
+    Object.keys(s.byMonth).sort().forEach(function(mo) {
+      var v=s.byMonth[mo];
+      var mn=MONTH_NAMES[parseInt(mo)]||mo;
+      s1.push([mn, v.count||0, Math.round(v.val||0), v.inv||0, v.grv||0]);
     });
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([mHeaders].concat(mRows)), 'By Month');
+    s1.push(['']);
   }
-
-  // Sheet 4: By BU / Category
   if (s.byBU) {
-    var bHeaders = ['BU / Category', 'Total', 'Value (AED)'];
-    var bRows = Object.keys(s.byBU).map(function(bu) {
-      var v = s.byBU[bu];
-      return [bu, v.count||0, Math.round(v.val||0)];
+    s1.push(['BY BU / CATEGORY','Count','Value (AED)']);
+    Object.keys(s.byBU).forEach(function(bu) {
+      var v=s.byBU[bu];
+      s1.push([bu, v.count||0, Math.round(v.val||0)]);
     });
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([bHeaders].concat(bRows)), 'By BU');
   }
+  var ws1 = XLSX.utils.aoa_to_sheet(s1);
+  ws1['!cols'] = [{wch:22},{wch:12},{wch:16},{wch:16},{wch:12}];
+  for (var R=0; R<s1.length; R++) {
+    for (var Ci=0; Ci<5; Ci++) {
+      var addr = XLSX.utils.encode_cell({r:R,c:Ci});
+      if (!ws1[addr]) continue;
+      var v0 = s1[R][0];
+      var isTitleRow = R<2;
+      var isSectionHdr = (v0==='OVERVIEW'||v0==='BY WAREHOUSE'||v0==='BY MONTH'||v0==='BY BU / CATEGORY');
+      var isTotalRow = (v0==='Total Returns');
+      ws1[addr].s = {
+        font:{ name:'Calibri', sz:11, bold:isTitleRow||isSectionHdr||isTotalRow, color:{rgb: isTitleRow||isSectionHdr?'C9A84C': isTotalRow?'C9A84C':'F5F0E8'} },
+        fill:{ patternType:'solid', fgColor:{rgb: isTitleRow?'0D1117': isSectionHdr?'1A1A2E': isTotalRow?'2A2410': R%2===0?'0D1117':'161B22'} },
+        border:{ bottom:{style:'thin',color:{rgb:'30363D'}}, right:{style:'thin',color:{rgb:'30363D'}} },
+        alignment:{ horizontal: Ci===0?'left':'center', vertical:'center' }
+      };
+      if ((Ci===2||Ci===3) && typeof ws1[addr].v==='number') ws1[addr].z = '#,##0';
+    }
+  }
+  XLSX.utils.book_append_sheet(wb, ws1, 'Dashboard Summary');
+
+  // ── Sheet 2: Raw Data ─────────────────────────────────────────────
+  var rawH = ['Category','Sub-Category','Count','Value (AED)','Invoice Cancel','GRV'];
+  var rawD = [
+    ['Overview','Total Returns', totalCount, Math.round(s.totalVal||0), s.invCount||0, s.grvCount||0],
+  ];
+  if (s.byWH) Object.keys(s.byWH).forEach(function(wh){ var v=s.byWH[wh]; rawD.push(['Warehouse',wh,v.count||0,Math.round(v.val||0),v.inv||0,v.grv||0]); });
+  if (s.byMonth) Object.keys(s.byMonth).sort().forEach(function(mo){ var v=s.byMonth[mo]; rawD.push(['Month',MONTH_NAMES[parseInt(mo)]||mo,v.count||0,Math.round(v.val||0),v.inv||0,v.grv||0]); });
+  if (s.byBU) Object.keys(s.byBU).forEach(function(bu){ var v=s.byBU[bu]; rawD.push(['BU/Category',bu,v.count||0,Math.round(v.val||0),'','']); });
+  var ws2 = XLSX.utils.aoa_to_sheet([rawH].concat(rawD));
+  ws2['!cols'] = [{wch:16},{wch:20},{wch:12},{wch:16},{wch:16},{wch:12}];
+  XLSX.utils.book_append_sheet(wb, ws2, 'Raw Data');
 
   downloadExcel(wb, 'Market_Returns_' + new Date().toISOString().slice(0,10) + '.xlsx');
 }
