@@ -1462,23 +1462,69 @@ app.get('/twilio-sdk.js', function(req, res) {
 });
 
 // ══════════════════════════════════════════════════════════
-// AUTOMATION TRACKING API ROUTES
+// AUTOMATION TRACKING API ROUTES — PER-MONTH MERGE
 // ══════════════════════════════════════════════════════════
 var automationData = null;
 
+// New table structure: one row per month
+// automation_months: month TEXT PK, auto INT, manual INT, total INT, org_data JSONB, updated_at, updated_by, file_name
+
+async function initAutomationMonthsTable() {
+  try {
+    await pool.query(`CREATE TABLE IF NOT EXISTS automation_months (
+      month TEXT PRIMARY KEY,
+      auto_count INT DEFAULT 0,
+      manual_count INT DEFAULT 0,
+      total_count INT DEFAULT 0,
+      org_data JSONB DEFAULT '{}'::jsonb,
+      updated_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_by TEXT,
+      file_name TEXT
+    )`);
+    console.log('automation_months table ready');
+  } catch(e) { console.error('automation_months init:', e.message); }
+}
+initAutomationMonthsTable();
+
 async function loadAutomationFromDB() {
   try {
-    var r = await pool.query('SELECT * FROM automation_data ORDER BY uploaded_at DESC LIMIT 1');
+    // Load from new per-month table
+    var r = await pool.query('SELECT * FROM automation_months ORDER BY month');
     if (r.rows.length) {
+      var monthData = {}, orgData = {}, totalAuto = 0, totalManual = 0;
+      var latestFile = '', latestBy = '', latestAt = null;
+      r.rows.forEach(function(row) {
+        monthData[row.month] = { auto: row.auto_count, manual: row.manual_count, total: row.total_count };
+        totalAuto   += row.auto_count;
+        totalManual += row.manual_count;
+        // Merge org data
+        var od = row.org_data || {};
+        Object.keys(od).forEach(function(org) {
+          if (!orgData[org]) orgData[org] = { total:0, auto:0, manual:0, ots:[] };
+          orgData[org].total  += od[org].total  || 0;
+          orgData[org].auto   += od[org].auto   || 0;
+          orgData[org].manual += od[org].manual || 0;
+          (od[org].ots||[]).forEach(function(ot){
+            if (orgData[org].ots.indexOf(ot) === -1) orgData[org].ots.push(ot);
+          });
+        });
+        if (!latestAt || new Date(row.updated_at) > new Date(latestAt)) {
+          latestAt = row.updated_at; latestFile = row.file_name; latestBy = row.updated_by;
+        }
+      });
+      var total = totalAuto + totalManual;
+      var rate  = total ? Math.round(totalAuto/total*100) : 0;
+      var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      var sortedMonths = months.filter(function(m){ return monthData[m]; });
+      var latestMonth  = sortedMonths[sortedMonths.length-1] || '';
+      var latestRate   = latestMonth ? Math.round(monthData[latestMonth].auto/monthData[latestMonth].total*100) : 0;
       automationData = {
-        uploadedAt: r.rows[0].uploaded_at,
-        uploadedBy: r.rows[0].uploaded_by,
-        fileName:   r.rows[0].file_name,
-        totalRecords: r.rows[0].total_records,
-        summary:    r.rows[0].summary,
-        rows:       r.rows[0].rows
+        uploadedAt: latestAt, uploadedBy: latestBy, fileName: latestFile,
+        totalRecords: total, rows: monthData, orgRows: orgData,
+        summary: { total, auto: totalAuto, manual: totalManual, rate, orgRows: orgData },
+        sortedMonths, latestMonth, latestRate
       };
-      console.log('Automation data loaded from DB:', automationData.totalRecords, 'records');
+      console.log('Automation loaded from DB:', total, 'total records across', sortedMonths.length, 'months:', sortedMonths.join(', '));
     }
   } catch(e) { console.error('Automation DB load:', e.message); }
 }
@@ -1486,29 +1532,76 @@ loadAutomationFromDB();
 
 app.get('/api/automation/status', requireAuth, function(req, res) {
   if (!automationData) return res.json({ hasData: false });
-  res.json({ hasData: true, uploadedAt: automationData.uploadedAt, uploadedBy: automationData.uploadedBy, fileName: automationData.fileName, totalRecords: automationData.totalRecords, summary: automationData.summary, rows: automationData.rows });
+  res.json({
+    hasData: true,
+    uploadedAt:   automationData.uploadedAt,
+    uploadedBy:   automationData.uploadedBy,
+    fileName:     automationData.fileName,
+    totalRecords: automationData.totalRecords,
+    summary:      automationData.summary,
+    rows:         automationData.rows,
+    orgRows:      automationData.orgRows || {}
+  });
 });
 
 app.post('/api/automation/upload', requireAuth, requireRole('superadmin','subadmin'), async function(req, res) {
   try {
-    var { rows, fileName, totalRecords, summary } = req.body;
-    if (!rows || !rows.length) return res.status(400).json({ error: 'No rows provided' });
-    automationData = { uploadedAt: new Date(), uploadedBy: req.user.username, fileName: fileName || 'automation.xlsx', totalRecords: totalRecords || rows.length, summary, rows };
-    try {
-      await pool.query('DELETE FROM automation_data');
-      await pool.query('INSERT INTO automation_data (uploaded_by, file_name, total_records, summary, rows) VALUES ($1,$2,$3,$4,$5)',
-        [req.user.username, automationData.fileName, automationData.totalRecords, JSON.stringify(summary), JSON.stringify(rows)]);
-      console.log('Automation data saved to DB:', rows.length, 'records');
-    } catch(dbErr) { console.error('Automation DB save:', dbErr.message); }
-    await auditLog(req.user.uid, req.user.username, 'UPLOAD', 'Automation: ' + automationData.fileName, '');
-    res.json({ success: true, totalRecords: automationData.totalRecords });
-  } catch(e) { res.status(500).json({ error: e.message }); }
+    var { rows, orgRows, fileName, totalRecords, summary } = req.body;
+    if (!rows) return res.status(400).json({ error: 'No data provided' });
+
+    // rows = { Jan: {auto, manual, total}, Feb: {...}, ... }
+    // orgRows = { 'Victory-Food': {total, auto, manual, ots:[...]}, ... }
+    var monthsUpdated = [];
+
+    for (var month in rows) {
+      var md = rows[month];
+      var od = {};
+      // Build org_data for this month from orgRows — approximate split
+      if (orgRows) {
+        Object.keys(orgRows).forEach(function(org) {
+          od[org] = orgRows[org]; // store full org totals per upload
+        });
+      }
+      await pool.query(`
+        INSERT INTO automation_months (month, auto_count, manual_count, total_count, org_data, updated_at, updated_by, file_name)
+        VALUES ($1, $2, $3, $4, $5, NOW(), $6, $7)
+        ON CONFLICT (month) DO UPDATE SET
+          auto_count   = EXCLUDED.auto_count,
+          manual_count = EXCLUDED.manual_count,
+          total_count  = EXCLUDED.total_count,
+          org_data     = EXCLUDED.org_data,
+          updated_at   = NOW(),
+          updated_by   = EXCLUDED.updated_by,
+          file_name    = EXCLUDED.file_name
+      `, [month, md.auto||0, md.manual||0, md.total||0, JSON.stringify(od), req.user.username, fileName||'automation.xlsx']);
+      monthsUpdated.push(month);
+    }
+
+    console.log('Automation months upserted:', monthsUpdated.join(', '));
+    await auditLog(req.user.uid, req.user.username, 'UPLOAD', 'Automation: ' + fileName + ' months: ' + monthsUpdated.join(','), '');
+
+    // Reload full aggregated data from DB
+    await loadAutomationFromDB();
+    res.json({ success: true, monthsUpdated: monthsUpdated, totalRecords: automationData ? automationData.totalRecords : totalRecords });
+  } catch(e) {
+    console.error('Automation upload error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
 });
 
 app.delete('/api/automation/clear', requireAuth, requireRole('superadmin'), async function(req, res) {
   try {
-    await pool.query('DELETE FROM automation_data');
+    await pool.query('DELETE FROM automation_months');
     automationData = null;
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// Per-month delete endpoint (optional future use)
+app.delete('/api/automation/month/:month', requireAuth, requireRole('superadmin'), async function(req, res) {
+  try {
+    await pool.query('DELETE FROM automation_months WHERE month=$1', [req.params.month]);
+    await loadAutomationFromDB();
     res.json({ success: true });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
