@@ -1261,7 +1261,7 @@ footer span{color:var(--gold);}
       </div>
 
       <!-- Upload status -->
-      <div id="auto-status" style="font-size:12px;color:var(--muted);margin-bottom:14px;padding:0 2px;"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;"><div id="auto-status" style="font-size:12px;color:var(--muted);"></div><button id="auto-excel-btn" onclick="exportAutoExcel()" style="display:none;background:rgba(201,168,76,0.12);border:1px solid var(--gold);color:var(--gold);font-size:11px;font-weight:700;letter-spacing:1px;padding:6px 16px;cursor:pointer;font-family:Montserrat,sans-serif;">⬇ DOWNLOAD EXCEL</button></div>
 
       <!-- Empty state -->
       <div id="auto-empty" style="text-align:center;padding:60px 24px;color:var(--muted);">
@@ -1302,7 +1302,7 @@ footer span{color:var(--gold);}
       <!-- Monthly table + bar chart -->
       <div id="auto-main-grid" style="display:none;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
         <div class="box">
-          <div class="box-title">📅 Monthly Breakdown<button onclick="exportAutoExcel()" style="background:rgba(201,168,76,0.12);border:1px solid var(--gold);color:var(--gold);font-size:11px;font-weight:700;letter-spacing:1px;padding:6px 14px;cursor:pointer;font-family:Montserrat,sans-serif;float:right;margin-top:-2px;">⬇ EXCEL</button></div>
+          <div class="box-title">📅 Monthly Breakdown</div>
           <div style="overflow-x:auto;">
             <table class="data-table" style="width:100%;">
               <thead><tr>
@@ -7010,6 +7010,7 @@ function renderAutoFromAggregated(agg) {
   document.getElementById('auto-kpi-row').style.display = 'grid';
   document.getElementById('auto-main-grid').style.display = 'grid';
   document.getElementById('auto-org-section').style.display = 'block';
+  var exBtn = document.getElementById('auto-excel-btn'); if(exBtn) exBtn.style.display = 'block';
 
   // Monthly table
   var tbody = '';
@@ -7083,6 +7084,7 @@ function renderAutoTracking(data) {
   document.getElementById('auto-kpi-row').style.display = 'grid';
   document.getElementById('auto-main-grid').style.display = 'grid';
   document.getElementById('auto-org-section').style.display = 'block';
+  var exBtn = document.getElementById('auto-excel-btn'); if(exBtn) exBtn.style.display = 'block';
   var tbody = '';
   sortedMonths.forEach(function(m) {
     var d = monthData[m], p = Math.round(d.auto/d.total*100);
@@ -7113,41 +7115,50 @@ function renderAutoTracking(data) {
 // ═══════════════════════════════════════════════════════════
 
 var XL_CSS = `
-  body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; background: #0d1117; color: #f5f0e8; margin: 0; padding: 16px; }
-  h1 { color: #c9a84c; font-size: 14pt; margin: 0 0 2px 0; letter-spacing: 1px; }
-  .sub { color: #7d8590; font-size: 10pt; margin-bottom: 18px; }
-  .section-title { color: #c9a84c; font-size: 11pt; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin: 18px 0 8px 0; border-bottom: 1px solid #30363d; padding-bottom: 4px; }
-  table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
-  th { background: #1a1a2e; color: #c9a84c; font-size: 11pt; font-weight: bold; padding: 8px 12px; text-align: center; border: 1px solid #30363d; text-transform: uppercase; letter-spacing: 0.5px; }
-  th:first-child { text-align: left; }
-  td { padding: 7px 12px; font-size: 11pt; border: 1px solid #30363d; text-align: center; color: #f5f0e8; }
-  td:first-child { text-align: left; font-weight: 600; }
-  tr:nth-child(even) td { background: #161b22; }
-  tr:nth-child(odd)  td { background: #0d1117; }
-  .total-row td { background: #2a2410 !important; color: #c9a84c !important; font-weight: bold !important; border-top: 2px solid #c9a84c; }
-  .pct-high { color: #3fb950 !important; font-weight: bold; }
-  .pct-mid  { color: #e3b341 !important; font-weight: bold; }
-  .pct-low  { color: #f85149 !important; font-weight: bold; }
-  .green { color: #3fb950 !important; }
-  .red   { color: #f85149 !important; }
-  .blue  { color: #58a6ff !important; }
-  .gold  { color: #c9a84c !important; }
-  .kpi-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 20px; }
-  .kpi-card { background: #161b22; border: 1px solid #30363d; border-radius: 4px; padding: 12px 16px; }
-  .kpi-label { color: #c9a84c; font-size: 9pt; font-weight: bold; text-transform: uppercase; letter-spacing: 0.8px; }
-  .kpi-value { font-size: 22pt; font-weight: bold; margin: 4px 0 2px; }
-  .kpi-sub { color: #7d8590; font-size: 9pt; }
-  .bar-wrap { display: flex; align-items: center; gap: 10px; margin: 6px 0; }
-  .bar-label { min-width: 40px; text-align: right; color: #c9a84c; font-weight: bold; font-size: 11pt; }
-  .bar-track { flex: 1; background: #21262d; border-radius: 3px; height: 22px; overflow: hidden; position: relative; }
-  .bar-fill { height: 100%; background: linear-gradient(90deg, #238636, #3fb950); display: flex; align-items: center; justify-content: flex-end; padding-right: 8px; }
-  .bar-fill span { color: #fff; font-size: 10pt; font-weight: bold; }
-  .bar-total { min-width: 60px; text-align: right; color: #f5f0e8; font-size: 11pt; }
-  .prog-track { background: #21262d; border-radius: 3px; height: 10px; overflow: hidden; min-width: 80px; }
-  .prog-fill { height: 100%; border-radius: 3px; }
+body{font-family:Calibri,Arial,sans-serif;font-size:11pt;background:#0d1117;color:#f5f0e8;margin:0;padding:20px;}
+h1{color:#c9a84c;font-size:15pt;margin:0 0 4px 0;letter-spacing:1px;}
+.sub{color:#7d8590;font-size:10pt;margin-bottom:20px;}
+.section-title{color:#c9a84c;font-size:11pt;font-weight:bold;text-transform:uppercase;letter-spacing:1px;margin:20px 0 8px 0;border-bottom:1px solid #30363d;padding-bottom:4px;}
+table{border-collapse:collapse;width:100%;margin-bottom:24px;table-layout:fixed;}
+th{background:#1a1a2e;color:#c9a84c;font-size:11pt;font-weight:bold;padding:9px 10px;text-align:center;border:1px solid #30363d;text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap;}
+th:first-child,th:nth-child(2){text-align:left;}
+td{padding:8px 10px;font-size:11pt;border:1px solid #30363d;text-align:center;color:#f5f0e8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+td:first-child{text-align:left;font-weight:600;}
+td:nth-child(2){text-align:left;font-size:10pt;color:#d4c89a;}
+tr:nth-child(even) td{background:#161b22;}
+tr:nth-child(odd) td{background:#0d1117;}
+.total-row td{background:#2a2410!important;color:#c9a84c!important;font-weight:bold!important;border-top:2px solid #c9a84c;}
+.pct-high{color:#3fb950!important;font-weight:bold;}
+.pct-mid{color:#e3b341!important;font-weight:bold;}
+.pct-low{color:#f85149!important;font-weight:bold;}
+.green{color:#3fb950!important;}
+.red{color:#f85149!important;}
+.gold{color:#c9a84c!important;}
+.blue{color:#58a6ff!important;}
+/* KPI row - use table for Excel compatibility */
+.kpi-table{width:100%;border-collapse:separate;border-spacing:8px;margin-bottom:20px;}
+.kpi-table td{background:#161b22;border:1px solid #30363d;border-radius:4px;padding:12px 14px;width:20%;vertical-align:top;text-align:left;}
+.kpi-label{color:#c9a84c;font-size:9pt;font-weight:bold;text-transform:uppercase;letter-spacing:0.8px;display:block;margin-bottom:4px;}
+.kpi-value{font-size:20pt;font-weight:bold;display:block;margin-bottom:2px;}
+.kpi-sub{color:#7d8590;font-size:9pt;display:block;}
+/* Bar chart as a proper table */
+.bar-table{width:100%;border-collapse:collapse;margin-bottom:24px;}
+.bar-table td{border:none;padding:4px 6px;background:transparent!important;}
+.bar-label-cell{width:50px;text-align:right;color:#c9a84c;font-weight:bold;font-size:11pt;}
+.bar-track-cell{width:60%;}
+.bar-track{background:#21262d;border-radius:3px;height:22px;position:relative;}
+.bar-fill{height:22px;border-radius:3px;background:linear-gradient(90deg,#238636,#3fb950);display:table;min-width:30px;}
+.bar-fill-text{display:table-cell;vertical-align:middle;text-align:right;padding-right:8px;color:#fff;font-size:10pt;font-weight:bold;white-space:nowrap;}
+.bar-total-cell{text-align:right;color:#f5f0e8;font-size:11pt;width:80px;}
+/* Progress bar */
+.prog-track{background:#21262d;border-radius:3px;height:10px;overflow:hidden;min-width:80px;}
+.prog-fill{height:10px;border-radius:3px;}
 `;
 
-function pctClass(p) {
+function pctClass(p){return p>=80?'pct-high':p>=55?'pct-mid':'pct-low';}
+function pctColor(p){return p>=80?'#3fb950':p>=55?'#e3b341':'#f85149';}
+
+(p) {
   return p >= 80 ? 'pct-high' : p >= 55 ? 'pct-mid' : 'pct-low';
 }
 function pctColor(p) {
@@ -7170,65 +7181,84 @@ function exportAutoExcel() {
   var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   var date = new Date().toLocaleDateString('en-AE');
 
-  var html = '<h1>⚡ AUTOMATION TRACKING YTD 2026</h1>';
-  html += '<div class="sub">DoxtrE Auto vs Manual Booking &nbsp;·&nbsp; AKI Group &nbsp;·&nbsp; Generated: ' + date + '</div>';
+  var html = '<h1>&#9889; AUTOMATION TRACKING YTD 2026</h1>';
+  html += '<div class="sub">DoxtrE Auto vs Manual Booking &nbsp;&middot;&nbsp; AKI Group &nbsp;&middot;&nbsp; Generated: ' + date + '</div>';
 
-  // KPI Cards
-  html += '<div class="kpi-grid">';
+  // KPI cards — table layout for Excel
+  html += '<table class="kpi-table"><tr>';
   var kpis = [
-    { label:'Total Orders YTD', val: ad.total.toLocaleString(), sub: 'Jan \u2013 ' + (ad.latestMonth||'') + ' 2026', col:'#c9a84c' },
-    { label:'Auto Booked',       val: ad.totalAuto.toLocaleString(), sub: ad.rate + '% of total', col:'#3fb950' },
-    { label:'Manually Booked',   val: ad.totalManual.toLocaleString(), sub: Math.round(ad.totalManual/ad.total*100) + '% of total', col:'#f85149' },
-    { label:'Automation Rate',   val: ad.rate + '%', sub: 'YTD average', col:'#58a6ff' },
-    { label:'Latest Month',      val: (ad.latestRate||0) + '%', sub: (ad.latestMonth||'') + ' 2026 \u2191', col:'#a371f7' },
+    {label:'Total Orders YTD', val:ad.total.toLocaleString(), sub:'Jan &ndash; '+(ad.latestMonth||'')+' 2026', col:'#c9a84c'},
+    {label:'Auto Booked',       val:ad.totalAuto.toLocaleString(), sub:ad.rate+'% of total', col:'#3fb950'},
+    {label:'Manually Booked',   val:ad.totalManual.toLocaleString(), sub:Math.round(ad.totalManual/ad.total*100)+'% of total', col:'#f85149'},
+    {label:'Automation Rate',   val:ad.rate+'%', sub:'YTD average', col:'#58a6ff'},
+    {label:'Latest Month',      val:(ad.latestRate||0)+'%', sub:(ad.latestMonth||'')+' 2026 &#8593;', col:'#a371f7'},
   ];
-  kpis.forEach(function(k) {
-    html += '<div class="kpi-card"><div class="kpi-label">' + k.label + '</div><div class="kpi-value" style="color:' + k.col + '">' + k.val + '</div><div class="kpi-sub">' + k.sub + '</div></div>';
+  kpis.forEach(function(k){
+    html += '<td><span class="kpi-label">'+k.label+'</span><span class="kpi-value" style="color:'+k.col+'">'+k.val+'</span><span class="kpi-sub">'+k.sub+'</span></td>';
   });
-  html += '</div>';
+  html += '</tr></table>';
 
-  // Monthly table + bar side by side
-  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">';
+  // Two column layout using nested table
+  html += '<table style="width:100%;border-collapse:collapse;margin-bottom:20px;"><tr><td style="width:50%;vertical-align:top;padding-right:12px;border:none;background:transparent;">';
 
-  // Monthly table
-  html += '<div><div class="section-title">📅 Monthly Breakdown</div>';
-  html += '<table><thead><tr><th>Month</th><th>Total</th><th>Auto</th><th>Manual</th><th>Auto %</th></tr></thead><tbody>';
-  months.forEach(function(m) {
+  // Monthly breakdown table
+  html += '<div class="section-title">&#128197; Monthly Breakdown</div>';
+  html += '<table><colgroup><col style="width:80px"><col style="width:100px"><col style="width:90px"><col style="width:100px"><col style="width:80px"></colgroup>';
+  html += '<thead><tr><th>Month</th><th>Total</th><th>Auto</th><th>Manual</th><th>Auto %</th></tr></thead><tbody>';
+  months.forEach(function(m){
     var d = ad.monthData ? ad.monthData[m] : null;
     if (!d) return;
     var p = Math.round(d.auto/d.total*100);
-    html += '<tr><td>' + m + '</td><td>' + d.total.toLocaleString() + '</td><td class="green">' + d.auto.toLocaleString() + '</td><td class="red">' + d.manual.toLocaleString() + '</td><td class="' + pctClass(p) + '">' + p + '%</td></tr>';
+    html += '<tr><td>'+m+'</td><td>'+d.total.toLocaleString()+'</td><td class="green">'+d.auto.toLocaleString()+'</td><td class="red">'+d.manual.toLocaleString()+'</td><td class="'+pctClass(p)+'">'+p+'%</td></tr>';
   });
-  html += '<tr class="total-row"><td>TOTAL</td><td>' + ad.total.toLocaleString() + '</td><td>' + ad.totalAuto.toLocaleString() + '</td><td>' + ad.totalManual.toLocaleString() + '</td><td>' + ad.rate + '%</td></tr>';
-  html += '</tbody></table></div>';
+  html += '<tr class="total-row"><td>TOTAL</td><td>'+ad.total.toLocaleString()+'</td><td>'+ad.totalAuto.toLocaleString()+'</td><td>'+ad.totalManual.toLocaleString()+'</td><td>'+ad.rate+'%</td></tr>';
+  html += '</tbody></table>';
 
-  // Bar chart
-  html += '<div><div class="section-title">📊 Auto vs Manual by Month</div>';
-  months.forEach(function(m) {
+  html += '</td><td style="width:50%;vertical-align:top;padding-left:12px;border:none;background:transparent;">';
+
+  // Bar chart — proper table layout
+  html += '<div class="section-title">&#128202; Auto vs Manual by Month</div>';
+  html += '<table class="bar-table"><colgroup><col style="width:50px"><col><col style="width:70px"></colgroup>';
+  months.forEach(function(m){
     var d = ad.monthData ? ad.monthData[m] : null;
     if (!d) return;
     var p = Math.round(d.auto/d.total*100);
-    html += '<div class="bar-wrap"><div class="bar-label">' + m + '</div><div class="bar-track"><div class="bar-fill" style="width:' + p + '%"><span>' + p + '%</span></div></div><div class="bar-total">' + d.total.toLocaleString() + '</div></div>';
+    html += '<tr>'
+      + '<td class="bar-label-cell">'+m+'</td>'
+      + '<td class="bar-track-cell"><div class="bar-track"><div class="bar-fill" style="width:'+p+'%"><div class="bar-fill-text">'+p+'%</div></div></div></td>'
+      + '<td class="bar-total-cell">'+d.total.toLocaleString()+'</td>'
+      + '</tr>';
   });
-  html += '</div>';
-  html += '</div>';
+  html += '</table>';
 
-  // Org table
-  html += '<div class="section-title">🏢 Organisation Breakdown — Auto-mapped from Order Type</div>';
-  html += '<table><thead><tr><th>Organisation</th><th>Order Type(s)</th><th>Total</th><th>Auto</th><th>Manual</th><th>Auto %</th><th>Progress</th></tr></thead><tbody>';
+  html += '</td></tr></table>';
+
+  // Organisation breakdown
+  html += '<div class="section-title">&#127970; Organisation Breakdown &mdash; Auto-mapped from Order Type</div>';
+  html += '<table><colgroup><col style="width:140px"><col style="width:260px"><col style="width:90px"><col style="width:90px"><col style="width:100px"><col style="width:70px"><col style="width:100px"></colgroup>';
+  html += '<thead><tr><th>Organisation</th><th>Order Type(s)</th><th>Total</th><th>Auto</th><th>Manual</th><th>Auto %</th><th>Progress</th></tr></thead><tbody>';
   var orgData = ad.orgData || {};
-  Object.keys(orgData).sort(function(a,b){ return orgData[b].total - orgData[a].total; }).forEach(function(org) {
+  Object.keys(orgData).sort(function(a,b){ return orgData[b].total - orgData[a].total; }).forEach(function(org){
     var d = orgData[org];
     var p = Math.round(d.auto/d.total*100);
     var ots = Array.isArray(d.ots) ? d.ots.join(', ') : (d.ots||'');
     var col = pctColor(p);
-    html += '<tr><td style="color:#c9a84c;font-weight:700">' + org + '</td><td style="color:#d4c89a;font-size:10pt">' + ots + '</td><td>' + d.total.toLocaleString() + '</td><td class="green">' + d.auto.toLocaleString() + '</td><td class="red">' + d.manual.toLocaleString() + '</td><td class="' + pctClass(p) + '">' + p + '%</td><td><div class="prog-track"><div class="prog-fill" style="width:' + p + '%;background:' + col + '"></div></div></td></tr>';
+    html += '<tr>'
+      + '<td style="color:#c9a84c;font-weight:700">'+org+'</td>'
+      + '<td style="color:#d4c89a;font-size:10pt">'+ots+'</td>'
+      + '<td>'+d.total.toLocaleString()+'</td>'
+      + '<td class="green">'+d.auto.toLocaleString()+'</td>'
+      + '<td class="red">'+d.manual.toLocaleString()+'</td>'
+      + '<td class="'+pctClass(p)+'">'+p+'%</td>'
+      + '<td><div class="prog-track"><div class="prog-fill" style="width:'+p+'%;background:'+col+'"></div></div></td>'
+      + '</tr>';
   });
-  html += '<tr class="total-row"><td>GRAND TOTAL</td><td>All organisations</td><td>' + ad.total.toLocaleString() + '</td><td>' + ad.totalAuto.toLocaleString() + '</td><td>' + ad.totalManual.toLocaleString() + '</td><td>' + ad.rate + '%</td><td></td></tr>';
+  html += '<tr class="total-row"><td>GRAND TOTAL</td><td>All organisations</td><td>'+ad.total.toLocaleString()+'</td><td>'+ad.totalAuto.toLocaleString()+'</td><td>'+ad.totalManual.toLocaleString()+'</td><td>'+ad.rate+'%</td><td></td></tr>';
   html += '</tbody></table>';
 
   downloadHTML(html, 'Automation_Tracking_YTD_' + new Date().toISOString().slice(0,10) + '.xls');
 }
+
 
 function exportGIExcel() {
   if (!GI_RAW || !GI_RAW.length) { alert('No General Info data loaded'); return; }
