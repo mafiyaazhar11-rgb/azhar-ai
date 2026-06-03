@@ -7670,6 +7670,11 @@ async function handleDSScheduleUpload(input) {
     console.log('DS Schedule:', msg.replace(/<[^>]+>/g,''));
   }
 
+  // Check for xlsb — not supported in browser
+  if (file.name.toLowerCase().endsWith('.xlsb')) {
+    dscSetStatus('<span style="color:#ef4444">❌ .xlsb format not supported in browser. Please save your file as .xlsx first (File → Save As → Excel Workbook .xlsx)</span>');
+    return;
+  }
   dscSetStatus('<span style="color:var(--gold)">⚙️ Reading schedule file: ' + file.name + '</span>');
   var reader = new FileReader();
   reader.onload = async function(e) {
