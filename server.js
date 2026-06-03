@@ -83,7 +83,7 @@ async function initDB() {
       password_hash TEXT NOT NULL,
       full_name TEXT,
       role TEXT NOT NULL DEFAULT 'viewer',
-      dashboards JSONB DEFAULT '["dispatch","rejection","summary","email","invoice","backlog","returns","sales"]'::jsonb,
+      dashboards JSONB DEFAULT '["dispatch","rejection","summary","email","invoice","backlog","returns","sales","automation"]'::jsonb,
       active BOOLEAN DEFAULT true,
       created_at TIMESTAMPTZ DEFAULT NOW(),
       created_by TEXT DEFAULT 'system',
@@ -1068,7 +1068,7 @@ app.post('/api/users', requireAuth, requireRole('superadmin'), async function(re
     var { username, password, full_name, role, dashboards } = req.body;
     if (!username || !password) return res.status(400).json({ error: 'Username and password required' });
     var hash = await bcrypt.hash(password, 10);
-    var dbs = dashboards || ['dispatch','rejection','summary','email','invoice','backlog','returns','sales'];
+    var dbs = dashboards || ['dispatch','rejection','summary','email','invoice','backlog','returns','sales','automation'];
     var result = await pool.query(
       'INSERT INTO users (username, password_hash, full_name, role, dashboards, created_by) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id',
       [username.toLowerCase().trim(), hash, full_name||username, role||'viewer', JSON.stringify(dbs), req.user.username]
@@ -1211,6 +1211,15 @@ var genInfoData = null;
 async function loadGenInfoFromDB() {
   try {
     await pool.query('CREATE TABLE IF NOT EXISTS geninfo_data (id SERIAL PRIMARY KEY, uploaded_at TIMESTAMPTZ DEFAULT NOW(), file_name TEXT, total_members INT, rows JSONB)');
+    await pool.query(`CREATE TABLE IF NOT EXISTS automation_data (
+      id SERIAL PRIMARY KEY,
+      uploaded_at TIMESTAMPTZ DEFAULT NOW(),
+      uploaded_by TEXT,
+      file_name TEXT,
+      total_records INT,
+      summary JSONB,
+      rows JSONB
+    )`);
     var r = await pool.query('SELECT * FROM geninfo_data ORDER BY uploaded_at DESC LIMIT 1');
     if (r.rows[0]) {
       genInfoData = { fileName: r.rows[0].file_name, totalMembers: r.rows[0].total_members, rows: r.rows[0].rows };
@@ -1450,6 +1459,58 @@ app.get('/twilio-sdk.js', function(req, res) {
       res.redirect('https://sdk.twilio.com/js/client/v1.14/twilio.js');
     }
   }
+});
+
+// ══════════════════════════════════════════════════════════
+// AUTOMATION TRACKING API ROUTES
+// ══════════════════════════════════════════════════════════
+var automationData = null;
+
+async function loadAutomationFromDB() {
+  try {
+    var r = await pool.query('SELECT * FROM automation_data ORDER BY uploaded_at DESC LIMIT 1');
+    if (r.rows.length) {
+      automationData = {
+        uploadedAt: r.rows[0].uploaded_at,
+        uploadedBy: r.rows[0].uploaded_by,
+        fileName:   r.rows[0].file_name,
+        totalRecords: r.rows[0].total_records,
+        summary:    r.rows[0].summary,
+        rows:       r.rows[0].rows
+      };
+      console.log('Automation data loaded from DB:', automationData.totalRecords, 'records');
+    }
+  } catch(e) { console.error('Automation DB load:', e.message); }
+}
+loadAutomationFromDB();
+
+app.get('/api/automation/status', requireAuth, function(req, res) {
+  if (!automationData) return res.json({ hasData: false });
+  res.json({ hasData: true, uploadedAt: automationData.uploadedAt, uploadedBy: automationData.uploadedBy, fileName: automationData.fileName, totalRecords: automationData.totalRecords, summary: automationData.summary, rows: automationData.rows });
+});
+
+app.post('/api/automation/upload', requireAuth, requireRole('superadmin','subadmin'), async function(req, res) {
+  try {
+    var { rows, fileName, totalRecords, summary } = req.body;
+    if (!rows || !rows.length) return res.status(400).json({ error: 'No rows provided' });
+    automationData = { uploadedAt: new Date(), uploadedBy: req.user.username, fileName: fileName || 'automation.xlsx', totalRecords: totalRecords || rows.length, summary, rows };
+    try {
+      await pool.query('DELETE FROM automation_data');
+      await pool.query('INSERT INTO automation_data (uploaded_by, file_name, total_records, summary, rows) VALUES ($1,$2,$3,$4,$5)',
+        [req.user.username, automationData.fileName, automationData.totalRecords, JSON.stringify(summary), JSON.stringify(rows)]);
+      console.log('Automation data saved to DB:', rows.length, 'records');
+    } catch(dbErr) { console.error('Automation DB save:', dbErr.message); }
+    await auditLog(req.user.uid, req.user.username, 'UPLOAD', 'Automation: ' + automationData.fileName, '');
+    res.json({ success: true, totalRecords: automationData.totalRecords });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/automation/clear', requireAuth, requireRole('superadmin'), async function(req, res) {
+  try {
+    await pool.query('DELETE FROM automation_data');
+    automationData = null;
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
 var PORT=process.env.PORT||3000;
