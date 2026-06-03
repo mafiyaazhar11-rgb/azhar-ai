@@ -1685,4 +1685,12 @@ app.post('/api/delivery/data', requireAuth, requireRole('superadmin','subadmin')
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
+app.delete('/api/delivery/schedule/clear', requireAuth, requireRole('superadmin','subadmin'), async function(req, res) {
+  try {
+    await pool.query('DELETE FROM delivery_schedule');
+    deliveryScheduleLookup = null;
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 app.listen(PORT,function(){console.log('AZHAR-AI server running on port '+PORT+(process.env.DATABASE_URL?' with PostgreSQL':' file-only mode'));});
