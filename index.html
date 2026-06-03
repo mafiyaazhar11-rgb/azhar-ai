@@ -1306,11 +1306,11 @@ footer span{color:var(--gold);}
           <div style="overflow-x:auto;">
             <table class="data-table" style="width:100%;">
               <thead><tr>
-                <th style="font-size:12px;color:var(--gold);">Month</th>
-                <th style="text-align:center;font-size:12px;color:var(--gold);">Total</th>
-                <th style="text-align:center;font-size:12px;color:var(--gold);">Auto</th>
-                <th style="text-align:center;font-size:12px;color:var(--gold);">Manual</th>
-                <th style="text-align:center;font-size:12px;color:var(--gold);">Auto %</th>
+                <th style="font-size:13px;color:var(--gold);font-weight:700;">Month</th>
+                <th style="text-align:center;font-size:13px;color:var(--gold);font-weight:700;">Total</th>
+                <th style="text-align:center;font-size:13px;color:var(--gold);font-weight:700;">Auto</th>
+                <th style="text-align:center;font-size:13px;color:var(--gold);font-weight:700;">Manual</th>
+                <th style="text-align:center;font-size:13px;color:var(--gold);font-weight:700;">Auto %</th>
               </tr></thead>
               <tbody id="auto-monthly-body"></tbody>
             </table>
@@ -1332,13 +1332,13 @@ footer span{color:var(--gold);}
         <div style="overflow-x:auto;">
           <table class="data-table" style="width:100%;min-width:700px;">
             <thead><tr>
-              <th style="font-size:12px;color:var(--gold);">Organisation</th>
-              <th style="font-size:12px;color:var(--gold);">Order Type(s)</th>
-              <th style="text-align:center;font-size:12px;color:var(--gold);">Total</th>
-              <th style="text-align:center;font-size:12px;color:var(--gold);">Auto</th>
-              <th style="text-align:center;font-size:12px;color:var(--gold);">Manual</th>
-              <th style="text-align:center;font-size:12px;color:var(--gold);">Auto %</th>
-              <th style="text-align:center;font-size:12px;color:var(--gold);">Progress</th>
+              <th style="font-size:13px;color:var(--gold);font-weight:700;">Organisation</th>
+              <th style="font-size:13px;color:var(--gold);font-weight:700;">Order Type(s)</th>
+              <th style="text-align:center;font-size:13px;color:var(--gold);font-weight:700;">Total</th>
+              <th style="text-align:center;font-size:13px;color:var(--gold);font-weight:700;">Auto</th>
+              <th style="text-align:center;font-size:13px;color:var(--gold);font-weight:700;">Manual</th>
+              <th style="text-align:center;font-size:13px;color:var(--gold);font-weight:700;">Auto %</th>
+              <th style="text-align:center;font-size:13px;color:var(--gold);font-weight:700;">Progress</th>
             </tr></thead>
             <tbody id="auto-org-body"></tbody>
           </table>
@@ -7003,9 +7003,9 @@ function renderAutoFromAggregated(agg) {
     var p = Math.round(d.auto/d.total*100);
     var col = p>=80?'var(--green)':p>=55?'#e3b341':'#f85149';
     var ots = Array.isArray(d.ots) ? d.ots.join(', ') : (d.ots||'');
-    orgRows += '<tr><td style="font-size:13px;font-weight:600;color:#f5f0e8">'+org+'</td><td style="font-size:11px;color:#c9c3b0">'+ots+'</td><td style="text-align:center;font-size:13px;color:#f5f0e8">'+d.total.toLocaleString()+'</td><td style="text-align:center;font-size:13px;color:var(--green)">'+d.auto.toLocaleString()+'</td><td style="text-align:center;font-size:13px;color:#f85149">'+d.manual.toLocaleString()+'</td><td style="text-align:center;font-size:13px;font-weight:700;color:'+col+'">'+p+'%</td><td><div style="background:#21262d;border-radius:3px;height:8px;overflow:hidden"><div style="width:'+p+'%;height:100%;background:'+col+';border-radius:3px"></div></div></td></tr>';
+    orgRows += '<tr><td style="font-size:15px;font-weight:700;color:var(--gold)">'+org+'</td><td style="font-size:13px;color:#d4c89a">'+ots+'</td><td style="text-align:center;font-size:14px;color:#f5f0e8;font-weight:600">'+d.total.toLocaleString()+'</td><td style="text-align:center;font-size:14px;color:var(--green);font-weight:600">'+d.auto.toLocaleString()+'</td><td style="text-align:center;font-size:14px;color:#f85149;font-weight:600">'+d.manual.toLocaleString()+'</td><td style="text-align:center;font-size:14px;font-weight:800;color:'+col+'">'+p+'%</td><td><div style="background:#21262d;border-radius:3px;height:10px;overflow:hidden"><div style="width:'+p+'%;height:100%;background:'+col+';border-radius:3px"></div></div></td></tr>';
   });
-  orgRows += '<tr style="background:rgba(201,168,76,0.08);border-top:1px solid var(--gold)"><td style="color:var(--gold);font-weight:700;font-size:13px">GRAND TOTAL</td><td style="font-size:11px;color:#c9c3b0">All organisations</td><td style="text-align:center;color:var(--gold);font-weight:700;font-size:13px">'+total.toLocaleString()+'</td><td style="text-align:center;color:var(--green);font-weight:700;font-size:13px">'+totalAuto.toLocaleString()+'</td><td style="text-align:center;color:#f85149;font-weight:700;font-size:13px">'+totalManual.toLocaleString()+'</td><td style="text-align:center;color:#58a6ff;font-weight:700;font-size:13px">'+rate+'%</td><td><div style="background:#21262d;border-radius:3px;height:8px;overflow:hidden"><div style="width:'+rate+'%;height:100%;background:#58a6ff;border-radius:3px"></div></div></td></tr>';
+  orgRows += '<tr style="background:rgba(201,168,76,0.12);border-top:2px solid var(--gold)"><td style="color:var(--gold);font-weight:800;font-size:15px">GRAND TOTAL</td><td style="font-size:13px;color:#d4c89a">All organisations</td><td style="text-align:center;color:var(--gold);font-weight:800;font-size:14px">'+total.toLocaleString()+'</td><td style="text-align:center;color:var(--green);font-weight:800;font-size:14px">'+totalAuto.toLocaleString()+'</td><td style="text-align:center;color:#f85149;font-weight:800;font-size:14px">'+totalManual.toLocaleString()+'</td><td style="text-align:center;color:#58a6ff;font-weight:800;font-size:14px">'+rate+'%</td><td><div style="background:#21262d;border-radius:3px;height:10px;overflow:hidden"><div style="width:'+rate+'%;height:100%;background:#58a6ff;border-radius:3px"></div></div></td></tr>';
   document.getElementById('auto-org-body').innerHTML = orgRows;
 }
 
@@ -7066,9 +7066,9 @@ function renderAutoTracking(data) {
   Object.keys(orgData).sort(function(a,b){ return orgData[b].total-orgData[a].total; }).forEach(function(org) {
     var d = orgData[org], p = Math.round(d.auto/d.total*100);
     var col = p>=80?'var(--green)':p>=55?'#e3b341':'#f85149';
-    orgRows += '<tr><td style="font-size:13px;font-weight:600;color:#f5f0e8">'+org+'</td><td style="font-size:11px;color:#c9c3b0">'+d.ots.join(', ')+'</td><td style="text-align:center;font-size:13px;color:#f5f0e8">'+d.total.toLocaleString()+'</td><td style="text-align:center;font-size:13px;color:var(--green)">'+d.auto.toLocaleString()+'</td><td style="text-align:center;font-size:13px;color:#f85149">'+d.manual.toLocaleString()+'</td><td style="text-align:center;font-size:13px;font-weight:700;color:'+col+'">'+p+'%</td><td><div style="background:#21262d;border-radius:3px;height:8px;overflow:hidden"><div style="width:'+p+'%;height:100%;background:'+col+';border-radius:3px"></div></div></td></tr>';
+    orgRows += '<tr><td style="font-size:15px;font-weight:700;color:var(--gold)">'+org+'</td><td style="font-size:13px;color:#d4c89a">'+d.ots.join(', ')+'</td><td style="text-align:center;font-size:14px;color:#f5f0e8;font-weight:600">'+d.total.toLocaleString()+'</td><td style="text-align:center;font-size:14px;color:var(--green);font-weight:600">'+d.auto.toLocaleString()+'</td><td style="text-align:center;font-size:14px;color:#f85149;font-weight:600">'+d.manual.toLocaleString()+'</td><td style="text-align:center;font-size:14px;font-weight:800;color:'+col+'">'+p+'%</td><td><div style="background:#21262d;border-radius:3px;height:10px;overflow:hidden"><div style="width:'+p+'%;height:100%;background:'+col+';border-radius:3px"></div></div></td></tr>';
   });
-  orgRows += '<tr style="background:rgba(201,168,76,0.08);border-top:1px solid var(--gold)"><td style="color:var(--gold);font-weight:700;font-size:13px">GRAND TOTAL</td><td style="font-size:11px;color:#c9c3b0">All organisations</td><td style="text-align:center;color:var(--gold);font-weight:700;font-size:13px">'+total.toLocaleString()+'</td><td style="text-align:center;color:var(--green);font-weight:700;font-size:13px">'+totalAuto.toLocaleString()+'</td><td style="text-align:center;color:#f85149;font-weight:700;font-size:13px">'+totalManual.toLocaleString()+'</td><td style="text-align:center;color:#58a6ff;font-weight:700;font-size:13px">'+rate+'%</td><td><div style="background:#21262d;border-radius:3px;height:8px;overflow:hidden"><div style="width:'+rate+'%;height:100%;background:#58a6ff;border-radius:3px"></div></div></td></tr>';
+  orgRows += '<tr style="background:rgba(201,168,76,0.12);border-top:2px solid var(--gold)"><td style="color:var(--gold);font-weight:800;font-size:15px">GRAND TOTAL</td><td style="font-size:13px;color:#d4c89a">All organisations</td><td style="text-align:center;color:var(--gold);font-weight:800;font-size:14px">'+total.toLocaleString()+'</td><td style="text-align:center;color:var(--green);font-weight:800;font-size:14px">'+totalAuto.toLocaleString()+'</td><td style="text-align:center;color:#f85149;font-weight:800;font-size:14px">'+totalManual.toLocaleString()+'</td><td style="text-align:center;color:#58a6ff;font-weight:800;font-size:14px">'+rate+'%</td><td><div style="background:#21262d;border-radius:3px;height:10px;overflow:hidden"><div style="width:'+rate+'%;height:100%;background:#58a6ff;border-radius:3px"></div></div></td></tr>';
   document.getElementById('auto-org-body').innerHTML = orgRows;
 }
 
