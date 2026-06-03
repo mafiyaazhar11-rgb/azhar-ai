@@ -1328,7 +1328,7 @@ footer span{color:var(--gold);}
 
       <!-- Org breakdown -->
       <div id="auto-org-section" class="box" style="display:none;">
-        <div class="box-title">🏢 Organisation Breakdown — Auto-mapped from Order Type<button onclick="exportAutoExcel()" style="background:rgba(201,168,76,0.12);border:1px solid var(--gold);color:var(--gold);font-size:11px;font-weight:700;letter-spacing:1px;padding:6px 14px;cursor:pointer;font-family:Montserrat,sans-serif;float:right;margin-top:-2px;">⬇ EXCEL</button></div>
+        <div class="box-title">🏢 Organisation Breakdown — Auto-mapped from Order Type</div>
         <div style="overflow-x:auto;">
           <table class="data-table" style="width:100%;min-width:700px;">
             <thead><tr>
@@ -6252,7 +6252,11 @@ async function authBoot() {
     if (!r.ok) { AUTH_TOKEN=null; localStorage.removeItem('azhar_token'); showLogin(); return; }
     AUTH_USER = await r.json();
     showApp();
-  } catch(e) { showLogin(); }
+  } catch(e) {
+    // Network error (Render cold start) — retry once after 3 seconds
+    console.log('authBoot error, retrying...', e.message);
+    setTimeout(authBoot, 3000);
+  }
 }
 
 function showLogin() {
@@ -6568,12 +6572,12 @@ window.fetch = function(url, opts) {
   return _origFetch.apply(this, [url, opts]);
 };
 
-// Auto-logout for non-admin users after 10 minutes inactivity
+// Auto-logout for non-admin users after 30 minutes inactivity
 var _inactivityTimer = null;
-var _INACTIVITY_LIMIT = 10 * 60 * 1000; // 10 minutes
+var _INACTIVITY_LIMIT = 30 * 60 * 1000; // 30 minutes
 
 function resetInactivityTimer() {
-  if (!AUTH_USER || AUTH_USER.role === 'superadmin') return;
+  if (!AUTH_USER || AUTH_USER.role === 'superadmin' || AUTH_USER.role === 'subadmin') return;
   clearTimeout(_inactivityTimer);
   _inactivityTimer = setTimeout(function() {
     alert('You have been logged out due to 10 minutes of inactivity.');
@@ -6582,7 +6586,7 @@ function resetInactivityTimer() {
 }
 
 function startInactivityWatcher() {
-  if (!AUTH_USER || AUTH_USER.role === 'superadmin') return;
+  if (!AUTH_USER || AUTH_USER.role === 'superadmin' || AUTH_USER.role === 'subadmin') return;
   ['mousemove','keydown','click','scroll','touchstart'].forEach(function(evt) {
     document.addEventListener(evt, resetInactivityTimer, true);
   });
@@ -7157,12 +7161,6 @@ tr:nth-child(odd) td{background:#0d1117;}
 function pctClass(p){return p>=80?'pct-high':p>=55?'pct-mid':'pct-low';}
 function pctColor(p){return p>=80?'#3fb950':p>=55?'#e3b341':'#f85149';}
 
-(p) {
-  return p >= 80 ? 'pct-high' : p >= 55 ? 'pct-mid' : 'pct-low';
-}
-function pctColor(p) {
-  return p >= 80 ? '#3fb950' : p >= 55 ? '#e3b341' : '#f85149';
-}
 
 function downloadHTML(html, filename) {
   var full = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>' + filename + '</title><style>' + XL_CSS + '</style></head><body>' + html + '</body></html>';
