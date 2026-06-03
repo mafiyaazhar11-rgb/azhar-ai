@@ -1634,8 +1634,13 @@ async function initDeliveryTables() {
     // Load existing data
     var sr = await pool.query('SELECT * FROM delivery_schedule ORDER BY uploaded_at DESC LIMIT 1');
     if (sr.rows.length) {
-      deliveryScheduleLookup = sr.rows[0].lookup;
-      console.log('Delivery schedule loaded:', sr.rows[0].customer_count, 'customers');
+      // Convert string keys to integers after JSONB parse
+      var rawLookup = sr.rows[0].lookup || {};
+      deliveryScheduleLookup = {};
+      Object.keys(rawLookup).forEach(function(k) {
+        deliveryScheduleLookup[parseInt(k)] = rawLookup[k];
+      });
+      console.log('Delivery schedule loaded:', Object.keys(deliveryScheduleLookup).length, 'customers');
     }
     var dr = await pool.query('SELECT * FROM delivery_data ORDER BY uploaded_at DESC LIMIT 1');
     if (dr.rows.length) {
@@ -1663,7 +1668,11 @@ app.post('/api/delivery/schedule', requireAuth, requireRole('superadmin','subadm
   try {
     var { lookup, fileName, customerCount } = req.body;
     if (!lookup) return res.status(400).json({ error: 'No schedule data' });
-    deliveryScheduleLookup = lookup;
+    // Store with integer keys in memory
+    deliveryScheduleLookup = {};
+    Object.keys(lookup).forEach(function(k) {
+      deliveryScheduleLookup[parseInt(k)] = lookup[k];
+    });
     await pool.query('DELETE FROM delivery_schedule');
     await pool.query('INSERT INTO delivery_schedule (uploaded_by, file_name, customer_count, lookup) VALUES ($1,$2,$3,$4)',
       [req.user.username, fileName||'schedule.xlsx', customerCount||0, JSON.stringify(lookup)]);
