@@ -1607,4 +1607,82 @@ app.delete('/api/automation/month/:month', requireAuth, requireRole('superadmin'
 });
 
 var PORT=process.env.PORT||3000;
+// ══════════════════════════════════════════════════════════
+// DELIVERY SCHEDULE COMPLIANCE API ROUTES
+// ══════════════════════════════════════════════════════════
+var deliveryScheduleLookup = null;
+var deliveryData = null;
+
+async function initDeliveryTables() {
+  try {
+    await pool.query(`CREATE TABLE IF NOT EXISTS delivery_schedule (
+      id SERIAL PRIMARY KEY,
+      uploaded_at TIMESTAMPTZ DEFAULT NOW(),
+      uploaded_by TEXT,
+      file_name TEXT,
+      customer_count INT,
+      lookup JSONB
+    )`);
+    await pool.query(`CREATE TABLE IF NOT EXISTS delivery_data (
+      id SERIAL PRIMARY KEY,
+      uploaded_at TIMESTAMPTZ DEFAULT NOW(),
+      uploaded_by TEXT,
+      file_name TEXT,
+      total_orders INT,
+      summary JSONB
+    )`);
+    // Load existing data
+    var sr = await pool.query('SELECT * FROM delivery_schedule ORDER BY uploaded_at DESC LIMIT 1');
+    if (sr.rows.length) {
+      deliveryScheduleLookup = sr.rows[0].lookup;
+      console.log('Delivery schedule loaded:', sr.rows[0].customer_count, 'customers');
+    }
+    var dr = await pool.query('SELECT * FROM delivery_data ORDER BY uploaded_at DESC LIMIT 1');
+    if (dr.rows.length) {
+      deliveryData = { summary: dr.rows[0].summary, uploadedBy: dr.rows[0].uploaded_by, fileName: dr.rows[0].file_name, totalOrders: dr.rows[0].total_orders };
+      console.log('Delivery data loaded:', dr.rows[0].total_orders, 'orders');
+    }
+  } catch(e) { console.error('Delivery init:', e.message); }
+}
+initDeliveryTables();
+
+app.get('/api/delivery/status', requireAuth, function(req, res) {
+  res.json({
+    hasSchedule: !!deliveryScheduleLookup,
+    scheduleCustomers: deliveryScheduleLookup ? Object.keys(deliveryScheduleLookup).length : 0,
+    scheduleLookup: deliveryScheduleLookup || {},
+    hasData: !!deliveryData,
+    summary: deliveryData ? deliveryData.summary : null,
+    fileName: deliveryData ? deliveryData.fileName : null,
+    uploadedBy: deliveryData ? deliveryData.uploadedBy : null,
+    totalOrders: deliveryData ? deliveryData.totalOrders : 0
+  });
+});
+
+app.post('/api/delivery/schedule', requireAuth, requireRole('superadmin','subadmin'), async function(req, res) {
+  try {
+    var { lookup, fileName, customerCount } = req.body;
+    if (!lookup) return res.status(400).json({ error: 'No schedule data' });
+    deliveryScheduleLookup = lookup;
+    await pool.query('DELETE FROM delivery_schedule');
+    await pool.query('INSERT INTO delivery_schedule (uploaded_by, file_name, customer_count, lookup) VALUES ($1,$2,$3,$4)',
+      [req.user.username, fileName||'schedule.xlsx', customerCount||0, JSON.stringify(lookup)]);
+    await auditLog(req.user.uid, req.user.username, 'UPLOAD', 'Delivery Schedule: ' + fileName, '');
+    res.json({ success: true, customerCount: customerCount });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/delivery/data', requireAuth, requireRole('superadmin','subadmin'), async function(req, res) {
+  try {
+    var { summary, fileName, totalOrders } = req.body;
+    if (!summary) return res.status(400).json({ error: 'No data' });
+    deliveryData = { summary, fileName: fileName||'oracle.xlsx', uploadedBy: req.user.username, totalOrders: totalOrders||0 };
+    await pool.query('DELETE FROM delivery_data');
+    await pool.query('INSERT INTO delivery_data (uploaded_by, file_name, total_orders, summary) VALUES ($1,$2,$3,$4)',
+      [req.user.username, deliveryData.fileName, deliveryData.totalOrders, JSON.stringify(summary)]);
+    await auditLog(req.user.uid, req.user.username, 'UPLOAD', 'Delivery Data: ' + fileName, '');
+    res.json({ success: true, totalOrders: deliveryData.totalOrders });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 app.listen(PORT,function(){console.log('AZHAR-AI server running on port '+PORT+(process.env.DATABASE_URL?' with PostgreSQL':' file-only mode'));});
