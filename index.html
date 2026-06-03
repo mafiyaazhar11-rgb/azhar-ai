@@ -7108,373 +7108,256 @@ function renderAutoTracking(data) {
 }
 
 // ═══════════════════════════════════════════════════════════
+// EXCEL EXPORT — HTML-based styled files (open in Excel)
+// Matches dashboard colors exactly
 // ═══════════════════════════════════════════════════════════
-// EXCEL EXPORT FUNCTIONS — Styled with colors matching dashboard
-// ═══════════════════════════════════════════════════════════
 
-function downloadExcel(wb, filename) { XLSX.writeFile(wb, filename); }
+var XL_CSS = `
+  body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; background: #0d1117; color: #f5f0e8; margin: 0; padding: 16px; }
+  h1 { color: #c9a84c; font-size: 14pt; margin: 0 0 2px 0; letter-spacing: 1px; }
+  .sub { color: #7d8590; font-size: 10pt; margin-bottom: 18px; }
+  .section-title { color: #c9a84c; font-size: 11pt; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin: 18px 0 8px 0; border-bottom: 1px solid #30363d; padding-bottom: 4px; }
+  table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
+  th { background: #1a1a2e; color: #c9a84c; font-size: 11pt; font-weight: bold; padding: 8px 12px; text-align: center; border: 1px solid #30363d; text-transform: uppercase; letter-spacing: 0.5px; }
+  th:first-child { text-align: left; }
+  td { padding: 7px 12px; font-size: 11pt; border: 1px solid #30363d; text-align: center; color: #f5f0e8; }
+  td:first-child { text-align: left; font-weight: 600; }
+  tr:nth-child(even) td { background: #161b22; }
+  tr:nth-child(odd)  td { background: #0d1117; }
+  .total-row td { background: #2a2410 !important; color: #c9a84c !important; font-weight: bold !important; border-top: 2px solid #c9a84c; }
+  .pct-high { color: #3fb950 !important; font-weight: bold; }
+  .pct-mid  { color: #e3b341 !important; font-weight: bold; }
+  .pct-low  { color: #f85149 !important; font-weight: bold; }
+  .green { color: #3fb950 !important; }
+  .red   { color: #f85149 !important; }
+  .blue  { color: #58a6ff !important; }
+  .gold  { color: #c9a84c !important; }
+  .kpi-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 20px; }
+  .kpi-card { background: #161b22; border: 1px solid #30363d; border-radius: 4px; padding: 12px 16px; }
+  .kpi-label { color: #c9a84c; font-size: 9pt; font-weight: bold; text-transform: uppercase; letter-spacing: 0.8px; }
+  .kpi-value { font-size: 22pt; font-weight: bold; margin: 4px 0 2px; }
+  .kpi-sub { color: #7d8590; font-size: 9pt; }
+  .bar-wrap { display: flex; align-items: center; gap: 10px; margin: 6px 0; }
+  .bar-label { min-width: 40px; text-align: right; color: #c9a84c; font-weight: bold; font-size: 11pt; }
+  .bar-track { flex: 1; background: #21262d; border-radius: 3px; height: 22px; overflow: hidden; position: relative; }
+  .bar-fill { height: 100%; background: linear-gradient(90deg, #238636, #3fb950); display: flex; align-items: center; justify-content: flex-end; padding-right: 8px; }
+  .bar-fill span { color: #fff; font-size: 10pt; font-weight: bold; }
+  .bar-total { min-width: 60px; text-align: right; color: #f5f0e8; font-size: 11pt; }
+  .prog-track { background: #21262d; border-radius: 3px; height: 10px; overflow: hidden; min-width: 80px; }
+  .prog-fill { height: 100%; border-radius: 3px; }
+`;
 
-// Apply styles to a worksheet
-function styleSheet(ws, headerRow, dataRows, opts) {
-  opts = opts || {};
-  var range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
+function pctClass(p) {
+  return p >= 80 ? 'pct-high' : p >= 55 ? 'pct-mid' : 'pct-low';
+}
+function pctColor(p) {
+  return p >= 80 ? '#3fb950' : p >= 55 ? '#e3b341' : '#f85149';
+}
 
-  // Column widths
-  if (opts.colWidths) {
-    ws['!cols'] = opts.colWidths.map(function(w){ return { wch: w }; });
-  }
-
-  // Style each cell
-  for (var R = range.s.r; R <= range.e.r; R++) {
-    for (var C = range.s.c; C <= range.e.c; C++) {
-      var addr = XLSX.utils.encode_cell({r:R, c:C});
-      if (!ws[addr]) continue;
-
-      var isHeader = R === 0;
-      var isTotal  = opts.totalRows && opts.totalRows.indexOf(R) !== -1;
-      var isKPI    = opts.kpiRows   && opts.kpiRows.indexOf(R)   !== -1;
-
-      ws[addr].s = {
-        font: {
-          name: 'Calibri',
-          sz: isHeader ? 12 : isTotal ? 12 : 11,
-          bold: isHeader || isTotal,
-          color: { rgb: isHeader ? 'C9A84C' : isTotal ? 'C9A84C' : 'F5F0E8' }
-        },
-        fill: {
-          patternType: 'solid',
-          fgColor: { rgb: isHeader ? '1A1A2E' : isTotal ? '2A2410' : R % 2 === 0 ? '0D1117' : '161B22' }
-        },
-        border: {
-          bottom: { style: 'thin', color: { rgb: '30363D' } },
-          right:  { style: 'thin', color: { rgb: '30363D' } }
-        },
-        alignment: { horizontal: C === 0 ? 'left' : 'center', vertical: 'center', wrapText: true }
-      };
-
-      // Color code Auto % column (last data col before progress)
-      if (opts.pctCol !== undefined && C === opts.pctCol && !isHeader) {
-        var val = String(ws[addr].v || '');
-        var pct = parseInt(val);
-        if (!isNaN(pct)) {
-          var rgb = pct >= 80 ? '238636' : pct >= 55 ? 'D29922' : 'DA3633';
-          ws[addr].s.font.color = { rgb: rgb };
-          ws[addr].s.font.bold = true;
-        }
-      }
-    }
-  }
-  return ws;
+function downloadHTML(html, filename) {
+  var full = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>' + filename + '</title><style>' + XL_CSS + '</style></head><body>' + html + '</body></html>';
+  var blob = new Blob([full], { type: 'application/vnd.ms-excel;charset=utf-8' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
 }
 
 function exportAutoExcel() {
   if (!AUTO_DATA) { alert('No automation data loaded'); return; }
   var ad = AUTO_DATA;
-  var wb = XLSX.utils.book_new();
   var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var date = new Date().toLocaleDateString('en-AE');
 
-  // ── Sheet 1: Dashboard Summary (matches screen) ──────────────────
-  var s1Data = [
-    ['AKI GROUP — AUTOMATION TRACKING YTD 2026', '', '', ''],
-    ['Generated: ' + new Date().toLocaleDateString('en-AE'), '', '', ''],
-    [''],
-    ['KPI SUMMARY', '', '', ''],
-    ['Metric', 'Value', '', ''],
-    ['Total Orders YTD', ad.total, '', ''],
-    ['Auto Booked', ad.totalAuto, '', ''],
-    ['Manually Booked', ad.totalManual, '', ''],
-    ['Automation Rate', ad.rate + '%', '', ''],
-    ['Latest Month', ad.latestMonth + ' — ' + ad.latestRate + '%', '', ''],
-    [''],
-    ['MONTHLY BREAKDOWN', '', '', '', ''],
-    ['Month', 'Total Orders', 'Auto Booked', 'Manually Booked', 'Auto %'],
+  var html = '<h1>⚡ AUTOMATION TRACKING YTD 2026</h1>';
+  html += '<div class="sub">DoxtrE Auto vs Manual Booking &nbsp;·&nbsp; AKI Group &nbsp;·&nbsp; Generated: ' + date + '</div>';
+
+  // KPI Cards
+  html += '<div class="kpi-grid">';
+  var kpis = [
+    { label:'Total Orders YTD', val: ad.total.toLocaleString(), sub: 'Jan \u2013 ' + (ad.latestMonth||'') + ' 2026', col:'#c9a84c' },
+    { label:'Auto Booked',       val: ad.totalAuto.toLocaleString(), sub: ad.rate + '% of total', col:'#3fb950' },
+    { label:'Manually Booked',   val: ad.totalManual.toLocaleString(), sub: Math.round(ad.totalManual/ad.total*100) + '% of total', col:'#f85149' },
+    { label:'Automation Rate',   val: ad.rate + '%', sub: 'YTD average', col:'#58a6ff' },
+    { label:'Latest Month',      val: (ad.latestRate||0) + '%', sub: (ad.latestMonth||'') + ' 2026 \u2191', col:'#a371f7' },
   ];
-  var monthTotalRows = [];
+  kpis.forEach(function(k) {
+    html += '<div class="kpi-card"><div class="kpi-label">' + k.label + '</div><div class="kpi-value" style="color:' + k.col + '">' + k.val + '</div><div class="kpi-sub">' + k.sub + '</div></div>';
+  });
+  html += '</div>';
+
+  // Monthly table + bar side by side
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">';
+
+  // Monthly table
+  html += '<div><div class="section-title">📅 Monthly Breakdown</div>';
+  html += '<table><thead><tr><th>Month</th><th>Total</th><th>Auto</th><th>Manual</th><th>Auto %</th></tr></thead><tbody>';
   months.forEach(function(m) {
     var d = ad.monthData ? ad.monthData[m] : null;
     if (!d) return;
     var p = Math.round(d.auto/d.total*100);
-    s1Data.push([m, d.total, d.auto, d.manual, p + '%']);
+    html += '<tr><td>' + m + '</td><td>' + d.total.toLocaleString() + '</td><td class="green">' + d.auto.toLocaleString() + '</td><td class="red">' + d.manual.toLocaleString() + '</td><td class="' + pctClass(p) + '">' + p + '%</td></tr>';
   });
-  s1Data.push(['GRAND TOTAL', ad.total, ad.totalAuto, ad.totalManual, ad.rate + '%']);
-  monthTotalRows.push(s1Data.length - 1);
+  html += '<tr class="total-row"><td>TOTAL</td><td>' + ad.total.toLocaleString() + '</td><td>' + ad.totalAuto.toLocaleString() + '</td><td>' + ad.totalManual.toLocaleString() + '</td><td>' + ad.rate + '%</td></tr>';
+  html += '</tbody></table></div>';
 
-  s1Data.push(['']);
-  s1Data.push(['ORGANISATION BREAKDOWN — AUTO-MAPPED FROM ORDER TYPE', '', '', '', '', '']);
-  s1Data.push(['Organisation', 'Order Type(s)', 'Total Orders', 'Auto Booked', 'Manually Booked', 'Auto %']);
+  // Bar chart
+  html += '<div><div class="section-title">📊 Auto vs Manual by Month</div>';
+  months.forEach(function(m) {
+    var d = ad.monthData ? ad.monthData[m] : null;
+    if (!d) return;
+    var p = Math.round(d.auto/d.total*100);
+    html += '<div class="bar-wrap"><div class="bar-label">' + m + '</div><div class="bar-track"><div class="bar-fill" style="width:' + p + '%"><span>' + p + '%</span></div></div><div class="bar-total">' + d.total.toLocaleString() + '</div></div>';
+  });
+  html += '</div>';
+  html += '</div>';
+
+  // Org table
+  html += '<div class="section-title">🏢 Organisation Breakdown — Auto-mapped from Order Type</div>';
+  html += '<table><thead><tr><th>Organisation</th><th>Order Type(s)</th><th>Total</th><th>Auto</th><th>Manual</th><th>Auto %</th><th>Progress</th></tr></thead><tbody>';
   var orgData = ad.orgData || {};
   Object.keys(orgData).sort(function(a,b){ return orgData[b].total - orgData[a].total; }).forEach(function(org) {
     var d = orgData[org];
     var p = Math.round(d.auto/d.total*100);
     var ots = Array.isArray(d.ots) ? d.ots.join(', ') : (d.ots||'');
-    s1Data.push([org, ots, d.total, d.auto, d.manual, p + '%']);
+    var col = pctColor(p);
+    html += '<tr><td style="color:#c9a84c;font-weight:700">' + org + '</td><td style="color:#d4c89a;font-size:10pt">' + ots + '</td><td>' + d.total.toLocaleString() + '</td><td class="green">' + d.auto.toLocaleString() + '</td><td class="red">' + d.manual.toLocaleString() + '</td><td class="' + pctClass(p) + '">' + p + '%</td><td><div class="prog-track"><div class="prog-fill" style="width:' + p + '%;background:' + col + '"></div></div></td></tr>';
   });
-  s1Data.push(['GRAND TOTAL', 'All organisations', ad.total, ad.totalAuto, ad.totalManual, ad.rate + '%']);
-  monthTotalRows.push(s1Data.length - 1);
+  html += '<tr class="total-row"><td>GRAND TOTAL</td><td>All organisations</td><td>' + ad.total.toLocaleString() + '</td><td>' + ad.totalAuto.toLocaleString() + '</td><td>' + ad.totalManual.toLocaleString() + '</td><td>' + ad.rate + '%</td><td></td></tr>';
+  html += '</tbody></table>';
 
-  var ws1 = XLSX.utils.aoa_to_sheet(s1Data);
-  ws1['!cols'] = [{wch:22},{wch:38},{wch:14},{wch:14},{wch:16},{wch:10}];
-  // Title row styles
-  if (ws1['A1']) ws1['A1'].s = { font:{name:'Calibri',sz:14,bold:true,color:{rgb:'C9A84C'}}, fill:{patternType:'solid',fgColor:{rgb:'0D1117'}} };
-  // Style all rows
-  for (var R = 0; R < s1Data.length; R++) {
-    var row = s1Data[R];
-    for (var Ci = 0; Ci < row.length; Ci++) {
-      var addr = XLSX.utils.encode_cell({r:R, c:Ci});
-      if (!ws1[addr]) continue;
-      var isHeaderRow = (row[0] === 'Month' || row[0] === 'Organisation' || row[0] === 'Metric' || row[0] === 'KPI SUMMARY' || row[0] === 'MONTHLY BREAKDOWN' || row[0] === 'ORGANISATION BREAKDOWN — AUTO-MAPPED FROM ORDER TYPE');
-      var isTotalRow  = (row[0] === 'GRAND TOTAL' || row[0] === 'Grand Total');
-      var isSectionHdr = (row[0] === 'AKI GROUP — AUTOMATION TRACKING YTD 2026' || row[0] === 'KPI SUMMARY' || row[0] === 'MONTHLY BREAKDOWN' || row[0] === 'ORGANISATION BREAKDOWN — AUTO-MAPPED FROM ORDER TYPE');
-      var bgColor = isTotalRow ? '2A2410' : isHeaderRow ? '1A1A2E' : R % 2 === 0 ? '0D1117' : '161B22';
-      var fgColor = isTotalRow ? 'C9A84C' : isHeaderRow ? 'C9A84C' : 'F5F0E8';
-      ws1[addr].s = {
-        font: { name:'Calibri', sz: isSectionHdr ? 12 : 11, bold: isHeaderRow || isTotalRow, color:{rgb:fgColor} },
-        fill: { patternType:'solid', fgColor:{rgb:bgColor} },
-        border: { bottom:{style:'thin',color:{rgb:'30363D'}}, right:{style:'thin',color:{rgb:'30363D'}} },
-        alignment: { horizontal: Ci === 0 ? 'left' : 'center', vertical:'center', wrapText:true }
-      };
-      // Color Auto % column
-      if ((Ci === 4 || Ci === 5) && !isHeaderRow && !isTotalRow) {
-        var pStr = String(ws1[addr].v || '');
-        var pNum = parseInt(pStr);
-        if (!isNaN(pNum)) {
-          ws1[addr].s.font.color = { rgb: pNum >= 80 ? '3FB950' : pNum >= 55 ? 'E3B341' : 'F85149' };
-          ws1[addr].s.font.bold = true;
-        }
-      }
-    }
-  }
-  XLSX.utils.book_append_sheet(wb, ws1, 'Dashboard View');
-
-  // ── Sheet 2: Raw Data ─────────────────────────────────────────────
-  var rawHeaders = ['Organisation','Order Type(s)','Total Orders','Auto Booked','Manually Booked','Auto %','Manual %'];
-  var rawRows = [];
-  Object.keys(orgData).sort(function(a,b){ return orgData[b].total-orgData[a].total; }).forEach(function(org) {
-    var d = orgData[org];
-    var autoP = Math.round(d.auto/d.total*100);
-    var manP  = 100 - autoP;
-    var ots = Array.isArray(d.ots) ? d.ots.join(', ') : (d.ots||'');
-    rawRows.push([org, ots, d.total, d.auto, d.manual, autoP/100, manP/100]);
-  });
-  rawRows.push(['GRAND TOTAL','All organisations',ad.total,ad.totalAuto,ad.totalManual,ad.rate/100,(100-ad.rate)/100]);
-  var ws2 = XLSX.utils.aoa_to_sheet([rawHeaders].concat(rawRows));
-  ws2['!cols'] = [{wch:20},{wch:40},{wch:14},{wch:14},{wch:16},{wch:10},{wch:10}];
-  // Format pct columns as %
-  for (var ri = 1; ri <= rawRows.length; ri++) {
-    var pa = XLSX.utils.encode_cell({r:ri,c:5});
-    var pb = XLSX.utils.encode_cell({r:ri,c:6});
-    if (ws2[pa]) ws2[pa].z = '0%';
-    if (ws2[pb]) ws2[pb].z = '0%';
-  }
-  XLSX.utils.book_append_sheet(wb, ws2, 'Raw Data');
-
-  downloadExcel(wb, 'Automation_Tracking_YTD_' + new Date().toISOString().slice(0,10) + '.xlsx');
+  downloadHTML(html, 'Automation_Tracking_YTD_' + new Date().toISOString().slice(0,10) + '.xls');
 }
 
 function exportGIExcel() {
   if (!GI_RAW || !GI_RAW.length) { alert('No General Info data loaded'); return; }
-  var wb = XLSX.utils.book_new();
+  var date = new Date().toLocaleDateString('en-AE');
 
-  // ── Sheet 1: Dashboard Summary View ──────────────────────────────
-  var s1 = [
-    ['AKI GROUP — GENERAL INFORMATION & TEAM DIRECTORY'],
-    ['Generated: ' + new Date().toLocaleDateString('en-AE') + '  |  Total Members: ' + GI_RAW.length],
-    [''],
-    ['Name','Designation','Unit / Dept','Department','Contact','Responsibility','Outlet','Branch','Report To','BU Type','Account No']
-  ];
-  GI_RAW.forEach(function(r) {
-    s1.push([
-      giGetVal(r,'name'), giGetVal(r,'designation'), giGetVal(r,'unit'),
-      giGetVal(r,'dept'), giGetVal(r,'contact'), giGetVal(r,'responsibility'),
-      giGetVal(r,'outlet'), giGetVal(r,'branch'), giGetVal(r,'reportTo'),
-      giGetVal(r,'buType'), giGetVal(r,'acctNo')
-    ]);
+  var html = '<h1>\ud83d\udc65 GENERAL INFORMATION — TEAM DIRECTORY</h1>';
+  html += '<div class="sub">AKI Group &nbsp;·&nbsp; Total Members: ' + GI_RAW.length + ' &nbsp;·&nbsp; Generated: ' + date + '</div>';
+
+  html += '<table><thead><tr><th>Name</th><th>Designation</th><th>Unit/Dept</th><th>Contact</th><th>Responsibility</th><th>Outlet</th><th>Branch</th><th>Report To</th><th>BU Type</th><th>Account No</th></tr></thead><tbody>';
+  GI_RAW.forEach(function(r, i) {
+    html += '<tr><td style="color:#c9a84c;font-weight:700">' + (giGetVal(r,'name')||'') + '</td><td>' + (giGetVal(r,'designation')||'') + '</td><td>' + (giGetVal(r,'unit')||'') + '</td><td style="color:#58a6ff">' + (giGetVal(r,'contact')||'') + '</td><td style="font-size:10pt;color:#d4c89a">' + (giGetVal(r,'responsibility')||'') + '</td><td>' + (giGetVal(r,'outlet')||'') + '</td><td>' + (giGetVal(r,'branch')||'') + '</td><td>' + (giGetVal(r,'reportTo')||'') + '</td><td>' + (giGetVal(r,'buType')||'') + '</td><td>' + (giGetVal(r,'acctNo')||'') + '</td></tr>';
   });
-  var wsGI = XLSX.utils.aoa_to_sheet(s1);
-  wsGI['!cols'] = [{wch:22},{wch:20},{wch:16},{wch:14},{wch:16},{wch:24},{wch:20},{wch:16},{wch:18},{wch:12},{wch:14}];
-  // Style header rows
-  for (var R=0; R<s1.length; R++) {
-    for (var Ci=0; Ci<s1[R].length; Ci++) {
-      var addr = XLSX.utils.encode_cell({r:R,c:Ci});
-      if (!wsGI[addr]) continue;
-      var isTitle = R<2, isHdr = R===3;
-      wsGI[addr].s = {
-        font:{ name:'Calibri', sz: isTitle?12:11, bold:isTitle||isHdr, color:{rgb: isTitle?'C9A84C': isHdr?'C9A84C':'F5F0E8'} },
-        fill:{ patternType:'solid', fgColor:{rgb: isTitle?'0D1117': isHdr?'1A1A2E': R%2===0?'0D1117':'161B22'} },
-        border:{ bottom:{style:'thin',color:{rgb:'30363D'}}, right:{style:'thin',color:{rgb:'30363D'}} },
-        alignment:{ horizontal:Ci===0?'left':'left', vertical:'center', wrapText:true }
-      };
-    }
-  }
-  XLSX.utils.book_append_sheet(wb, wsGI, 'Team Directory');
+  html += '</tbody></table>';
 
-  // ── Sheet 2: Merchandisers ────────────────────────────────────────
-  var merch = GI_RAW.filter(function(r){ return giGetVal(r,'unit')==='Merchandisers'; });
+  // Merchandisers section
+  var merch = GI_RAW.filter(function(r){ return giGetVal(r,'unit') === 'Merchandisers'; });
   if (merch.length) {
-    var s2 = [['Name','Designation','Contact','Outlet','Branch','BU Type','Account No']];
+    html += '<div class="section-title">\ud83d\udccb Merchandisers (' + merch.length + ')</div>';
+    html += '<table><thead><tr><th>Name</th><th>Designation</th><th>Contact</th><th>Outlet</th><th>Branch</th><th>BU Type</th><th>Account No</th></tr></thead><tbody>';
     merch.forEach(function(r) {
-      s2.push([giGetVal(r,'name'),giGetVal(r,'designation'),giGetVal(r,'contact'),giGetVal(r,'outlet'),giGetVal(r,'branch'),giGetVal(r,'buType'),giGetVal(r,'acctNo')]);
+      html += '<tr><td style="color:#c9a84c;font-weight:700">' + (giGetVal(r,'name')||'') + '</td><td>' + (giGetVal(r,'designation')||'') + '</td><td style="color:#58a6ff">' + (giGetVal(r,'contact')||'') + '</td><td>' + (giGetVal(r,'outlet')||'') + '</td><td>' + (giGetVal(r,'branch')||'') + '</td><td>' + (giGetVal(r,'buType')||'') + '</td><td>' + (giGetVal(r,'acctNo')||'') + '</td></tr>';
     });
-    var wsM = XLSX.utils.aoa_to_sheet(s2);
-    wsM['!cols'] = [{wch:22},{wch:20},{wch:16},{wch:22},{wch:16},{wch:12},{wch:14}];
-    for (var Ci=0; Ci<7; Ci++) {
-      var addr = XLSX.utils.encode_cell({r:0,c:Ci});
-      if (wsM[addr]) wsM[addr].s = { font:{name:'Calibri',sz:11,bold:true,color:{rgb:'C9A84C'}}, fill:{patternType:'solid',fgColor:{rgb:'1A1A2E'}}, alignment:{horizontal:'left'} };
-    }
-    XLSX.utils.book_append_sheet(wb, wsM, 'Merchandisers');
+    html += '</tbody></table>';
   }
 
-  downloadExcel(wb, 'General_Info_' + new Date().toISOString().slice(0,10) + '.xlsx');
+  downloadHTML(html, 'General_Info_' + new Date().toISOString().slice(0,10) + '.xls');
 }
 
 function exportSalesExcel() {
   if (!SALES_DATA) { alert('No Order Summary data loaded'); return; }
   var d = SALES_DATA;
-  var wb = XLSX.utils.book_new();
+  var date = new Date().toLocaleDateString('en-AE');
 
-  // ── Sheet 1: Dashboard Summary ────────────────────────────────────
-  var s1 = [
-    ['AKI GROUP — ORDER SUMMARY DASHBOARD'],
-    ['Date: ' + (d.date||'') + '  |  File: ' + (d.fileName||'')],
-    [''],
-    ['OVERVIEW', 'Orders', 'Value (AED)', ''],
-    ['Total Orders', d.totalOrders||0, Math.round(d.totalVal||0), ''],
-    ['Food', d.foodOrders||0, Math.round(d.foodVal||0), ''],
-    ['Non-Food', d.nfOrders||0, Math.round(d.nfVal||0), ''],
-    ['Frozen', d.frozenOrders||0, Math.round(d.frozenVal||0), ''],
-    ['Ambient', d.ambientOrders||0, Math.round(d.ambientVal||0), ''],
-    [''],
+  var html = '<h1>\ud83d\udcca ORDER SUMMARY DASHBOARD</h1>';
+  html += '<div class="sub">AKI Group &nbsp;·&nbsp; Date: ' + (d.date||date) + ' &nbsp;·&nbsp; File: ' + (d.fileName||'') + '</div>';
+
+  // KPI row
+  html += '<div class="kpi-grid">';
+  var skpis = [
+    { label:'Total Orders', val:(d.totalOrders||0).toLocaleString(), sub:'All orders', col:'#c9a84c' },
+    { label:'Food', val:(d.foodOrders||0).toLocaleString(), sub:'AED '+Math.round(d.foodVal||0).toLocaleString(), col:'#3fb950' },
+    { label:'Non-Food', val:(d.nfOrders||0).toLocaleString(), sub:'AED '+Math.round(d.nfVal||0).toLocaleString(), col:'#58a6ff' },
+    { label:'Frozen', val:(d.frozenOrders||0).toLocaleString(), sub:'AED '+Math.round(d.frozenVal||0).toLocaleString(), col:'#a371f7' },
+    { label:'Ambient', val:(d.ambientOrders||0).toLocaleString(), sub:'AED '+Math.round(d.ambientVal||0).toLocaleString(), col:'#e3b341' },
   ];
+  skpis.forEach(function(k) {
+    html += '<div class="kpi-card"><div class="kpi-label">' + k.label + '</div><div class="kpi-value" style="color:' + k.col + '">' + k.val + '</div><div class="kpi-sub">' + k.sub + '</div></div>';
+  });
+  html += '</div>';
+
   if (d.orgMap) {
-    s1.push(['BY ORGANISATION','Orders','Value (AED)','']);
+    html += '<div class="section-title">\ud83c\udfe2 By Organisation</div>';
+    html += '<table><thead><tr><th>Organisation</th><th>Orders</th><th>Value (AED)</th></tr></thead><tbody>';
     Object.keys(d.orgMap).forEach(function(org) {
       var v = d.orgMap[org];
-      s1.push([org, v.orders||0, Math.round(v.value||0), '']);
+      html += '<tr><td style="color:#c9a84c;font-weight:700">' + org + '</td><td>' + (v.orders||0).toLocaleString() + '</td><td class="gold">' + Math.round(v.value||0).toLocaleString() + '</td></tr>';
     });
-    s1.push(['']);
+    html += '</tbody></table>';
   }
+
   if (d.statusMap) {
-    s1.push(['BY STATUS','Orders','Value (AED)','']);
+    html += '<div class="section-title">📋 By Status</div>';
+    html += '<table><thead><tr><th>Status</th><th>Orders</th><th>Value (AED)</th></tr></thead><tbody>';
     Object.keys(d.statusMap).forEach(function(st) {
       var v = d.statusMap[st];
-      s1.push([st, v.orders||0, Math.round(v.value||0), '']);
+      html += '<tr><td style="color:#c9a84c">' + st + '</td><td>' + (v.orders||0).toLocaleString() + '</td><td class="gold">' + Math.round(v.value||0).toLocaleString() + '</td></tr>';
     });
+    html += '</tbody></table>';
   }
-  var ws1 = XLSX.utils.aoa_to_sheet(s1);
-  ws1['!cols'] = [{wch:22},{wch:14},{wch:16},{wch:10}];
-  for (var R=0; R<s1.length; R++) {
-    for (var Ci=0; Ci<4; Ci++) {
-      var addr = XLSX.utils.encode_cell({r:R,c:Ci});
-      if (!ws1[addr]) continue;
-      var v0 = s1[R][0];
-      var isTitleRow = R<2;
-      var isSectionHdr = (v0==='OVERVIEW'||v0==='BY ORGANISATION'||v0==='BY STATUS');
-      var isTotalRow = (v0==='Total Orders');
-      ws1[addr].s = {
-        font:{ name:'Calibri', sz:11, bold:isTitleRow||isSectionHdr||isTotalRow, color:{rgb: isTitleRow?'C9A84C': isSectionHdr?'C9A84C': isTotalRow?'C9A84C':'F5F0E8'} },
-        fill:{ patternType:'solid', fgColor:{rgb: isTitleRow?'0D1117': isSectionHdr?'1A1A2E': isTotalRow?'2A2410': R%2===0?'0D1117':'161B22'} },
-        border:{ bottom:{style:'thin',color:{rgb:'30363D'}}, right:{style:'thin',color:{rgb:'30363D'}} },
-        alignment:{ horizontal: Ci===0?'left':'center', vertical:'center' }
-      };
-      if (Ci===2 && !isTitleRow && !isSectionHdr && typeof ws1[addr].v === 'number') ws1[addr].z = '#,##0';
-    }
-  }
-  XLSX.utils.book_append_sheet(wb, ws1, 'Dashboard Summary');
 
-  // ── Sheet 2: Raw Data ─────────────────────────────────────────────
-  var rawH = ['Category','Sub-Category','Orders','Value (AED)'];
-  var rawD = [
-    ['Food','Total',d.foodOrders||0,Math.round(d.foodVal||0)],
-    ['Non-Food','Total',d.nfOrders||0,Math.round(d.nfVal||0)],
-    ['Frozen','Total',d.frozenOrders||0,Math.round(d.frozenVal||0)],
-    ['Ambient','Total',d.ambientOrders||0,Math.round(d.ambientVal||0)],
-  ];
-  if (d.orgMap) Object.keys(d.orgMap).forEach(function(org){ var v=d.orgMap[org]; rawD.push(['Organisation',org,v.orders||0,Math.round(v.value||0)]); });
-  if (d.statusMap) Object.keys(d.statusMap).forEach(function(st){ var v=d.statusMap[st]; rawD.push(['Status',st,v.orders||0,Math.round(v.value||0)]); });
-  var ws2 = XLSX.utils.aoa_to_sheet([rawH].concat(rawD));
-  ws2['!cols'] = [{wch:18},{wch:22},{wch:12},{wch:16}];
-  XLSX.utils.book_append_sheet(wb, ws2, 'Raw Data');
-
-  downloadExcel(wb, 'Order_Summary_' + (d.date||new Date().toISOString().slice(0,10)).replace(/\//g,'-') + '.xlsx');
+  downloadHTML(html, 'Order_Summary_' + (d.date||new Date().toISOString().slice(0,10)).replace(/\//g,'-') + '.xls');
 }
 
 function exportReturnsExcel() {
   if (!RET_FULL_SUMMARY) { alert('No Market Returns data loaded'); return; }
   var s = RET_FULL_SUMMARY;
-  var wb = XLSX.utils.book_new();
-
-  // ── Sheet 1: Dashboard Summary ────────────────────────────────────
+  var date = new Date().toLocaleDateString('en-AE');
   var totalCount = (s.invCount||0) + (s.grvCount||0);
-  var s1 = [
-    ['AKI GROUP — MARKET RETURNS DASHBOARD'],
-    ['Generated: ' + new Date().toLocaleDateString('en-AE')],
-    [''],
-    ['OVERVIEW','Count','Value (AED)'],
-    ['Total Returns', totalCount, Math.round(s.totalVal||0)],
-    ['Invoice Cancellations', s.invCount||0, Math.round(s.invVal||0)],
-    ['GRV Returns', s.grvCount||0, Math.round(s.grvVal||0)],
-    [''],
+
+  var html = '<h1>\ud83d\udd04 MARKET RETURNS DASHBOARD</h1>';
+  html += '<div class="sub">AKI Group &nbsp;·&nbsp; Generated: ' + date + '</div>';
+
+  // KPI row
+  html += '<div class="kpi-grid">';
+  var rkpis = [
+    { label:'Total Returns', val:totalCount.toLocaleString(), sub:'AED '+Math.round(s.totalVal||0).toLocaleString(), col:'#c9a84c' },
+    { label:'Invoice Cancel', val:(s.invCount||0).toLocaleString(), sub:'AED '+Math.round(s.invVal||0).toLocaleString(), col:'#f85149' },
+    { label:'GRV Returns', val:(s.grvCount||0).toLocaleString(), sub:'AED '+Math.round(s.grvVal||0).toLocaleString(), col:'#e3b341' },
+    { label:'', val:'', sub:'', col:'#161b22' },
+    { label:'', val:'', sub:'', col:'#161b22' },
   ];
+  rkpis.forEach(function(k) {
+    html += '<div class="kpi-card"><div class="kpi-label">' + k.label + '</div><div class="kpi-value" style="color:' + k.col + '">' + k.val + '</div><div class="kpi-sub">' + k.sub + '</div></div>';
+  });
+  html += '</div>';
+
   if (s.byWH) {
-    s1.push(['BY WAREHOUSE','Count','Value (AED)','Invoice Cancel','GRV']);
+    html += '<div class="section-title">\ud83c\udfed By Warehouse</div>';
+    html += '<table><thead><tr><th>Warehouse</th><th>Total</th><th>Value (AED)</th><th>Invoice Cancel</th><th>GRV</th></tr></thead><tbody>';
     Object.keys(s.byWH).forEach(function(wh) {
-      var v=s.byWH[wh];
-      s1.push([wh, v.count||0, Math.round(v.val||0), v.inv||0, v.grv||0]);
+      var v = s.byWH[wh];
+      html += '<tr><td style="color:#c9a84c;font-weight:700">' + wh + '</td><td>' + (v.count||0).toLocaleString() + '</td><td class="gold">' + Math.round(v.val||0).toLocaleString() + '</td><td class="red">' + (v.inv||0).toLocaleString() + '</td><td class="green">' + (v.grv||0).toLocaleString() + '</td></tr>';
     });
-    s1.push(['']);
+    html += '</tbody></table>';
   }
+
   if (s.byMonth) {
-    s1.push(['BY MONTH','Count','Value (AED)','Invoice Cancel','GRV']);
+    html += '<div class="section-title">📅 By Month</div>';
+    html += '<table><thead><tr><th>Month</th><th>Total</th><th>Value (AED)</th><th>Invoice Cancel</th><th>GRV</th></tr></thead><tbody>';
     Object.keys(s.byMonth).sort().forEach(function(mo) {
-      var v=s.byMonth[mo];
-      var mn=MONTH_NAMES[parseInt(mo)]||mo;
-      s1.push([mn, v.count||0, Math.round(v.val||0), v.inv||0, v.grv||0]);
+      var v = s.byMonth[mo];
+      var mn = MONTH_NAMES[parseInt(mo)] || mo;
+      html += '<tr><td style="color:#c9a84c;font-weight:700">' + mn + '</td><td>' + (v.count||0).toLocaleString() + '</td><td class="gold">' + Math.round(v.val||0).toLocaleString() + '</td><td class="red">' + (v.inv||0).toLocaleString() + '</td><td class="green">' + (v.grv||0).toLocaleString() + '</td></tr>';
     });
-    s1.push(['']);
+    html += '</tbody></table>';
   }
+
   if (s.byBU) {
-    s1.push(['BY BU / CATEGORY','Count','Value (AED)']);
+    html += '<div class="section-title">🏷️ By BU / Category</div>';
+    html += '<table><thead><tr><th>BU / Category</th><th>Total</th><th>Value (AED)</th></tr></thead><tbody>';
     Object.keys(s.byBU).forEach(function(bu) {
-      var v=s.byBU[bu];
-      s1.push([bu, v.count||0, Math.round(v.val||0)]);
+      var v = s.byBU[bu];
+      html += '<tr><td style="color:#c9a84c;font-weight:700">' + bu + '</td><td>' + (v.count||0).toLocaleString() + '</td><td class="gold">' + Math.round(v.val||0).toLocaleString() + '</td></tr>';
     });
+    html += '</tbody></table>';
   }
-  var ws1 = XLSX.utils.aoa_to_sheet(s1);
-  ws1['!cols'] = [{wch:22},{wch:12},{wch:16},{wch:16},{wch:12}];
-  for (var R=0; R<s1.length; R++) {
-    for (var Ci=0; Ci<5; Ci++) {
-      var addr = XLSX.utils.encode_cell({r:R,c:Ci});
-      if (!ws1[addr]) continue;
-      var v0 = s1[R][0];
-      var isTitleRow = R<2;
-      var isSectionHdr = (v0==='OVERVIEW'||v0==='BY WAREHOUSE'||v0==='BY MONTH'||v0==='BY BU / CATEGORY');
-      var isTotalRow = (v0==='Total Returns');
-      ws1[addr].s = {
-        font:{ name:'Calibri', sz:11, bold:isTitleRow||isSectionHdr||isTotalRow, color:{rgb: isTitleRow||isSectionHdr?'C9A84C': isTotalRow?'C9A84C':'F5F0E8'} },
-        fill:{ patternType:'solid', fgColor:{rgb: isTitleRow?'0D1117': isSectionHdr?'1A1A2E': isTotalRow?'2A2410': R%2===0?'0D1117':'161B22'} },
-        border:{ bottom:{style:'thin',color:{rgb:'30363D'}}, right:{style:'thin',color:{rgb:'30363D'}} },
-        alignment:{ horizontal: Ci===0?'left':'center', vertical:'center' }
-      };
-      if ((Ci===2||Ci===3) && typeof ws1[addr].v==='number') ws1[addr].z = '#,##0';
-    }
-  }
-  XLSX.utils.book_append_sheet(wb, ws1, 'Dashboard Summary');
 
-  // ── Sheet 2: Raw Data ─────────────────────────────────────────────
-  var rawH = ['Category','Sub-Category','Count','Value (AED)','Invoice Cancel','GRV'];
-  var rawD = [
-    ['Overview','Total Returns', totalCount, Math.round(s.totalVal||0), s.invCount||0, s.grvCount||0],
-  ];
-  if (s.byWH) Object.keys(s.byWH).forEach(function(wh){ var v=s.byWH[wh]; rawD.push(['Warehouse',wh,v.count||0,Math.round(v.val||0),v.inv||0,v.grv||0]); });
-  if (s.byMonth) Object.keys(s.byMonth).sort().forEach(function(mo){ var v=s.byMonth[mo]; rawD.push(['Month',MONTH_NAMES[parseInt(mo)]||mo,v.count||0,Math.round(v.val||0),v.inv||0,v.grv||0]); });
-  if (s.byBU) Object.keys(s.byBU).forEach(function(bu){ var v=s.byBU[bu]; rawD.push(['BU/Category',bu,v.count||0,Math.round(v.val||0),'','']); });
-  var ws2 = XLSX.utils.aoa_to_sheet([rawH].concat(rawD));
-  ws2['!cols'] = [{wch:16},{wch:20},{wch:12},{wch:16},{wch:16},{wch:12}];
-  XLSX.utils.book_append_sheet(wb, ws2, 'Raw Data');
-
-  downloadExcel(wb, 'Market_Returns_' + new Date().toISOString().slice(0,10) + '.xlsx');
+  downloadHTML(html, 'Market_Returns_' + new Date().toISOString().slice(0,10) + '.xls');
 }
-
 loadAutomationFromServer();
 </script>
 
