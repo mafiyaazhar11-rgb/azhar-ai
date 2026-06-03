@@ -1276,17 +1276,17 @@ footer span{color:var(--gold);}
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px 16px;border-top:3px solid var(--gold);">
           <div style="font-size:13px;font-weight:600;color:var(--gold);text-transform:uppercase;letter-spacing:0.8px;">Total Orders YTD</div>
           <div id="auto-kpi-total" style="font-family:Montserrat,sans-serif;font-size:30px;font-weight:800;color:var(--gold);margin-top:4px;">—</div>
-          <div id="auto-kpi-period" style="font-size:12px;color:#c9c3b0;margin-top:2px;">—</div>
+          <div id="auto-kpi-period" style="font-size:13px;color:#c9c3b0;margin-top:2px;">—</div>
         </div>
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px 16px;border-top:3px solid var(--green);">
           <div style="font-size:13px;font-weight:600;color:var(--gold);text-transform:uppercase;letter-spacing:0.8px;">Auto Booked</div>
           <div id="auto-kpi-auto" style="font-family:Montserrat,sans-serif;font-size:30px;font-weight:800;color:var(--green);margin-top:4px;">—</div>
-          <div id="auto-kpi-auto-pct" style="font-size:12px;color:#c9c3b0;margin-top:2px;">—</div>
+          <div id="auto-kpi-auto-pct" style="font-size:13px;color:#c9c3b0;margin-top:2px;">—</div>
         </div>
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px 16px;border-top:3px solid #f85149;">
           <div style="font-size:13px;font-weight:600;color:var(--gold);text-transform:uppercase;letter-spacing:0.8px;">Manually Booked</div>
           <div id="auto-kpi-manual" style="font-family:Montserrat,sans-serif;font-size:30px;font-weight:800;color:#f85149;margin-top:4px;">—</div>
-          <div id="auto-kpi-manual-pct" style="font-size:12px;color:#c9c3b0;margin-top:2px;">—</div>
+          <div id="auto-kpi-manual-pct" style="font-size:13px;color:#c9c3b0;margin-top:2px;">—</div>
         </div>
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px 16px;border-top:3px solid #58a6ff;">
           <div style="font-size:13px;font-weight:600;color:var(--gold);text-transform:uppercase;letter-spacing:0.8px;">Automation Rate</div>
@@ -1296,7 +1296,7 @@ footer span{color:var(--gold);}
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px 16px;border-top:3px solid #a371f7;">
           <div style="font-size:13px;font-weight:600;color:var(--gold);text-transform:uppercase;letter-spacing:0.8px;">Latest Month</div>
           <div id="auto-kpi-latest" style="font-family:Montserrat,sans-serif;font-size:30px;font-weight:800;color:#a371f7;margin-top:4px;">—</div>
-          <div id="auto-kpi-latest-lbl" style="font-size:12px;color:#c9c3b0;margin-top:2px;">—</div>
+          <div id="auto-kpi-latest-lbl" style="font-size:13px;color:#c9c3b0;margin-top:2px;">—</div>
         </div>
       </div>
 
@@ -1566,51 +1566,55 @@ footer span{color:var(--gold);}
       </div>
 
       <!-- FILTERS -->
-      <div id="ds-filters" style="display:none;background:var(--surface);border:1px solid var(--border);padding:10px 14px;margin-bottom:14px;display:none;flex-wrap:wrap;gap:12px;align-items:center;">
+      <style>
+        #ds-f-org,#ds-f-channel,#ds-f-month{background:#1c2330!important;color:#c9a84c!important;border:1px solid #c9a84c!important;padding:6px 12px;font-size:13px;font-family:Montserrat,sans-serif;-webkit-appearance:none;appearance:none;cursor:pointer;min-width:100px;}
+        #ds-f-org option,#ds-f-channel option,#ds-f-month option{background:#1c2330;color:#f5f0e8;}
+      </style>
+      <div id="ds-filters" style="display:none;background:var(--surface);border:1px solid var(--border);padding:12px 14px;margin-bottom:14px;flex-wrap:wrap;gap:14px;align-items:center;">
         <div style="display:flex;align-items:center;gap:6px;">
-          <span style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Category</span>
-          <button id="ds-f-all" onclick="dsSetFilter('cat','all')" style="padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;border-radius:3px;background:var(--glow);border:1px solid var(--gold);color:var(--gold);font-family:Montserrat,sans-serif;">All</button>
-          <button id="ds-f-amb" onclick="dsSetFilter('cat','Ambient')" style="padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;border-radius:3px;background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-family:Montserrat,sans-serif;">Ambient</button>
-          <button id="ds-f-frz" onclick="dsSetFilter('cat','Frozen')" style="padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;border-radius:3px;background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-family:Montserrat,sans-serif;">Frozen</button>
+          <span style="font-size:13px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:1px;">Category</span>
+          <button id="ds-f-all" onclick="dsSetFilter('cat','all')" style="padding:6px 14px;font-size:13px;font-weight:700;cursor:pointer;border-radius:3px;background:rgba(201,168,76,0.15);border:1px solid var(--gold);color:var(--gold);font-family:Montserrat,sans-serif;">All</button>
+          <button id="ds-f-amb" onclick="dsSetFilter('cat','Ambient')" style="padding:6px 14px;font-size:13px;font-weight:700;cursor:pointer;border-radius:3px;background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-family:Montserrat,sans-serif;">Ambient</button>
+          <button id="ds-f-frz" onclick="dsSetFilter('cat','Frozen')" style="padding:6px 14px;font-size:13px;font-weight:700;cursor:pointer;border-radius:3px;background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-family:Montserrat,sans-serif;">Frozen</button>
         </div>
         <div style="display:flex;align-items:center;gap:6px;">
-          <span style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">ORG</span>
-          <select id="ds-f-org" onchange="dsApplyFilters()" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);padding:5px 10px;font-size:12px;font-family:Montserrat,sans-serif;"><option value="">All</option></select>
+          <span style="font-size:13px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:1px;">ORG</span>
+          <select id="ds-f-org" onchange="dsApplyFilters()"><option value="">All</option></select>
         </div>
         <div style="display:flex;align-items:center;gap:6px;">
-          <span style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Channel</span>
-          <select id="ds-f-channel" onchange="dsApplyFilters()" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);padding:5px 10px;font-size:12px;font-family:Montserrat,sans-serif;"><option value="">All</option></select>
+          <span style="font-size:13px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:1px;">Channel</span>
+          <select id="ds-f-channel" onchange="dsApplyFilters()"><option value="">All</option></select>
         </div>
         <div style="display:flex;align-items:center;gap:6px;">
-          <span style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Month</span>
-          <select id="ds-f-month" onchange="dsApplyFilters()" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);padding:5px 10px;font-size:12px;font-family:Montserrat,sans-serif;"><option value="">All</option></select>
+          <span style="font-size:13px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:1px;">Month</span>
+          <select id="ds-f-month" onchange="dsApplyFilters()"><option value="">All Months</option></select>
         </div>
       </div>
 
       <!-- KPI CARDS -->
       <div id="ds-kpi-row" style="display:none;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px;">
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px 16px;border-top:3px solid var(--gold);">
-          <div style="font-size:12px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:0.8px;">Total Orders</div>
+          <div style="font-size:13px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:0.8px;">Total Orders</div>
           <div id="ds-kpi-total" style="font-family:Montserrat,sans-serif;font-size:30px;font-weight:900;color:var(--gold);margin-top:4px;">—</div>
-          <div id="ds-kpi-period" style="font-size:12px;color:#c9c3b0;margin-top:2px;">—</div>
+          <div id="ds-kpi-period" style="font-size:13px;color:#c9c3b0;margin-top:2px;">—</div>
         </div>
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px 16px;border-top:3px solid #22c55e;">
-          <div style="font-size:12px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:0.8px;">Scheduled</div>
+          <div style="font-size:13px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:0.8px;">Scheduled</div>
           <div id="ds-kpi-sched" style="font-family:Montserrat,sans-serif;font-size:30px;font-weight:900;color:#22c55e;margin-top:4px;">—</div>
-          <div id="ds-kpi-sched-pct" style="font-size:12px;color:#c9c3b0;margin-top:2px;">—</div>
+          <div id="ds-kpi-sched-pct" style="font-size:13px;color:#c9c3b0;margin-top:2px;">—</div>
         </div>
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px 16px;border-top:3px solid #ef4444;">
-          <div style="font-size:12px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:0.8px;">Out of Schedule</div>
+          <div style="font-size:13px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:0.8px;">Out of Schedule</div>
           <div id="ds-kpi-oos" style="font-family:Montserrat,sans-serif;font-size:30px;font-weight:900;color:#ef4444;margin-top:4px;">—</div>
-          <div id="ds-kpi-oos-pct" style="font-size:12px;color:#c9c3b0;margin-top:2px;">—</div>
+          <div id="ds-kpi-oos-pct" style="font-size:13px;color:#c9c3b0;margin-top:2px;">—</div>
         </div>
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px 16px;border-top:3px solid #f59e0b;">
-          <div style="font-size:12px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:0.8px;">No Schedule</div>
+          <div style="font-size:13px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:0.8px;">No Schedule</div>
           <div id="ds-kpi-nosched" style="font-family:Montserrat,sans-serif;font-size:30px;font-weight:900;color:#f59e0b;margin-top:4px;">—</div>
           <div id="ds-kpi-nosched-pct" style="font-size:12px;color:#c9c3b0;margin-top:2px;">Not in master</div>
         </div>
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px 16px;border-top:3px solid #3b82f6;">
-          <div style="font-size:12px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:0.8px;">Compliance Rate</div>
+          <div style="font-size:13px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:0.8px;">Compliance Rate</div>
           <div id="ds-kpi-rate" style="font-family:Montserrat,sans-serif;font-size:30px;font-weight:900;color:#3b82f6;margin-top:4px;">—</div>
           <div style="font-size:12px;color:#c9c3b0;margin-top:2px;">Scheduled / Total</div>
         </div>
@@ -8023,15 +8027,34 @@ function dsApplyFilters() {
 function dsFilterData(s) {
   if (!s) return s;
   var f = DS_FILTER;
-  // If no filters active, return full data
   if (f.cat === 'all' && !f.channel && !f.month) return s;
 
-  // Filter monthData
+  var scheduled = 0, oos = 0, noSched = 0;
+
+  // Ambient/Frozen filter — use tempData
+  if (f.cat !== 'all' && s.tempData && s.tempData[f.cat]) {
+    var td = s.tempData[f.cat];
+    scheduled = td.scheduled; oos = td.oos; noSched = td.noSched;
+  } else {
+    scheduled = s.scheduled; oos = s.oos; noSched = s.noSched;
+  }
+
+  // Filter monthData by month selection
   var monthData = {};
   Object.keys(s.monthData||{}).forEach(function(m) {
     if (f.month && f.month !== m) return;
     monthData[m] = s.monthData[m];
   });
+
+  // Recalc from monthData if month filter active
+  if (f.month && Object.keys(monthData).length) {
+    scheduled = 0; oos = 0; noSched = 0;
+    Object.keys(monthData).forEach(function(m) {
+      scheduled += monthData[m].scheduled || 0;
+      oos       += monthData[m].oos       || 0;
+      noSched   += monthData[m].noSched   || 0;
+    });
+  }
 
   // Filter channelData
   var channelData = {};
@@ -8040,34 +8063,31 @@ function dsFilterData(s) {
     channelData[ch] = s.channelData[ch];
   });
 
-  // Recalculate totals from filtered data
-  var scheduled = 0, oos = 0, noSched = 0;
-  var src = f.month ? monthData : (f.channel ? channelData : null);
-  if (src) {
-    Object.keys(src).forEach(function(k) {
-      scheduled += src[k].scheduled || 0;
-      oos       += src[k].oos       || 0;
-      noSched   += src[k].noSched   || 0;
+  // Recalc from channelData if channel filter active
+  if (f.channel && Object.keys(channelData).length) {
+    scheduled = 0; oos = 0; noSched = 0;
+    Object.keys(channelData).forEach(function(ch) {
+      scheduled += channelData[ch].scheduled || 0;
+      oos       += channelData[ch].oos       || 0;
+      noSched   += channelData[ch].noSched   || 0;
     });
-  } else {
-    scheduled = s.scheduled; oos = s.oos; noSched = s.noSched;
   }
-  var total = scheduled + oos + noSched;
-  if (!total) { scheduled = s.scheduled; oos = s.oos; noSched = s.noSched; total = s.total; }
 
-  // Update KPIs
+  var total = scheduled + oos + noSched || s.total;
   var sp = total ? Math.round(scheduled/total*100) : 0;
   var op = total ? Math.round(oos/total*100)       : 0;
   var np = total ? Math.round(noSched/total*100)   : 0;
-  document.getElementById('ds-kpi-total').textContent   = total.toLocaleString();
-  document.getElementById('ds-kpi-sched').textContent   = scheduled.toLocaleString();
-  document.getElementById('ds-kpi-sched-pct').textContent = sp + '% compliance';
-  document.getElementById('ds-kpi-oos').textContent     = oos.toLocaleString();
-  document.getElementById('ds-kpi-oos-pct').textContent = op + '% of total';
-  document.getElementById('ds-kpi-nosched').textContent = noSched.toLocaleString();
-  document.getElementById('ds-kpi-rate').textContent    = sp + '%';
 
-  // Filter no-schedule and OOS customers
+  // Update KPIs live
+  document.getElementById('ds-kpi-total').textContent     = total.toLocaleString();
+  document.getElementById('ds-kpi-sched').textContent     = scheduled.toLocaleString();
+  document.getElementById('ds-kpi-sched-pct').textContent = sp + '% compliance';
+  document.getElementById('ds-kpi-oos').textContent       = oos.toLocaleString();
+  document.getElementById('ds-kpi-oos-pct').textContent   = op + '% of total';
+  document.getElementById('ds-kpi-nosched').textContent   = noSched.toLocaleString();
+  document.getElementById('ds-kpi-rate').textContent      = sp + '%';
+
+  // Filter customer lists
   var noSchedCustomers = (s.noSchedCustomers||[]).filter(function(r) {
     if (f.channel && r.channel !== f.channel) return false;
     return true;
@@ -8078,10 +8098,10 @@ function dsFilterData(s) {
   });
 
   return Object.assign({}, s, {
-    total: total, scheduled: scheduled, oos: oos, noSched: noSched,
-    schedPct: sp, oosPct: op, noSchedPct: np,
-    monthData: monthData, channelData: channelData,
-    noSchedCustomers: noSchedCustomers, oosCustomers: oosCustomers
+    total:total, scheduled:scheduled, oos:oos, noSched:noSched,
+    schedPct:sp, oosPct:op, noSchedPct:np,
+    monthData:monthData, channelData:channelData,
+    noSchedCustomers:noSchedCustomers, oosCustomers:oosCustomers
   });
 }
 
@@ -8181,7 +8201,7 @@ function dsRenderMonthly(md) {
     var d = md[m];
     var p = d.total ? Math.round(d.scheduled/d.total*100) : 0;
     html += '<tr>';
-    html += '<td style="padding:8px 10px;font-size:15px;font-weight:700;color:var(--gold);border-bottom:1px solid #1a1e26;">'+m+'</td>';
+    html += '<td style="padding:9px 10px;font-size:15px;font-weight:700;color:var(--gold);border-bottom:1px solid #1a1e26;">'+m+'</td>';
     html += '<td style="padding:8px 10px;font-size:15px;text-align:center;border-bottom:1px solid #1a1e26;color:#f5f0e8;">'+d.total.toLocaleString()+'</td>';
     html += '<td style="padding:8px 10px;font-size:15px;text-align:center;border-bottom:1px solid #1a1e26;color:#22c55e;">'+d.scheduled.toLocaleString()+'</td>';
     html += '<td style="padding:8px 10px;font-size:15px;text-align:center;border-bottom:1px solid #1a1e26;color:#ef4444;">'+(d.oos||0).toLocaleString()+'</td>';
@@ -8240,7 +8260,7 @@ function dsRenderNoSched(arr) {
     html += '<td style="padding:8px 10px;font-size:14px;text-align:center;border-bottom:1px solid #1a1e26;color:#c9c3b0;">'+r.org+'</td>';
     html += '<td style="padding:8px 10px;font-size:15px;font-weight:700;text-align:center;border-bottom:1px solid #1a1e26;color:#f59e0b;">'+r.orders+'</td>';
     html += '<td style="padding:8px 10px;font-size:13px;border-bottom:1px solid #1a1e26;color:#c9c3b0;">'+r.months+'</td>';
-    html += '<td style="padding:8px 10px;text-align:center;border-bottom:1px solid #1a1e26;"><span style="background:rgba(245,158,11,0.15);color:#f59e0b;padding:3px 10px;border-radius:10px;font-size:11px;font-weight:700;">Add to Schedule</span></td>';
+    html += '<td style="padding:8px 10px;text-align:center;border-bottom:1px solid #1a1e26;"><span style="background:rgba(245,158,11,0.15);color:#f59e0b;padding:3px 10px;border-radius:10px;font-size:11px;font-weight:700;">Exception Approval / Promo</span></td>';
     html += '</tr>';
   });
   html += '</tbody>';
