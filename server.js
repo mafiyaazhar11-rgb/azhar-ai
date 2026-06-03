@@ -1694,6 +1694,177 @@ app.post('/api/delivery/data', requireAuth, requireRole('superadmin','subadmin')
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
+// ── Server-side Oracle classification (avoids browser freeze) ────────
+app.post('/api/delivery/classify', requireAuth, requireRole('superadmin','subadmin'), upload.single('file'), async function(req, res) {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+    if (!deliveryScheduleLookup || Object.keys(deliveryScheduleLookup).length === 0) {
+      return res.status(400).json({ error: 'No schedule loaded on server. Please upload schedule first.' });
+    }
+
+    console.log('DS Classify: Reading', req.file.originalname, req.file.size, 'bytes');
+    var wb = XLSX.read(req.file.buffer, { type: 'buffer', cellDates: true, cellNF: false, cellHTML: false, cellFormula: false });
+
+    // Find correct sheet
+    var sheetName = wb.SheetNames.find(function(s){ return s.trim() === 'Data'; })
+      || wb.SheetNames.find(function(s){ return s.toUpperCase().includes('MASTER'); })
+      || wb.SheetNames[0];
+
+    console.log('DS Classify: Using sheet', sheetName, 'of', wb.SheetNames);
+    var data = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { defval: '' });
+    console.log('DS Classify: Rows', data.length);
+
+    if (!data.length) return res.status(400).json({ error: 'No data rows found in file. Sheet: ' + sheetName });
+
+    var keys = Object.keys(data[0]);
+    var colSiteId  = keys.find(function(k){ return /site.?id/i.test(k); }) || '';
+    var colDate    = keys.find(function(k){ return /^rsd$/i.test(k.trim()) || /request.?date/i.test(k) || /invoice.?date/i.test(k); }) || '';
+    var colTemp    = keys.find(function(k){ return /ambient.*frozen|frozen.*ambient/i.test(k) || k.trim() === 'Ambient / Frozen'; }) || '';
+    var colChannel = keys.find(function(k){ return /channel/i.test(k); }) || '';
+    var colMonth   = keys.find(function(k){ return k.trim().toUpperCase() === 'MONTH'; }) || '';
+    var colCust    = keys.find(function(k){ return /customer.?name|customer_name/i.test(k); }) || '';
+    var colOrg     = keys.find(function(k){ return k.trim().toUpperCase() === 'ORG'; }) || '';
+    var colOrderType = keys.find(function(k){ return /order.?type/i.test(k); }) || '';
+
+    console.log('DS Classify columns: siteId=' + colSiteId + ' date=' + colDate + ' temp=' + colTemp + ' channel=' + colChannel + ' month=' + colMonth);
+
+    var DAYS = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
+    var monthData = {}, channelData = {}, dayData = {}, noSchedCusts = {}, oosCusts = {};
+    var scheduled = 0, oos = 0, noSched = 0;
+
+    data.forEach(function(row) {
+      var siteRaw = row[colSiteId];
+      var site = null;
+      try { site = siteRaw ? parseInt(parseFloat(String(siteRaw))) : null; } catch(e){}
+
+      var day = null;
+      var dateRaw = row[colDate];
+      if (dateRaw) {
+        try {
+          var dt = null;
+          if (dateRaw instanceof Date) { dt = dateRaw; }
+          else {
+            var f = parseFloat(String(dateRaw));
+            if (!isNaN(f) && f > 1000) dt = new Date(Math.round((f - 25569) * 86400 * 1000));
+            else dt = new Date(String(dateRaw));
+          }
+          if (dt && !isNaN(dt.getTime())) day = DAYS[dt.getDay()];
+        } catch(e){}
+      }
+
+      var temp    = String(row[colTemp]||'').trim().toUpperCase();
+      // Derive month from date if no MONTH column
+      var month = '';
+      if (colMonth && row[colMonth]) {
+        month = String(row[colMonth]).trim();
+      } else if (dateRaw) {
+        try {
+          var mdt = null;
+          if (dateRaw instanceof Date) mdt = dateRaw;
+          else { var mf = parseFloat(String(dateRaw)); if (!isNaN(mf) && mf > 1000) mdt = new Date(Math.round((mf-25569)*86400*1000)); else mdt = new Date(String(dateRaw)); }
+          if (mdt && !isNaN(mdt.getTime())) {
+            var mNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            month = mNames[mdt.getMonth()] + '-' + String(mdt.getFullYear()).slice(2);
+          }
+        } catch(e){}
+      }
+      var channel = String(row[colChannel]||'').trim();
+      var org     = String(row[colOrg]||'').trim();
+      var cust    = String(row[colCust]||'').trim();
+      // Get channel and org from schedule if not in oracle
+      if ((!channel || !org) && site && deliveryScheduleLookup[site]) {
+        var sl2 = deliveryScheduleLookup[site];
+        if (!channel && sl2.accountType) channel = sl2.accountType;
+        if (!org && sl2.org) org = sl2.org;
+      }
+
+      var status;
+      if (!site || !deliveryScheduleLookup[site]) {
+        status = 'No Schedule';
+        if (site) {
+          if (!noSchedCusts[site]) noSchedCusts[site] = { name: cust, orders: 0, months: {}, channel: channel, org: org };
+          noSchedCusts[site].orders++;
+          if (month) noSchedCusts[site].months[month] = 1;
+        }
+      } else {
+        var sl = deliveryScheduleLookup[site];
+        var day3 = day ? day.substring(0,3) : null;
+        if (day3 && sl.days && (day3 in sl.days)) {
+          var schedTemp = sl.days[day3].replace(/\s/g,'').toUpperCase();
+          if (temp === 'FROZEN') {
+            status = schedTemp.indexOf('FROZEN') !== -1 ? 'Scheduled' : 'Out of Schedule';
+          } else {
+            status = schedTemp ? 'Scheduled' : 'Out of Schedule';
+          }
+        } else {
+          status = 'Out of Schedule';
+        }
+        if (status === 'Out of Schedule') {
+          if (!oosCusts[site]) oosCusts[site] = { name: cust, orders: 0, schedDays: sl.days ? Object.keys(sl.days).join(', ') : '', orderedDay: day3||'?', channel: channel, org: org };
+          oosCusts[site].orders++;
+        }
+      }
+
+      if (status === 'Scheduled') scheduled++;
+      else if (status === 'Out of Schedule') oos++;
+      else noSched++;
+
+      if (month) {
+        if (!monthData[month]) monthData[month] = { scheduled:0, oos:0, noSched:0, total:0 };
+        monthData[month][status==='Scheduled'?'scheduled':status==='Out of Schedule'?'oos':'noSched']++;
+        monthData[month].total++;
+      }
+      if (channel) {
+        if (!channelData[channel]) channelData[channel] = { scheduled:0, oos:0, noSched:0, total:0 };
+        channelData[channel][status==='Scheduled'?'scheduled':status==='Out of Schedule'?'oos':'noSched']++;
+        channelData[channel].total++;
+      }
+      if (day) {
+        var d3 = day.substring(0,3);
+        if (!dayData[d3]) dayData[d3] = { scheduled:0, oos:0, noSched:0, total:0 };
+        dayData[d3][status==='Scheduled'?'scheduled':status==='Out of Schedule'?'oos':'noSched']++;
+        dayData[d3].total++;
+      }
+    });
+
+    var total = scheduled + oos + noSched;
+    var sp = total ? Math.round(scheduled/total*100) : 0;
+    var op = total ? Math.round(oos/total*100) : 0;
+    var np = total ? Math.round(noSched/total*100) : 0;
+
+    var noSchedArr = Object.keys(noSchedCusts).map(function(s){
+      var d = noSchedCusts[s];
+      return { site:s, name:d.name, orders:d.orders, months:Object.keys(d.months).join(', '), channel:d.channel, org:d.org };
+    }).sort(function(a,b){ return b.orders-a.orders; }).slice(0,50);
+
+    var oosArr = Object.keys(oosCusts).map(function(s){
+      var d = oosCusts[s];
+      return { site:s, name:d.name, orders:d.orders, schedDays:d.schedDays, orderedDay:d.orderedDay, channel:d.channel, org:d.org };
+    }).sort(function(a,b){ return b.orders-a.orders; }).slice(0,50);
+
+    var summary = {
+      total:total, scheduled:scheduled, oos:oos, noSched:noSched,
+      schedPct:sp, oosPct:op, noSchedPct:np,
+      monthData:monthData, channelData:channelData, dayData:dayData,
+      noSchedCustomers:noSchedArr, oosCustomers:oosArr
+    };
+
+    // Save to DB
+    await pool.query('DELETE FROM delivery_data');
+    await pool.query('INSERT INTO delivery_data (uploaded_by, file_name, total_orders, summary) VALUES ($1,$2,$3,$4)',
+      [req.user.username, req.file.originalname, total, JSON.stringify(summary)]);
+    deliveryData = { summary, fileName: req.file.originalname, uploadedBy: req.user.username, totalOrders: total };
+
+    await auditLog(req.user.uid, req.user.username, 'UPLOAD', 'Delivery Oracle: ' + req.file.originalname + ' ' + total + ' orders', '');
+    console.log('DS Classify complete:', total, 'orders — Scheduled:', sp + '%', 'OOS:', op + '%', 'NoSched:', np + '%');
+
+    res.json({ success: true, summary: summary, totalOrders: total });
+  } catch(e) {
+    console.error('DS Classify error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.delete('/api/delivery/schedule/clear', requireAuth, requireRole('superadmin','subadmin'), async function(req, res) {
   try {
     await pool.query('DELETE FROM delivery_schedule');
