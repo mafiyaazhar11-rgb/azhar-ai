@@ -7777,61 +7777,64 @@ async function handleDSScheduleUpload(input) {
   reader.readAsArrayBuffer(file);
 }
 
-// ── Upload Oracle Extract (daily) ─────────────────────────────────────
+// ── Upload Oracle Extract (daily) — SERVER SIDE PROCESSING ──────────
 async function handleDSOracleUpload(input) {
   var file = input.files[0];
   if (!file) return;
-  // If not in memory, try loading from server first
+
+  function dscSetOracleStatus(msg) {
+    var el = document.getElementById('ds-status');
+    if (el) el.innerHTML = msg;
+    console.log('DS Oracle:', msg.replace(/<[^>]+>/g,''));
+  }
+
+  // Check schedule loaded
   if (!DS_SCHED_LOOKUP || Object.keys(DS_SCHED_LOOKUP).length === 0) {
-    document.getElementById('ds-status').innerHTML = '<span style="color:var(--gold)">⚙️ Loading schedule from database...</span>';
+    dscSetOracleStatus('<span style="color:var(--gold)">⚙️ Loading schedule from server...</span>');
     await loadDeliveryFromServer();
     if (!DS_SCHED_LOOKUP || Object.keys(DS_SCHED_LOOKUP).length === 0) {
-      document.getElementById('ds-status').innerHTML = '<span style="color:#ef4444">❌ Schedule not found — please upload Schedule Master first (📋 button)</span>';
+      dscSetOracleStatus('<span style="color:#ef4444">❌ Schedule not found — upload Schedule Master first (📋 button)</span>');
       return;
     }
   }
-  document.getElementById('ds-status').innerHTML = '<span style="color:var(--gold)">⚙️ Reading Oracle extract...</span>';
-  var reader = new FileReader();
-  reader.onload = async function(e) {
-    try {
-      var wb = XLSX.read(e.target.result, { type: 'array', dense: true, cellDates: false });
-      // Try Data sheet first, then MASTER DATA, then first sheet
-      var sheetName = wb.SheetNames.find(function(s){ return s.trim() === 'Data'; })
-        || wb.SheetNames.find(function(s){ return s.toUpperCase().includes('MASTER'); })
-        || wb.SheetNames[0];
 
-      document.getElementById('ds-status').innerHTML = '<span style="color:var(--gold)">⚙️ Parsing ' + file.name + '...</span>';
-      await new Promise(function(r){ setTimeout(r, 50); });
+  dscSetOracleStatus('<span style="color:var(--gold)">⚙️ Uploading ' + file.name + ' to server for processing...</span>');
 
-      var data = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { defval: '' });
-      document.getElementById('ds-status').innerHTML = '<span style="color:var(--gold)">⚙️ Classifying ' + data.length.toLocaleString() + ' orders...</span>';
-      await new Promise(function(r){ setTimeout(r, 50); });
+  try {
+    // Send file to server — server does all classification (avoids browser freeze)
+    var formData = new FormData();
+    formData.append('file', file);
 
-      var result = await classifyOracle(data);
-      DS_DATA = result.summary;
+    var resp = await fetch('/api/delivery/classify', {
+      method: 'POST',
+      headers: { 'x-auth-token': AUTH_TOKEN },
+      body: formData
+    });
 
-      document.getElementById('ds-status').innerHTML = '<span style="color:var(--gold)">⚙️ Saving to database...</span>';
-
-      // Save aggregated to server
-      var saveResp = await fetch('/api/delivery/data', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-auth-token': AUTH_TOKEN },
-        body: JSON.stringify({ summary: result.summary, fileName: file.name, totalOrders: result.summary.total })
-      });
-      var saveResult = await saveResp.json();
-
-      document.getElementById('ds-status').innerHTML = saveResult.success
-        ? '<span style="color:#22c55e">✅ ' + result.summary.total.toLocaleString() + ' orders classified — Scheduled: ' + result.summary.schedPct + '% · OOS: ' + result.summary.oosPct + '% · No Sched: ' + result.summary.noSchedPct + '%</span>'
-        : '<span style="color:#f59e0b">⚠️ ' + result.summary.total.toLocaleString() + ' orders classified (save error: ' + (saveResult.error||'') + ')</span>';
-
-      dsShowData(result.summary, null);
-      dscToggleOracle();
-    } catch(err) {
-      document.getElementById('ds-status').innerHTML = '<span style="color:#ef4444">❌ Error: ' + err.message + '</span>';
+    if (!resp.ok) {
+      var errText = await resp.text();
+      try { var errJson = JSON.parse(errText); dscSetOracleStatus('<span style="color:#ef4444">❌ Server error: ' + (errJson.error||errText) + '</span>'); }
+      catch(e) { dscSetOracleStatus('<span style="color:#ef4444">❌ Server error: ' + errText.substring(0,200) + '</span>'); }
+      return;
     }
-  };
-  reader.readAsArrayBuffer(file);
+
+    var result = await resp.json();
+    if (!result.success) {
+      dscSetOracleStatus('<span style="color:#ef4444">❌ Classification failed: ' + (result.error||'Unknown error') + '</span>');
+      return;
+    }
+
+    DS_DATA = result.summary;
+    dscSetOracleStatus('<span style="color:#22c55e">✅ ' + result.totalOrders.toLocaleString() + ' orders classified — Scheduled: ' + result.summary.schedPct + '% · OOS: ' + result.summary.oosPct + '% · No Sched: ' + result.summary.noSchedPct + '%</span>');
+    dsShowData(result.summary, null);
+    dscToggleOracle();
+
+  } catch(err) {
+    dscSetOracleStatus('<span style="color:#ef4444">❌ Upload error: ' + err.message + '</span>');
+    console.error('Oracle upload error:', err);
+  }
 }
+
 
 // ── Classify Oracle rows ──────────────────────────────────────────────
 async function classifyOracle(data) {
@@ -8014,7 +8017,72 @@ function dsApplyFilters() {
   DS_FILTER.org     = document.getElementById('ds-f-org')     ? document.getElementById('ds-f-org').value : '';
   DS_FILTER.channel = document.getElementById('ds-f-channel') ? document.getElementById('ds-f-channel').value : '';
   DS_FILTER.month   = document.getElementById('ds-f-month')   ? document.getElementById('ds-f-month').value : '';
-  if (DS_DATA) dsRenderAll(DS_DATA);
+  if (DS_DATA) dsRenderAll(dsFilterData(DS_DATA));
+}
+
+function dsFilterData(s) {
+  if (!s) return s;
+  var f = DS_FILTER;
+  // If no filters active, return full data
+  if (f.cat === 'all' && !f.channel && !f.month) return s;
+
+  // Filter monthData
+  var monthData = {};
+  Object.keys(s.monthData||{}).forEach(function(m) {
+    if (f.month && f.month !== m) return;
+    monthData[m] = s.monthData[m];
+  });
+
+  // Filter channelData
+  var channelData = {};
+  Object.keys(s.channelData||{}).forEach(function(ch) {
+    if (f.channel && f.channel !== ch) return;
+    channelData[ch] = s.channelData[ch];
+  });
+
+  // Recalculate totals from filtered data
+  var scheduled = 0, oos = 0, noSched = 0;
+  var src = f.month ? monthData : (f.channel ? channelData : null);
+  if (src) {
+    Object.keys(src).forEach(function(k) {
+      scheduled += src[k].scheduled || 0;
+      oos       += src[k].oos       || 0;
+      noSched   += src[k].noSched   || 0;
+    });
+  } else {
+    scheduled = s.scheduled; oos = s.oos; noSched = s.noSched;
+  }
+  var total = scheduled + oos + noSched;
+  if (!total) { scheduled = s.scheduled; oos = s.oos; noSched = s.noSched; total = s.total; }
+
+  // Update KPIs
+  var sp = total ? Math.round(scheduled/total*100) : 0;
+  var op = total ? Math.round(oos/total*100)       : 0;
+  var np = total ? Math.round(noSched/total*100)   : 0;
+  document.getElementById('ds-kpi-total').textContent   = total.toLocaleString();
+  document.getElementById('ds-kpi-sched').textContent   = scheduled.toLocaleString();
+  document.getElementById('ds-kpi-sched-pct').textContent = sp + '% compliance';
+  document.getElementById('ds-kpi-oos').textContent     = oos.toLocaleString();
+  document.getElementById('ds-kpi-oos-pct').textContent = op + '% of total';
+  document.getElementById('ds-kpi-nosched').textContent = noSched.toLocaleString();
+  document.getElementById('ds-kpi-rate').textContent    = sp + '%';
+
+  // Filter no-schedule and OOS customers
+  var noSchedCustomers = (s.noSchedCustomers||[]).filter(function(r) {
+    if (f.channel && r.channel !== f.channel) return false;
+    return true;
+  });
+  var oosCustomers = (s.oosCustomers||[]).filter(function(r) {
+    if (f.channel && r.channel !== f.channel) return false;
+    return true;
+  });
+
+  return Object.assign({}, s, {
+    total: total, scheduled: scheduled, oos: oos, noSched: noSched,
+    schedPct: sp, oosPct: op, noSchedPct: np,
+    monthData: monthData, channelData: channelData,
+    noSchedCustomers: noSchedCustomers, oosCustomers: oosCustomers
+  });
 }
 
 function dsRenderAll(s) {
