@@ -6278,6 +6278,7 @@ function showApp() {
   showDemoBanner();
   loadSalesFromServer();
   loadGIFromServer();
+  loadAutomationFromServer();
 
   if(AUTH_USER && AUTH_USER.must_change_password) {
     document.getElementById('change-pwd-modal').style.display = 'flex';
@@ -7388,7 +7389,6 @@ function exportReturnsExcel() {
 
   downloadHTML(html, 'Market_Returns_' + new Date().toISOString().slice(0,10) + '.xls');
 }
-loadAutomationFromServer();
 </script>
 
 </body>
