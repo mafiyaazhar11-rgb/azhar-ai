@@ -2433,20 +2433,35 @@ function getFilteredData(){
     base.reasons = (base.reasons||[]).map(function(r){return{l:r.l,n:Math.round((r.n||0)*finalRatio)};}).filter(function(r){return r.n>0;});
     base.custs   = (base.custs||[]).map(function(c){return{n:c.n,c:Math.round((c.c||0)*finalRatio),v:c.v||''};}).filter(function(c){return c.c>0;});
     base.tRej = Math.round((base.tRej||0) * finalRatio);
-  } else if(!hasDayFilter && (rejType !== 'all' || rejSrc !== 'all')){
-    // tRej already set correctly above from month data — just scale del/rej arrays
+  } else if(!hasDayFilter){
+    // All months or Month only — use REAL counts from orgBase
+    if(rejType === 'food'){
+      base.tRej = rejMonth !== 'all' ? Math.round((moInfo3.food_rej||0)) : (orgBase.food_rej||0);
+    } else if(rejType === 'nonfood'){
+      base.tRej = rejMonth !== 'all' ? Math.round((moInfo3.nonfood_rej||0)) : (orgBase.nonfood_rej||0);
+    } else if(rejSrc === 'external'){
+      base.tRej = rejMonth !== 'all' ? Math.round((moInfo3.ext_rej||0)) : (orgBase.ext_rej||0);
+    } else if(rejSrc === 'internal'){
+      base.tRej = rejMonth !== 'all' ? Math.round((moInfo3.int_rej||0)) : (orgBase.int_rej||0);
+    } else {
+      base.tRej = Math.round((base.tRej||0) * finalRatio);
+    }
   } else {
     base.tRej = Math.round((base.tRej||0) * finalRatio);
   }
   base.del  = base.del.map(function(v){return Math.round(v*finalRatio);});
   base.rej  = base.rej.map(function(v){return Math.round(v*finalRatio);});
-  // tDel scaling
-  if(rejType === 'all' && rejSrc === 'all'){
+  // tDel scaling — use real food/nonfood delivered counts
+  if(rejType === 'food'){
+    base.tDel = orgBase.food_del||0;
+  } else if(rejType === 'nonfood'){
+    base.tDel = orgBase.nonfood_del||0;
+  } else if(rejSrc === 'external'){
+    base.tDel = Math.round((orgBase.tDel||0) * srcRatio);
+  } else if(rejSrc === 'internal'){
+    base.tDel = Math.round((orgBase.tDel||0) * srcRatio);
+  } else {
     base.tDel = Math.round(base.tDel||0);
-  } else if(rejType === 'all' && rejSrc !== 'all'){
-    base.tDel = Math.round((base.tDel||0) * srcRatio);
-  } else if(rejType !== 'all' && rejSrc !== 'all'){
-    base.tDel = Math.round((base.tDel||0) * srcRatio);
   }
   return base;
 }
@@ -2567,7 +2582,7 @@ oc.innerHTML=ORG_SUMMARY.map(function(o){
     +'<div style="background:rgba(232,75,75,0.1);border:1px solid rgba(232,75,75,0.3);padding:16px;">'+
      '<div style="font-size:12px;letter-spacing:2px;color:var(--red);text-transform:uppercase;margin-bottom:4px;">'+rateLabel+'</div>'+
      '<div style="font-family:Cormorant Garamond,serif;font-size:28px;font-weight:700;color:var(--red);">'+rejRate+'</div>'+
-     (isFiltered?'<div style="font-size:12px;color:var(--muted);margin-top:3px;">Overall: '+overallRate+'  ·  '+(rejType!=='all'?(rejType==='food'?'Food':'Non-Food')+' share':(rejSrc==='external'?'External':'Internal')+' share')+'</div>':'')+
+     (isFiltered?'<div style="font-size:12px;color:var(--muted);margin-top:3px;">Overall: '+overallRate+' &nbsp;·&nbsp; Contribution: '+(d.tRej/(_allData.tRej||1)*100).toFixed(1)+'% of total rej</div>':'')+
      '</div>'
     +'<div style="background:var(--card);border:1px solid var(--border);padding:16px;position:relative;"><div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:0.4;"></div><div style="font-size:12px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">Delivered</div><div style="font-family:Cormorant Garamond,serif;font-size:28px;font-weight:700;color:var(--green);">'+d.tDel.toLocaleString()+'</div></div>'
     +'<div style="background:var(--card);border:1px solid var(--border);padding:16px;position:relative;"><div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:0.4;"></div><div style="font-size:12px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">Value at Risk</div><div style="font-family:Cormorant Garamond,serif;font-size:28px;font-weight:700;color:var(--gold);">'+d.val+'</div></div>';
