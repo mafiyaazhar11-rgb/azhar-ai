@@ -2452,10 +2452,20 @@ function getFilteredData(){
   base.del  = base.del.map(function(v){return Math.round(v*finalRatio);});
   base.rej  = base.rej.map(function(v){return Math.round(v*finalRatio);});
   // tDel scaling — use real food/nonfood delivered counts
+  // food_del + food_rej = total food orders; nonfood_del + nonfood_rej = total nonfood orders
   if(rejType === 'food'){
-    base.tDel = orgBase.food_del||0;
+    var foodTotalDel = orgBase.food_del||0;
+    // If food_del seems low (less than food_rej), use tDel * typeRatio as fallback
+    if(foodTotalDel === 0 && (orgBase.food_rej||0) > 0){
+      foodTotalDel = Math.round((orgBase.tDel||0) * typeRatio);
+    }
+    base.tDel = foodTotalDel;
   } else if(rejType === 'nonfood'){
-    base.tDel = orgBase.nonfood_del||0;
+    var nfTotalDel = orgBase.nonfood_del||0;
+    if(nfTotalDel === 0 && (orgBase.nonfood_rej||0) > 0){
+      nfTotalDel = Math.round((orgBase.tDel||0) * typeRatio);
+    }
+    base.tDel = nfTotalDel;
   } else if(rejSrc === 'external'){
     base.tDel = Math.round((orgBase.tDel||0) * srcRatio);
   } else if(rejSrc === 'internal'){
@@ -2542,8 +2552,15 @@ oc.innerHTML=ORG_SUMMARY.map(function(o){
     var onCls=rejORG===o.org?'on':(rejORG!=='all'?'dim':'');
     var orgD = ORG_DATA[o.org] || {};
 
-    // Compute filtered rejection count for this org
-    var filtRej = getOrgFilteredCount(o);
+    // Compute filtered rejection count for this org — use actual type breakdown
+    var filtRej;
+    if(rejType === 'food'){
+      filtRej = NONFOOD_ORGS.indexOf(o.org) >= 0 ? 0 : (orgD.food_rej||0);
+    } else if(rejType === 'nonfood'){
+      filtRej = FOOD_ORGS.indexOf(o.org) >= 0 ? 0 : (orgD.nonfood_rej||0);
+    } else {
+      filtRej = getOrgFilteredCount(o);
+    }
 
     // Compute filtered delivered count for this org based on active filter
     var filtDel = 0;
