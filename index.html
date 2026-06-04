@@ -738,6 +738,7 @@ footer span{color:var(--gold);}
           <button class="rej-pill" id="rm-3" onclick="rejFilter('month',3)">Mar</button>
           <button class="rej-pill" id="rm-4" onclick="rejFilter('month',4)">Apr</button>
           <button class="rej-pill" id="rm-5" onclick="rejFilter('month',5)">May</button>
+          <button class="rej-pill" id="rm-6" onclick="rejFilter('month',6)">Jun</button>
         </div>
         <!-- Day row — shown when a month is selected -->
         <div id="rej-day-row" style="display:none;margin-bottom:10px;">
@@ -2106,9 +2107,9 @@ function lockAdmin(){document.getElementById('admin-lock').style.display='flex';
 // REJECTION PIVOT DASHBOARD
 // 
 const DAY_DATA  = {};
-const ORG_DATA  = { all:{del:[0,0,0,0,0],rej:[0,0,0,0,0],tDel:0,tRej:0,val:'',reasons:[],custs:[],areas:[]} };
+const ORG_DATA  = { all:{del:[0,0,0,0,0,0],rej:[0,0,0,0,0,0],tDel:0,tRej:0,val:'',reasons:[],custs:[],areas:[]} };
 const ORG_SUMMARY = [];
-const REJ_MONTHS  = ['Jan','Feb','Mar','Apr','May'];
+const REJ_MONTHS  = ['Jan','Feb','Mar','Apr','May','Jun'];
 
 let rejBU='all', rejORG='all', rejMonth='all', rejDay='all', rejType='all', rejSrc='all';
 var rejSelectedDays = []; // multi-day selection
@@ -2119,7 +2120,7 @@ function rejFilter(dim, val){
   const idMap={
     bu:   {all:'rb-all',consumer:'rb-con',salon:'rb-sal'},
     org:  {all:'ro-all',DCV:'ro-dcv',DGC:'ro-dgc',DSN:'ro-dsn',DGS:'ro-dgs',DCF:'ro-dcf'},
-    month:{all:'rm-all',1:'rm-1',2:'rm-2',3:'rm-3',4:'rm-4',5:'rm-5'},
+    month:{all:'rm-all',1:'rm-1',2:'rm-2',3:'rm-3',4:'rm-4',5:'rm-5',6:'rm-6'},
     type: {all:'rt-all',food:'rt-food',nonfood:'rt-nf'},
     src:  {all:'rs-all',external:'rs-ext',internal:'rs-int'}
   };
@@ -2235,9 +2236,9 @@ function getFilteredData(){
   var NONFOOD_ORGS2 = ['DGC','DGS','DSN'];
   if(effectiveORG !== 'all' && effectiveORG !== 'CONSUMER_DIC'){
     if(rejType === 'food'    && NONFOOD_ORGS2.indexOf(effectiveORG) >= 0)
-      return {tDel:0,tRej:0,val:'AED 0K',del:[0,0,0,0,0],rej:[0,0,0,0,0],reasons:[],custs:[],areas:[]};
+      return {tDel:0,tRej:0,val:'AED 0K',del:[0,0,0,0,0,0],rej:[0,0,0,0,0,0],reasons:[],custs:[],areas:[]};
     if(rejType === 'nonfood' && FOOD_ORGS2.indexOf(effectiveORG) >= 0)
-      return {tDel:0,tRej:0,val:'AED 0K',del:[0,0,0,0,0],rej:[0,0,0,0,0],reasons:[],custs:[],areas:[]};
+      return {tDel:0,tRej:0,val:'AED 0K',del:[0,0,0,0,0,0],rej:[0,0,0,0,0,0],reasons:[],custs:[],areas:[]};
   }
 
   // Step 1: Get base ORG data (using effectiveORG from BU filter)
@@ -2298,8 +2299,8 @@ function getFilteredData(){
     timeBase = {
       tDel:comb.tDel, tRej:comb.tRej,
       val:comb.valNum>=1000000?'AED '+(comb.valNum/1000000).toFixed(2)+'M':'AED '+Math.round(comb.valNum/1000)+'K',
-      del:[0,0,0,0,0].map(function(_,i){return i===rejMonth-1?comb.tDel:0;}),
-      rej:[0,0,0,0,0].map(function(_,i){return i===rejMonth-1?comb.tRej:0;}),
+      del:[0,0,0,0,0,0].map(function(_,i){return i===rejMonth-1?comb.tDel:0;}),
+      rej:[0,0,0,0,0,0].map(function(_,i){return i===rejMonth-1?comb.tRej:0;}),
       reasons:top10x(comb.reasons), custs:top8cx(comb.custs), areas:top6ax(comb.areas)
     };
   }
@@ -2310,8 +2311,8 @@ function getFilteredData(){
     if(di2){
       timeBase = {
         tDel:di2.tDel||0, tRej:di2.tRej||0, val:di2.val||'AED 0K',
-        del:[0,0,0,0,0].map(function(_,i){return i===rejMonth-1?(di2.tDel||0):0;}),
-        rej:[0,0,0,0,0].map(function(_,i){return i===rejMonth-1?(di2.tRej||0):0;}),
+        del:[0,0,0,0,0,0].map(function(_,i){return i===rejMonth-1?(di2.tDel||0):0;}),
+        rej:[0,0,0,0,0,0].map(function(_,i){return i===rejMonth-1?(di2.tRej||0):0;}),
         reasons:di2.reasons||[], custs:di2.custs||[], areas:di2.areas||[]
       };
     }
@@ -2325,8 +2326,8 @@ function getFilteredData(){
     timeBase = {
       tDel:mDel, tRej:mRej,
       val: (function(){ var r=mRej/(orgBase.tRej||1); var v=parseFloat((orgBase.val||'0').replace(/[^0-9.]/g,''))*((orgBase.val||'').includes('M')?1000000:1000); var n=v*r; return n>=1000000?'AED '+(n/1000000).toFixed(2)+'M':'AED '+Math.round(n/1000)+'K'; })(),
-      del:[0,0,0,0,0].map(function(_,i){return i===mi?mDel:0;}),
-      rej:[0,0,0,0,0].map(function(_,i){return i===mi?mRej:0;}),
+      del:[0,0,0,0,0,0].map(function(_,i){return i===mi?mDel:0;}),
+      rej:[0,0,0,0,0,0].map(function(_,i){return i===mi?mRej:0;}),
       reasons:(moInfo2.reasons&&moInfo2.reasons.length)?moInfo2.reasons:(orgBase.reasons||[]),
       custs:(moInfo2.custs&&moInfo2.custs.length)?moInfo2.custs:(orgBase.custs||[]), areas:(moInfo2.areas&&moInfo2.areas.length)?moInfo2.areas:(orgBase.areas||[])
     };
