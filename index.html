@@ -2336,13 +2336,13 @@ function getFilteredData(){
   // Use timeBase if available, otherwise use orgBase
   var base = timeBase || {
     tDel:orgBase.tDel, tRej:orgBase.tRej, val:orgBase.val,
-    del:orgBase.del.slice(0,5), rej:orgBase.rej.slice(0,5),
+    del:orgBase.del.slice(0,6), rej:orgBase.rej.slice(0,6),
     reasons:orgBase.reasons||[], custs:orgBase.custs||[], areas:orgBase.areas||[]
   };
   if(!timeBase){
-    while(base.del.length<5) base.del.push(0);
-    while(base.rej.length<5) base.rej.push(0);
-    base.del=base.del.slice(0,5); base.rej=base.rej.slice(0,5);
+    while(base.del.length<6) base.del.push(0);
+    while(base.rej.length<6) base.rej.push(0);
+    base.del=base.del.slice(0,6); base.rej=base.rej.slice(0,6);
   }
 
   // Step 3: Apply TYPE and SOURCE filters using ORG-level ratios
@@ -2352,26 +2352,23 @@ function getFilteredData(){
 
   if(rejType === 'food'){
     typeRatio = orgTotalRej > 0 ? (orgBase.food_rej||0) / orgTotalRej : 0;
-    // Set tDel directly from real food delivered count
-    // Use ratio of food_del/tDel to scale the time-filtered base.tDel
-    // Use food_del ratio if available, otherwise use food_rej ratio as best estimate
     var foodDelRatioRaw = (orgBase.food_del||0) > 0 && (orgBase.tDel||0) > 0
       ? (orgBase.food_del||0)/(orgBase.tDel||1)
       : ((orgBase.food_rej||0) > 0 ? (orgBase.food_rej||0)/(orgBase.tRej||1) : typeRatio);
     base.tDel = Math.round((base.tDel||0) * foodDelRatioRaw);
-    // Safety: ensure tDel is never 0 when there are rejections (causes 100% rate)
     if(base.tDel === 0 && base.tRej > 0) base.tDel = Math.round(base.tRej * (1/typeRatio - 1));
-    // Update val to food val (proportional)
     var foodValNum = parseFloat((orgBase.food_val||'0').replace(/[^0-9.]/g,'')) * ((orgBase.food_val||'').includes('M')?1000000:1000);
     var baseValNum = parseFloat((base.val||'0').replace(/[^0-9.]/g,'')) * ((base.val||'').includes('M')?1000000:1000);
     var orgValNum  = parseFloat((orgBase.val||'0').replace(/[^0-9.]/g,'')) * ((orgBase.val||'').includes('M')?1000000:1000);
-    // Fallback: if food_val not stored, estimate from food_rej ratio
     if(foodValNum === 0 && (orgBase.food_rej||0) > 0 && (orgBase.tRej||0) > 0){
       foodValNum = orgValNum * ((orgBase.food_rej||0) / (orgBase.tRej||1));
     }
     var foodValRatio = orgValNum > 0 ? foodValNum / orgValNum : (orgBase.food_rej||0)/(orgBase.tRej||1);
     var newVal = baseValNum * foodValRatio;
     base.val = newVal>=1000000?'AED '+(newVal/1000000).toFixed(2)+'M':'AED '+Math.round(newVal/1000)+'K';
+    // Use real food reasons/custs
+    if((orgBase.food_reasons||[]).length > 0) base.reasons = orgBase.food_reasons;
+    if((orgBase.food_custs||[]).length > 0) base.custs = orgBase.food_custs;
   } else if(rejType === 'nonfood'){
     typeRatio = (orgBase.nonfood_rej||0) / orgTotalRej;
     var nfValNum  = parseFloat((orgBase.nonfood_val||'0').replace(/[^0-9.]/g,'')) * ((orgBase.nonfood_val||'').includes('M')?1000000:1000);
@@ -2380,12 +2377,21 @@ function getFilteredData(){
     var nfValRatio = orgValNum2 > 0 ? nfValNum / orgValNum2 : 0;
     var newVal2 = baseValNum2 * nfValRatio;
     base.val = newVal2>=1000000?'AED '+(newVal2/1000000).toFixed(2)+'M':'AED '+Math.round(newVal2/1000)+'K';
+    // Use real nonfood reasons/custs
+    if((orgBase.nonfood_reasons||[]).length > 0) base.reasons = orgBase.nonfood_reasons;
+    if((orgBase.nonfood_custs||[]).length > 0) base.custs = orgBase.nonfood_custs;
   }
 
-  if(rejSrc === 'external') srcRatio = (orgBase.ext_rej||0) / orgTotalRej;
-  else if(rejSrc === 'internal'){
+  if(rejSrc === 'external'){
+    srcRatio = (orgBase.ext_rej||0) / orgTotalRej;
+    // Use real external reasons/custs
+    if((orgBase.ext_reasons||[]).length > 0) base.reasons = orgBase.ext_reasons;
+    if((orgBase.ext_custs||[]).length > 0) base.custs = orgBase.ext_custs;
+  } else if(rejSrc === 'internal'){
     srcRatio = (orgBase.int_rej||0) / orgTotalRej;
-    base.reasons = [{l:'AKI staff issue',n:0},{l:'Staff related reason',n:0},{l:'Receiving closed early',n:0}];
+    // Use real internal reasons/custs
+    if((orgBase.int_reasons||[]).length > 0) base.reasons = orgBase.int_reasons;
+    if((orgBase.int_custs||[]).length > 0) base.custs = orgBase.int_custs;
   }
 
   var finalRatio = typeRatio * srcRatio;
@@ -2394,21 +2400,14 @@ function getFilteredData(){
   base.tRej = Math.round((base.tRej||0) * finalRatio);
   base.del  = base.del.map(function(v){return Math.round(v*finalRatio);});
   base.rej  = base.rej.map(function(v){return Math.round(v*finalRatio);});
-  // tDel: only scale by srcRatio if source filter active
-  // (type-filtered tDel already set correctly above)
+  // tDel scaling
   if(rejType === 'all' && rejSrc === 'all'){
-    base.tDel = Math.round((base.tDel||0));
+    base.tDel = Math.round(base.tDel||0);
   } else if(rejType === 'all' && rejSrc !== 'all'){
     base.tDel = Math.round((base.tDel||0) * srcRatio);
   } else if(rejType !== 'all' && rejSrc !== 'all'){
     base.tDel = Math.round((base.tDel||0) * srcRatio);
   }
-  // else: rejType !== 'all' && rejSrc === 'all' -> tDel already set by type filter above
-
-  if(rejSrc === 'internal' && base.tRej > 0){
-    base.reasons = [{l:'AKI staff issue',n:Math.round(base.tRej*0.4)},{l:'Staff related reason',n:Math.round(base.tRej*0.35)},{l:'Receiving closed early',n:Math.round(base.tRej*0.25)}];
-  }
-
   return base;
 }
 
