@@ -663,7 +663,7 @@ app.post('/api/rejection/upload', upload.single('file'), async function(req, res
       if (del) totalDel++;
       if (rej) { totalRej++; totalVal+=val; }
       if (org) {
-        if (!orgMap[org]) orgMap[org]={tDel:0,tRej:0,val:0,food_rej:0,food_del:0,nonfood_rej:0,nonfood_del:0,ext_rej:0,ext_del:0,int_rej:0,int_del:0,food_val:0,nonfood_val:0,del:new Array(12).fill(0),rej:new Array(12).fill(0),reasons:{},custs:{},areas:{}};
+        if (!orgMap[org]) orgMap[org]={tDel:0,tRej:0,val:0,food_rej:0,food_del:0,nonfood_rej:0,nonfood_del:0,ext_rej:0,ext_del:0,int_rej:0,int_del:0,food_val:0,nonfood_val:0,del:new Array(12).fill(0),rej:new Array(12).fill(0),reasons:{},custs:{},areas:{},food_reasons:{},food_custs:{},nonfood_reasons:{},nonfood_custs:{},ext_reasons:{},ext_custs:{},int_reasons:{},int_custs:{}};
         if (del) {
           orgMap[org].tDel++; if(mo)orgMap[org].del[mo-1]++;
           if(isFood)orgMap[org].food_del++; else if(isNF)orgMap[org].nonfood_del++;
@@ -677,6 +677,22 @@ app.post('/api/rejection/upload', upload.single('file'), async function(req, res
           if(root)orgMap[org].reasons[root]=(orgMap[org].reasons[root]||0)+1;
           if(cust)orgMap[org].custs[cust]=(orgMap[org].custs[cust]||0)+1;
           if(area)orgMap[org].areas[area]=(orgMap[org].areas[area]||0)+1;
+          // Per-type breakdown
+          if(isFood){
+            if(root)orgMap[org].food_reasons[root]=(orgMap[org].food_reasons[root]||0)+1;
+            if(cust)orgMap[org].food_custs[cust]=(orgMap[org].food_custs[cust]||0)+1;
+          } else if(isNF){
+            if(root)orgMap[org].nonfood_reasons[root]=(orgMap[org].nonfood_reasons[root]||0)+1;
+            if(cust)orgMap[org].nonfood_custs[cust]=(orgMap[org].nonfood_custs[cust]||0)+1;
+          }
+          // Per-source breakdown
+          if(srcStr==='EXTERNAL'){
+            if(root)orgMap[org].ext_reasons[root]=(orgMap[org].ext_reasons[root]||0)+1;
+            if(cust)orgMap[org].ext_custs[cust]=(orgMap[org].ext_custs[cust]||0)+1;
+          } else if(srcStr==='INTERNAL'){
+            if(root)orgMap[org].int_reasons[root]=(orgMap[org].int_reasons[root]||0)+1;
+            if(cust)orgMap[org].int_custs[cust]=(orgMap[org].int_custs[cust]||0)+1;
+          }
         }
       }
       if (mo) {
@@ -704,11 +720,20 @@ app.post('/api/rejection/upload', upload.single('file'), async function(req, res
 
     var allR={},allC={},allA={},allDel=new Array(12).fill(0),allRej=new Array(12).fill(0);
     var allFoodRej=0,allNFRej=0,allExtRej=0,allIntRej=0,allFoodDel=0,allNFDel=0,allFoodVal=0,allNFVal=0;
+    var allFoodR={},allFoodC={},allNFR={},allNFC={},allExtR={},allExtC={},allIntR={},allIntC={};
     Object.keys(orgMap).forEach(function(org){
       var v=orgMap[org];
       Object.keys(v.reasons).forEach(function(k){allR[k]=(allR[k]||0)+v.reasons[k];});
       Object.keys(v.custs).forEach(function(k){allC[k]=(allC[k]||0)+v.custs[k];});
       Object.keys(v.areas).forEach(function(k){allA[k]=(allA[k]||0)+v.areas[k];});
+      Object.keys(v.food_reasons||{}).forEach(function(k){allFoodR[k]=(allFoodR[k]||0)+v.food_reasons[k];});
+      Object.keys(v.food_custs||{}).forEach(function(k){allFoodC[k]=(allFoodC[k]||0)+v.food_custs[k];});
+      Object.keys(v.nonfood_reasons||{}).forEach(function(k){allNFR[k]=(allNFR[k]||0)+v.nonfood_reasons[k];});
+      Object.keys(v.nonfood_custs||{}).forEach(function(k){allNFC[k]=(allNFC[k]||0)+v.nonfood_custs[k];});
+      Object.keys(v.ext_reasons||{}).forEach(function(k){allExtR[k]=(allExtR[k]||0)+v.ext_reasons[k];});
+      Object.keys(v.ext_custs||{}).forEach(function(k){allExtC[k]=(allExtC[k]||0)+v.ext_custs[k];});
+      Object.keys(v.int_reasons||{}).forEach(function(k){allIntR[k]=(allIntR[k]||0)+v.int_reasons[k];});
+      Object.keys(v.int_custs||{}).forEach(function(k){allIntC[k]=(allIntC[k]||0)+v.int_custs[k];});
       v.del.forEach(function(d,i){allDel[i]+=d;}); v.rej.forEach(function(r,i){allRej[i]+=r;});
       allFoodRej+=(v.food_rej||0); allNFRej+=(v.nonfood_rej||0);
       allExtRej+=(v.ext_rej||0); allIntRej+=(v.int_rej||0);
@@ -726,10 +751,10 @@ app.post('/api/rejection/upload', upload.single('file'), async function(req, res
       monthsOut[mo]={days:Object.keys(md.days).map(Number).sort(function(a,b){return a-b;}),tDel:md.tDel,tRej:md.tRej,val:fmtVal(md.val),reasons:top10(md.reasons),custs:top8c(md.custs||{}),areas:top6a(md.areas||{}),data:dataOut};
     });
 
-    var orgsOut={all:{tDel:totalDel,tRej:totalRej,val:fmtVal(totalVal),food_rej:allFoodRej,food_del:allFoodDel,nonfood_rej:allNFRej,nonfood_del:allNFDel,ext_rej:allExtRej,int_rej:allIntRej,food_val:fmtVal(allFoodVal),nonfood_val:fmtVal(allNFVal),del:allDel,rej:allRej,reasons:top10(allR),custs:top8c(allC),areas:top6a(allA)}};
+    var orgsOut={all:{tDel:totalDel,tRej:totalRej,val:fmtVal(totalVal),food_rej:allFoodRej,food_del:allFoodDel,nonfood_rej:allNFRej,nonfood_del:allNFDel,ext_rej:allExtRej,int_rej:allIntRej,food_val:fmtVal(allFoodVal),nonfood_val:fmtVal(allNFVal),del:allDel,rej:allRej,reasons:top10(allR),custs:top8c(allC),areas:top6a(allA),food_reasons:top10(allFoodR),food_custs:top8c(allFoodC),nonfood_reasons:top10(allNFR),nonfood_custs:top8c(allNFC),ext_reasons:top10(allExtR),ext_custs:top8c(allExtC),int_reasons:top10(allIntR),int_custs:top8c(allIntC)}};
     Object.keys(orgMap).forEach(function(org){
       var v=orgMap[org];
-      orgsOut[org]={tDel:v.tDel,tRej:v.tRej,val:fmtVal(v.val),food_rej:v.food_rej||0,food_del:v.food_del||0,nonfood_rej:v.nonfood_rej||0,nonfood_del:v.nonfood_del||0,ext_rej:v.ext_rej||0,int_rej:v.int_rej||0,food_val:fmtVal(v.food_val||0),nonfood_val:fmtVal(v.nonfood_val||0),del:v.del,rej:v.rej,reasons:top10(v.reasons),custs:top8c(v.custs),areas:top6a(v.areas)};
+      orgsOut[org]={tDel:v.tDel,tRej:v.tRej,val:fmtVal(v.val),food_rej:v.food_rej||0,food_del:v.food_del||0,nonfood_rej:v.nonfood_rej||0,nonfood_del:v.nonfood_del||0,ext_rej:v.ext_rej||0,int_rej:v.int_rej||0,food_val:fmtVal(v.food_val||0),nonfood_val:fmtVal(v.nonfood_val||0),del:v.del,rej:v.rej,reasons:top10(v.reasons),custs:top8c(v.custs),areas:top6a(v.areas),food_reasons:top10(v.food_reasons||{}),food_custs:top8c(v.food_custs||{}),nonfood_reasons:top10(v.nonfood_reasons||{}),nonfood_custs:top8c(v.nonfood_custs||{}),ext_reasons:top10(v.ext_reasons||{}),ext_custs:top8c(v.ext_custs||{}),int_reasons:top10(v.int_reasons||{}),int_custs:top8c(v.int_custs||{})};
     });
 
     rejectionData={uploadedAt:new Date().toISOString(),uploadedBy:req.body.uploadedBy||'Admin',fileName:req.file.originalname,totalOrders:totalRej+totalDel,orgs:orgsOut,months:monthsOut};
