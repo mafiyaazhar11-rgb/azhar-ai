@@ -2540,8 +2540,7 @@ oc.innerHTML=ORG_SUMMARY.map(function(o){
       +'</div>';
   }).join('');
 
-  // KPI Cards
-  // Get overall (all-BU) data for current selection to compute overall rate
+  // KPI Cards — compute rates correctly for each filter combination
   var _savedType = rejType;
   rejType = 'all';
   var _allData = getFilteredData();
@@ -2549,15 +2548,26 @@ oc.innerHTML=ORG_SUMMARY.map(function(o){
   var allGrandTotal = (_allData.tDel + _allData.tRej) || 1;
   const overallRate = (_allData.tRej/allGrandTotal*100).toFixed(2)+'%';
   const totalOrders = d.tDel + d.tRej;
-  const rejRate = overallRate; // always show overall rate
-  const buContrib = (rejType!=='all') ? (d.tRej/allGrandTotal*100).toFixed(2)+'%' : null;
+  // Rejection rate = filtered rejections / (filtered delivered + filtered rejections)
+  const filteredGrandTotal = (d.tDel + d.tRej) || 1;
+  const filteredRate = (d.tRej / filteredGrandTotal * 100).toFixed(2) + '%';
+  // Show filtered rate when type or source is selected, overall rate when All
+  const isFiltered = (rejType !== 'all' || rejSrc !== 'all');
+  const rejRate = isFiltered ? filteredRate : overallRate;
+  const buContrib = isFiltered ? (d.tRej/allGrandTotal*100).toFixed(2)+'%' : null;
   const kEl=document.getElementById('rej-kpis');
+  var rateLabel = 'Rejection Rate';
+  if(rejType==='food') rateLabel='Food Rejection Rate';
+  else if(rejType==='nonfood') rateLabel='Non-Food Rejection Rate';
+  else if(rejSrc==='external') rateLabel='External Rejection Rate';
+  else if(rejSrc==='internal') rateLabel='Internal Rejection Rate';
+
   if(kEl)kEl.innerHTML=''
     +'<div style="background:var(--card);border:1px solid var(--border);padding:16px;position:relative;"><div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:0.4;"></div><div style="font-size:12px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">Total Rejections</div><div style="font-family:Cormorant Garamond,serif;font-size:28px;font-weight:700;color:var(--gold);">'+d.tRej.toLocaleString()+'</div></div>'
     +'<div style="background:rgba(232,75,75,0.1);border:1px solid rgba(232,75,75,0.3);padding:16px;">'+
-     '<div style="font-size:12px;letter-spacing:2px;color:var(--red);text-transform:uppercase;margin-bottom:4px;">'+(buContrib?'BU Contribution to Rejections':'Rejection Rate')+'</div>'+
-     '<div style="font-family:Cormorant Garamond,serif;font-size:28px;font-weight:700;color:var(--red);">'+(buContrib||rejRate)+'</div>'+
-     (buContrib?'<div style="font-size:12px;color:var(--muted);margin-top:3px;">Overall: '+overallRate+' · '+(rejType==='food'?'Food':'Non-Food')+' share of total</div>':'')+
+     '<div style="font-size:12px;letter-spacing:2px;color:var(--red);text-transform:uppercase;margin-bottom:4px;">'+rateLabel+'</div>'+
+     '<div style="font-family:Cormorant Garamond,serif;font-size:28px;font-weight:700;color:var(--red);">'+rejRate+'</div>'+
+     (isFiltered?'<div style="font-size:12px;color:var(--muted);margin-top:3px;">Overall: '+overallRate+'  ·  '+(rejType!=='all'?(rejType==='food'?'Food':'Non-Food')+' share':(rejSrc==='external'?'External':'Internal')+' share')+'</div>':'')+
      '</div>'
     +'<div style="background:var(--card);border:1px solid var(--border);padding:16px;position:relative;"><div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:0.4;"></div><div style="font-size:12px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">Delivered</div><div style="font-family:Cormorant Garamond,serif;font-size:28px;font-weight:700;color:var(--green);">'+d.tDel.toLocaleString()+'</div></div>'
     +'<div style="background:var(--card);border:1px solid var(--border);padding:16px;position:relative;"><div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:0.4;"></div><div style="font-size:12px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">Value at Risk</div><div style="font-family:Cormorant Garamond,serif;font-size:28px;font-weight:700;color:var(--gold);">'+d.val+'</div></div>';
