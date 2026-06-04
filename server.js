@@ -609,7 +609,7 @@ app.post('/api/rejection/upload', upload.single('file'), async function(req, res
       status:  findC('FINAL STATUS', 'STATUS'),
       org:     findC('ORGANIZATION') || findC('ORG-BU'),
       date:    findC('D DATE', 'DATE', 'DELIVERY DATE'),
-      root:    findC('FINA- ROOT', 'ROOT CAUSE', 'ROOT_CAUSE', 'REASON-1'),
+      root:    findC('FINAL- ROOT', 'FINA- ROOT', 'ROOT CAUSE', 'ROOT_CAUSE', 'REASON-1'),
       cust:    findC('CUSTOMER NAME', 'CUSTOMER'),
       area:    findC('AREA', 'CITY'),
       value:   findC('VALUE', 'AMOUNT'),
@@ -696,7 +696,7 @@ app.post('/api/rejection/upload', upload.single('file'), async function(req, res
         }
       }
       if (mo) {
-        if (!monthMap[mo]) monthMap[mo]={days:{},tDel:0,tRej:0,val:0,reasons:{},custs:{},areas:{},data:{}};
+        if (!monthMap[mo]) monthMap[mo]={days:{},tDel:0,tRej:0,val:0,reasons:{},custs:{},areas:{},food_reasons:{},food_custs:{},nonfood_reasons:{},nonfood_custs:{},ext_reasons:{},ext_custs:{},int_reasons:{},int_custs:{},food_rej:0,nonfood_rej:0,ext_rej:0,int_rej:0,data:{}};
         if (del) monthMap[mo].tDel++;
         if (rej) {
           monthMap[mo].tRej++; monthMap[mo].val+=val;
@@ -704,6 +704,26 @@ app.post('/api/rejection/upload', upload.single('file'), async function(req, res
           if(cust)monthMap[mo].custs[cust]=(monthMap[mo].custs[cust]||0)+1;
           if(area)monthMap[mo].areas[area]=(monthMap[mo].areas[area]||0)+1;
           if(day)monthMap[mo].days[day]=1;
+          // Per-type breakdown for month
+          if(isFood){
+            monthMap[mo].food_rej++;
+            if(root)monthMap[mo].food_reasons[root]=(monthMap[mo].food_reasons[root]||0)+1;
+            if(cust)monthMap[mo].food_custs[cust]=(monthMap[mo].food_custs[cust]||0)+1;
+          } else if(isNF){
+            monthMap[mo].nonfood_rej++;
+            if(root)monthMap[mo].nonfood_reasons[root]=(monthMap[mo].nonfood_reasons[root]||0)+1;
+            if(cust)monthMap[mo].nonfood_custs[cust]=(monthMap[mo].nonfood_custs[cust]||0)+1;
+          }
+          // Per-source breakdown for month
+          if(srcStr==='EXTERNAL'){
+            monthMap[mo].ext_rej++;
+            if(root)monthMap[mo].ext_reasons[root]=(monthMap[mo].ext_reasons[root]||0)+1;
+            if(cust)monthMap[mo].ext_custs[cust]=(monthMap[mo].ext_custs[cust]||0)+1;
+          } else if(srcStr==='INTERNAL'){
+            monthMap[mo].int_rej++;
+            if(root)monthMap[mo].int_reasons[root]=(monthMap[mo].int_reasons[root]||0)+1;
+            if(cust)monthMap[mo].int_custs[cust]=(monthMap[mo].int_custs[cust]||0)+1;
+          }
         }
         if (day) {
           if(!monthMap[mo].data[day])monthMap[mo].data[day]={tDel:0,tRej:0,val:0,reasons:{},custs:{},areas:{}};
@@ -748,7 +768,7 @@ app.post('/api/rejection/upload', upload.single('file'), async function(req, res
         var dd=md.data[day];
         dataOut[day]={tDel:dd.tDel,tRej:dd.tRej,val:fmtVal(dd.val),reasons:top10(dd.reasons),custs:top8c(dd.custs),areas:top6a(dd.areas)};
       });
-      monthsOut[mo]={days:Object.keys(md.days).map(Number).sort(function(a,b){return a-b;}),tDel:md.tDel,tRej:md.tRej,val:fmtVal(md.val),reasons:top10(md.reasons),custs:top8c(md.custs||{}),areas:top6a(md.areas||{}),data:dataOut};
+      monthsOut[mo]={days:Object.keys(md.days).map(Number).sort(function(a,b){return a-b;}),tDel:md.tDel,tRej:md.tRej,val:fmtVal(md.val),food_rej:md.food_rej||0,nonfood_rej:md.nonfood_rej||0,ext_rej:md.ext_rej||0,int_rej:md.int_rej||0,reasons:top10(md.reasons),custs:top8c(md.custs||{}),areas:top6a(md.areas||{}),food_reasons:top10(md.food_reasons||{}),food_custs:top8c(md.food_custs||{}),nonfood_reasons:top10(md.nonfood_reasons||{}),nonfood_custs:top8c(md.nonfood_custs||{}),ext_reasons:top10(md.ext_reasons||{}),ext_custs:top8c(md.ext_custs||{}),int_reasons:top10(md.int_reasons||{}),int_custs:top8c(md.int_custs||{}),data:dataOut};
     });
 
     var orgsOut={all:{tDel:totalDel,tRej:totalRej,val:fmtVal(totalVal),food_rej:allFoodRej,food_del:allFoodDel,nonfood_rej:allNFRej,nonfood_del:allNFDel,ext_rej:allExtRej,int_rej:allIntRej,food_val:fmtVal(allFoodVal),nonfood_val:fmtVal(allNFVal),del:allDel,rej:allRej,reasons:top10(allR),custs:top8c(allC),areas:top6a(allA),food_reasons:top10(allFoodR),food_custs:top8c(allFoodC),nonfood_reasons:top10(allNFR),nonfood_custs:top8c(allNFC),ext_reasons:top10(allExtR),ext_custs:top8c(allExtC),int_reasons:top10(allIntR),int_custs:top8c(allIntC)}};
