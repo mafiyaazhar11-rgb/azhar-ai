@@ -2540,16 +2540,37 @@ filterNote.textContent = rejORG!=='all' ? ' ORG FILTER ACTIVE: Showing '+rejORG+
 
 oc.innerHTML=ORG_SUMMARY.map(function(o){
     var onCls=rejORG===o.org?'on':(rejORG!=='all'?'dim':'');
-    // When org is selected, show that org's actual data in its card
-    var cardData = (rejORG===o.org && ORG_DATA[o.org]) ? ORG_DATA[o.org] : o;
-    var cardRej = rejORG===o.org ? (cardData.tRej||o.rej) : o.rej;
-    var cardVal = rejORG===o.org ? (cardData.val||o.val) : o.val;
+    var orgD = ORG_DATA[o.org] || {};
+
+    // Compute filtered rejection count for this org
+    var filtRej = getOrgFilteredCount(o);
+
+    // Compute filtered delivered count for this org based on active filter
+    var filtDel = 0;
+    if(rejType === 'food'){
+      filtDel = NONFOOD_ORGS.indexOf(o.org) >= 0 ? 0 : (orgD.food_del||0);
+    } else if(rejType === 'nonfood'){
+      filtDel = FOOD_ORGS.indexOf(o.org) >= 0 ? 0 : (orgD.nonfood_del||0);
+    } else if(rejSrc === 'external'){
+      filtDel = Math.round((orgD.tDel||0) * ((orgD.ext_rej||0) / Math.max(orgD.tRej,1)));
+    } else if(rejSrc === 'internal'){
+      filtDel = Math.round((orgD.tDel||0) * ((orgD.int_rej||0) / Math.max(orgD.tRej,1)));
+    } else if(rejMonth !== 'all'){
+      var mi0 = rejMonth - 1;
+      filtDel = (orgD.del||[])[mi0] || 0;
+    } else {
+      filtDel = orgD.tDel || 0;
+    }
+
+    var filtTotal = filtRej + filtDel;
+    var dynamicRate = filtTotal > 0 ? (filtRej/filtTotal*100).toFixed(1)+'%' : '0%';
+
     return '<div class="org-card '+onCls+'" onclick="rejFilter(\'org\',\''+o.org+'\')">'
       +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">'
       +'<span style="font-size:15px;font-weight:700;color:'+o.color+';">'+o.org+'</span>'
-      +'<span style="font-size:12px;color:var(--red);background:rgba(232,75,75,0.1);padding:2px 6px;border-radius:10px;">'+o.rate+'</span>'
+      +'<span style="font-size:12px;color:var(--red);background:rgba(232,75,75,0.1);padding:2px 6px;border-radius:10px;">'+dynamicRate+'</span>'
       +'</div>'
-      +'<div style="font-family:Cormorant Garamond,serif;font-size:20px;font-weight:700;color:var(--text);">'+getOrgFilteredCount(o).toLocaleString()+'</div>'
+      +'<div style="font-family:Cormorant Garamond,serif;font-size:20px;font-weight:700;color:var(--text);">'+filtRej.toLocaleString()+'</div>'
       +'<div style="font-size:13px;color:var(--gold);margin-top:2px;">'+getOrgFilteredVal(o)+'</div>'
       +'<div style="font-size:12px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+o.bu+'</div>'
       +'</div>';
