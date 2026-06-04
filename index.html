@@ -722,7 +722,7 @@ footer span{color:var(--gold);}
 
         </div>
         <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;align-items:center;">
-          <span style="font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;min-width:24px;">ORG</span>
+          <span style="font-size:13px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;min-width:24px;">ORG</span>
           <button class="rej-pill on" id="ro-all" onclick="rejFilter('org','all')">All</button>
           <button class="rej-pill" id="ro-dcv" onclick="rejFilter('org','DCV')">DCV</button>
           <button class="rej-pill" id="ro-dgc" onclick="rejFilter('org','DGC')">DGC</button>
@@ -731,7 +731,7 @@ footer span{color:var(--gold);}
           <button class="rej-pill" id="ro-dcf" onclick="rejFilter('org','DCF')">DCF</button>
         </div>
         <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;align-items:center;">
-          <span style="font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;min-width:24px;">MONTH</span>
+          <span style="font-size:13px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;min-width:24px;">MONTH</span>
           <button class="rej-pill on" id="rm-all" onclick="rejFilter('month','all')">All</button>
           <button class="rej-pill" id="rm-1" onclick="rejFilter('month',1)">Jan</button>
           <button class="rej-pill" id="rm-2" onclick="rejFilter('month',2)">Feb</button>
@@ -742,26 +742,26 @@ footer span{color:var(--gold);}
         <!-- Day row — shown when a month is selected -->
         <div id="rej-day-row" style="display:none;margin-bottom:10px;">
           <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:8px;">
-            <span style="font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;min-width:24px;">DAY</span>
+            <span style="font-size:13px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;min-width:24px;">DAY</span>
             <button class="rej-pill on" id="rd-all" onclick="rejFilter('day','all')">All Days</button>
-            <span style="font-size:10px;color:var(--muted);margin-left:4px;" id="rej-day-hint">← click a day to drill down to that date</span>
+            <span style="font-size:13px;color:var(--muted);margin-left:4px;" id="rej-day-hint">← click a day to drill down to that date</span>
           </div>
           <div id="rej-day-grid" style="display:flex;flex-wrap:wrap;gap:4px;padding:10px 12px;background:var(--surface);border:1px solid var(--border);"></div>
           <div id="rej-day-banner" style="display:none;margin-top:8px;padding:8px 14px;background:rgba(201,168,76,0.12);border:1px solid var(--gold);align-items:center;justify-content:space-between;">
-            <span style="font-size:11px;color:var(--gold);font-weight:600;" id="rej-day-banner-txt">—</span>
-            <button onclick="rejFilter('day','all')" style="background:transparent;border:1px solid var(--border);color:var(--muted);font-size:9px;padding:3px 10px;cursor:pointer;font-family:Montserrat,sans-serif;letter-spacing:1px;text-transform:uppercase;">✕ Clear Day</button>
+            <span style="font-size:15px;color:var(--gold);font-weight:600;" id="rej-day-banner-txt">—</span>
+            <button onclick="rejFilter('day','all')" style="background:transparent;border:1px solid var(--border);color:var(--muted);font-size:13px;padding:3px 10px;cursor:pointer;font-family:Montserrat,sans-serif;letter-spacing:1px;text-transform:uppercase;">✕ Clear Day</button>
           </div>
         </div>
         
       </div>
 
         <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;align-items:center;">
-          <span style="font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;min-width:24px;">TYPE</span>
+          <span style="font-size:13px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;min-width:24px;">TYPE</span>
           <button class="rej-pill on" id="rt-all" onclick="rejFilter('type','all')">All</button>
           <button class="rej-pill" id="rt-food" onclick="rejFilter('type','food')">Food</button>
           <button class="rej-pill" id="rt-nf" onclick="rejFilter('type','nonfood')">Non-Food</button>
           <span style="width:1px;height:16px;background:var(--border);margin:0 6px;"></span>
-          <span style="font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;min-width:40px;">SOURCE</span>
+          <span style="font-size:13px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;min-width:40px;">SOURCE</span>
           <button class="rej-pill on" id="rs-all" onclick="rejFilter('src','all')">All</button>
           <button class="rej-pill" id="rs-ext" onclick="rejFilter('src','external')">External</button>
           <button class="rej-pill" id="rs-int" onclick="rejFilter('src','internal')">Internal</button>
@@ -773,20 +773,29 @@ footer span{color:var(--gold);}
       <!-- KPI CARDS -->
       <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px;"><div style="display:grid;grid-template-columns:repeat(4,minmax(150px,1fr));gap:12px;margin-bottom:16px;" id="rej-kpis"></div></div>
 
-      <!-- CHARTS ROW 1 -->
+      <!-- CHARTS ROW 1: ROOT CAUSES + TOP CUSTOMERS (moved up) -->
       <div class="grid-2" style="margin-bottom:16px;">
         <div class="box">
-          <div class="box-title">📈 Delivered vs Rejected — Monthly <span id="rej-chart-sub"></span></div>
-          <div style="display:flex;gap:14px;margin-bottom:8px;font-size:10px;color:var(--muted);"><span style="display:flex;align-items:center;gap:5px;"><span style="width:10px;height:10px;border-radius:2px;background:var(--green);display:inline-block;"></span>Delivered</span><span style="display:flex;align-items:center;gap:5px;"><span style="width:10px;height:10px;border-radius:2px;background:var(--red);display:inline-block;"></span>Rejected</span></div>
-          <div style="position:relative;height:180px;"><canvas id="rejMonthChart"></canvas></div>
+          <div class="box-title" style="font-size:15px;">🔍 Top Root Causes</div>
+          <div id="rej-reasons-panel"></div>
         </div>
-        <div class="box"><div class="box-title">📍 Rejections by Area</div><div style="position:relative;height:210px;"><canvas id="rejAreaChart"></canvas></div></div>
+        <div class="box">
+          <div class="box-title" style="font-size:15px;">👥 Top Customers by Rejections</div>
+          <div id="rej-cust-panel"></div>
+        </div>
       </div>
 
-      <!-- CHARTS ROW 2 -->
+      <!-- CHARTS ROW 2: MONTHLY + AREA (moved down) -->
       <div class="grid-2" style="margin-bottom:16px;">
-        <div class="box"><div class="box-title">🔍 Top Root Causes</div><div id="rej-reasons-panel"></div></div>
-        <div class="box"><div class="box-title">👥 Top Customers by Rejections</div><div id="rej-cust-panel"></div></div>
+        <div class="box">
+          <div class="box-title" style="font-size:15px;">📈 Delivered vs Rejected — Monthly <span id="rej-chart-sub"></span></div>
+          <div style="display:flex;gap:14px;margin-bottom:8px;font-size:12px;color:var(--muted);"><span style="display:flex;align-items:center;gap:5px;"><span style="width:10px;height:10px;border-radius:2px;background:var(--green);display:inline-block;"></span>Delivered</span><span style="display:flex;align-items:center;gap:5px;"><span style="width:10px;height:10px;border-radius:2px;background:var(--red);display:inline-block;"></span>Rejected</span></div>
+          <div style="position:relative;height:200px;"><canvas id="rejMonthChart"></canvas></div>
+        </div>
+        <div class="box">
+          <div class="box-title" style="font-size:15px;">📍 Rejections by Area</div>
+          <div style="position:relative;height:230px;"><canvas id="rejAreaChart"></canvas></div>
+        </div>
       </div>
 
       <div style="padding:10px 14px;background:var(--surface);border:1px solid var(--border);font-size:10px;color:var(--muted);letter-spacing:1px;" id="rej-source-note">
@@ -2482,12 +2491,12 @@ oc.innerHTML=ORG_SUMMARY.map(function(o){
     var cardVal = rejORG===o.org ? (cardData.val||o.val) : o.val;
     return '<div class="org-card '+onCls+'" onclick="rejFilter(\'org\',\''+o.org+'\')">'
       +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">'
-      +'<span style="font-size:13px;font-weight:700;color:'+o.color+';">'+o.org+'</span>'
-      +'<span style="font-size:9px;color:var(--red);background:rgba(232,75,75,0.1);padding:2px 6px;border-radius:10px;">'+o.rate+'</span>'
+      +'<span style="font-size:15px;font-weight:700;color:'+o.color+';">'+o.org+'</span>'
+      +'<span style="font-size:12px;color:var(--red);background:rgba(232,75,75,0.1);padding:2px 6px;border-radius:10px;">'+o.rate+'</span>'
       +'</div>'
       +'<div style="font-family:Cormorant Garamond,serif;font-size:20px;font-weight:700;color:var(--text);">'+getOrgFilteredCount(o).toLocaleString()+'</div>'
-      +'<div style="font-size:10px;color:var(--gold);margin-top:2px;">'+getOrgFilteredVal(o)+'</div>'
-      +'<div style="font-size:9px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+o.bu+'</div>'
+      +'<div style="font-size:13px;color:var(--gold);margin-top:2px;">'+getOrgFilteredVal(o)+'</div>'
+      +'<div style="font-size:12px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+o.bu+'</div>'
       +'</div>';
   }).join('');
 
@@ -2504,68 +2513,92 @@ oc.innerHTML=ORG_SUMMARY.map(function(o){
   const buContrib = (rejType!=='all') ? (d.tRej/allGrandTotal*100).toFixed(2)+'%' : null;
   const kEl=document.getElementById('rej-kpis');
   if(kEl)kEl.innerHTML=''
-    +'<div style="background:var(--card);border:1px solid var(--border);padding:16px;position:relative;"><div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:0.4;"></div><div style="font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">Total Rejections</div><div style="font-family:Cormorant Garamond,serif;font-size:28px;font-weight:700;color:var(--gold);">'+d.tRej.toLocaleString()+'</div></div>'
+    +'<div style="background:var(--card);border:1px solid var(--border);padding:16px;position:relative;"><div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:0.4;"></div><div style="font-size:12px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">Total Rejections</div><div style="font-family:Cormorant Garamond,serif;font-size:28px;font-weight:700;color:var(--gold);">'+d.tRej.toLocaleString()+'</div></div>'
     +'<div style="background:rgba(232,75,75,0.1);border:1px solid rgba(232,75,75,0.3);padding:16px;">'+
-     '<div style="font-size:9px;letter-spacing:2px;color:var(--red);text-transform:uppercase;margin-bottom:4px;">'+(buContrib?'BU Contribution to Rejections':'Rejection Rate')+'</div>'+
+     '<div style="font-size:12px;letter-spacing:2px;color:var(--red);text-transform:uppercase;margin-bottom:4px;">'+(buContrib?'BU Contribution to Rejections':'Rejection Rate')+'</div>'+
      '<div style="font-family:Cormorant Garamond,serif;font-size:28px;font-weight:700;color:var(--red);">'+(buContrib||rejRate)+'</div>'+
-     (buContrib?'<div style="font-size:9px;color:var(--muted);margin-top:3px;">Overall: '+overallRate+' · '+(rejType==='food'?'Food':'Non-Food')+' share of total</div>':'')+
+     (buContrib?'<div style="font-size:12px;color:var(--muted);margin-top:3px;">Overall: '+overallRate+' · '+(rejType==='food'?'Food':'Non-Food')+' share of total</div>':'')+
      '</div>'
-    +'<div style="background:var(--card);border:1px solid var(--border);padding:16px;position:relative;"><div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:0.4;"></div><div style="font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">Delivered</div><div style="font-family:Cormorant Garamond,serif;font-size:28px;font-weight:700;color:var(--green);">'+d.tDel.toLocaleString()+'</div></div>'
-    +'<div style="background:var(--card);border:1px solid var(--border);padding:16px;position:relative;"><div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:0.4;"></div><div style="font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">Value at Risk</div><div style="font-family:Cormorant Garamond,serif;font-size:28px;font-weight:700;color:var(--gold);">'+d.val+'</div></div>';
+    +'<div style="background:var(--card);border:1px solid var(--border);padding:16px;position:relative;"><div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:0.4;"></div><div style="font-size:12px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">Delivered</div><div style="font-family:Cormorant Garamond,serif;font-size:28px;font-weight:700;color:var(--green);">'+d.tDel.toLocaleString()+'</div></div>'
+    +'<div style="background:var(--card);border:1px solid var(--border);padding:16px;position:relative;"><div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:0.4;"></div><div style="font-size:12px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">Value at Risk</div><div style="font-family:Cormorant Garamond,serif;font-size:28px;font-weight:700;color:var(--gold);">'+d.val+'</div></div>';
 
   // Charts
   const gridC='rgba(255,255,255,0.06)', tickC='#7a7660';
   const mc=document.getElementById('rejMonthChart');
   if(mc){
     if(rejMChart)rejMChart.destroy();
-    rejMChart=new Chart(mc,{type:'bar',data:{labels:REJ_MONTHS,datasets:[{label:'Delivered',data:d.del,backgroundColor:'#4ecb8d',borderRadius:3,borderSkipped:false},{label:'Rejected',data:d.rej,backgroundColor:'#e84b4b',borderRadius:3,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:gridC},ticks:{color:tickC,font:{size:10}}},y:{grid:{color:gridC},ticks:{color:tickC,font:{size:10}},beginAtZero:true}}}});
+    rejMChart=new Chart(mc,{type:'bar',data:{labels:REJ_MONTHS,datasets:[{label:'Delivered',data:d.del,backgroundColor:'#4ecb8d',borderRadius:3,borderSkipped:false},{label:'Rejected',data:d.rej,backgroundColor:'#e84b4b',borderRadius:3,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){return ' '+ctx.dataset.label+': '+ctx.parsed.y.toLocaleString();}}}},scales:{x:{grid:{color:gridC},ticks:{color:tickC,font:{size:12}}},y:{grid:{color:gridC},ticks:{color:tickC,font:{size:12}},beginAtZero:true}}}});
   }
   const ac=document.getElementById('rejAreaChart');
   if(ac){
     if(rejAChart)rejAChart.destroy();
     const areas=(d.areas||[]).slice(0,8);
-    rejAChart=new Chart(ac,{type:'bar',data:{labels:areas.map(a=>a.a),datasets:[{label:'Rejections',data:areas.map(a=>a.n),backgroundColor:'#5b8dee',borderRadius:3,borderSkipped:false}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:gridC},ticks:{color:tickC,font:{size:10}},beginAtZero:true},y:{grid:{display:false},ticks:{color:tickC,font:{size:10}}}}}});
+    rejAChart=new Chart(ac,{type:'bar',data:{labels:areas.map(a=>a.a),datasets:[{label:'Rejections',data:areas.map(a=>a.n),backgroundColor:'#5b8dee',borderRadius:3,borderSkipped:false}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){return ' Rejections: '+ctx.parsed.x.toLocaleString();}}}},scales:{x:{grid:{color:gridC},ticks:{color:tickC,font:{size:12}},beginAtZero:true},y:{grid:{display:false},ticks:{color:tickC,font:{size:12}}}}}});
   }
 
-  // Reasons
+  // ── Root Causes (upgraded 15px+) ──
   const topR=(d.reasons||[]).slice(0,12);
   const maxR=Math.max(...topR.map(r=>r.n),1);
   const rp=document.getElementById('rej-reasons-panel');
-  if(rp)rp.innerHTML=topR.map(function(r,i){
-    var barColor=i<3?'var(--red)':i<6?'#e8854b':'#5b8dee';
-    var barW=Math.round((r.n||0)/maxR*100);
-    return '<div style="margin-bottom:10px;">'
-      +'<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px;gap:8px;">'
-      +'<span style="color:#ffffff;font-weight:500;flex:1;">'+r.l+'</span>'
-      +'<span style="color:var(--gold);font-weight:700;white-space:nowrap;flex-shrink:0;">'+(r.n||0).toLocaleString()+'</span>'
-      +'</div>'
-      +'<div style="height:4px;background:var(--border);border-radius:2px;">'
-      +'<div style="height:4px;width:'+barW+'%;background:'+barColor+';border-radius:2px;transition:width 0.5s;"></div>'
-      +'</div></div>';
-  }).join('');
+  if(rp){
+    if(topR.length===0){
+      rp.innerHTML='<div style="font-size:15px;color:var(--muted);padding:20px 0;text-align:center;">No data — upload rejection file</div>';
+    } else {
+      rp.innerHTML=topR.map(function(r,i){
+        var barColor=i<3?'var(--red)':i<6?'#e8854b':'#5b8dee';
+        var barW=Math.round((r.n||0)/maxR*100);
+        var pct = d.tRej > 0 ? ((r.n||0)/d.tRej*100).toFixed(1)+'%' : '0%';
+        var rankMedal = i===0?'🥇':i===1?'🥈':i===2?'🥉':('  '+(i+1)+'.');
+        return '<div style="margin-bottom:12px;">'
+          +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;gap:8px;">'
+          +'<div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0;">'
+          +'<span style="font-size:15px;width:28px;flex-shrink:0;color:'+barColor+';">'+rankMedal+'</span>'
+          +'<span style="font-size:15px;color:#ffffff;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+r.l+'</span>'
+          +'</div>'
+          +'<div style="display:flex;gap:10px;align-items:center;flex-shrink:0;">'
+          +'<span style="font-size:15px;color:var(--gold);font-weight:700;">'+(r.n||0).toLocaleString()+'</span>'
+          +'<span style="font-size:13px;color:var(--muted);min-width:38px;text-align:right;">'+pct+'</span>'
+          +'</div>'
+          +'</div>'
+          +'<div style="height:6px;background:var(--border);border-radius:3px;">'
+          +'<div style="height:6px;width:'+barW+'%;background:'+barColor+';border-radius:3px;transition:width 0.5s;"></div>'
+          +'</div></div>';
+      }).join('');
+    }
+  }
 
-  // Customers
+  // ── Top Customers (upgraded 15px+) ──
   const cp=document.getElementById('rej-cust-panel');
-  if(cp)cp.innerHTML=(d.custs||[]).slice(0,8).map(function(c,i){
-    var cols=['var(--red)','var(--red)','var(--gold)','var(--gold)','var(--blue)'];
-    var col=cols[i]||'var(--muted)';
-    var pct = d.tRej > 0 ? (c.c/d.tRej*100).toFixed(1)+'%' : '0%';
-    return '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(42,42,30,0.5);">'
-      +'<div style="display:flex;align-items:center;gap:8px;min-width:0;flex:1;">'
-      +'<span style="font-size:11px;font-weight:700;color:'+col+';width:16px;flex-shrink:0;">'+(i+1)+'</span>'
-      +'<span style="font-size:12px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+c.n+'</span>'
-      +'</div>'
-      +'<div style="display:flex;align-items:center;gap:12px;flex-shrink:0;margin-left:8px;">'
-      +'<div style="text-align:right;">'
-      +'<div style="font-size:12px;font-weight:700;color:var(--text);">'+c.c+'</div>'
-      +'<div style="font-size:10px;color:var(--muted);">'+(c.v||'')+'</div>'
-      +'</div>'
-      +'<div style="text-align:right;min-width:40px;">'
-      +'<div style="font-size:12px;font-weight:700;color:var(--red);">'+pct+'</div>'
-      +'<div style="font-size:10px;color:var(--muted);">of rej</div>'
-      +'</div>'
-      +'</div></div>';
-  }).join('');
+  if(cp){
+    const custList=(d.custs||[]).slice(0,10);
+    if(custList.length===0){
+      cp.innerHTML='<div style="font-size:15px;color:var(--muted);padding:20px 0;text-align:center;">No data — upload rejection file</div>';
+    } else {
+      const maxC=Math.max(...custList.map(c=>c.c),1);
+      cp.innerHTML=custList.map(function(c,i){
+        var cols=['#e84b4b','#e84b4b','#e84b4b','var(--gold)','var(--gold)','var(--gold)','#5b8dee','#5b8dee','#5b8dee','#5b8dee'];
+        var col=cols[i]||'var(--muted)';
+        var pct = d.tRej > 0 ? (c.c/d.tRej*100).toFixed(1)+'%' : '0%';
+        var barW = Math.round(c.c/maxC*100);
+        return '<div style="padding:8px 0;border-bottom:1px solid rgba(60,60,40,0.5);">'
+          +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">'
+          +'<div style="display:flex;align-items:center;gap:8px;min-width:0;flex:1;">'
+          +'<span style="font-size:15px;font-weight:800;color:'+col+';width:22px;flex-shrink:0;">'+(i+1)+'</span>'
+          +'<span style="font-size:15px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500;">'+c.n+'</span>'
+          +'</div>'
+          +'<div style="display:flex;align-items:center;gap:10px;flex-shrink:0;margin-left:8px;">'
+          +'<span style="font-size:16px;font-weight:700;color:var(--text);">'+c.c.toLocaleString()+'</span>'
+          +'<span style="font-size:14px;font-weight:700;color:var(--red);min-width:42px;text-align:right;">'+pct+'</span>'
+          +'</div>'
+          +'</div>'
+          +'<div style="height:4px;background:var(--border);border-radius:2px;">'
+          +'<div style="height:4px;width:'+barW+'%;background:'+col+';border-radius:2px;transition:width 0.5s;"></div>'
+          +'</div>'
+          +(c.v?'<div style="font-size:13px;color:var(--gold);margin-top:3px;padding-left:30px;">'+c.v+'</div>':'')
+          +'</div>';
+      }).join('');
+    }
+  }
 }
 
 // REJECTION AUTH
