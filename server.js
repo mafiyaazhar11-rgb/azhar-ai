@@ -107,15 +107,19 @@ async function initDB() {
       ip_address TEXT,
       created_at TIMESTAMPTZ DEFAULT NOW()
     )`);
-    // Create default super admin if not exists
+    // Create or update default super admin
     var adminCheck = await pool.query("SELECT id FROM users WHERE username = 'azhar'");
+    var hash = await bcrypt.hash('YAmaha100@', 10);
     if (adminCheck.rows.length === 0) {
-      var hash = await bcrypt.hash('YAmaha100@', 10);
       await pool.query(
         "INSERT INTO users (username, password_hash, full_name, role) VALUES ($1,$2,$3,$4)",
         ['azhar', hash, 'Mohammed Azharuddin', 'superadmin']
       );
-      console.log('Default super admin created: azhar / azhar2026');
+      console.log('Default super admin created: azhar / YAmaha100@');
+    } else {
+      // Always sync password with code on server start
+      await pool.query("UPDATE users SET password_hash=$1, active=true WHERE username='azhar'", [hash]);
+      console.log('Super admin password synced: azhar / YAmaha100@');
     }
     console.log('DB tables ready');
   } catch(e) {
