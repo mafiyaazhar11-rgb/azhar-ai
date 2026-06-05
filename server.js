@@ -570,7 +570,19 @@ app.post('/api/rejection/upload', upload.single('file'), async function(req, res
     console.log('Reading rejection file:', req.file.originalname, req.file.size, 'bytes');
     var rows = [];
     if (ext === '.csv') {
-      var csvText = req.file.buffer.toString('utf8');
+      // Try UTF-8 first, fall back to latin1 for special characters
+      var csvText;
+      try {
+        csvText = req.file.buffer.toString('utf8');
+        // Check for replacement characters indicating wrong encoding
+        if (csvText.includes('\uFFFD')) {
+          csvText = req.file.buffer.toString('latin1');
+          console.log('CSV: switched to latin1 encoding');
+        }
+      } catch(e) {
+        csvText = req.file.buffer.toString('latin1');
+        console.log('CSV: using latin1 encoding');
+      }
       var csvRows = csvText.split('\n').filter(function(l){return l.trim();});
       if (csvRows.length < 2) return res.status(400).json({ error:'CSV file is empty' });
       function parseCSVLine(line) {
