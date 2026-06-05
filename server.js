@@ -539,12 +539,16 @@ async function loadRejectionFromDB() {
   try {
     var row = await dbLoadRejection();
     if (row) {
+      var orgs = row.orgs || {};
+      // Version check: if 'all' org has no detail array, data is old — needs re-upload
+      var hasDetail = orgs.all && Array.isArray(orgs.all.detail) && orgs.all.detail.length > 0;
       rejectionData = {
         uploadedAt: row.uploaded_at, uploadedBy: row.uploaded_by,
         fileName: row.file_name, totalOrders: row.total_orders,
-        orgs: row.orgs, months: row.months
+        orgs: orgs, months: row.months,
+        needsReupload: !hasDetail
       };
-      console.log('Loaded rejection from DB uploadedAt:', rejectionData.uploadedAt);
+      console.log('Loaded rejection from DB. hasDetail:', hasDetail);
       return true;
     }
   } catch(e) { console.error('loadRejectionFromDB error:', e.message); }
@@ -852,7 +856,7 @@ app.post('/api/rejection/upload', upload.single('file'), async function(req, res
 app.get('/api/rejection/status', function(req, res) {
   res.setHeader('Content-Type', 'application/json');
   if (!rejectionData) return res.json({ hasData:false });
-  res.json({ hasData:true, uploadedAt:rejectionData.uploadedAt, uploadedBy:rejectionData.uploadedBy, fileName:rejectionData.fileName, totalOrders:rejectionData.totalOrders, orgs:rejectionData.orgs, months:rejectionData.months });
+  res.json({ hasData:true, uploadedAt:rejectionData.uploadedAt, uploadedBy:rejectionData.uploadedBy, fileName:rejectionData.fileName, totalOrders:rejectionData.totalOrders, orgs:rejectionData.orgs, months:rejectionData.months, needsReupload:rejectionData.needsReupload||false });
 });
 
 // ── SHARED PASSWORD CHECK FOR UPLOAD STARS ──
