@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Customer Service & Operations Control Tower</title>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600;700&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600;700&family=Montserrat:wght@300;400;500;600&family=Cinzel:wght@400;700;900&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
 :root{
@@ -177,6 +177,7 @@ textarea{resize:vertical;min-height:100px;line-height:1.7;}
 footer{padding:16px 28px;border-top:1px solid var(--border);text-align:center;font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;flex-shrink:0;}
 footer span{color:var(--gold);}
 @keyframes logoSpin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+@keyframes apexSpin{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
 @keyframes starGlow{0%,100%{color:var(--gold);text-shadow:0 0 10px #c9a84c,0 0 20px #e8c878,0 0 40px #c9a84c;}50%{color:var(--gold3);text-shadow:0 0 20px #f5e0a0,0 0 40px #e8c878,0 0 60px #c9a84c;}}
 .sb-logo-box svg{width:18px;height:18px;transition:transform 0.5s;}
 .sb-logo-box.spinning svg{animation:logoSpin 1s ease-in-out;}
@@ -548,15 +549,55 @@ footer span{color:var(--gold);}
 
 <aside class="sidebar" id="sidebar">
   <div class="sb-logo">
-    <div class="sb-logo-box"><svg viewBox="0 0 22 22" fill="none"><path d="M11 2L13.5 8.5H20L14.5 12.5L16.5 19L11 15L5.5 19L7.5 12.5L2 8.5H8.5L11 2Z" stroke="#c9a84c" stroke-width="1"/><circle cx="11" cy="11" r="3" stroke="#c9a84c" stroke-width="0.5" fill="rgba(201,168,76,0.1)"/></svg></div>
+    <div class="sb-logo-box" style="width:46px;height:46px;border:none;background:transparent;overflow:visible;">
+      <div style="position:relative;width:46px;height:46px;display:flex;align-items:center;justify-content:center;">
+        <!-- Rotating gold border -->
+        <div style="position:absolute;inset:-2px;border-radius:50%;background:conic-gradient(from 0deg,#c9a84c,#f5d98b,#8b6914,#c9a84c);animation:apexSpin 4s linear infinite;z-index:0;"></div>
+        <div style="position:absolute;inset:2px;border-radius:50%;background:#0d0d0d;z-index:1;"></div>
+        <!-- Crown SVG scaled to fit -->
+        <svg style="position:relative;z-index:2;width:32px;height:36px;" viewBox="0 0 160 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="apexGold" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#8b6914"/>
+              <stop offset="35%" style="stop-color:#c9a84c"/>
+              <stop offset="60%" style="stop-color:#f5d98b"/>
+              <stop offset="100%" style="stop-color:#c9a84c"/>
+            </linearGradient>
+            <linearGradient id="apexBright" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#f5d98b"/>
+              <stop offset="50%" style="stop-color:#ffffff"/>
+              <stop offset="100%" style="stop-color:#f5d98b"/>
+            </linearGradient>
+          </defs>
+          <polygon points="80,10 148,80 80,150 12,80" fill="#111" stroke="url(#apexGold)" stroke-width="1.5"/>
+          <g>
+            <rect x="46" y="54" width="68" height="8" rx="3" fill="url(#apexGold)"/>
+            <rect x="46" y="38" width="8" height="18" rx="2" fill="url(#apexGold)"/>
+            <rect x="106" y="38" width="8" height="18" rx="2" fill="url(#apexGold)"/>
+            <polygon points="62,44 67,28 72,44" fill="url(#apexGold)"/>
+            <polygon points="73,44 80,14 87,44" fill="url(#apexGold)"/>
+            <polygon points="88,44 93,28 98,44" fill="url(#apexGold)"/>
+            <circle cx="50" cy="37" r="5" fill="url(#apexGold)"/>
+            <circle cx="110" cy="37" r="5" fill="url(#apexGold)"/>
+            <circle cx="80" cy="13" r="5" fill="url(#apexGold)"/>
+            <circle cx="80" cy="13" r="2.5" fill="#ffffff" opacity="0.95"/>
+            <polygon points="67,38 70,42 67,46 64,42" fill="#cc0000"/>
+            <polygon points="80,36 84,41 80,46 76,41" fill="#cc0000"/>
+            <polygon points="93,38 96,42 93,46 90,42" fill="#cc0000"/>
+          </g>
+          <path d="M80 62 L104 125 L92 125 L87 110 L73 110 L68 125 L56 125 Z" fill="url(#apexGold)"/>
+          <rect x="71" y="100" width="18" height="5" rx="1" fill="#0d0d0d"/>
+          <path d="M80 70 L98 118 L62 118 Z" fill="#111" opacity="0.7"/>
+          <circle cx="80" cy="133" r="3.5" fill="#cc0000"/>
+        </svg>
+      </div>
+    </div>
     <div class="sb-brand">
-  <div class="sb-name" id="animated-logo" style="font-size:11px;line-height:1.2;letter-spacing:0.5px;">
-    <span class="logo-letter" style="--i:0;font-size:11px;">C</span><span class="logo-letter" style="--i:1;font-size:11px;">u</span><span class="logo-letter" style="--i:2;font-size:11px;">s</span><span class="logo-letter" style="--i:3;font-size:11px;">t</span><span class="logo-letter" style="--i:4;font-size:11px;">o</span><span class="logo-letter" style="--i:5;font-size:11px;">m</span><span class="logo-letter" style="--i:6;font-size:11px;">e</span><span class="logo-letter" style="--i:7;font-size:11px;">r</span><span class="logo-letter" style="--i:8;font-size:11px;"> </span><span class="logo-letter" style="--i:9;font-size:11px;">S</span><span class="logo-letter" style="--i:10;font-size:11px;">e</span><span class="logo-letter" style="--i:11;font-size:11px;">r</span><span class="logo-letter" style="--i:12;font-size:11px;">v</span><span class="logo-letter" style="--i:13;font-size:11px;">i</span><span class="logo-letter" style="--i:14;font-size:11px;">c</span><span class="logo-letter" style="--i:15;font-size:11px;">e</span><br>
-    <span class="logo-letter" style="--i:16;font-size:11px;">&</span><span class="logo-letter" style="--i:17;font-size:11px;"> </span><span class="logo-letter" style="--i:18;font-size:11px;">O</span><span class="logo-letter" style="--i:19;font-size:11px;">p</span><span class="logo-letter" style="--i:20;font-size:11px;">e</span><span class="logo-letter" style="--i:21;font-size:11px;">r</span><span class="logo-letter" style="--i:22;font-size:11px;">a</span><span class="logo-letter" style="--i:23;font-size:11px;">t</span><span class="logo-letter" style="--i:24;font-size:11px;">i</span><span class="logo-letter" style="--i:25;font-size:11px;">o</span><span class="logo-letter" style="--i:26;font-size:11px;">n</span><span class="logo-letter" style="--i:27;font-size:11px;">s</span><br>
-    <span class="logo-letter" style="--i:28;font-size:10px;">C</span><span class="logo-letter" style="--i:29;font-size:10px;">o</span><span class="logo-letter" style="--i:30;font-size:10px;">n</span><span class="logo-letter" style="--i:31;font-size:10px;">t</span><span class="logo-letter" style="--i:32;font-size:10px;">r</span><span class="logo-letter" style="--i:33;font-size:10px;">o</span><span class="logo-letter" style="--i:34;font-size:10px;">l</span><span class="logo-letter" style="--i:35;font-size:10px;"> </span><span class="logo-letter" style="--i:36;font-size:10px;">T</span><span class="logo-letter" style="--i:37;font-size:10px;">o</span><span class="logo-letter" style="--i:38;font-size:10px;">w</span><span class="logo-letter" style="--i:39;font-size:10px;">e</span><span class="logo-letter" style="--i:40;font-size:10px;">r</span>
-    <span id="sb-star" style="font-size:10px;vertical-align:middle;margin-left:2px;">✦</span>
+  <div class="sb-name" id="animated-logo" style="font-size:13px;line-height:1.2;letter-spacing:2px;background:linear-gradient(135deg,#8b6914 0%,#c9a84c 40%,#f5d98b 60%,#c9a84c 80%,#8b6914 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-family:'Cinzel',serif;font-weight:900;text-transform:uppercase;">
+    APEX
+    <span id="sb-star" style="font-size:10px;vertical-align:middle;margin-left:2px;-webkit-text-fill-color:#c9a84c;">✦</span>
   </div>
-  <div class="sb-sub">CST-Operations Intelligence</div>
+  <div class="sb-sub" style="font-size:9px;letter-spacing:1px;color:#ff1a1a;text-shadow:0 0 4px #fff,0 0 8px #f5d98b,0 0 16px #c9a84c;">Operations Intelligence</div>
 </div>
   </div>
   <div class="sb-section">Command Centre</div>
@@ -2773,33 +2814,12 @@ oc.innerHTML=ORG_SUMMARY.map(function(o){
 
     var detailRows = (detailSrc[detailKey] || detailSrc['detail'] || []);
 
-    // FALLBACK: if no detail data (old DB data), build from correct filtered custs
+    // FALLBACK: build from d.custs which is ALWAYS populated when data is loaded
     if(detailRows.length === 0){
-      // Pick the right custs based on active filters — same priority as reasons
-      var fallbackCusts = [];
-      if(rejType==='food'){
-        fallbackCusts = hasDayFilter
-          ? (detailSrc.food_custs||[])
-          : (rejMonth!=='all' ? ((DAY_DATA[rejMonth]||DAY_DATA[String(rejMonth)]||{}).food_custs||[]) : (orgBase.food_custs||[]));
-      } else if(rejType==='nonfood'){
-        fallbackCusts = hasDayFilter
-          ? (detailSrc.nonfood_custs||[])
-          : (rejMonth!=='all' ? ((DAY_DATA[rejMonth]||DAY_DATA[String(rejMonth)]||{}).nonfood_custs||[]) : (orgBase.nonfood_custs||[]));
-      } else if(rejSrc==='external'){
-        fallbackCusts = hasDayFilter
-          ? (detailSrc.ext_custs||[])
-          : (rejMonth!=='all' ? ((DAY_DATA[rejMonth]||DAY_DATA[String(rejMonth)]||{}).ext_custs||[]) : (orgBase.ext_custs||[]));
-      } else if(rejSrc==='internal'){
-        fallbackCusts = hasDayFilter
-          ? (detailSrc.int_custs||[])
-          : (rejMonth!=='all' ? ((DAY_DATA[rejMonth]||DAY_DATA[String(rejMonth)]||{}).int_custs||[]) : (orgBase.int_custs||[]));
-      } else {
-        // All types/sources — use time-filtered custs
-        fallbackCusts = detailSrc.custs || orgBase.custs || [];
-      }
+      var fallbackCusts = d.custs || [];
       if(fallbackCusts.length > 0){
         detailRows = fallbackCusts.map(function(c){
-          return {cust:c.n||c.name||'', addr:'— Re-upload file to see address —', root:'— Re-upload to see root cause —', n:c.c||c.count||0};
+          return {cust:c.n||'', addr:'Address — deploy new server.js + re-upload to enable', root:'Root cause — deploy new server.js + re-upload to enable', n:c.c||0};
         });
       }
     }
