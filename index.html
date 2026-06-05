@@ -1691,7 +1691,7 @@ footer span{color:var(--gold);}
 </script>
 <script>
 //  PASSWORD 
-const ADMIN_PWD = 'azhar2026';
+const ADMIN_PWD = 'YAmaha100@';
 
 //  CLOCK 
 function updateClock(){
@@ -2436,6 +2436,7 @@ function getFilteredData(){
     var intRejCount = hasDayFilter ? (base.int_rej||0) : (rejMonth!=='all'?(moInfo3.int_rej||0):(orgBase.int_rej||0));
     if(rejType !== 'all' && intRejCount > 0) base.tRej = Math.round(intRejCount * typeRatio);
     else if(intRejCount > 0) base.tRej = intRejCount;
+  }
 
   // For day filter: scale reasons counts proportionally
   var finalRatio = typeRatio * srcRatio;
@@ -2976,7 +2977,7 @@ function blToggleUpload(){
   if(!box) return;
   if(!blUploadVisible){
     var pwd = prompt('Admin access:');
-    if(pwd !== 'azhar2026'){ alert('Wrong password'); return; }
+    if(pwd !== 'YAmaha100@'){ alert('Wrong password'); return; }
     blUploadVisible = true;
     box.style.display = 'flex';
     box.style.flexWrap = 'wrap';
@@ -2996,7 +2997,7 @@ function rejToggleUpload(){
   if(!lockWrap) return;
   if(!rejUploadVisible){
     var pwd = prompt('Admin access:');
-    if(pwd !== 'azhar2026') return;
+    if(pwd !== 'YAmaha100@') return;
     rejUploadVisible = true;
     lockWrap.style.display = 'flex';
     var btn = document.getElementById('rej-star-btn');
@@ -3017,7 +3018,7 @@ function dsToggleUpload(){
   if(!box) return;
   if(!dsUploadVisible){
     var pwd = prompt('Admin access:');
-    if(pwd !== 'azhar2026') return;
+    if(pwd !== 'YAmaha100@') return;
     dsUploadVisible = true;
     box.style.display = 'block';
   } else {
@@ -3354,7 +3355,7 @@ function blAuthUpload(e){
 }
 function blPwdConfirm(){
   var pwd = document.getElementById('bl-pwd-input').value;
-  if(pwd === 'azhar2026'){
+  if(pwd === 'YAmaha100@'){
     document.getElementById('bl-pwd-modal').style.display='none';
     document.getElementById('bl-pwd-input').value='';
     document.getElementById('bl-pwd-error').style.display='none';
@@ -3940,7 +3941,7 @@ function retPwdConfirm(){
   var inp=document.getElementById('ret-pwd-input');
   var err=document.getElementById('ret-pwd-error');
   if(!inp)return;
-  if(inp.value!=='azhar2026'){
+  if(inp.value!=='YAmaha100@'){
     inp.style.borderColor='#e84b4b';
     if(err)err.style.display='block';
     inp.value='';
@@ -7187,7 +7188,7 @@ function autoToggleUpload() {
 
 function autoCheckPassword() {
   var pw = document.getElementById('auto-pw-input').value;
-  if (pw === 'azhar2026') {
+  if (pw === 'YAmaha100@') {
     autoUnlocked = true;
     document.getElementById('auto-pw-error').style.display = 'none';
     document.getElementById('auto-file-btn').style.display = 'block';
@@ -7773,7 +7774,7 @@ function dscToggleSched() {
 }
 
 function dscCheckOraclePw() {
-  if (document.getElementById('dsc-oracle-pw').value === 'azhar2026') {
+  if (document.getElementById('dsc-oracle-pw').value === 'YAmaha100@') {
     document.getElementById('dsc-oracle-pw-err').style.display = 'none';
     document.getElementById('dsc-oracle-pw').style.display = 'none';
     document.querySelector('[onclick="dscCheckOraclePw()"]').style.display = 'none';
@@ -7784,7 +7785,7 @@ function dscCheckOraclePw() {
 }
 
 function dscCheckSchedPw() {
-  if (document.getElementById('dsc-sched-pw').value === 'azhar2026') {
+  if (document.getElementById('dsc-sched-pw').value === 'YAmaha100@') {
     document.getElementById('dsc-sched-pw-err').style.display = 'none';
     document.getElementById('dsc-sched-pw').style.display = 'none';
     document.querySelector('[onclick="dscCheckSchedPw()"]').style.display = 'none';
