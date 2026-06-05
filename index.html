@@ -611,7 +611,7 @@ footer span{color:#60a5fa;}
 
   <button class="sb-item" onclick="goTab('backlog',this)"><span class="icon">📦</span> WH Backlog</button>
   <button class="sb-item" onclick="goTab('returns',this)"><span class="icon">🔄</span> Market Returns</button>
-  <button class="sb-item" onclick="goTab('sales',this)"><span class="icon">📊</span> Order Summary</button>
+  <button class="sb-item" onclick="goTab('sales',this)"><span class="icon">📊</span> Today's Order Booking</button>
   <button class="sb-item" onclick="goTab('geninfo',this)"><span class="icon">👥</span> General Info</button>
   <button class="sb-item" onclick="goTab('automation',this)"><span class="icon">⚡</span> Automation Track</button>
   <button class="sb-item" onclick="goTab('delivery',this)"><span class="icon">📦</span> Delivery Schedule</button>
@@ -2576,14 +2576,43 @@ function getOrgFilteredCount(o){
   if(rejType === 'food' && NONFOOD_ORGS.indexOf(o.org) >= 0) return 0;
   if(rejType === 'nonfood' && FOOD_ORGS.indexOf(o.org) >= 0) return 0;
 
-  // Get base count for selected month
-  var baseRej = o.rej || 0;
-  if(rejMonth !== 'all'){
-    var mi = rejMonth - 1;
-    baseRej = (orgD.rej||[])[mi] || 0;
+  // DAY filter — get from day data if available
+  var baseRej = 0;
+  if(rejMonth !== 'all' && rejDay !== 'all'){
+    // Specific day selected — get day data
+    var moKeyO = DAY_DATA[rejMonth] ? rejMonth : String(rejMonth);
+    var dayDataO = ((DAY_DATA[moKeyO]||{}).data||{})[rejDay] || ((DAY_DATA[moKeyO]||{}).data||{})[String(rejDay)];
+    if(dayDataO){
+      // Day data doesn't have per-org breakdown — use org's proportion of month
+      var moRejO = (orgD.rej||[])[rejMonth-1] || 0;
+      var moTotalO = 0;
+      ['DCV','DGC','DSN','DGS','DCF'].forEach(function(org2){
+        var d2 = ORG_DATA[org2];
+        if(d2) moTotalO += (d2.rej||[])[rejMonth-1]||0;
+      });
+      var orgMonthShare = moTotalO > 0 ? moRejO/moTotalO : 0;
+      baseRej = Math.round((dayDataO.tRej||0) * orgMonthShare);
+    } else {
+      baseRej = 0;
+    }
+  } else if(rejMonth !== 'all'){
+    // Month only
+    baseRej = (orgD.rej||[])[rejMonth-1] || 0;
+  } else {
+    // All months YTD
+    baseRej = orgD.tRej || 0;
   }
 
-  // Source filter using YTD ratio
+  // TYPE filter — scale by type ratio
+  if(rejType === 'food'){
+    var foodRatio = orgD.tRej > 0 ? (orgD.food_rej||0)/orgD.tRej : 0;
+    baseRej = Math.round(baseRej * foodRatio);
+  } else if(rejType === 'nonfood'){
+    var nfRatio = orgD.tRej > 0 ? (orgD.nonfood_rej||0)/orgD.tRej : 0;
+    baseRej = Math.round(baseRej * nfRatio);
+  }
+
+  // Source filter
   if(rejSrc === 'external'){
     return Math.round(baseRej * ((orgD.ext_rej||0) / Math.max(orgD.tRej,1)));
   }
@@ -2592,18 +2621,32 @@ function getOrgFilteredCount(o){
   }
   return baseRej;
 }
+
 function getOrgFilteredVal(o){
   var orgD = ORG_DATA[o.org];
   if(!orgD) return o.val||'';
-  // For value, use type-specific YTD value as approximation
   if(rejType==='food')    return orgD.food_val||'AED 0K';
   if(rejType==='nonfood') return orgD.nonfood_val||'AED 0K';
-  // For month filter, show proportional value
   if(rejMonth !== 'all'){
     var mi2 = rejMonth - 1;
     var moRej = (orgD.rej||[])[mi2] || 0;
     var ytdRej = orgD.tRej || 1;
     var moRatio = moRej / ytdRej;
+    // If day selected, scale further
+    if(rejDay !== 'all'){
+      var moKeyV = DAY_DATA[rejMonth] ? rejMonth : String(rejMonth);
+      var dayDataV = ((DAY_DATA[moKeyV]||{}).data||{})[rejDay];
+      if(dayDataV && moRej > 0){
+        var moTotal2 = 0;
+        ['DCV','DGC','DSN','DGS','DCF'].forEach(function(org2){
+          var d2 = ORG_DATA[org2];
+          if(d2) moTotal2 += (d2.rej||[])[mi2]||0;
+        });
+        var dayShare = moTotal2 > 0 ? moRej/moTotal2 : 0;
+        var dayRej = Math.round((dayDataV.tRej||0) * dayShare);
+        moRatio = ytdRej > 0 ? dayRej/ytdRej : 0;
+      }
+    }
     var rawVal = parseFloat((orgD.val||'0').replace(/[^0-9.]/g,'')) * ((orgD.val||'').includes('M')?1000000:1000);
     var moVal = rawVal * moRatio;
     return moVal>=1000000?'AED '+(moVal/1000000).toFixed(2)+'M':'AED '+Math.round(moVal/1000)+'K';
@@ -2640,9 +2683,9 @@ oc.innerHTML=ORG_SUMMARY.map(function(o){
     // Compute filtered rejection count for this org — use actual type breakdown
     var filtRej;
     if(rejType === 'food'){
-      filtRej = NONFOOD_ORGS.indexOf(o.org) >= 0 ? 0 : (orgD.food_rej||0);
+      filtRej = NONFOOD_ORGS.indexOf(o.org) >= 0 ? 0 : getOrgFilteredCount(o);
     } else if(rejType === 'nonfood'){
-      filtRej = FOOD_ORGS.indexOf(o.org) >= 0 ? 0 : (orgD.nonfood_rej||0);
+      filtRej = FOOD_ORGS.indexOf(o.org) >= 0 ? 0 : getOrgFilteredCount(o);
     } else {
       filtRej = getOrgFilteredCount(o);
     }
@@ -7318,23 +7361,24 @@ window.addEventListener('load', authBoot);
             </div>
           </div>
           <div style="margin-bottom:12px;">
-            <label style="font-size:9px;color:#7a7660;display:block;margin-bottom:8px;">DASHBOARD ACCESS</label>
-            <div style="display:flex;flex-wrap:wrap;gap:8px;" id="uf-dashboards">
-              <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#f5f0e8;cursor:pointer;"><input type="checkbox" value="dispatch" checked> Daily Dispatch</label>
-              <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#f5f0e8;cursor:pointer;"><input type="checkbox" value="rejection" checked> Rejection YTD</label>
-              <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#f5f0e8;cursor:pointer;"><input type="checkbox" value="summary" checked> Executive Summary</label>
-              <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#f5f0e8;cursor:pointer;"><input type="checkbox" value="email" checked> Email Writer</label>
-              <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#f5f0e8;cursor:pointer;"><input type="checkbox" value="invoice" checked> Proforma Invoice</label>
-              <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#f5f0e8;cursor:pointer;"><input type="checkbox" value="backlog" checked> WH Backlog</label>
-              <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#f5f0e8;cursor:pointer;"><input type="checkbox" value="returns" checked> Daily Returns</label>
-              <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#f5f0e8;cursor:pointer;"><input type="checkbox" value="sales" checked> Order Summary</label>
-              <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#f5f0e8;cursor:pointer;"><input type="checkbox" value="geninfo" checked> General Info</label>
-              <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#f5f0e8;cursor:pointer;"><input type="checkbox" value="automation" checked> Automation Track</label>
+            <label style="font-size:11px;color:#7eb3e8;display:block;margin-bottom:10px;letter-spacing:1px;text-transform:uppercase;">Dashboard Access</label>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;" id="uf-dashboards">
+              <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#f0f6ff;cursor:pointer;padding:8px 12px;background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);border-radius:8px;transition:all 0.2s;" onmouseover="this.style.background='rgba(59,130,246,0.15)'" onmouseout="this.style.background='rgba(59,130,246,0.08)'"><input type="checkbox" value="dispatch" checked style="accent-color:#3b82f6;width:15px;height:15px;"> 🚚 Daily Dispatch</label>
+              <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#f0f6ff;cursor:pointer;padding:8px 12px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:8px;transition:all 0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.15)'" onmouseout="this.style.background='rgba(239,68,68,0.08)'"><input type="checkbox" value="rejection" checked style="accent-color:#ef4444;width:15px;height:15px;"> 📋 Rejection YTD</label>
+              <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#f0f6ff;cursor:pointer;padding:8px 12px;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);border-radius:8px;transition:all 0.2s;" onmouseover="this.style.background='rgba(34,197,94,0.15)'" onmouseout="this.style.background='rgba(34,197,94,0.08)'"><input type="checkbox" value="summary" checked style="accent-color:#22c55e;width:15px;height:15px;"> 📈 Executive Summary</label>
+              <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#f0f6ff;cursor:pointer;padding:8px 12px;background:rgba(168,85,247,0.08);border:1px solid rgba(168,85,247,0.2);border-radius:8px;transition:all 0.2s;" onmouseover="this.style.background='rgba(168,85,247,0.15)'" onmouseout="this.style.background='rgba(168,85,247,0.08)'"><input type="checkbox" value="email" checked style="accent-color:#a855f7;width:15px;height:15px;"> ✉️ Email Writer</label>
+              <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#f0f6ff;cursor:pointer;padding:8px 12px;background:rgba(249,115,22,0.08);border:1px solid rgba(249,115,22,0.2);border-radius:8px;transition:all 0.2s;" onmouseover="this.style.background='rgba(249,115,22,0.15)'" onmouseout="this.style.background='rgba(249,115,22,0.08)'"><input type="checkbox" value="invoice" checked style="accent-color:#f97316;width:15px;height:15px;"> 🧾 Proforma Invoice</label>
+              <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#f0f6ff;cursor:pointer;padding:8px 12px;background:rgba(20,184,166,0.08);border:1px solid rgba(20,184,166,0.2);border-radius:8px;transition:all 0.2s;" onmouseover="this.style.background='rgba(20,184,166,0.15)'" onmouseout="this.style.background='rgba(20,184,166,0.08)'"><input type="checkbox" value="backlog" checked style="accent-color:#14b8a6;width:15px;height:15px;"> 📦 WH Backlog</label>
+              <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#f0f6ff;cursor:pointer;padding:8px 12px;background:rgba(236,72,153,0.08);border:1px solid rgba(236,72,153,0.2);border-radius:8px;transition:all 0.2s;" onmouseover="this.style.background='rgba(236,72,153,0.15)'" onmouseout="this.style.background='rgba(236,72,153,0.08)'"><input type="checkbox" value="returns" checked style="accent-color:#ec4899;width:15px;height:15px;"> 🔄 Market Returns</label>
+              <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#f0f6ff;cursor:pointer;padding:8px 12px;background:rgba(234,179,8,0.08);border:1px solid rgba(234,179,8,0.2);border-radius:8px;transition:all 0.2s;" onmouseover="this.style.background='rgba(234,179,8,0.15)'" onmouseout="this.style.background='rgba(234,179,8,0.08)'"><input type="checkbox" value="sales" checked style="accent-color:#eab308;width:15px;height:15px;"> 📊 Today's Order Booking</label>
+              <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#f0f6ff;cursor:pointer;padding:8px 12px;background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);border-radius:8px;transition:all 0.2s;" onmouseover="this.style.background='rgba(59,130,246,0.15)'" onmouseout="this.style.background='rgba(59,130,246,0.08)'"><input type="checkbox" value="geninfo" checked style="accent-color:#3b82f6;width:15px;height:15px;"> ℹ️ General Info</label>
+              <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#f0f6ff;cursor:pointer;padding:8px 12px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:8px;transition:all 0.2s;" onmouseover="this.style.background='rgba(245,158,11,0.15)'" onmouseout="this.style.background='rgba(245,158,11,0.08)'"><input type="checkbox" value="automation" checked style="accent-color:#f59e0b;width:15px;height:15px;"> ⚡ Automation Track</label>
+              <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#f0f6ff;cursor:pointer;padding:8px 12px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);border-radius:8px;transition:all 0.2s;" onmouseover="this.style.background='rgba(16,185,129,0.15)'" onmouseout="this.style.background='rgba(16,185,129,0.08)'"><input type="checkbox" value="delivery" checked style="accent-color:#10b981;width:15px;height:15px;"> 🗓️ Delivery Schedule</label>
             </div>
           </div>
           <div style="display:flex;gap:8px;">
-            <button onclick="saveUser()" style="background:rgba(201,168,76,0.1);border:1px solid #c9a84c;color:#c9a84c;font-size:10px;letter-spacing:2px;padding:8px 20px;cursor:pointer;font-family:Montserrat,sans-serif;">SAVE</button>
-            <button onclick="document.getElementById('admin-user-form').style.display='none'" style="background:transparent;border:1px solid rgba(255,255,255,0.1);color:#7a7660;font-size:10px;letter-spacing:2px;padding:8px 16px;cursor:pointer;font-family:Montserrat,sans-serif;">CANCEL</button>
+            <button onclick="saveUser()" style="background:#2563eb;border:1px solid #3b82f6;color:#ffffff;font-size:13px;letter-spacing:1px;padding:10px 24px;cursor:pointer;font-family:Inter,Montserrat,sans-serif;border-radius:8px;font-weight:600;">SAVE USER</button>
+            <button onclick="document.getElementById('admin-user-form').style.display='none'" style="background:transparent;border:1px solid rgba(126,179,232,0.2);color:#7eb3e8;font-size:13px;padding:10px 16px;cursor:pointer;font-family:Inter,Montserrat,sans-serif;border-radius:8px;">CANCEL</button>
           </div>
         </div>
         <div id="admin-users-list"></div>
