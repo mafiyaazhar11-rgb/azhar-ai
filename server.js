@@ -1245,7 +1245,7 @@ app.get('/api/version', function(req, res) {
   res.json({ version: 'V4.1', date: '2026-06-05', status: 'running', auth: 'active' });
 });
 
-(req, res) {
+app.get('/api/setup/reset-admin', async function(req, res) {
   try {
     var hash = await bcrypt.hash('YAmaha100@', 10);
     var check = await pool.query("SELECT id FROM users WHERE username='azhar'");
