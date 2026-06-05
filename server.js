@@ -611,6 +611,7 @@ app.post('/api/rejection/upload', upload.single('file'), async function(req, res
       date:    findC('D DATE', 'DATE', 'DELIVERY DATE'),
       root:    findC('FINAL- ROOT', 'FINA- ROOT', 'ROOT CAUSE', 'ROOT_CAUSE', 'REASON-1'),
       cust:    findC('CUSTOMER NAME', 'CUSTOMER'),
+      addr:    findC('FULL ADDRESS', 'ADDRESS MATCHING', 'ADDRESS'),
       area:    findC('AREA', 'CITY'),
       value:   findC('VALUE', 'AMOUNT'),
       type:    findC('TYPE'),
@@ -651,6 +652,7 @@ app.post('/api/rejection/upload', upload.single('file'), async function(req, res
       var org=toStr(row[RC.org]).toUpperCase().replace('NON-FOOD','DGC');
       var root=toStr(row[RC.root]);
       var cust=toStr(row[RC.cust]);
+      var addr=RC.addr?toStr(row[RC.addr]):'';
       var area=toStr(row[RC.area]);
       var orderNo=RC.orderNo?toStr(row[RC.orderNo]):'';
       var rawVal=parseFloat(row[RC.value])||0;
@@ -663,7 +665,7 @@ app.post('/api/rejection/upload', upload.single('file'), async function(req, res
       if (del) totalDel++;
       if (rej) { totalRej++; totalVal+=val; }
       if (org) {
-        if (!orgMap[org]) orgMap[org]={tDel:0,tRej:0,val:0,food_rej:0,food_del:0,nonfood_rej:0,nonfood_del:0,ext_rej:0,ext_del:0,int_rej:0,int_del:0,food_val:0,nonfood_val:0,del:new Array(12).fill(0),rej:new Array(12).fill(0),reasons:{},custs:{},areas:{},food_reasons:{},food_custs:{},nonfood_reasons:{},nonfood_custs:{},ext_reasons:{},ext_custs:{},int_reasons:{},int_custs:{}};
+        if (!orgMap[org]) orgMap[org]={tDel:0,tRej:0,val:0,food_rej:0,food_del:0,nonfood_rej:0,nonfood_del:0,ext_rej:0,ext_del:0,int_rej:0,int_del:0,food_val:0,nonfood_val:0,del:new Array(12).fill(0),rej:new Array(12).fill(0),reasons:{},custs:{},areas:{},food_reasons:{},food_custs:{},nonfood_reasons:{},nonfood_custs:{},ext_reasons:{},ext_custs:{},int_reasons:{},int_custs:{},detail:{},food_detail:{},nonfood_detail:{},ext_detail:{},int_detail:{}};
         if (del) {
           orgMap[org].tDel++; if(mo)orgMap[org].del[mo-1]++;
           if(isFood)orgMap[org].food_del++; else if(isNF)orgMap[org].nonfood_del++;
@@ -677,6 +679,15 @@ app.post('/api/rejection/upload', upload.single('file'), async function(req, res
           if(root)orgMap[org].reasons[root]=(orgMap[org].reasons[root]||0)+1;
           if(cust)orgMap[org].custs[cust]=(orgMap[org].custs[cust]||0)+1;
           if(area)orgMap[org].areas[area]=(orgMap[org].areas[area]||0)+1;
+          // Detail: customer+address+rootcause combo
+          if(cust||root){
+            var detailKey = (cust||'Unknown')+'|||'+(addr||'No address')+'|||'+(root||'Unknown');
+            orgMap[org].detail[detailKey]=(orgMap[org].detail[detailKey]||0)+1;
+            if(isFood)  orgMap[org].food_detail[detailKey]=(orgMap[org].food_detail[detailKey]||0)+1;
+            if(isNF)    orgMap[org].nonfood_detail[detailKey]=(orgMap[org].nonfood_detail[detailKey]||0)+1;
+            if(srcStr==='EXTERNAL') orgMap[org].ext_detail[detailKey]=(orgMap[org].ext_detail[detailKey]||0)+1;
+            if(srcStr==='INTERNAL') orgMap[org].int_detail[detailKey]=(orgMap[org].int_detail[detailKey]||0)+1;
+          }
           // Per-type breakdown
           if(isFood){
             if(root)orgMap[org].food_reasons[root]=(orgMap[org].food_reasons[root]||0)+1;
@@ -696,7 +707,7 @@ app.post('/api/rejection/upload', upload.single('file'), async function(req, res
         }
       }
       if (mo) {
-        if (!monthMap[mo]) monthMap[mo]={days:{},tDel:0,tRej:0,val:0,reasons:{},custs:{},areas:{},food_reasons:{},food_custs:{},nonfood_reasons:{},nonfood_custs:{},ext_reasons:{},ext_custs:{},int_reasons:{},int_custs:{},food_rej:0,nonfood_rej:0,ext_rej:0,int_rej:0,data:{}};
+        if (!monthMap[mo]) monthMap[mo]={days:{},tDel:0,tRej:0,val:0,reasons:{},custs:{},areas:{},food_reasons:{},food_custs:{},nonfood_reasons:{},nonfood_custs:{},ext_reasons:{},ext_custs:{},int_reasons:{},int_custs:{},food_rej:0,nonfood_rej:0,ext_rej:0,int_rej:0,detail:{},food_detail:{},nonfood_detail:{},ext_detail:{},int_detail:{},data:{}};
         if (del) monthMap[mo].tDel++;
         if (rej) {
           monthMap[mo].tRej++; monthMap[mo].val+=val;
@@ -724,9 +735,18 @@ app.post('/api/rejection/upload', upload.single('file'), async function(req, res
             if(root)monthMap[mo].int_reasons[root]=(monthMap[mo].int_reasons[root]||0)+1;
             if(cust)monthMap[mo].int_custs[cust]=(monthMap[mo].int_custs[cust]||0)+1;
           }
+          // Month detail
+          if(cust||root){
+            var mdk=(cust||'Unknown')+'|||'+(addr||'No address')+'|||'+(root||'Unknown');
+            monthMap[mo].detail[mdk]=(monthMap[mo].detail[mdk]||0)+1;
+            if(isFood)  monthMap[mo].food_detail[mdk]=(monthMap[mo].food_detail[mdk]||0)+1;
+            if(isNF)    monthMap[mo].nonfood_detail[mdk]=(monthMap[mo].nonfood_detail[mdk]||0)+1;
+            if(srcStr==='EXTERNAL') monthMap[mo].ext_detail[mdk]=(monthMap[mo].ext_detail[mdk]||0)+1;
+            if(srcStr==='INTERNAL') monthMap[mo].int_detail[mdk]=(monthMap[mo].int_detail[mdk]||0)+1;
+          }
         }
         if (day) {
-          if(!monthMap[mo].data[day])monthMap[mo].data[day]={tDel:0,tRej:0,val:0,reasons:{},custs:{},areas:{},food_reasons:{},food_custs:{},nonfood_reasons:{},nonfood_custs:{},ext_reasons:{},ext_custs:{},int_reasons:{},int_custs:{},food_rej:0,nonfood_rej:0,ext_rej:0,int_rej:0};
+          if(!monthMap[mo].data[day])monthMap[mo].data[day]={tDel:0,tRej:0,val:0,reasons:{},custs:{},areas:{},food_reasons:{},food_custs:{},nonfood_reasons:{},nonfood_custs:{},ext_reasons:{},ext_custs:{},int_reasons:{},int_custs:{},food_rej:0,nonfood_rej:0,ext_rej:0,int_rej:0,detail:{},food_detail:{},nonfood_detail:{},ext_detail:{},int_detail:{}};
           if(del)monthMap[mo].data[day].tDel++;
           if(rej){
             monthMap[mo].data[day].tRej++; monthMap[mo].data[day].val+=val;
@@ -751,6 +771,15 @@ app.post('/api/rejection/upload', upload.single('file'), async function(req, res
               if(root)monthMap[mo].data[day].int_reasons[root]=(monthMap[mo].data[day].int_reasons[root]||0)+1;
               if(cust)monthMap[mo].data[day].int_custs[cust]=(monthMap[mo].data[day].int_custs[cust]||0)+1;
             }
+            // Day detail
+            if(cust||root){
+              var ddk=(cust||'Unknown')+'|||'+(addr||'No address')+'|||'+(root||'Unknown');
+              monthMap[mo].data[day].detail[ddk]=(monthMap[mo].data[day].detail[ddk]||0)+1;
+              if(isFood)  monthMap[mo].data[day].food_detail[ddk]=(monthMap[mo].data[day].food_detail[ddk]||0)+1;
+              if(isNF)    monthMap[mo].data[day].nonfood_detail[ddk]=(monthMap[mo].data[day].nonfood_detail[ddk]||0)+1;
+              if(srcStr==='EXTERNAL') monthMap[mo].data[day].ext_detail[ddk]=(monthMap[mo].data[day].ext_detail[ddk]||0)+1;
+              if(srcStr==='INTERNAL') monthMap[mo].data[day].int_detail[ddk]=(monthMap[mo].data[day].int_detail[ddk]||0)+1;
+            }
           }
         }
       }
@@ -760,8 +789,9 @@ app.post('/api/rejection/upload', upload.single('file'), async function(req, res
     function top10(obj){return Object.keys(obj).map(function(l){return{l:l,n:obj[l]};}).sort(function(a,b){return b.n-a.n;}).slice(0,10);}
     function top8c(obj){return Object.keys(obj).map(function(n){return{n:n,c:obj[n],v:''};}).sort(function(a,b){return b.c-a.c;}).slice(0,8);}
     function top6a(obj){return Object.keys(obj).map(function(a){return{a:a,n:obj[a]};}).sort(function(a,b){return b.n-a.n;}).slice(0,6);}
+    function topDetail(obj){return Object.keys(obj).map(function(k){var p=k.split('|||');return{cust:p[0],addr:p[1],root:p[2],n:obj[k]};}).sort(function(a,b){return b.n-a.n;}).slice(0,100);}
 
-    var allR={},allC={},allA={},allDel=new Array(12).fill(0),allRej=new Array(12).fill(0);
+    var allR={},allC={},allA={},allDetail={},allFoodDetail={},allNFDetail={},allExtDetail={},allIntDetail={},allDel=new Array(12).fill(0),allRej=new Array(12).fill(0);
     var allFoodRej=0,allNFRej=0,allExtRej=0,allIntRej=0,allFoodDel=0,allNFDel=0,allFoodVal=0,allNFVal=0;
     var allFoodR={},allFoodC={},allNFR={},allNFC={},allExtR={},allExtC={},allIntR={},allIntC={};
     Object.keys(orgMap).forEach(function(org){
@@ -769,6 +799,11 @@ app.post('/api/rejection/upload', upload.single('file'), async function(req, res
       Object.keys(v.reasons).forEach(function(k){allR[k]=(allR[k]||0)+v.reasons[k];});
       Object.keys(v.custs).forEach(function(k){allC[k]=(allC[k]||0)+v.custs[k];});
       Object.keys(v.areas).forEach(function(k){allA[k]=(allA[k]||0)+v.areas[k];});
+      Object.keys(v.detail||{}).forEach(function(k){allDetail[k]=(allDetail[k]||0)+v.detail[k];});
+      Object.keys(v.food_detail||{}).forEach(function(k){allFoodDetail[k]=(allFoodDetail[k]||0)+v.food_detail[k];});
+      Object.keys(v.nonfood_detail||{}).forEach(function(k){allNFDetail[k]=(allNFDetail[k]||0)+v.nonfood_detail[k];});
+      Object.keys(v.ext_detail||{}).forEach(function(k){allExtDetail[k]=(allExtDetail[k]||0)+v.ext_detail[k];});
+      Object.keys(v.int_detail||{}).forEach(function(k){allIntDetail[k]=(allIntDetail[k]||0)+v.int_detail[k];});
       Object.keys(v.food_reasons||{}).forEach(function(k){allFoodR[k]=(allFoodR[k]||0)+v.food_reasons[k];});
       Object.keys(v.food_custs||{}).forEach(function(k){allFoodC[k]=(allFoodC[k]||0)+v.food_custs[k];});
       Object.keys(v.nonfood_reasons||{}).forEach(function(k){allNFR[k]=(allNFR[k]||0)+v.nonfood_reasons[k];});
@@ -789,15 +824,15 @@ app.post('/api/rejection/upload', upload.single('file'), async function(req, res
       var md=monthMap[mo]; var dataOut={};
       Object.keys(md.data).forEach(function(day){
         var dd=md.data[day];
-        dataOut[day]={tDel:dd.tDel,tRej:dd.tRej,val:fmtVal(dd.val),reasons:top10(dd.reasons),custs:top8c(dd.custs),areas:top6a(dd.areas),food_rej:dd.food_rej||0,nonfood_rej:dd.nonfood_rej||0,ext_rej:dd.ext_rej||0,int_rej:dd.int_rej||0,food_reasons:top10(dd.food_reasons||{}),food_custs:top8c(dd.food_custs||{}),nonfood_reasons:top10(dd.nonfood_reasons||{}),nonfood_custs:top8c(dd.nonfood_custs||{}),ext_reasons:top10(dd.ext_reasons||{}),ext_custs:top8c(dd.ext_custs||{}),int_reasons:top10(dd.int_reasons||{}),int_custs:top8c(dd.int_custs||{})};
+        dataOut[day]={tDel:dd.tDel,tRej:dd.tRej,val:fmtVal(dd.val),reasons:top10(dd.reasons),custs:top8c(dd.custs),areas:top6a(dd.areas),food_rej:dd.food_rej||0,nonfood_rej:dd.nonfood_rej||0,ext_rej:dd.ext_rej||0,int_rej:dd.int_rej||0,food_reasons:top10(dd.food_reasons||{}),food_custs:top8c(dd.food_custs||{}),nonfood_reasons:top10(dd.nonfood_reasons||{}),nonfood_custs:top8c(dd.nonfood_custs||{}),ext_reasons:top10(dd.ext_reasons||{}),ext_custs:top8c(dd.ext_custs||{}),int_reasons:top10(dd.int_reasons||{}),int_custs:top8c(dd.int_custs||{}),detail:topDetail(dd.detail||{}),food_detail:topDetail(dd.food_detail||{}),nonfood_detail:topDetail(dd.nonfood_detail||{}),ext_detail:topDetail(dd.ext_detail||{}),int_detail:topDetail(dd.int_detail||{})};
       });
-      monthsOut[mo]={days:Object.keys(md.days).map(Number).sort(function(a,b){return a-b;}),tDel:md.tDel,tRej:md.tRej,val:fmtVal(md.val),food_rej:md.food_rej||0,nonfood_rej:md.nonfood_rej||0,ext_rej:md.ext_rej||0,int_rej:md.int_rej||0,reasons:top10(md.reasons),custs:top8c(md.custs||{}),areas:top6a(md.areas||{}),food_reasons:top10(md.food_reasons||{}),food_custs:top8c(md.food_custs||{}),nonfood_reasons:top10(md.nonfood_reasons||{}),nonfood_custs:top8c(md.nonfood_custs||{}),ext_reasons:top10(md.ext_reasons||{}),ext_custs:top8c(md.ext_custs||{}),int_reasons:top10(md.int_reasons||{}),int_custs:top8c(md.int_custs||{}),data:dataOut};
+      monthsOut[mo]={days:Object.keys(md.days).map(Number).sort(function(a,b){return a-b;}),tDel:md.tDel,tRej:md.tRej,val:fmtVal(md.val),food_rej:md.food_rej||0,nonfood_rej:md.nonfood_rej||0,ext_rej:md.ext_rej||0,int_rej:md.int_rej||0,reasons:top10(md.reasons),custs:top8c(md.custs||{}),areas:top6a(md.areas||{}),food_reasons:top10(md.food_reasons||{}),food_custs:top8c(md.food_custs||{}),nonfood_reasons:top10(md.nonfood_reasons||{}),nonfood_custs:top8c(md.nonfood_custs||{}),ext_reasons:top10(md.ext_reasons||{}),ext_custs:top8c(md.ext_custs||{}),int_reasons:top10(md.int_reasons||{}),int_custs:top8c(md.int_custs||{}),detail:topDetail(md.detail||{}),food_detail:topDetail(md.food_detail||{}),nonfood_detail:topDetail(md.nonfood_detail||{}),ext_detail:topDetail(md.ext_detail||{}),int_detail:topDetail(md.int_detail||{}),data:dataOut};
     });
 
-    var orgsOut={all:{tDel:totalDel,tRej:totalRej,val:fmtVal(totalVal),food_rej:allFoodRej,food_del:allFoodDel,nonfood_rej:allNFRej,nonfood_del:allNFDel,ext_rej:allExtRej,int_rej:allIntRej,food_val:fmtVal(allFoodVal),nonfood_val:fmtVal(allNFVal),del:allDel,rej:allRej,reasons:top10(allR),custs:top8c(allC),areas:top6a(allA),food_reasons:top10(allFoodR),food_custs:top8c(allFoodC),nonfood_reasons:top10(allNFR),nonfood_custs:top8c(allNFC),ext_reasons:top10(allExtR),ext_custs:top8c(allExtC),int_reasons:top10(allIntR),int_custs:top8c(allIntC)}};
+    var orgsOut={all:{tDel:totalDel,tRej:totalRej,val:fmtVal(totalVal),food_rej:allFoodRej,food_del:allFoodDel,nonfood_rej:allNFRej,nonfood_del:allNFDel,ext_rej:allExtRej,int_rej:allIntRej,food_val:fmtVal(allFoodVal),nonfood_val:fmtVal(allNFVal),del:allDel,rej:allRej,reasons:top10(allR),custs:top8c(allC),areas:top6a(allA),detail:topDetail(allDetail),food_detail:topDetail(allFoodDetail||{}),nonfood_detail:topDetail(allNFDetail||{}),ext_detail:topDetail(allExtDetail||{}),int_detail:topDetail(allIntDetail||{}),food_reasons:top10(allFoodR),food_custs:top8c(allFoodC),nonfood_reasons:top10(allNFR),nonfood_custs:top8c(allNFC),ext_reasons:top10(allExtR),ext_custs:top8c(allExtC),int_reasons:top10(allIntR),int_custs:top8c(allIntC)}};
     Object.keys(orgMap).forEach(function(org){
       var v=orgMap[org];
-      orgsOut[org]={tDel:v.tDel,tRej:v.tRej,val:fmtVal(v.val),food_rej:v.food_rej||0,food_del:v.food_del||0,nonfood_rej:v.nonfood_rej||0,nonfood_del:v.nonfood_del||0,ext_rej:v.ext_rej||0,int_rej:v.int_rej||0,food_val:fmtVal(v.food_val||0),nonfood_val:fmtVal(v.nonfood_val||0),del:v.del,rej:v.rej,reasons:top10(v.reasons),custs:top8c(v.custs),areas:top6a(v.areas),food_reasons:top10(v.food_reasons||{}),food_custs:top8c(v.food_custs||{}),nonfood_reasons:top10(v.nonfood_reasons||{}),nonfood_custs:top8c(v.nonfood_custs||{}),ext_reasons:top10(v.ext_reasons||{}),ext_custs:top8c(v.ext_custs||{}),int_reasons:top10(v.int_reasons||{}),int_custs:top8c(v.int_custs||{})};
+      orgsOut[org]={tDel:v.tDel,tRej:v.tRej,val:fmtVal(v.val),food_rej:v.food_rej||0,food_del:v.food_del||0,nonfood_rej:v.nonfood_rej||0,nonfood_del:v.nonfood_del||0,ext_rej:v.ext_rej||0,int_rej:v.int_rej||0,food_val:fmtVal(v.food_val||0),nonfood_val:fmtVal(v.nonfood_val||0),del:v.del,rej:v.rej,reasons:top10(v.reasons),custs:top8c(v.custs),areas:top6a(v.areas),detail:topDetail(v.detail||{}),food_detail:topDetail(v.food_detail||{}),nonfood_detail:topDetail(v.nonfood_detail||{}),ext_detail:topDetail(v.ext_detail||{}),int_detail:topDetail(v.int_detail||{}),food_reasons:top10(v.food_reasons||{}),food_custs:top8c(v.food_custs||{}),nonfood_reasons:top10(v.nonfood_reasons||{}),nonfood_custs:top8c(v.nonfood_custs||{}),ext_reasons:top10(v.ext_reasons||{}),ext_custs:top8c(v.ext_custs||{}),int_reasons:top10(v.int_reasons||{}),int_custs:top8c(v.int_custs||{})};
     });
 
     rejectionData={uploadedAt:new Date().toISOString(),uploadedBy:req.body.uploadedBy||'Admin',fileName:req.file.originalname,totalOrders:totalRej+totalDel,orgs:orgsOut,months:monthsOut};
