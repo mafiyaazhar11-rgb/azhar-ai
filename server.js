@@ -156,12 +156,11 @@ async function dbLoadDispatch() {
 
 async function dbSaveRejection(uploadedBy, fileName, totalOrders, orgs, months) {
   try {
-    // Keep only latest rejection upload (upsert by overwriting)
     await pool.query(`DELETE FROM rejection_data`);
     await pool.query(`
       INSERT INTO rejection_data (uploaded_by, file_name, total_orders, orgs, months)
       VALUES ($1, $2, $3, $4, $5)
-    `, [uploadedBy, fileName, totalOrders, JSON.stringify(orgs), JSON.stringify(months)]);
+    `, [uploadedBy, fileName, totalOrders, orgs, months]);
     return true;
   } catch(e) {
     console.error('DB save rejection error:', e.message);
@@ -543,16 +542,20 @@ async function loadRejectionFromDB() {
   try {
     var row = await dbLoadRejection();
     if (row) {
-      var orgs = row.orgs || {};
+      // Safely parse orgs/months — may be object (JSONB) or string (old saves)
+      var orgs = row.orgs;
+      var months = row.months;
+      if (typeof orgs === 'string') try { orgs = JSON.parse(orgs); } catch(e) { orgs = {}; }
+      if (typeof months === 'string') try { months = JSON.parse(months); } catch(e) { months = {}; }
       // Version check: if 'all' org has no detail array, data is old — needs re-upload
-      var hasDetail = orgs.all && Array.isArray(orgs.all.detail) && orgs.all.detail.length > 0;
+      var hasDetail = orgs && orgs.all && Array.isArray(orgs.all.detail) && orgs.all.detail.length > 0;
       rejectionData = {
         uploadedAt: row.uploaded_at, uploadedBy: row.uploaded_by,
         fileName: row.file_name, totalOrders: row.total_orders,
-        orgs: orgs, months: row.months,
+        orgs: orgs, months: months,
         needsReupload: !hasDetail
       };
-      console.log('Loaded rejection from DB. hasDetail:', hasDetail);
+      console.log('Loaded rejection from DB. hasDetail:', hasDetail, 'orgs keys:', Object.keys(orgs||{}).length);
       return true;
     }
   } catch(e) { console.error('loadRejectionFromDB error:', e.message); }
