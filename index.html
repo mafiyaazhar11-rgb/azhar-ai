@@ -2313,7 +2313,13 @@ function getFilteredData(){
         tDel:di2.tDel||0, tRej:di2.tRej||0, val:di2.val||'AED 0K',
         del:[0,0,0,0,0,0].map(function(_,i){return i===rejMonth-1?(di2.tDel||0):0;}),
         rej:[0,0,0,0,0,0].map(function(_,i){return i===rejMonth-1?(di2.tRej||0):0;}),
-        reasons:di2.reasons||[], custs:di2.custs||[], areas:di2.areas||[]
+        reasons:di2.reasons||[], custs:di2.custs||[], areas:di2.areas||[],
+        food_rej:di2.food_rej||0, nonfood_rej:di2.nonfood_rej||0,
+        ext_rej:di2.ext_rej||0, int_rej:di2.int_rej||0,
+        food_reasons:di2.food_reasons||[], food_custs:di2.food_custs||[],
+        nonfood_reasons:di2.nonfood_reasons||[], nonfood_custs:di2.nonfood_custs||[],
+        ext_reasons:di2.ext_reasons||[], ext_custs:di2.ext_custs||[],
+        int_reasons:di2.int_reasons||[], int_custs:di2.int_custs||[]
       };
     }
   }
@@ -2371,15 +2377,18 @@ function getFilteredData(){
       foodValNum = orgValNum * ((orgBase.food_rej||0) / (orgBase.tRej||1));
     var foodValRatio = orgValNum > 0 ? foodValNum / orgValNum : (orgBase.food_rej||0)/(orgBase.tRej||1);
     base.val = (function(){var n=baseValNum*foodValRatio;return n>=1000000?'AED '+(n/1000000).toFixed(2)+'M':'AED '+Math.round(n/1000)+'K';})();
-    // Use month-level food reasons if month selected, else YTD
-    if(!hasDayFilter){
-      var fr = (moInfo3.food_reasons||[]).length>0 ? moInfo3.food_reasons : (orgBase.food_reasons||[]);
-      var fc = (moInfo3.food_custs||[]).length>0   ? moInfo3.food_custs   : (orgBase.food_custs||[]);
-      if(fr.length>0) base.reasons = fr;
-      if(fc.length>0) base.custs   = fc;
-      // Override tRej with actual month food count
-      if(rejMonth !== 'all' && (moInfo3.food_rej||0) > 0) base.tRej = moInfo3.food_rej;
-    }
+    // Use most specific available data: day > month > YTD
+    var fr = hasDayFilter
+      ? ((base.food_reasons||[]).length>0 ? base.food_reasons : [])
+      : ((moInfo3.food_reasons||[]).length>0 ? moInfo3.food_reasons : (orgBase.food_reasons||[]));
+    var fc = hasDayFilter
+      ? ((base.food_custs||[]).length>0 ? base.food_custs : [])
+      : ((moInfo3.food_custs||[]).length>0 ? moInfo3.food_custs : (orgBase.food_custs||[]));
+    if(fr.length>0) base.reasons = fr;
+    if(fc.length>0) base.custs   = fc;
+    // tRej from actual food count
+    var foodRejCount = hasDayFilter ? (base.food_rej||0) : (rejMonth!=='all'?(moInfo3.food_rej||0):(orgBase.food_rej||0));
+    if(foodRejCount>0) base.tRej = foodRejCount;
   } else if(rejType === 'nonfood'){
     typeRatio = (orgBase.nonfood_rej||0) / orgTotalRej;
     var nfValNum   = parseFloat((orgBase.nonfood_val||'0').replace(/[^0-9.]/g,'')) * ((orgBase.nonfood_val||'').includes('M')?1000000:1000);
@@ -2388,44 +2397,45 @@ function getFilteredData(){
     var nfValRatio = orgValNum2 > 0 ? nfValNum / orgValNum2 : 0;
     base.val = (function(){var n=baseValNum2*nfValRatio;return n>=1000000?'AED '+(n/1000000).toFixed(2)+'M':'AED '+Math.round(n/1000)+'K';})();
     if(!hasDayFilter){
-      var nr = (moInfo3.nonfood_reasons||[]).length>0 ? moInfo3.nonfood_reasons : (orgBase.nonfood_reasons||[]);
-      var nc = (moInfo3.nonfood_custs||[]).length>0   ? moInfo3.nonfood_custs   : (orgBase.nonfood_custs||[]);
+      var nr = hasDayFilter
+        ? ((base.nonfood_reasons||[]).length>0 ? base.nonfood_reasons : [])
+        : ((moInfo3.nonfood_reasons||[]).length>0 ? moInfo3.nonfood_reasons : (orgBase.nonfood_reasons||[]));
+      var nc = hasDayFilter
+        ? ((base.nonfood_custs||[]).length>0 ? base.nonfood_custs : [])
+        : ((moInfo3.nonfood_custs||[]).length>0 ? moInfo3.nonfood_custs : (orgBase.nonfood_custs||[]));
       if(nr.length>0) base.reasons = nr;
       if(nc.length>0) base.custs   = nc;
-      if(rejMonth !== 'all' && (moInfo3.nonfood_rej||0) > 0) base.tRej = moInfo3.nonfood_rej;
+      var nfRejCount = hasDayFilter ? (base.nonfood_rej||0) : (rejMonth!=='all'?(moInfo3.nonfood_rej||0):(orgBase.nonfood_rej||0));
+      if(nfRejCount>0) base.tRej = nfRejCount;
     }
   }
 
   if(rejSrc === 'external'){
     srcRatio = (orgBase.ext_rej||0) / orgTotalRej;
-    if(!hasDayFilter){
-      var er = (moInfo3.ext_reasons||[]).length>0 ? moInfo3.ext_reasons : (orgBase.ext_reasons||[]);
-      var ec = (moInfo3.ext_custs||[]).length>0   ? moInfo3.ext_custs   : (orgBase.ext_custs||[]);
-      if(er.length>0) base.reasons = er;
-      if(ec.length>0) base.custs   = ec;
-      // Combine type+source: if BOTH type and source selected, use actual month counts
-      if(rejMonth !== 'all'){
-        var moExt = moInfo3.ext_rej||0;
-        var moTypeSrc = base.tRej; // already set by type filter above if active
-        // If type filter also active, scale ext by type ratio
-        if(rejType !== 'all' && moExt > 0) base.tRej = Math.round(moExt * typeRatio);
-        else if(moExt > 0) base.tRej = moExt;
-      }
-    }
+    var er = hasDayFilter
+      ? ((base.ext_reasons||[]).length>0 ? base.ext_reasons : [])
+      : ((moInfo3.ext_reasons||[]).length>0 ? moInfo3.ext_reasons : (orgBase.ext_reasons||[]));
+    var ec = hasDayFilter
+      ? ((base.ext_custs||[]).length>0 ? base.ext_custs : [])
+      : ((moInfo3.ext_custs||[]).length>0 ? moInfo3.ext_custs : (orgBase.ext_custs||[]));
+    if(er.length>0) base.reasons = er;
+    if(ec.length>0) base.custs   = ec;
+    var extRejCount = hasDayFilter ? (base.ext_rej||0) : (rejMonth!=='all'?(moInfo3.ext_rej||0):(orgBase.ext_rej||0));
+    if(rejType !== 'all' && extRejCount > 0) base.tRej = Math.round(extRejCount * typeRatio);
+    else if(extRejCount > 0) base.tRej = extRejCount;
   } else if(rejSrc === 'internal'){
     srcRatio = (orgBase.int_rej||0) / orgTotalRej;
-    if(!hasDayFilter){
-      var ir = (moInfo3.int_reasons||[]).length>0 ? moInfo3.int_reasons : (orgBase.int_reasons||[]);
-      var ic = (moInfo3.int_custs||[]).length>0   ? moInfo3.int_custs   : (orgBase.int_custs||[]);
-      if(ir.length>0) base.reasons = ir;
-      if(ic.length>0) base.custs   = ic;
-      if(rejMonth !== 'all'){
-        var moInt = moInfo3.int_rej||0;
-        if(rejType !== 'all' && moInt > 0) base.tRej = Math.round(moInt * typeRatio);
-        else if(moInt > 0) base.tRej = moInt;
-      }
-    }
-  }
+    var ir = hasDayFilter
+      ? ((base.int_reasons||[]).length>0 ? base.int_reasons : [])
+      : ((moInfo3.int_reasons||[]).length>0 ? moInfo3.int_reasons : (orgBase.int_reasons||[]));
+    var ic = hasDayFilter
+      ? ((base.int_custs||[]).length>0 ? base.int_custs : [])
+      : ((moInfo3.int_custs||[]).length>0 ? moInfo3.int_custs : (orgBase.int_custs||[]));
+    if(ir.length>0) base.reasons = ir;
+    if(ic.length>0) base.custs   = ic;
+    var intRejCount = hasDayFilter ? (base.int_rej||0) : (rejMonth!=='all'?(moInfo3.int_rej||0):(orgBase.int_rej||0));
+    if(rejType !== 'all' && intRejCount > 0) base.tRej = Math.round(intRejCount * typeRatio);
+    else if(intRejCount > 0) base.tRej = intRejCount;
 
   // For day filter: scale reasons counts proportionally
   var finalRatio = typeRatio * srcRatio;
@@ -2579,8 +2589,12 @@ oc.innerHTML=ORG_SUMMARY.map(function(o){
       filtDel = orgD.tDel || 0;
     }
 
-    var filtTotal = filtRej + filtDel;
-    var dynamicRate = filtTotal > 0 ? (filtRej/filtTotal*100).toFixed(1)+'%' : '0%';
+    // Rate badge = org's CONTRIBUTION to overall rejection rate
+    // = org rejections / total ALL orders (not org's own orders)
+    var grandTotalOrders = (ORG_DATA['all'] && ((ORG_DATA['all'].tDel||0)+(ORG_DATA['all'].tRej||0))) || 1;
+    // Use filtered rej count for contribution
+    var contribRej = filtRej;
+    var dynamicRate = (contribRej/grandTotalOrders*100).toFixed(2)+'%';
 
     return '<div class="org-card '+onCls+'" onclick="rejFilter(\'org\',\''+o.org+'\')">'
       +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">'
@@ -2593,34 +2607,32 @@ oc.innerHTML=ORG_SUMMARY.map(function(o){
       +'</div>';
   }).join('');
 
-  // KPI Cards — compute rates correctly for each filter combination
+  // KPI Cards — compute rates correctly
   var _savedType = rejType;
   rejType = 'all';
   var _allData = getFilteredData();
   rejType = _savedType;
-  var allGrandTotal = (_allData.tDel + _allData.tRej) || 1;
-  const overallRate = (_allData.tRej/allGrandTotal*100).toFixed(2)+'%';
-  const totalOrders = d.tDel + d.tRej;
-  // Rejection rate = filtered rejections / (filtered delivered + filtered rejections)
-  const filteredGrandTotal = (d.tDel + d.tRej) || 1;
-  const filteredRate = (d.tRej / filteredGrandTotal * 100).toFixed(2) + '%';
-  // Show filtered rate when type or source is selected, overall rate when All
+  var grandTotal = (_allData.tDel + _allData.tRej) || 1;
+  const overallRate = (_allData.tRej/grandTotal*100).toFixed(2)+'%';
+  // Contribution = filtered rejections / ALL orders (not just filtered orders)
+  // So Food = 2.72%, NonFood = 3.18%, both add up to 5.90%
   const isFiltered = (rejType !== 'all' || rejSrc !== 'all');
-  const rejRate = isFiltered ? filteredRate : overallRate;
-  const buContrib = isFiltered ? (d.tRej/allGrandTotal*100).toFixed(2)+'%' : null;
+  const filteredContrib = (d.tRej/grandTotal*100).toFixed(2)+'%';
+  const rejRate = isFiltered ? filteredContrib : overallRate;
   const kEl=document.getElementById('rej-kpis');
-  var rateLabel = 'Rejection Rate';
-  if(rejType==='food') rateLabel='Food Rejection Rate';
-  else if(rejType==='nonfood') rateLabel='Non-Food Rejection Rate';
-  else if(rejSrc==='external') rateLabel='External Rejection Rate';
-  else if(rejSrc==='internal') rateLabel='Internal Rejection Rate';
+  var rateLabel = isFiltered ? 'Contribution to Rejection Rate' : 'Rejection Rate';
+  var rateSub = '';
+  if(rejType==='food') rateSub='Food share of overall '+overallRate;
+  else if(rejType==='nonfood') rateSub='Non-Food share of overall '+overallRate;
+  else if(rejSrc==='external') rateSub='External share of overall '+overallRate;
+  else if(rejSrc==='internal') rateSub='Internal share of overall '+overallRate;
 
   if(kEl)kEl.innerHTML=''
     +'<div style="background:var(--card);border:1px solid var(--border);padding:16px;position:relative;"><div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:0.4;"></div><div style="font-size:12px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">Total Rejections</div><div style="font-family:Cormorant Garamond,serif;font-size:28px;font-weight:700;color:var(--gold);">'+d.tRej.toLocaleString()+'</div></div>'
     +'<div style="background:rgba(232,75,75,0.1);border:1px solid rgba(232,75,75,0.3);padding:16px;">'+
      '<div style="font-size:12px;letter-spacing:2px;color:var(--red);text-transform:uppercase;margin-bottom:4px;">'+rateLabel+'</div>'+
      '<div style="font-family:Cormorant Garamond,serif;font-size:28px;font-weight:700;color:var(--red);">'+rejRate+'</div>'+
-     (isFiltered?'<div style="font-size:12px;color:var(--muted);margin-top:3px;">Overall: '+overallRate+' &nbsp;·&nbsp; Contribution: '+(d.tRej/(_allData.tRej||1)*100).toFixed(1)+'% of total rej</div>':'')+
+     (rateSub?'<div style="font-size:12px;color:var(--muted);margin-top:3px;">'+rateSub+'</div>':'')+
      '</div>'
     +'<div style="background:var(--card);border:1px solid var(--border);padding:16px;position:relative;"><div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:0.4;"></div><div style="font-size:12px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">Delivered</div><div style="font-family:Cormorant Garamond,serif;font-size:28px;font-weight:700;color:var(--green);">'+d.tDel.toLocaleString()+'</div></div>'
     +'<div style="background:var(--card);border:1px solid var(--border);padding:16px;position:relative;"><div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:0.4;"></div><div style="font-size:12px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">Value at Risk</div><div style="font-family:Cormorant Garamond,serif;font-size:28px;font-weight:700;color:var(--gold);">'+d.val+'</div></div>';
