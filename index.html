@@ -2792,68 +2792,67 @@ oc.innerHTML=ORG_SUMMARY.map(function(o){
   // ── Customer · Location · Root Cause Detail Table ──
   var detailTbody = document.getElementById('rej-detail-tbody');
   if(detailTbody){
-    // Pick detail based on all active filters — most specific wins
+    // Define orgBase in THIS scope
+    var rejOrgBase = ORG_DATA[rejORG==='all'?'all':rejORG] || ORG_DATA['all'] || {};
+
+    // Pick correct detail key based on filters
     var detailKey = 'detail';
-    if(rejType==='food')    detailKey='food_detail';
+    if(rejType==='food') detailKey='food_detail';
     else if(rejType==='nonfood') detailKey='nonfood_detail';
-    if(rejSrc==='external') detailKey=(rejType!=='all'?rejType[0]+'_':'')+'ext_detail';
-    if(rejSrc==='internal') detailKey=(rejType!=='all'?rejType[0]+'_':'')+'int_detail';
-    // Simplify: type+source combo — just use source detail (most restrictive)
     if(rejSrc==='external') detailKey='ext_detail';
     if(rejSrc==='internal') detailKey='int_detail';
 
     // Pick data source: day > month > org
-    var detailSrc = orgBase;
+    var detailSrc = rejOrgBase;
     if(rejMonth !== 'all' && rejDay !== 'all'){
       var moKey4 = DAY_DATA[rejMonth] ? rejMonth : String(rejMonth);
       var di4 = ((DAY_DATA[moKey4]||{}).data||{})[rejDay] || ((DAY_DATA[moKey4]||{}).data||{})[String(rejDay)];
       if(di4) detailSrc = di4;
     } else if(rejMonth !== 'all'){
       var moInfo4 = DAY_DATA[rejMonth] || DAY_DATA[String(rejMonth)] || {};
-      if(moInfo4 && moInfo4.detail) detailSrc = moInfo4;
+      if(moInfo4 && (moInfo4.detail || moInfo4.custs)) detailSrc = moInfo4;
     }
 
+    // Get detail rows
     var detailRows = (detailSrc[detailKey] || detailSrc['detail'] || []);
 
-    // FALLBACK: build from d.custs which is ALWAYS populated when data is loaded
-    if(detailRows.length === 0){
-      var fallbackCusts = d.custs || [];
-      if(fallbackCusts.length > 0){
-        detailRows = fallbackCusts.map(function(c){
-          return {cust:c.n||'', addr:'Address — deploy new server.js + re-upload to enable', root:'Root cause — deploy new server.js + re-upload to enable', n:c.c||0};
-        });
-      }
+    // FALLBACK 1: use d.custs (filtered customers - always populated)
+    if(detailRows.length === 0 && (d.custs||[]).length > 0){
+      detailRows = d.custs.map(function(c){
+        return {cust:c.n||'', addr:'Re-upload file to see full address', root:'Re-upload file to see root cause', n:c.c||0};
+      });
     }
 
-    if(detailRows.length === 0){
-      // LAST RESORT: use ORG_DATA directly
-      var emergencyCusts = (ORG_DATA['all']||{}).custs || [];
-      if(emergencyCusts.length > 0){
-        detailRows = emergencyCusts.map(function(c){
-          return {cust:c.n||'', addr:'Address — deploy new server.js + re-upload to enable', root:'Root cause — deploy new server.js + re-upload to enable', n:c.c||0};
-        });
-      }
+    // FALLBACK 2: use ORG_DATA directly (absolute last resort)
+    if(detailRows.length === 0 && (rejOrgBase.custs||[]).length > 0){
+      detailRows = rejOrgBase.custs.map(function(c){
+        return {cust:c.n||'', addr:'Re-upload file to see full address', root:'Re-upload file to see root cause', n:c.c||0};
+      });
     }
+
+    var totalForPct = d.tRej || 1;
+    var hasFullData = detailRows.length > 0 && detailRows[0].addr && !detailRows[0].addr.startsWith('Re-upload');
 
     if(detailRows.length === 0){
       detailTbody.innerHTML = '<tr><td colspan="6" style="padding:20px;text-align:center;color:var(--muted);font-size:15px;">No data — upload rejection file</td></tr>';
     } else {
-      var totalForPct = d.tRej || 1;
       detailTbody.innerHTML = detailRows.slice(0,50).map(function(r,i){
         var rowPct = (r.n/totalForPct*100).toFixed(1)+'%';
         var rowCol = i<3?'#e84b4b':i<10?'var(--gold)':'var(--text)';
-        var addrStyle = r.addr.startsWith('—') ? 'color:rgba(201,168,76,0.5);font-style:italic;' : 'color:var(--muted);';
-        var rootStyle = r.root.startsWith('—') ? 'color:rgba(201,168,76,0.5);font-style:italic;' : 'color:#c9c3b0;';
+        var addrTxt = r.addr || '';
+        var rootTxt = r.root || '';
+        var addrStyle = addrTxt.startsWith('Re-upload') ? 'color:rgba(201,168,76,0.4);font-style:italic;font-size:12px;' : 'color:var(--muted);font-size:13px;';
+        var rootStyle = rootTxt.startsWith('Re-upload') ? 'color:rgba(201,168,76,0.4);font-style:italic;' : 'color:#c9c3b0;';
         return '<tr style="border-bottom:1px solid rgba(60,60,40,0.4);">'
           +'<td style="padding:8px 10px;font-size:15px;font-weight:700;color:'+rowCol+';">'+(i+1)+'</td>'
           +'<td style="padding:8px 10px;font-size:15px;color:var(--text);font-weight:500;">'+r.cust+'</td>'
-          +'<td style="padding:8px 10px;font-size:13px;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'+addrStyle+'" title="'+r.addr+'">'+r.addr+'</td>'
-          +'<td style="padding:8px 10px;font-size:14px;'+rootStyle+'">'+r.root+'</td>'
+          +'<td style="padding:8px 10px;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'+addrStyle+'" title="'+addrTxt+'">'+addrTxt+'</td>'
+          +'<td style="padding:8px 10px;'+rootStyle+'">'+rootTxt+'</td>'
           +'<td style="padding:8px 10px;font-size:15px;font-weight:700;color:var(--text);text-align:right;">'+r.n+'</td>'
           +'<td style="padding:8px 10px;font-size:14px;font-weight:700;color:var(--red);text-align:right;">'+rowPct+'</td>'
           +'</tr>';
       }).join('')
-      + '<tr><td colspan="6" style="padding:10px;text-align:center;font-size:13px;color:rgba(201,168,76,0.7);background:rgba(201,168,76,0.05);">⚠️ Re-upload rejection file to see Full Address and Root Cause per customer</td></tr>';
+      +(!hasFullData?'<tr><td colspan="6" style="padding:8px;text-align:center;font-size:12px;color:rgba(201,168,76,0.5);background:rgba(201,168,76,0.03);">📌 Deploy new server.js + re-upload file to see Full Address and Root Cause</td></tr>':'');
     }
   }
 }
