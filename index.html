@@ -2917,7 +2917,19 @@ async function rejLoadFromServer(){
 
       // Update source note
       const sn=document.getElementById('rej-source-note');
-      if(sn&&d.fileName)sn.textContent='Source: '+d.fileName+'  Uploaded: '+new Date(d.uploadedAt).toLocaleDateString('en-AE')+'  Data persisted on server';
+      if(sn&&d.fileName){
+        if(d.needsReupload){
+          sn.innerHTML='<span style="color:var(--gold);">⚠️ New features available — please re-upload your rejection file to enable Customer · Location · Root Cause detail table.</span>';
+        } else {
+          sn.textContent='Source: '+d.fileName+'  Uploaded: '+new Date(d.uploadedAt).toLocaleDateString('en-AE')+'  Data persisted on server';
+        }
+      }
+
+      // Show needsReupload banner in detail table
+      var detailTbody2 = document.getElementById('rej-detail-tbody');
+      if(detailTbody2 && d.needsReupload){
+        detailTbody2.innerHTML='<tr><td colspan="6" style="padding:16px;text-align:center;color:var(--gold);font-size:15px;border:1px solid rgba(201,168,76,0.3);background:rgba(201,168,76,0.08);">⚠️ Re-upload your rejection file to load Customer · Location · Root Cause data<br><span style="font-size:13px;color:var(--muted);margin-top:4px;display:block;">Click the 🔒 upload button above and upload the same file</span></td></tr>';
+      }
 
       // Update status badge
       const st=document.getElementById('rej-upload-status');
