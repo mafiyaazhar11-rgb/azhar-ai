@@ -1241,20 +1241,27 @@ app.post('/api/users/:id/reset-password', requireAuth, requireRole('superadmin')
 
 
 // ── EMERGENCY ADMIN RESET (remove after first use) ──
-app.get('/api/setup/reset-admin', async function(req, res) {
+app.get('/api/version', function(req, res) {
+  res.json({ version: 'V4.1', date: '2026-06-05', status: 'running', auth: 'active' });
+});
+
+(req, res) {
   try {
     var hash = await bcrypt.hash('YAmaha100@', 10);
-    // Check if user exists
     var check = await pool.query("SELECT id FROM users WHERE username='azhar'");
     if (check.rows.length === 0) {
       await pool.query(
-        "INSERT INTO users (username, password_hash, full_name, role) VALUES ($1,$2,$3,$4)",
+        "INSERT INTO users (username, password_hash, full_name, role, active) VALUES ($1,$2,$3,$4,true)",
         ['azhar', hash, 'Mohammed Azharuddin', 'superadmin']
       );
-      res.json({ success: true, message: 'Admin user created' });
+      res.json({ success: true, message: 'Admin user CREATED. Login: azhar / YAmaha100@' });
     } else {
-      await pool.query("UPDATE users SET password_hash=$1 WHERE username='azhar'", [hash]);
-      res.json({ success: true, message: 'Admin password reset to YAmaha100@' });
+      // Force reset — update password AND ensure active=true
+      await pool.query("UPDATE users SET password_hash=$1, active=true, must_change_password=false WHERE username='azhar'", [hash]);
+      // Clear all old sessions for this user
+      var uid = check.rows[0].id;
+      await pool.query("DELETE FROM sessions WHERE user_id=$1", [uid]);
+      res.json({ success: true, message: 'Password RESET. All sessions cleared. Login: azhar / YAmaha100@' });
     }
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
