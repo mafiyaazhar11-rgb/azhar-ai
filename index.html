@@ -786,16 +786,28 @@ footer span{color:var(--gold);}
         </div>
       </div>
 
-      <!-- CHARTS ROW 2: MONTHLY + AREA (moved down) -->
-      <div class="grid-2" style="margin-bottom:16px;">
-        <div class="box">
-          <div class="box-title" style="font-size:15px;">📈 Delivered vs Rejected — Monthly <span id="rej-chart-sub"></span></div>
-          <div style="display:flex;gap:14px;margin-bottom:8px;font-size:12px;color:var(--muted);"><span style="display:flex;align-items:center;gap:5px;"><span style="width:10px;height:10px;border-radius:2px;background:var(--green);display:inline-block;"></span>Delivered</span><span style="display:flex;align-items:center;gap:5px;"><span style="width:10px;height:10px;border-radius:2px;background:var(--red);display:inline-block;"></span>Rejected</span></div>
-          <div style="position:relative;height:200px;"><canvas id="rejMonthChart"></canvas></div>
+      <!-- DETAIL TABLE: Customer + Location + Root Cause -->
+      <div class="box" style="margin-bottom:16px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+          <div class="box-title" style="font-size:15px;margin:0;">📋 Customer · Location · Root Cause Detail</div>
+          <button onclick="exportRejDetailExcel()" style="background:rgba(201,168,76,0.12);border:1px solid var(--gold);color:var(--gold);font-family:Montserrat,sans-serif;font-size:12px;letter-spacing:1px;text-transform:uppercase;padding:7px 16px;cursor:pointer;">⬇ Export Excel</button>
         </div>
-        <div class="box">
-          <div class="box-title" style="font-size:15px;">📍 Rejections by Area</div>
-          <div style="position:relative;height:230px;"><canvas id="rejAreaChart"></canvas></div>
+        <div style="overflow-x:auto;">
+          <table style="width:100%;border-collapse:collapse;" id="rej-detail-table">
+            <thead>
+              <tr style="border-bottom:1px solid var(--gold);">
+                <th style="text-align:left;padding:8px 10px;font-size:12px;color:var(--gold);letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">#</th>
+                <th style="text-align:left;padding:8px 10px;font-size:12px;color:var(--gold);letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">Customer Name</th>
+                <th style="text-align:left;padding:8px 10px;font-size:12px;color:var(--gold);letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">Full Address</th>
+                <th style="text-align:left;padding:8px 10px;font-size:12px;color:var(--gold);letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">Final Root Cause</th>
+                <th style="text-align:right;padding:8px 10px;font-size:12px;color:var(--gold);letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">Count</th>
+                <th style="text-align:right;padding:8px 10px;font-size:12px;color:var(--gold);letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">%</th>
+              </tr>
+            </thead>
+            <tbody id="rej-detail-tbody">
+              <tr><td colspan="6" style="padding:20px;text-align:center;color:var(--muted);font-size:15px;">Upload rejection file to view detail</td></tr>
+            </tbody>
+          </table>
         </div>
       </div>
 
@@ -2715,6 +2727,111 @@ oc.innerHTML=ORG_SUMMARY.map(function(o){
       }).join('');
     }
   }
+
+  // ── Customer · Location · Root Cause Detail Table ──
+  var detailTbody = document.getElementById('rej-detail-tbody');
+  if(detailTbody){
+    // Pick detail based on all active filters — most specific wins
+    var detailKey = 'detail';
+    if(rejType==='food')    detailKey='food_detail';
+    else if(rejType==='nonfood') detailKey='nonfood_detail';
+    if(rejSrc==='external') detailKey=(rejType!=='all'?rejType[0]+'_':'')+'ext_detail';
+    if(rejSrc==='internal') detailKey=(rejType!=='all'?rejType[0]+'_':'')+'int_detail';
+    // Simplify: type+source combo — just use source detail (most restrictive)
+    if(rejSrc==='external') detailKey='ext_detail';
+    if(rejSrc==='internal') detailKey='int_detail';
+
+    // Pick data source: day > month > org
+    var detailSrc = orgBase;
+    if(rejMonth !== 'all' && rejDay !== 'all'){
+      var moKey4 = DAY_DATA[rejMonth] ? rejMonth : String(rejMonth);
+      var di4 = ((DAY_DATA[moKey4]||{}).data||{})[rejDay] || ((DAY_DATA[moKey4]||{}).data||{})[String(rejDay)];
+      if(di4) detailSrc = di4;
+    } else if(rejMonth !== 'all'){
+      var moInfo4 = DAY_DATA[rejMonth] || DAY_DATA[String(rejMonth)] || {};
+      if(moInfo4 && moInfo4.detail) detailSrc = moInfo4;
+    }
+
+    var detailRows = (detailSrc[detailKey] || detailSrc['detail'] || []);
+    if(detailRows.length === 0){
+      detailTbody.innerHTML = '<tr><td colspan="6" style="padding:20px;text-align:center;color:var(--muted);font-size:15px;">No data for selected filters</td></tr>';
+    } else {
+      var totalForPct = d.tRej || 1;
+      detailTbody.innerHTML = detailRows.slice(0,50).map(function(r,i){
+        var rowPct = (r.n/totalForPct*100).toFixed(1)+'%';
+        var rowCol = i<3?'#e84b4b':i<10?'var(--gold)':'var(--text)';
+        return '<tr style="border-bottom:1px solid rgba(60,60,40,0.4);">'
+          +'<td style="padding:8px 10px;font-size:15px;font-weight:700;color:'+rowCol+';">'+(i+1)+'</td>'
+          +'<td style="padding:8px 10px;font-size:15px;color:var(--text);font-weight:500;">'+r.cust+'</td>'
+          +'<td style="padding:8px 10px;font-size:13px;color:var(--muted);max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+r.addr+'">'+r.addr+'</td>'
+          +'<td style="padding:8px 10px;font-size:14px;color:#c9c3b0;">'+r.root+'</td>'
+          +'<td style="padding:8px 10px;font-size:15px;font-weight:700;color:var(--text);text-align:right;">'+r.n+'</td>'
+          +'<td style="padding:8px 10px;font-size:14px;font-weight:700;color:var(--red);text-align:right;">'+rowPct+'</td>'
+          +'</tr>';
+      }).join('');
+    }
+  }
+}
+
+// REJECTION DETAIL EXCEL EXPORT
+function exportRejDetailExcel(){
+  var orgBase = ORG_DATA[rejORG==='all'?'all':rejORG] || ORG_DATA['all'] || {};
+  var detKey2 = 'detail';
+  if(rejType==='food')    detKey2='food_detail';
+  else if(rejType==='nonfood') detKey2='nonfood_detail';
+  if(rejSrc==='external') detKey2='ext_detail';
+  if(rejSrc==='internal') detKey2='int_detail';
+  var detSrc2 = orgBase;
+  if(rejMonth !== 'all' && rejDay !== 'all'){
+    var moKey5 = DAY_DATA[rejMonth] ? rejMonth : String(rejMonth);
+    var di5 = ((DAY_DATA[moKey5]||{}).data||{})[rejDay] || ((DAY_DATA[moKey5]||{}).data||{})[String(rejDay)];
+    if(di5) detSrc2 = di5;
+  } else if(rejMonth !== 'all'){
+    var moInfo5 = DAY_DATA[rejMonth] || DAY_DATA[String(rejMonth)] || {};
+    if(moInfo5 && moInfo5.detail) detSrc2 = moInfo5;
+  }
+  var detailRows = (detSrc2[detKey2] || detSrc2['detail'] || []);
+  if(!detailRows.length){ alert('No data to export. Upload rejection file first.'); return; }
+
+  // Build filter description
+  var filterDesc = [];
+  if(rejORG!=='all') filterDesc.push('ORG: '+rejORG);
+  if(rejMonth!=='all') filterDesc.push('Month: '+(['Jan','Feb','Mar','Apr','May','Jun'][rejMonth-1]||rejMonth));
+  if(rejType!=='all') filterDesc.push('Type: '+(rejType==='food'?'Food':'Non-Food'));
+  if(rejSrc!=='all') filterDesc.push('Source: '+(rejSrc==='external'?'External':'Internal'));
+  var filterStr = filterDesc.length ? filterDesc.join(' | ') : 'All Filters';
+
+  var totalRej = (ORG_DATA['all']||{}).tRej || 1;
+
+  var html = '<html><head><meta charset="UTF-8"></head><body>';
+  html += '<h2 style="color:#c9a84c;font-family:Arial;">REJECTION ANALYSIS — Customer · Location · Root Cause</h2>';
+  html += '<p style="font-family:Arial;font-size:13px;"><b>AKI Group — CST Operations Intelligence</b><br>';
+  html += 'Generated: '+new Date().toLocaleDateString('en-AE')+'<br>';
+  html += 'Filters Applied: '+filterStr+'<br>';
+  html += 'Total Rejections: '+(ORG_DATA[rejORG==='all'?'all':rejORG]||{}).tRej+'</p>';
+  html += '<table border="1" cellpadding="8" cellspacing="0" style="border-collapse:collapse;font-family:Arial;font-size:13px;width:100%;">';
+  html += '<thead><tr style="background:#1a1e26;color:#c9a84c;">';
+  html += '<th>#</th><th>Customer Name</th><th>Full Address for Address Matching</th><th>Final- Root Cause</th><th>Rejection Count</th><th>% of Total</th>';
+  html += '</tr></thead><tbody>';
+  detailRows.forEach(function(r,i){
+    var pct = (r.n/totalRej*100).toFixed(2)+'%';
+    var bg = i%2===0?'#ffffff':'#f5f5f5';
+    html += '<tr style="background:'+bg+';">';
+    html += '<td style="text-align:center;font-weight:bold;">'+(i+1)+'</td>';
+    html += '<td style="font-weight:600;">'+r.cust+'</td>';
+    html += '<td style="color:#555;">'+r.addr+'</td>';
+    html += '<td>'+r.root+'</td>';
+    html += '<td style="text-align:center;font-weight:bold;color:#c00;">'+r.n+'</td>';
+    html += '<td style="text-align:center;color:#c00;">'+pct+'</td>';
+    html += '</tr>';
+  });
+  html += '</tbody></table></body></html>';
+
+  var blob = new Blob([html], {type:'application/vnd.ms-excel;charset=utf-8'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'Rejection_Detail_'+filterStr.replace(/[^a-zA-Z0-9]/g,'_')+'_'+new Date().toISOString().slice(0,10)+'.xls';
+  a.click();
 }
 
 // REJECTION AUTH
