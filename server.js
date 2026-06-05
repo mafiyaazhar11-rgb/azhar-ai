@@ -726,9 +726,32 @@ app.post('/api/rejection/upload', upload.single('file'), async function(req, res
           }
         }
         if (day) {
-          if(!monthMap[mo].data[day])monthMap[mo].data[day]={tDel:0,tRej:0,val:0,reasons:{},custs:{},areas:{}};
+          if(!monthMap[mo].data[day])monthMap[mo].data[day]={tDel:0,tRej:0,val:0,reasons:{},custs:{},areas:{},food_reasons:{},food_custs:{},nonfood_reasons:{},nonfood_custs:{},ext_reasons:{},ext_custs:{},int_reasons:{},int_custs:{},food_rej:0,nonfood_rej:0,ext_rej:0,int_rej:0};
           if(del)monthMap[mo].data[day].tDel++;
-          if(rej){monthMap[mo].data[day].tRej++;monthMap[mo].data[day].val+=val;if(root)monthMap[mo].data[day].reasons[root]=(monthMap[mo].data[day].reasons[root]||0)+1;if(cust)monthMap[mo].data[day].custs[cust]=(monthMap[mo].data[day].custs[cust]||0)+1;if(area)monthMap[mo].data[day].areas[area]=(monthMap[mo].data[day].areas[area]||0)+1;}
+          if(rej){
+            monthMap[mo].data[day].tRej++; monthMap[mo].data[day].val+=val;
+            if(root)monthMap[mo].data[day].reasons[root]=(monthMap[mo].data[day].reasons[root]||0)+1;
+            if(cust)monthMap[mo].data[day].custs[cust]=(monthMap[mo].data[day].custs[cust]||0)+1;
+            if(area)monthMap[mo].data[day].areas[area]=(monthMap[mo].data[day].areas[area]||0)+1;
+            if(isFood){
+              monthMap[mo].data[day].food_rej++;
+              if(root)monthMap[mo].data[day].food_reasons[root]=(monthMap[mo].data[day].food_reasons[root]||0)+1;
+              if(cust)monthMap[mo].data[day].food_custs[cust]=(monthMap[mo].data[day].food_custs[cust]||0)+1;
+            } else if(isNF){
+              monthMap[mo].data[day].nonfood_rej++;
+              if(root)monthMap[mo].data[day].nonfood_reasons[root]=(monthMap[mo].data[day].nonfood_reasons[root]||0)+1;
+              if(cust)monthMap[mo].data[day].nonfood_custs[cust]=(monthMap[mo].data[day].nonfood_custs[cust]||0)+1;
+            }
+            if(srcStr==='EXTERNAL'){
+              monthMap[mo].data[day].ext_rej++;
+              if(root)monthMap[mo].data[day].ext_reasons[root]=(monthMap[mo].data[day].ext_reasons[root]||0)+1;
+              if(cust)monthMap[mo].data[day].ext_custs[cust]=(monthMap[mo].data[day].ext_custs[cust]||0)+1;
+            } else if(srcStr==='INTERNAL'){
+              monthMap[mo].data[day].int_rej++;
+              if(root)monthMap[mo].data[day].int_reasons[root]=(monthMap[mo].data[day].int_reasons[root]||0)+1;
+              if(cust)monthMap[mo].data[day].int_custs[cust]=(monthMap[mo].data[day].int_custs[cust]||0)+1;
+            }
+          }
         }
       }
     }
@@ -766,7 +789,7 @@ app.post('/api/rejection/upload', upload.single('file'), async function(req, res
       var md=monthMap[mo]; var dataOut={};
       Object.keys(md.data).forEach(function(day){
         var dd=md.data[day];
-        dataOut[day]={tDel:dd.tDel,tRej:dd.tRej,val:fmtVal(dd.val),reasons:top10(dd.reasons),custs:top8c(dd.custs),areas:top6a(dd.areas)};
+        dataOut[day]={tDel:dd.tDel,tRej:dd.tRej,val:fmtVal(dd.val),reasons:top10(dd.reasons),custs:top8c(dd.custs),areas:top6a(dd.areas),food_rej:dd.food_rej||0,nonfood_rej:dd.nonfood_rej||0,ext_rej:dd.ext_rej||0,int_rej:dd.int_rej||0,food_reasons:top10(dd.food_reasons||{}),food_custs:top8c(dd.food_custs||{}),nonfood_reasons:top10(dd.nonfood_reasons||{}),nonfood_custs:top8c(dd.nonfood_custs||{}),ext_reasons:top10(dd.ext_reasons||{}),ext_custs:top8c(dd.ext_custs||{}),int_reasons:top10(dd.int_reasons||{}),int_custs:top8c(dd.int_custs||{})};
       });
       monthsOut[mo]={days:Object.keys(md.days).map(Number).sort(function(a,b){return a-b;}),tDel:md.tDel,tRej:md.tRej,val:fmtVal(md.val),food_rej:md.food_rej||0,nonfood_rej:md.nonfood_rej||0,ext_rej:md.ext_rej||0,int_rej:md.int_rej||0,reasons:top10(md.reasons),custs:top8c(md.custs||{}),areas:top6a(md.areas||{}),food_reasons:top10(md.food_reasons||{}),food_custs:top8c(md.food_custs||{}),nonfood_reasons:top10(md.nonfood_reasons||{}),nonfood_custs:top8c(md.nonfood_custs||{}),ext_reasons:top10(md.ext_reasons||{}),ext_custs:top8c(md.ext_custs||{}),int_reasons:top10(md.int_reasons||{}),int_custs:top8c(md.int_custs||{}),data:dataOut};
     });
