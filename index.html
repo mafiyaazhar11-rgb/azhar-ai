@@ -2347,7 +2347,17 @@ function getFilteredData(){
       del:[0,0,0,0,0,0].map(function(_,i){return i===mi?mDel:0;}),
       rej:[0,0,0,0,0,0].map(function(_,i){return i===mi?mRej:0;}),
       reasons:(moInfo2.reasons&&moInfo2.reasons.length)?moInfo2.reasons:(orgBase.reasons||[]),
-      custs:(moInfo2.custs&&moInfo2.custs.length)?moInfo2.custs:(orgBase.custs||[]), areas:(moInfo2.areas&&moInfo2.areas.length)?moInfo2.areas:(orgBase.areas||[])
+      custs:(moInfo2.custs&&moInfo2.custs.length)?moInfo2.custs:(orgBase.custs||[]),
+      areas:(moInfo2.areas&&moInfo2.areas.length)?moInfo2.areas:(orgBase.areas||[]),
+      food_rej:moInfo2.food_rej||0, nonfood_rej:moInfo2.nonfood_rej||0,
+      ext_rej:moInfo2.ext_rej||0, int_rej:moInfo2.int_rej||0,
+      food_reasons:moInfo2.food_reasons||[], food_custs:moInfo2.food_custs||[],
+      nonfood_reasons:moInfo2.nonfood_reasons||[], nonfood_custs:moInfo2.nonfood_custs||[],
+      ext_reasons:moInfo2.ext_reasons||[], ext_custs:moInfo2.ext_custs||[],
+      int_reasons:moInfo2.int_reasons||[], int_custs:moInfo2.int_custs||[],
+      detail:moInfo2.detail||[], food_detail:moInfo2.food_detail||[],
+      nonfood_detail:moInfo2.nonfood_detail||[], ext_detail:moInfo2.ext_detail||[],
+      int_detail:moInfo2.int_detail||[]
     };
   }
 
@@ -2355,7 +2365,16 @@ function getFilteredData(){
   var base = timeBase || {
     tDel:orgBase.tDel, tRej:orgBase.tRej, val:orgBase.val,
     del:orgBase.del.slice(0,6), rej:orgBase.rej.slice(0,6),
-    reasons:orgBase.reasons||[], custs:orgBase.custs||[], areas:orgBase.areas||[]
+    reasons:orgBase.reasons||[], custs:orgBase.custs||[], areas:orgBase.areas||[],
+    food_rej:orgBase.food_rej||0, nonfood_rej:orgBase.nonfood_rej||0,
+    ext_rej:orgBase.ext_rej||0, int_rej:orgBase.int_rej||0,
+    food_reasons:orgBase.food_reasons||[], food_custs:orgBase.food_custs||[],
+    nonfood_reasons:orgBase.nonfood_reasons||[], nonfood_custs:orgBase.nonfood_custs||[],
+    ext_reasons:orgBase.ext_reasons||[], ext_custs:orgBase.ext_custs||[],
+    int_reasons:orgBase.int_reasons||[], int_custs:orgBase.int_custs||[],
+    detail:orgBase.detail||[], food_detail:orgBase.food_detail||[],
+    nonfood_detail:orgBase.nonfood_detail||[], ext_detail:orgBase.ext_detail||[],
+    int_detail:orgBase.int_detail||[]
   };
   if(!timeBase){
     while(base.del.length<6) base.del.push(0);
@@ -2753,22 +2772,57 @@ oc.innerHTML=ORG_SUMMARY.map(function(o){
     }
 
     var detailRows = (detailSrc[detailKey] || detailSrc['detail'] || []);
+
+    // FALLBACK: if no detail data (old DB data), build from correct filtered custs
     if(detailRows.length === 0){
-      detailTbody.innerHTML = '<tr><td colspan="6" style="padding:20px;text-align:center;color:var(--muted);font-size:15px;">No data for selected filters</td></tr>';
+      // Pick the right custs based on active filters — same priority as reasons
+      var fallbackCusts = [];
+      if(rejType==='food'){
+        fallbackCusts = hasDayFilter
+          ? (detailSrc.food_custs||[])
+          : (rejMonth!=='all' ? ((DAY_DATA[rejMonth]||DAY_DATA[String(rejMonth)]||{}).food_custs||[]) : (orgBase.food_custs||[]));
+      } else if(rejType==='nonfood'){
+        fallbackCusts = hasDayFilter
+          ? (detailSrc.nonfood_custs||[])
+          : (rejMonth!=='all' ? ((DAY_DATA[rejMonth]||DAY_DATA[String(rejMonth)]||{}).nonfood_custs||[]) : (orgBase.nonfood_custs||[]));
+      } else if(rejSrc==='external'){
+        fallbackCusts = hasDayFilter
+          ? (detailSrc.ext_custs||[])
+          : (rejMonth!=='all' ? ((DAY_DATA[rejMonth]||DAY_DATA[String(rejMonth)]||{}).ext_custs||[]) : (orgBase.ext_custs||[]));
+      } else if(rejSrc==='internal'){
+        fallbackCusts = hasDayFilter
+          ? (detailSrc.int_custs||[])
+          : (rejMonth!=='all' ? ((DAY_DATA[rejMonth]||DAY_DATA[String(rejMonth)]||{}).int_custs||[]) : (orgBase.int_custs||[]));
+      } else {
+        // All types/sources — use time-filtered custs
+        fallbackCusts = detailSrc.custs || orgBase.custs || [];
+      }
+      if(fallbackCusts.length > 0){
+        detailRows = fallbackCusts.map(function(c){
+          return {cust:c.n||c.name||'', addr:'— Re-upload file to see address —', root:'— Re-upload to see root cause —', n:c.c||c.count||0};
+        });
+      }
+    }
+
+    if(detailRows.length === 0){
+      detailTbody.innerHTML = '<tr><td colspan="6" style="padding:20px;text-align:center;color:var(--muted);font-size:15px;">No data — upload rejection file</td></tr>';
     } else {
       var totalForPct = d.tRej || 1;
       detailTbody.innerHTML = detailRows.slice(0,50).map(function(r,i){
         var rowPct = (r.n/totalForPct*100).toFixed(1)+'%';
         var rowCol = i<3?'#e84b4b':i<10?'var(--gold)':'var(--text)';
+        var addrStyle = r.addr.startsWith('—') ? 'color:rgba(201,168,76,0.5);font-style:italic;' : 'color:var(--muted);';
+        var rootStyle = r.root.startsWith('—') ? 'color:rgba(201,168,76,0.5);font-style:italic;' : 'color:#c9c3b0;';
         return '<tr style="border-bottom:1px solid rgba(60,60,40,0.4);">'
           +'<td style="padding:8px 10px;font-size:15px;font-weight:700;color:'+rowCol+';">'+(i+1)+'</td>'
           +'<td style="padding:8px 10px;font-size:15px;color:var(--text);font-weight:500;">'+r.cust+'</td>'
-          +'<td style="padding:8px 10px;font-size:13px;color:var(--muted);max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+r.addr+'">'+r.addr+'</td>'
-          +'<td style="padding:8px 10px;font-size:14px;color:#c9c3b0;">'+r.root+'</td>'
+          +'<td style="padding:8px 10px;font-size:13px;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'+addrStyle+'" title="'+r.addr+'">'+r.addr+'</td>'
+          +'<td style="padding:8px 10px;font-size:14px;'+rootStyle+'">'+r.root+'</td>'
           +'<td style="padding:8px 10px;font-size:15px;font-weight:700;color:var(--text);text-align:right;">'+r.n+'</td>'
           +'<td style="padding:8px 10px;font-size:14px;font-weight:700;color:var(--red);text-align:right;">'+rowPct+'</td>'
           +'</tr>';
-      }).join('');
+      }).join('')
+      + '<tr><td colspan="6" style="padding:10px;text-align:center;font-size:13px;color:rgba(201,168,76,0.7);background:rgba(201,168,76,0.05);">⚠️ Re-upload rejection file to see Full Address and Root Cause per customer</td></tr>';
     }
   }
 }
@@ -2791,6 +2845,16 @@ function exportRejDetailExcel(){
     if(moInfo5 && moInfo5.detail) detSrc2 = moInfo5;
   }
   var detailRows = (detSrc2[detKey2] || detSrc2['detail'] || []);
+  // Fallback: use correct filtered custs if detail not available
+  if(!detailRows.length){
+    var fbCusts = [];
+    if(rejType==='food') fbCusts = detSrc2.food_custs||orgBase.food_custs||[];
+    else if(rejType==='nonfood') fbCusts = detSrc2.nonfood_custs||orgBase.nonfood_custs||[];
+    else if(rejSrc==='external') fbCusts = detSrc2.ext_custs||orgBase.ext_custs||[];
+    else if(rejSrc==='internal') fbCusts = detSrc2.int_custs||orgBase.int_custs||[];
+    else fbCusts = detSrc2.custs||orgBase.custs||[];
+    if(fbCusts.length) detailRows = fbCusts.map(function(c){return{cust:c.n||'',addr:'Re-upload file to see address',root:'Re-upload file to see root cause',n:c.c||0};});
+  }
   if(!detailRows.length){ alert('No data to export. Upload rejection file first.'); return; }
 
   // Build filter description
