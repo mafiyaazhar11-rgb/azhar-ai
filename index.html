@@ -5922,7 +5922,7 @@ var vcListening = false;
 var vcRecognition = null;
 var VC_CURRENT_TAB = 'dispatch';
 var JARVIS_HISTORY = [];
-var JARVIS_LANG = { speech: 'en-US', label: 'EN', name: 'English' };
+var JARVIS_LANG = { speech: 'en-US', label: 'en', name: 'English' };
 
 function toggleVoiceCommand() {
   // On mobile - open fullscreen JARVIS mode
@@ -6015,31 +6015,19 @@ function askJarvisQuick(text) {
 
 function setJarvisLang(code, label, name) {
   JARVIS_LANG = { speech: code, label: label, name: name };
-  JARVIS_HISTORY = []; // reset conversation when language changes
-  // Update button styles
+  JARVIS_HISTORY = [];
   ['en','ar','hi','ta','ur'].forEach(function(l) {
-    var btn = document.getElementById('jl-' + l);
-    if (!btn) return;
-    btn.style.background = 'transparent';
-    btn.style.color = '#7a7660';
-    btn.style.borderColor = 'rgba(201,168,76,0.3)';
+    var b = document.getElementById('jl-' + l);
+    if (!b) return;
+    b.style.background = 'transparent';
+    b.style.color = '#7a7660';
+    b.style.borderColor = 'rgba(201,168,76,0.3)';
   });
-  var activeBtn = document.getElementById('jl-' + label.toLowerCase().substring(0,2));
-  if (activeBtn) {
-    activeBtn.style.background = 'rgba(201,168,76,0.2)';
-    activeBtn.style.color = '#c9a84c';
-    activeBtn.style.borderColor = '#c9a84c';
-  }
-  // Update status
-  var statusEl = document.getElementById('jarvis-status');
-  if (statusEl) {
-    statusEl.textContent = name.toUpperCase() + ' — TAP MIC TO SPEAK';
-    statusEl.style.color = '#c9a84c';
-    setTimeout(function() {
-      statusEl.textContent = 'TAP MIC TO SPEAK';
-      statusEl.style.color = '#7a7660';
-    }, 1500);
-  }
+  var ab = document.getElementById('jl-' + label);
+  if (ab) { ab.style.background = 'rgba(201,168,76,0.2)'; ab.style.color = '#c9a84c'; ab.style.borderColor = '#c9a84c'; }
+  var st = document.getElementById('jarvis-status');
+  if (st) { st.textContent = name.toUpperCase() + ' MODE — TAP MIC'; st.style.color = '#c9a84c';
+    setTimeout(function(){ st.textContent = 'TAP MIC TO SPEAK'; st.style.color = '#7a7660'; }, 1500); }
 }
 
 function openJarvisFullscreen() {
@@ -6051,7 +6039,10 @@ function openJarvisFullscreen() {
     document.getElementById('jarvis-status').textContent = 'TAP MIC TO SPEAK';
     document.getElementById('jarvis-status').style.color = '#7a7660';
     setJarvisOrb('idle');
-    JARVIS_HISTORY = []; // fresh conversation each session
+    JARVIS_HISTORY = [];
+    // Highlight active language button
+    var ab2 = document.getElementById('jl-' + JARVIS_LANG.label);
+    if (ab2) { ab2.style.background = 'rgba(201,168,76,0.2)'; ab2.style.color = '#c9a84c'; ab2.style.borderColor = '#c9a84c'; }
     // Show quick commands for current dashboard
     var qEl = document.getElementById('jarvis-quick-cmds');
     if (qEl) qEl.style.display = 'block';
@@ -6375,209 +6366,115 @@ async function processVoiceCommand(text) {
 }
 
 function buildVoiceContext() {
-  // FIXED: Always sends ALL dashboard data — not just current tab
-  var ctx = 'Current tab: ' + VC_CURRENT_TAB + '. Answer questions from ANY dashboard below.\n\n';
-
+  var ctx = 'Current tab: ' + VC_CURRENT_TAB + '. Answer ANY question from ANY dashboard below.\n\n';
   try {
-    // ── DISPATCH ──────────────────────────────────────
+    // DISPATCH
     if (typeof DS_CURRENT_SUMMARY !== 'undefined' && DS_CURRENT_SUMMARY) {
       var s = DS_CURRENT_SUMMARY;
       ctx += '=== DISPATCH ===\n';
-      ctx += 'Total Orders: ' + (s.total_orders||0) + ' | Value: AED ' + Math.round(s.total_value||0).toLocaleString() + ' | ';
-      ctx += 'Drops: ' + (s.total_drops||0) + ' | Drivers: ' + (s.total_drivers||0) + ' | Routes: ' + (s.total_routes||0) + ' | ';
-      ctx += 'Food: ' + (s.food_orders||0) + ' AED ' + Math.round(s.food_value||0).toLocaleString() + ' | ';
-      ctx += 'NonFood: ' + (s.non_food_orders||0) + ' AED ' + Math.round(s.non_food_value||0).toLocaleString() + ' | ';
-      ctx += '3PL: ' + (s.pl_orders||0) + ' | Van: ' + (s.van_orders||0) + ' | ';
+      ctx += 'Orders:' + (s.total_orders||0) + ' Value:AED ' + Math.round(s.total_value||0).toLocaleString() + ' Drops:' + (s.total_drops||0) + ' Drivers:' + (s.total_drivers||0) + ' Routes:' + (s.total_routes||0) + ' | ';
+      ctx += 'Food:' + (s.food_orders||0) + ' AED ' + Math.round(s.food_value||0).toLocaleString() + ' NonFood:' + (s.non_food_orders||0) + ' AED ' + Math.round(s.non_food_value||0).toLocaleString() + ' 3PL:' + (s.pl_orders||0) + ' Van:' + (s.van_orders||0) + ' | ';
       if (s.type_breakdown) {
-        var tb = s.type_breakdown;
-        ctx += 'ORG: ';
-        ['DCV','DCF','DGC','DGS','DSN','DPS','HCP'].forEach(function(org) {
-          if (tb[org] && tb[org].orders > 0) ctx += org + ':' + tb[org].orders + ' AED ' + Math.round(tb[org].value||0).toLocaleString() + ' | ';
-        });
+        var tb = s.type_breakdown; ctx += 'ORG: ';
+        ['DCV','DCF','DGC','DGS','DSN','DPS','HCP'].forEach(function(o) { if (tb[o] && tb[o].orders > 0) ctx += o + ':' + tb[o].orders + ' AED' + Math.round(tb[o].value||0).toLocaleString() + ' | '; });
       }
-      if (s.by_city) {
-        ctx += 'Cities: ';
-        Object.keys(s.by_city).forEach(function(city) { ctx += city + ':' + s.by_city[city] + ' '; });
-        ctx += ' | ';
-      }
-      if (s.top_customers && s.top_customers.length) {
-        ctx += 'Top Customers: ';
-        s.top_customers.slice(0,5).forEach(function(c) { ctx += c.name + '(' + c.orders + ' AED ' + Math.round(c.value||0).toLocaleString() + ') '; });
-        ctx += ' | ';
-      }
-      if (s.top_drivers && s.top_drivers.length) {
-        ctx += 'All Drivers today: ';
-        s.top_drivers.forEach(function(d) {
-          ctx += d.name + ':' + (d.drops||0) + ' drops ' + (d.orders||0) + ' orders AED ' + Math.round(d.value||0).toLocaleString() + ' | ';
-        });
-      }
+      if (s.by_city) { ctx += 'Cities: '; Object.keys(s.by_city).forEach(function(c) { ctx += c + ':' + s.by_city[c] + ' '; }); ctx += ' | '; }
+      if (s.top_customers && s.top_customers.length) { ctx += 'Top Customers: '; s.top_customers.slice(0,5).forEach(function(c) { ctx += c.name + '(' + c.orders + ' AED' + Math.round(c.value||0).toLocaleString() + ') '; }); ctx += ' | '; }
+      if (s.top_drivers && s.top_drivers.length) { ctx += 'All Drivers: '; s.top_drivers.forEach(function(d) { ctx += d.name + ':' + (d.drops||0) + 'drops ' + (d.orders||0) + 'orders AED' + Math.round(d.value||0).toLocaleString() + ' | '; }); }
       ctx += '\n';
     } else { ctx += '=== DISPATCH: no file uploaded ===\n'; }
 
-    // ── REJECTION ─────────────────────────────────────
+    // REJECTION
     if (typeof ORG_DATA !== 'undefined' && ORG_DATA) {
-      var MNAMES_R = {1:'January',2:'February',3:'March',4:'April',5:'May',6:'June',7:'July',8:'August',9:'September',10:'October',11:'November',12:'December'};
+      var MN = {1:'January',2:'February',3:'March',4:'April',5:'May',6:'June',7:'July',8:'August',9:'September',10:'October',11:'November',12:'December'};
       try {
         ctx += '=== REJECTION YTD ===\n';
         var allD = ORG_DATA['all'] || {};
         var tDel = allD.tDel||0, tRej = allD.tRej||0;
-        var rate = tDel > 0 ? ((tRej/tDel)*100).toFixed(2) : 0;
-        ctx += 'Overall: ' + tDel + ' delivered, ' + tRej + ' rejected, rate ' + rate + '%, value: ' + (allD.val||'') + ' | ';
-        ctx += 'By ORG: ';
-        Object.keys(ORG_DATA).forEach(function(org) {
-          if (org === 'all') return;
-          var d = ORG_DATA[org];
-          if (d && d.tDel) {
-            var rr = ((d.tRej/d.tDel)*100).toFixed(1);
-            ctx += org + ':' + d.tDel + ' del ' + d.tRej + ' rej(' + rr + '%) | ';
-          }
-        });
+        ctx += 'Overall:' + tDel + ' del ' + tRej + ' rej rate:' + (tDel>0?((tRej/tDel)*100).toFixed(2):0) + '% value:' + (allD.val||'') + ' | ';
+        ctx += 'ORG: ';
+        Object.keys(ORG_DATA).forEach(function(o) { if (o==='all') return; var d=ORG_DATA[o]; if (d&&d.tDel) ctx += o+':'+d.tDel+' del '+d.tRej+' rej('+((d.tRej/d.tDel)*100).toFixed(1)+'%) | '; });
         if (allD.rej && allD.del) {
           ctx += 'Monthly: ';
-          var ms = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-          allD.rej.forEach(function(rc, i) {
-            if (rc > 0 || allD.del[i] > 0) {
-              var mr = allD.del[i] > 0 ? ((rc/allD.del[i])*100).toFixed(1) : 0;
-              ctx += ms[i] + ':' + rc + '/' + allD.del[i] + '(' + mr + '%) ';
-            }
-          });
+          var ms=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+          allD.rej.forEach(function(rc,i){ if(rc>0||allD.del[i]>0) ctx += ms[i]+':'+rc+'/'+allD.del[i]+'('+(allD.del[i]>0?((rc/allD.del[i])*100).toFixed(1):0)+'%) '; });
           ctx += ' | ';
         }
         if (typeof DAY_DATA !== 'undefined') {
-          ctx += 'Detail by month: ';
           Object.keys(DAY_DATA).sort(function(a,b){return parseInt(a)-parseInt(b);}).forEach(function(mo) {
             var md = DAY_DATA[mo];
-            if (md && md.tRej) {
-              var mR = md.tDel > 0 ? ((md.tRej/md.tDel)*100).toFixed(1) : 0;
-              ctx += (MNAMES_R[parseInt(mo)]||mo) + ':' + md.tRej + ' rej ' + md.tDel + ' del(' + mR + '%) ' + (md.val||'') + ' | ';
-              if (md.reasons && md.reasons.length) { ctx += 'Reasons: '; md.reasons.slice(0,3).forEach(function(r){ctx += r.l+'('+r.n+') ';}); ctx += '| '; }
-              if (md.custs && md.custs.length) { ctx += 'Top rejected customers: '; md.custs.slice(0,5).forEach(function(c){ctx += c.n+'('+c.c+' rejections) ';}); ctx += '| '; }
-              // Daily breakdown per day of this month — full detail
-              if (md.data && Object.keys(md.data).length) {
-                ctx += 'Daily breakdown: ';
-                Object.keys(md.data).sort(function(a,b){return parseInt(a)-parseInt(b);}).forEach(function(day) {
-                  var dd = md.data[day];
-                  if (dd && (dd.tRej > 0 || dd.tDel > 0)) {
-                    var dr = dd.tDel > 0 ? ((dd.tRej/dd.tDel)*100).toFixed(1) : 0;
-                    ctx += 'Day' + day + ':' + (dd.tRej||0) + ' rej/' + (dd.tDel||0) + ' del(' + dr + '%)';
-                    if (dd.food_rej !== undefined) ctx += ' Food:' + (dd.food_rej||0) + ' NonFood:' + (dd.nonfood_rej||0);
-                    if (dd.val) ctx += ' ' + dd.val;
-                    if (dd.custs && dd.custs.length) {
-                      ctx += ' Customers:';
-                      dd.custs.slice(0,5).forEach(function(c){ ctx += c.n + '(' + c.c + 'rej)'; });
-                    }
-                    if (dd.reasons && dd.reasons.length) {
-                      ctx += ' Reasons:';
-                      dd.reasons.slice(0,3).forEach(function(r){ ctx += r.l + '(' + r.n + ')'; });
-                    }
-                    ctx += ' | ';
-                  }
-                });
-              }
+            if (!md || !md.tRej) return;
+            ctx += (MN[parseInt(mo)]||mo) + ':' + md.tRej + ' rej/' + md.tDel + ' del(' + (md.tDel>0?((md.tRej/md.tDel)*100).toFixed(1):0) + '%) ' + (md.val||'') + ' | ';
+            if (md.reasons && md.reasons.length) { ctx += 'Reasons:'; md.reasons.slice(0,3).forEach(function(r){ctx+=r.l+'('+r.n+') ';}); ctx += '| '; }
+            if (md.custs && md.custs.length) { ctx += 'TopCusts:'; md.custs.slice(0,5).forEach(function(c){ctx+=c.n+'('+c.c+'rej) ';}); ctx += '| '; }
+            if (md.data && Object.keys(md.data).length) {
+              ctx += 'Daily: ';
+              Object.keys(md.data).sort(function(a,b){return parseInt(a)-parseInt(b);}).forEach(function(day) {
+                var dd = md.data[day];
+                if (dd && (dd.tRej>0||dd.tDel>0)) {
+                  ctx += 'Day'+day+':'+( dd.tRej||0)+'rej/'+(dd.tDel||0)+'del('+( dd.tDel>0?((dd.tRej/dd.tDel)*100).toFixed(1):0)+'%)';
+                  if (dd.food_rej!==undefined) ctx += ' F:'+(dd.food_rej||0)+' NF:'+(dd.nonfood_rej||0);
+                  if (dd.custs&&dd.custs.length) { ctx += ' C:'; dd.custs.slice(0,3).forEach(function(c){ctx+=c.n+'('+c.c+'),';}); }
+                  ctx += ' | ';
+                }
+              });
             }
           });
         }
-        if (allD.reasons && allD.reasons.length) {
-          ctx += 'Top Reasons: ';
-          allD.reasons.slice(0,5).forEach(function(r){ctx += r.l+'('+r.n+') ';});
-          ctx += ' | ';
-        }
+        if (allD.reasons&&allD.reasons.length) { ctx += 'TopReasons:'; allD.reasons.slice(0,5).forEach(function(r){ctx+=r.l+'('+r.n+') ';}); ctx += ' | '; }
         ctx += '\n';
       } catch(e2) { ctx += '=== REJECTION: error ===\n'; }
-    } else { ctx += '=== REJECTION: no file uploaded ===\n'; }
+    } else { ctx += '=== REJECTION: no file ===\n'; }
 
-    // ── MARKET RETURNS ────────────────────────────────
+    // RETURNS
     if (typeof RET_FULL_SUMMARY !== 'undefined' && RET_FULL_SUMMARY) {
       var rs = RET_FULL_SUMMARY;
-      var MNAMES_J = {1:'January',2:'February',3:'March',4:'April',5:'May',6:'June',7:'July',8:'August',9:'September',10:'October',11:'November',12:'December'};
+      var MNJ = {1:'January',2:'February',3:'March',4:'April',5:'May',6:'June',7:'July',8:'August',9:'September',10:'October',11:'November',12:'December'};
       ctx += '=== MARKET RETURNS ===\n';
-      ctx += 'Total: AED ' + Math.round(rs.totalVal||0).toLocaleString() + ' (' + (rs.totalOrders||0) + ' orders) | ';
-      ctx += 'Invoice Cancel: ' + (rs.invCount||0) + ' AED ' + Math.round(rs.invVal||0).toLocaleString() + ' | ';
-      ctx += 'GRV: ' + (rs.grvCount||0) + ' AED ' + Math.round(rs.grvVal||0).toLocaleString() + ' | ';
-      if (rs.monthMap && Object.keys(rs.monthMap).length) {
-        ctx += 'Monthly: ';
-        Object.keys(rs.monthMap).map(Number).sort(function(a,b){return a-b;}).forEach(function(m) {
-          var mo = rs.monthMap[m]||{};
-          ctx += (MNAMES_J[m]||m) + ':AED ' + Math.round(typeof mo==='object'?mo.val:mo).toLocaleString() + '(' + (typeof mo==='object'?mo.count:0) + ') ';
-        });
-        ctx += ' | ';
-      }
-      if (rs.custMap) {
-        ctx += 'Top Customers: ';
-        Object.keys(rs.custMap).sort(function(a,b){return (rs.custMap[b]||0)-(rs.custMap[a]||0);}).slice(0,5).forEach(function(c){
-          ctx += c + ':AED ' + Math.round(rs.custMap[c]||0).toLocaleString() + ' ';
-        });
-        ctx += ' | ';
-      }
+      ctx += 'Total:AED ' + Math.round(rs.totalVal||0).toLocaleString() + '(' + (rs.totalOrders||0) + ') InvCancel:' + (rs.invCount||0) + ' AED' + Math.round(rs.invVal||0).toLocaleString() + ' GRV:' + (rs.grvCount||0) + ' AED' + Math.round(rs.grvVal||0).toLocaleString() + ' | ';
+      if (rs.monthMap) { ctx += 'Monthly: '; Object.keys(rs.monthMap).map(Number).sort(function(a,b){return a-b;}).forEach(function(m){ var mo=rs.monthMap[m]||{}; ctx+=(MNJ[m]||m)+':AED'+Math.round(typeof mo==='object'?mo.val:mo).toLocaleString()+'('+(typeof mo==='object'?mo.count:0)+') '; }); ctx += ' | '; }
+      if (rs.custMap) { ctx += 'TopCusts:'; Object.keys(rs.custMap).sort(function(a,b){return (rs.custMap[b]||0)-(rs.custMap[a]||0);}).slice(0,5).forEach(function(c){ctx+=c+':AED'+Math.round(rs.custMap[c]||0).toLocaleString()+' ';}); ctx += ' | '; }
       ctx += '\n';
-    } else { ctx += '=== RETURNS: no file uploaded ===\n'; }
+    } else { ctx += '=== RETURNS: no file ===\n'; }
 
-    // ── WH BACKLOG ────────────────────────────────────
+    // BACKLOG
     if (typeof window.BL_LAST_SUMMARY !== 'undefined' && window.BL_LAST_SUMMARY) {
       var bl = window.BL_LAST_SUMMARY;
       ctx += '=== WH BACKLOG ===\n';
-      ctx += 'Total: ' + (bl.totalOrders||0) + ' orders AED ' + Math.round(bl.totalVal||0).toLocaleString() + ' | ';
-      if (bl.catMap) {
-        var cm = bl.catMap;
-        ctx += 'Before Cut-Off: ' + ((cm['Before Cut-Off']||{}).count||0) + ' AED ' + Math.round((cm['Before Cut-Off']||{}).val||0).toLocaleString() + ' | ';
-        ctx += 'Advance: ' + ((cm['RSD >30 Advance']||{}).count||0) + ' AED ' + Math.round((cm['RSD >30 Advance']||{}).val||0).toLocaleString() + ' | ';
-        ctx += 'Frozen: ' + ((cm['Cut-Off Frozen']||{}).count||0) + ' AED ' + Math.round((cm['Cut-Off Frozen']||{}).val||0).toLocaleString() + ' | ';
-      }
-      if (bl.orgMap) {
-        ctx += 'By ORG: ';
-        Object.keys(bl.orgMap).forEach(function(o){ ctx += o + ':' + (bl.orgMap[o].count||0) + ' AED ' + Math.round(bl.orgMap[o].val||0).toLocaleString() + ' '; });
-        ctx += ' | ';
-      }
+      ctx += 'Total:' + (bl.totalOrders||0) + ' AED' + Math.round(bl.totalVal||0).toLocaleString() + ' | ';
+      if (bl.catMap) { var cm=bl.catMap; ctx+='BeforeCutOff:'+((cm['Before Cut-Off']||{}).count||0)+' Advance:'+((cm['RSD >30 Advance']||{}).count||0)+' Frozen:'+((cm['Cut-Off Frozen']||{}).count||0)+' | '; }
+      if (bl.orgMap) { ctx += 'ORG: '; Object.keys(bl.orgMap).forEach(function(o){ctx+=o+':'+(bl.orgMap[o].count||0)+' AED'+Math.round(bl.orgMap[o].val||0).toLocaleString()+' ';}); ctx += ' | '; }
       ctx += '\n';
-    } else { ctx += '=== WH BACKLOG: no file uploaded ===\n'; }
+    } else { ctx += '=== BACKLOG: no file ===\n'; }
 
-    // ── AUTOMATION ────────────────────────────────────
+    // AUTOMATION
     if (typeof AUTO_DATA !== 'undefined' && AUTO_DATA) {
       var ad = AUTO_DATA;
       ctx += '=== AUTOMATION ===\n';
-      ctx += 'Total: ' + (ad.total||0) + ' | Auto: ' + (ad.totalAuto||0) + '(' + (ad.rate||0) + '%) | Manual: ' + (ad.totalManual||0) + ' | Latest: ' + (ad.latestMonth||'') + ' ' + (ad.latestRate||0) + '% | ';
-      if (ad.monthData) {
-        ctx += 'Monthly: ';
-        Object.keys(ad.monthData).forEach(function(m) {
-          var d = ad.monthData[m];
-          var p = d.total ? Math.round(d.auto/d.total*100) : 0;
-          ctx += m + ':' + d.total + ' ' + p + '% | ';
-        });
-      }
-      if (ad.orgData) {
-        ctx += 'By ORG: ';
-        Object.keys(ad.orgData).forEach(function(org) {
-          var d = ad.orgData[org];
-          var p = d.total ? Math.round(d.auto/d.total*100) : 0;
-          ctx += org + ':' + d.total + ' ' + p + '% | ';
-        });
-      }
+      ctx += 'Total:'+(ad.total||0)+' Auto:'+(ad.totalAuto||0)+'('+(ad.rate||0)+'%) Manual:'+(ad.totalManual||0)+' Latest:'+(ad.latestMonth||'')+' '+(ad.latestRate||0)+'% | ';
+      if (ad.monthData) { ctx += 'Monthly: '; Object.keys(ad.monthData).forEach(function(m){var d=ad.monthData[m];var p=d.total?Math.round(d.auto/d.total*100):0;ctx+=m+':'+d.total+' '+p+'% | ';}); }
+      if (ad.orgData) { ctx += 'ORG: '; Object.keys(ad.orgData).forEach(function(o){var d=ad.orgData[o];var p=d.total?Math.round(d.auto/d.total*100):0;ctx+=o+':'+d.total+' '+p+'% | ';}); }
       ctx += '\n';
-    } else { ctx += '=== AUTOMATION: no file uploaded ===\n'; }
+    } else { ctx += '=== AUTOMATION: no file ===\n'; }
 
-    // ── DELIVERY SCHEDULE ─────────────────────────────
+    // DELIVERY
     if (typeof DS_DATA !== 'undefined' && DS_DATA) {
       ctx += '=== DELIVERY SCHEDULE ===\n';
-      ctx += 'Total: ' + (DS_DATA.total||0) + ' | Scheduled: ' + (DS_DATA.scheduled||0) + '(' + (DS_DATA.schedPct||0) + '%) | Out of Schedule: ' + (DS_DATA.oos||0) + '(' + (DS_DATA.oosPct||0) + '%) | No Schedule: ' + (DS_DATA.noSched||0) + ' | Compliance: ' + (DS_DATA.schedPct||0) + '% | \n';
-    } else { ctx += '=== DELIVERY SCHEDULE: no file uploaded ===\n'; }
+      ctx += 'Total:'+(DS_DATA.total||0)+' Scheduled:'+(DS_DATA.scheduled||0)+'('+(DS_DATA.schedPct||0)+'%) OutOfSchedule:'+(DS_DATA.oos||0)+'('+(DS_DATA.oosPct||0)+'%) Compliance:'+(DS_DATA.schedPct||0)+'% | \n';
+    } else { ctx += '=== DELIVERY: no file ===\n'; }
 
-    // ── GENERAL INFO / TEAM ───────────────────────────
+    // TEAM
     if (typeof GI_RAW !== 'undefined' && GI_RAW && GI_RAW.length) {
       ctx += '=== TEAM DIRECTORY ===\n';
-      GI_RAW.forEach(function(r) {
-        var name  = giGetVal(r,'name');
-        var unit  = giGetVal(r,'unit');
-        var desig = giGetVal(r,'designation');
-        var phone = giGetVal(r,'contact'); if (phone && !phone.startsWith('+')) phone = '+' + phone;
-        var branch = giGetVal(r,'branch');
-        var outlet = giGetVal(r,'outlet');
-        ctx += name + '|Unit:' + unit + '|Role:' + desig + '|PHONE:' + phone + (branch?'|Branch:'+branch:'') + (outlet?'|Outlets:'+outlet:'') + '. ';
+      GI_RAW.forEach(function(r){
+        var name=giGetVal(r,'name'), unit=giGetVal(r,'unit'), desig=giGetVal(r,'designation');
+        var phone=giGetVal(r,'contact'); if(phone&&!phone.startsWith('+'))phone='+'+phone;
+        var branch=giGetVal(r,'branch'), outlet=giGetVal(r,'outlet');
+        ctx+=name+'|Unit:'+unit+'|Role:'+desig+'|PHONE:'+phone+(branch?'|Branch:'+branch:'')+(outlet?'|Outlets:'+outlet:'')+'. ';
       });
       ctx += '\n';
     }
-
-  } catch(e) { ctx += 'Error reading context: ' + e.message; }
-
+  } catch(e) { ctx += 'Error:' + e.message; }
   return ctx;
 }
 
@@ -6711,59 +6608,28 @@ function executeVoiceAction(action, detail) {
     var d = (detail || '').toLowerCase();
     var MMAP = {'january':1,'jan':1,'february':2,'feb':2,'march':3,'mar':3,'april':4,'apr':4,'may':5,'june':6,'jun':6,'july':7,'jul':7,'august':8,'aug':8,'september':9,'sep':9,'october':10,'oct':10,'november':11,'nov':11,'december':12,'dec':12};
 
-    // ── NAVIGATE ──────────────────────────────────────
     if (action === 'navigate') {
       var tabs = {dispatch:'dispatch',rejection:'rejection',returns:'returns',backlog:'backlog',sales:'sales',summary:'summary',email:'email',invoice:'invoice',automation:'automation',delivery:'delivery',geninfo:'geninfo'};
-      Object.keys(tabs).forEach(function(k) {
-        if (d.includes(k) && typeof goTab === 'function') goTab(tabs[k], null);
-      });
+      Object.keys(tabs).forEach(function(k) { if (d.includes(k) && typeof goTab === 'function') goTab(tabs[k], null); });
     }
 
-    // ── FILTER DISPATCH ───────────────────────────────
     if (action === 'filter' && VC_CURRENT_TAB === 'dispatch') {
-      ['DCV','DGC','DCF','DGS','DPS','DSN','TPW'].forEach(function(r) {
-        if (detail.toUpperCase().includes(r) && typeof dsFilter === 'function') dsFilter('route', r);
-      });
-      ['Dubai','AbuDhabi','Sharjah','Ajman','AlAin','RAK','Fujairah','UAQ'].forEach(function(c) {
-        if (d.includes(c.toLowerCase()) && typeof dsFilter === 'function') dsFilter('city', c);
-      });
+      ['DCV','DGC','DCF','DGS','DPS','DSN','TPW'].forEach(function(r) { if (detail.toUpperCase().includes(r) && typeof dsFilter === 'function') dsFilter('route', r); });
+      ['Dubai','AbuDhabi','Sharjah','Ajman','AlAin','RAK','Fujairah','UAQ'].forEach(function(c) { if (d.includes(c.toLowerCase()) && typeof dsFilter === 'function') dsFilter('city', c); });
       if (d.includes('food') && !d.includes('non') && typeof dsFilter === 'function') dsFilter('type','food');
       else if ((d.includes('non food')||d.includes('nonfood')) && typeof dsFilter === 'function') dsFilter('type','nonfood');
     }
 
-    // ── FILTER REJECTION ──────────────────────────────
     if (action === 'filter' && VC_CURRENT_TAB === 'rejection') {
-      // Month
-      Object.keys(MMAP).forEach(function(name) {
-        if (d.includes(name)) { rejMonth = MMAP[name]; if (typeof renderRejection === 'function') renderRejection(); }
-      });
-      // ORG
-      ['DCV','DGC','DCF','DGS','DPS','DSN'].forEach(function(org) {
-        if (detail.toUpperCase().includes(org)) { rejORG = org; if (typeof renderRejection === 'function') renderRejection(); }
-      });
-      // Food/nonfood type
+      Object.keys(MMAP).forEach(function(name) { if (d.includes(name)) { rejMonth = MMAP[name]; if (typeof renderRejection === 'function') renderRejection(); } });
+      ['DCV','DGC','DCF','DGS','DPS','DSN'].forEach(function(org) { if (detail.toUpperCase().includes(org)) { rejORG = org; if (typeof renderRejection === 'function') renderRejection(); } });
       if (d.includes('food') && !d.includes('non')) { rejType = 'food'; if (typeof renderRejection === 'function') renderRejection(); }
       else if (d.includes('non food')||d.includes('nonfood')) { rejType = 'nonfood'; if (typeof renderRejection === 'function') renderRejection(); }
-      // Day — "day 3" or "3rd" or just number
       var dayM = d.match(/day\s*(\d{1,2})|(\d{1,2})(st|nd|rd|th)/);
-      if (dayM) {
-        var dn = parseInt(dayM[1]||dayM[2]);
-        if (dn >= 1 && dn <= 31) {
-          rejDay = dn;
-          // Also click that day button if available
-          var dayBtn = document.querySelector('[data-day="'+dn+'"]') || document.querySelector('.day-btn[onclick*="'+dn+'"]');
-          if (dayBtn) dayBtn.click();
-          if (typeof renderRejection === 'function') renderRejection();
-        }
-      }
-      // Reset all = go back to all
-      if (d === 'all' || d === 'reset' || d === 'clear') {
-        rejMonth = 'all'; rejORG = 'all'; rejDay = 'all'; rejType = 'all';
-        if (typeof renderRejection === 'function') renderRejection();
-      }
+      if (dayM) { var dn=parseInt(dayM[1]||dayM[2]); if (dn>=1&&dn<=31) { rejDay=dn; if (typeof renderRejection === 'function') renderRejection(); } }
+      if (d === 'all' || d === 'reset') { rejMonth='all'; rejORG='all'; rejDay='all'; rejType='all'; if (typeof renderRejection === 'function') renderRejection(); }
     }
 
-    // ── FILTER RETURNS ────────────────────────────────
     if (action === 'filter' && VC_CURRENT_TAB === 'returns') {
       if (d.includes('invoice')) retFilter('cat','Invoice Cancellation');
       else if (d.includes('grv')) retFilter('cat','GRV-Return');
@@ -6772,7 +6638,6 @@ function executeVoiceAction(action, detail) {
       ['DCV','DGC','DCF','DGS','DLL','DGN'].forEach(function(w) { if (detail.toUpperCase().includes(w)) retFilter('wh', w); });
       Object.keys(MMAP).forEach(function(name) { if (d.includes(name)) retFilter('month', MMAP[name]); });
     }
-
   } catch(e) { console.error('Voice action error:', e); }
 }
 
@@ -7187,12 +7052,12 @@ window.addEventListener('load', authBoot);
   <button onclick="closeJarvisFullscreen()" style="position:absolute;top:16px;right:16px;background:transparent;border:1px solid rgba(255,255,255,0.15);color:#7a7660;font-size:12px;padding:6px 14px;cursor:pointer;font-family:Montserrat,sans-serif;letter-spacing:1px;">✕ CLOSE</button>
 
   <!-- Language selector -->
-  <div style="position:absolute;top:16px;left:16px;display:flex;gap:6px;flex-wrap:wrap;max-width:220px;" id="jarvis-lang-selector">
-    <button onclick="setJarvisLang('en-US','EN','English')" id="jl-en" style="background:rgba(201,168,76,0.2);border:1px solid #c9a84c;color:#c9a84c;font-size:10px;padding:4px 9px;cursor:pointer;font-family:Montserrat,sans-serif;border-radius:3px;">EN</button>
-    <button onclick="setJarvisLang('ar-AE','AR','Arabic')" id="jl-ar" style="background:transparent;border:1px solid rgba(201,168,76,0.3);color:#7a7660;font-size:10px;padding:4px 9px;cursor:pointer;font-family:Montserrat,sans-serif;border-radius:3px;">عربي</button>
-    <button onclick="setJarvisLang('hi-IN','HI','Hindi')" id="jl-hi" style="background:transparent;border:1px solid rgba(201,168,76,0.3);color:#7a7660;font-size:10px;padding:4px 9px;cursor:pointer;font-family:Montserrat,sans-serif;border-radius:3px;">हिंदी</button>
-    <button onclick="setJarvisLang('ta-IN','TA','Tamil')" id="jl-ta" style="background:transparent;border:1px solid rgba(201,168,76,0.3);color:#7a7660;font-size:10px;padding:4px 9px;cursor:pointer;font-family:Montserrat,sans-serif;border-radius:3px;">தமிழ்</button>
-    <button onclick="setJarvisLang('ur-PK','UR','Urdu')" id="jl-ur" style="background:transparent;border:1px solid rgba(201,168,76,0.3);color:#7a7660;font-size:10px;padding:4px 9px;cursor:pointer;font-family:Montserrat,sans-serif;border-radius:3px;">اردو</button>
+  <div style="position:absolute;top:16px;left:16px;display:flex;gap:5px;flex-wrap:wrap;max-width:200px;">
+    <button id="jl-en" onclick="setJarvisLang('en-US','en','English')" style="background:rgba(201,168,76,0.2);border:1px solid #c9a84c;color:#c9a84c;font-size:10px;padding:4px 8px;cursor:pointer;font-family:Montserrat,sans-serif;border-radius:3px;">EN</button>
+    <button id="jl-ar" onclick="setJarvisLang('ar-AE','ar','Arabic')" style="background:transparent;border:1px solid rgba(201,168,76,0.3);color:#7a7660;font-size:10px;padding:4px 8px;cursor:pointer;font-family:Montserrat,sans-serif;border-radius:3px;">عربي</button>
+    <button id="jl-hi" onclick="setJarvisLang('hi-IN','hi','Hindi')" style="background:transparent;border:1px solid rgba(201,168,76,0.3);color:#7a7660;font-size:10px;padding:4px 8px;cursor:pointer;font-family:Montserrat,sans-serif;border-radius:3px;">हिंदी</button>
+    <button id="jl-ta" onclick="setJarvisLang('ta-IN','ta','Tamil')" style="background:transparent;border:1px solid rgba(201,168,76,0.3);color:#7a7660;font-size:10px;padding:4px 8px;cursor:pointer;font-family:Montserrat,sans-serif;border-radius:3px;">தமிழ்</button>
+    <button id="jl-ur" onclick="setJarvisLang('ur-PK','ur','Urdu')" style="background:transparent;border:1px solid rgba(201,168,76,0.3);color:#7a7660;font-size:10px;padding:4px 8px;cursor:pointer;font-family:Montserrat,sans-serif;border-radius:3px;">اردو</button>
   </div>
 
   <!-- JARVIS identity -->
