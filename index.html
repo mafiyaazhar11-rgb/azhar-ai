@@ -5921,8 +5921,6 @@ function initVoIP() {
 var vcListening = false;
 var vcRecognition = null;
 var VC_CURRENT_TAB = 'dispatch';
-var JARVIS_HISTORY = [];
-var JARVIS_SILENCE_TIMER = null;
 
 function toggleVoiceCommand() {
   // On mobile - open fullscreen JARVIS mode
@@ -6022,9 +6020,6 @@ function openJarvisFullscreen() {
     document.getElementById('jarvis-status').textContent = 'TAP MIC TO SPEAK';
     document.getElementById('jarvis-status').style.color = '#7a7660';
     setJarvisOrb('idle');
-    // Reset conversation on fresh open
-    JARVIS_HISTORY = [];
-    if (JARVIS_SILENCE_TIMER) { clearTimeout(JARVIS_SILENCE_TIMER); JARVIS_SILENCE_TIMER = null; }
     // Show quick commands for current dashboard
     var qEl = document.getElementById('jarvis-quick-cmds');
     if (qEl) qEl.style.display = 'block';
@@ -6033,26 +6028,12 @@ function openJarvisFullscreen() {
 }
 
 function closeJarvisFullscreen() {
-  if (JARVIS_SILENCE_TIMER) { clearTimeout(JARVIS_SILENCE_TIMER); JARVIS_SILENCE_TIMER = null; }
-  if (JARVIS_HISTORY.length > 0) {
-    jarvisSpeak('Thanks! Have a great day. See you next time!');
-    setTimeout(function() {
-      var fs = document.getElementById('jarvis-fullscreen');
-      if (fs) fs.style.display = 'none';
-      stopVoiceCommand();
-      JARVIS_HISTORY = [];
-    }, 2500);
-  } else {
-    var fs = document.getElementById('jarvis-fullscreen');
-    if (fs) fs.style.display = 'none';
-    stopVoiceCommand();
-    JARVIS_HISTORY = [];
-  }
+  var fs = document.getElementById('jarvis-fullscreen');
+  if (fs) fs.style.display = 'none';
+  stopVoiceCommand();
 }
 
 function toggleJarvisFS() {
-  // Cancel silence timer when user taps mic
-  if (JARVIS_SILENCE_TIMER) { clearTimeout(JARVIS_SILENCE_TIMER); JARVIS_SILENCE_TIMER = null; }
   if (vcListening) {
     stopVoiceCommand();
     setJarvisOrb('idle');
@@ -6177,175 +6158,52 @@ async function processVoiceCommandFS(text) {
   if (slBtn2) slBtn2.style.display = 'none';
   document.getElementById('jarvis-interim-fs').textContent = '"' + text + '"';
 
-  // Cancel silence timer while processing
-  if (JARVIS_SILENCE_TIMER) { clearTimeout(JARVIS_SILENCE_TIMER); JARVIS_SILENCE_TIMER = null; }
-
-  // Add user message to conversation history
-  JARVIS_HISTORY.push({ role: 'user', content: text });
-
   var context = buildVoiceContext();
 
   try {
     var response = await fetch('/api/voice', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-auth-token': AUTH_TOKEN },
-      body: JSON.stringify({
-        text: text,
-        context: context,
-        tab: VC_CURRENT_TAB,
-        history: JARVIS_HISTORY.slice(0, -1)
-      })
+      body: JSON.stringify({ text: text, context: context, tab: VC_CURRENT_TAB })
     });
     var data = await response.json();
     if (!data.success) throw new Error(data.error || 'Error');
     var parsed = data.result;
 
-    // Save JARVIS reply to history for follow-up questions
-    JARVIS_HISTORY.push({ role: 'assistant', content: parsed.answer || '' });
-    if (JARVIS_HISTORY.length > 20) JARVIS_HISTORY = JARVIS_HISTORY.slice(-20);
-
-    // Execute action if any
+    // Execute action
     if (parsed.action && parsed.action !== 'none') {
       executeVoiceAction(parsed.action, parsed.action_detail);
     }
 
-    // Show answer
+    // Show answer fullscreen
     document.getElementById('jarvis-question-fs').textContent = text;
     document.getElementById('jarvis-text-fs').textContent = parsed.answer || 'No answer.';
     document.getElementById('jarvis-action-fs').textContent = parsed.action_label ? '⚡ ' + parsed.action_label : '';
     document.getElementById('jarvis-answer-fs').style.display = 'block';
     document.getElementById('jarvis-interim-fs').textContent = '';
 
-    // Speak the answer — auto-listen fires EXACTLY when speech ends via onDone callback
+    // Speak + show speaking orb
     setJarvisOrb('speaking');
     document.getElementById('jarvis-status').textContent = 'JARVIS SPEAKING...';
     document.getElementById('jarvis-status').style.color = '#4ecb8d';
-
-    jarvisSpeak(parsed.answer || 'No answer.', function() {
-      // Called exactly when Jarvis finishes speaking
-      var fsPanel = document.getElementById('jarvis-fullscreen');
-      if (!fsPanel || fsPanel.style.display === 'none') return;
-
-      jarvisAutoListen(fsPanel);
-    });
+    
+    jarvisSpeak(parsed.answer || 'No answer.');
+    
+    // After speaking, go back to idle and show quick commands again
+    setTimeout(function() {
+      setJarvisOrb('idle');
+      document.getElementById('jarvis-status').textContent = 'TAP MIC OR CHOOSE BELOW';
+      document.getElementById('jarvis-status').style.color = '#7a7660';
+      var qEl = document.getElementById('jarvis-quick-cmds');
+      if (qEl) { qEl.style.display = 'block'; buildQuickCmds(); }
+    }, (parsed.answer || '').length * 60 + 1500);
 
   } catch(e) {
-    if (JARVIS_HISTORY.length > 0 && JARVIS_HISTORY[JARVIS_HISTORY.length-1].role === 'user') {
-      JARVIS_HISTORY.pop();
-    }
     setJarvisOrb('idle');
     document.getElementById('jarvis-status').textContent = 'ERROR - TRY AGAIN';
-    document.getElementById('jarvis-text-fs').textContent = 'Sorry, something went wrong. Please try again.';
+    document.getElementById('jarvis-text-fs').textContent = 'Sorry, I could not process that. Please try again.';
     document.getElementById('jarvis-answer-fs').style.display = 'block';
   }
-}
-
-
-function jarvisAutoListen(fsPanel) {
-  // Cancel any pending silence timer
-  if (JARVIS_SILENCE_TIMER) { clearTimeout(JARVIS_SILENCE_TIMER); JARVIS_SILENCE_TIMER = null; }
-
-  var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SpeechRecognition) {
-    // Browser doesn't support auto-listen — go idle, let user tap
-    setJarvisOrb('idle');
-    document.getElementById('jarvis-status').textContent = 'TAP MIC TO CONTINUE...';
-    document.getElementById('jarvis-status').style.color = '#7a7660';
-    var qElFb = document.getElementById('jarvis-quick-cmds');
-    if (qElFb) { qElFb.style.display = 'block'; buildQuickCmds(); }
-    return;
-  }
-
-  setJarvisOrb('listening');
-  document.getElementById('jarvis-status').textContent = 'LISTENING... ASK FOLLOW-UP OR SAY BYE';
-  document.getElementById('jarvis-status').style.color = '#e84b4b';
-  var qEl = document.getElementById('jarvis-quick-cmds');
-  if (qEl) qEl.style.display = 'none';
-
-  var autoRec = new SpeechRecognition();
-  autoRec.lang = 'en-US';
-  autoRec.continuous = false;
-  autoRec.interimResults = true;
-  vcListening = true;
-  vcRecognition = autoRec;
-
-  var autoSilenceTimer = null;
-  var autoFinal = '';
-  var gotSomething = false;
-
-  autoRec.onresult = function(event) {
-    var interim = '', final = '';
-    for (var i = event.resultIndex; i < event.results.length; i++) {
-      if (event.results[i].isFinal) final += event.results[i][0].transcript;
-      else interim += event.results[i][0].transcript;
-    }
-    gotSomething = true;
-    var interimEl = document.getElementById('jarvis-interim-fs');
-    if (interimEl) interimEl.textContent = '"' + (interim || final) + '"';
-    if (autoSilenceTimer) clearTimeout(autoSilenceTimer);
-    if (final) {
-      autoFinal = final.trim();
-      // Goodbye phrases — close gracefully
-      if (/^(bye|goodbye|thanks|thank you|close|exit|stop|that.s all|no thanks|ok thanks|okay thanks)/i.test(autoFinal)) {
-        stopVoiceCommand();
-        setJarvisOrb('speaking');
-        document.getElementById('jarvis-status').textContent = 'GOODBYE...';
-        jarvisSpeak('Alright, take care! Have a great day!');
-        setTimeout(function() {
-          if (fsPanel) fsPanel.style.display = 'none';
-          JARVIS_HISTORY = [];
-        }, 2500);
-        return;
-      }
-      // Real question — process it
-      autoSilenceTimer = setTimeout(function() {
-        vcListening = false;
-        if (autoFinal) processVoiceCommandFS(autoFinal);
-      }, 1000);
-    }
-  };
-
-  autoRec.onerror = function(e) {
-    vcListening = false;
-    // no-speech is normal — just go idle
-    setJarvisOrb('idle');
-    document.getElementById('jarvis-status').textContent = 'TAP MIC TO CONTINUE...';
-    document.getElementById('jarvis-status').style.color = '#7a7660';
-    var qEl2 = document.getElementById('jarvis-quick-cmds');
-    if (qEl2) { qEl2.style.display = 'block'; buildQuickCmds(); }
-    // Auto-close after 10s silence
-    JARVIS_SILENCE_TIMER = setTimeout(function() {
-      if (fsPanel && fsPanel.style.display !== 'none') {
-        jarvisSpeak('Alright, I will leave you to it. Have a great day!');
-        setTimeout(function() {
-          if (fsPanel) fsPanel.style.display = 'none';
-          JARVIS_HISTORY = [];
-        }, 2500);
-      }
-    }, 10000);
-  };
-
-  autoRec.onend = function() {
-    if (!gotSomething && !autoFinal) {
-      vcListening = false;
-      setJarvisOrb('idle');
-      document.getElementById('jarvis-status').textContent = 'TAP MIC TO CONTINUE...';
-      document.getElementById('jarvis-status').style.color = '#7a7660';
-      var qEl3 = document.getElementById('jarvis-quick-cmds');
-      if (qEl3) { qEl3.style.display = 'block'; buildQuickCmds(); }
-      JARVIS_SILENCE_TIMER = setTimeout(function() {
-        if (fsPanel && fsPanel.style.display !== 'none') {
-          jarvisSpeak('Alright, I will leave you to it. Have a great day!');
-          setTimeout(function() {
-            if (fsPanel) fsPanel.style.display = 'none';
-            JARVIS_HISTORY = [];
-          }, 2500);
-        }
-      }, 10000);
-    }
-  };
-
-  autoRec.start();
 }
 
 function startVoiceCommand() {
@@ -6480,319 +6338,192 @@ async function processVoiceCommand(text) {
 }
 
 function buildVoiceContext() {
-  var ctx = 'Dashboard: ' + VC_CURRENT_TAB + ' | ';
+  // Sends ALL dashboard data always — Jarvis can answer any question regardless of current tab
+  var ctx = 'Current tab open: ' + VC_CURRENT_TAB + '. You have access to ALL data below — answer any question from any dashboard.\n\n';
 
   try {
-    if (VC_CURRENT_TAB === 'dispatch') {
-      var s = DS_CURRENT_SUMMARY || {};
-      if (!DS_CURRENT_SUMMARY) {
-        ctx += 'No dispatch data loaded yet. | ';
-      } else {
-        ctx += 'Total Orders: ' + (s.total_orders||0) + ' | ';
-        ctx += 'Total Value: AED ' + Math.round(s.total_value||0).toLocaleString() + ' | ';
-        ctx += 'Total Drops: ' + (s.total_drops||0) + ' | ';
-        ctx += 'Total Drivers: ' + (s.total_drivers||0) + ' | ';
-        ctx += 'Total Routes: ' + (s.total_routes||0) + ' | ';
-        ctx += 'Food Orders: ' + (s.food_orders||0) + ' AED ' + Math.round(s.food_value||0).toLocaleString() + ' | ';
-        ctx += 'Non-Food Orders: ' + (s.non_food_orders||0) + ' AED ' + Math.round(s.non_food_value||0).toLocaleString() + ' | ';
-        ctx += '3PL Orders: ' + (s.pl_orders||0) + ' | ';
-        ctx += 'Van Orders: ' + (s.van_orders||0) + ' | ';
-        // ORG breakdown
-        if (s.type_breakdown) {
-          var tb = s.type_breakdown;
-          ctx += 'ORG Breakdown: ';
-          ['DCV','DCF','DGC','DGS','DSN','DPS','HCP'].forEach(function(org) {
-            if (tb[org] && tb[org].orders > 0) {
-              ctx += org + ':' + tb[org].orders + ' orders AED ' + Math.round(tb[org].value||0).toLocaleString() + ' ';
-            }
-          });
-          ctx += ' | ';
-        }
-        // Cities
-        if (s.by_city) {
-          ctx += 'Orders by City: ';
-          Object.keys(s.by_city).forEach(function(city) { ctx += city + ':' + s.by_city[city] + ' '; });
-          ctx += ' | ';
-        }
-        // Top customers
-        if (s.top_customers && s.top_customers.length) {
-          ctx += 'Top Customers: ';
-          s.top_customers.slice(0,5).forEach(function(c) { ctx += c.name + '(' + c.orders + ' orders AED ' + Math.round(c.value||0).toLocaleString() + ') '; });
-          ctx += ' | ';
-        }
-        // Top drivers
-        if (s.top_drivers && s.top_drivers.length) {
-          ctx += 'Top Drivers: ';
-          s.top_drivers.slice(0,5).forEach(function(d) { ctx += d.name + '(' + (d.drops||d.orders) + ' drops AED ' + Math.round(d.value||0).toLocaleString() + ') '; });
-          ctx += ' | ';
-        }
-        // Routes
-        if (s.top_routes && s.top_routes.length) {
-          ctx += 'Routes: ';
-          s.top_routes.forEach(function(r) { ctx += r.route + '(' + r.orders + ' orders ' + r.drops + ' drops AED ' + Math.round(r.value||0).toLocaleString() + ') '; });
-          ctx += ' | ';
-        }
-      }
-    }
-
-
-    if (VC_CURRENT_TAB === 'returns' && typeof RET_FULL_SUMMARY !== 'undefined' && RET_FULL_SUMMARY) {
-      var rs = RET_FULL_SUMMARY;
-      var MNAMES_J={1:'January',2:'February',3:'March',4:'April',5:'May',6:'June',7:'July',8:'August',9:'September',10:'October',11:'November',12:'December'};
-      // Active filters context
-      var activeFilters=[];
-      if(typeof retFilters!=='undefined'){
-        if(retFilters.month!=='all') activeFilters.push('Month filter: '+( MNAMES_J[retFilters.month]||retFilters.month));
-        if(retFilters.wh!=='all') activeFilters.push('Warehouse filter: '+retFilters.wh);
-        if(retFilters.area!=='all') activeFilters.push('Area filter: '+retFilters.area);
-        if(retFilters.bu!=='all') activeFilters.push('BU filter: '+retFilters.bu);
-        if(retFilters.cat!=='all') activeFilters.push('Category filter: '+retFilters.cat);
-      }
-      if(activeFilters.length) ctx += 'ACTIVE FILTERS: '+activeFilters.join(', ')+' | ';
-      // Use filtered summary if filters are active, otherwise full summary
-      var rsd = rs;
-      if(typeof retFilters!=='undefined' && (retFilters.month!=='all'||retFilters.wh!=='all'||retFilters.area!=='all'||retFilters.bu!=='all'||retFilters.cat!=='all') && typeof renderReturnsFiltered!=='undefined') {
-        // Build live filtered summary for JARVIS
-        try {
-          var frows2 = getFilteredReturnRows ? getFilteredReturnRows() : [];
-          if(frows2.length) rsd = buildReturnsSummary(frows2);
-        } catch(e2){}
-      }
-      ctx += 'Market Returns Dashboard | ';
-      ctx += 'Total Returns Value: AED ' + Math.round(rsd.totalVal||0).toLocaleString() + ' (' + (rsd.totalOrders||0) + ' orders) | ';
-      ctx += 'Invoice Cancellations: ' + (rsd.invCount||0) + ' orders AED ' + Math.round(rsd.invVal||0).toLocaleString() + ' | ';
-      ctx += 'GRV Returns: ' + (rsd.grvCount||0) + ' orders AED ' + Math.round(rsd.grvVal||0).toLocaleString() + ' | ';
-      if (rsd.whMap) { ctx += 'By Warehouse: '; Object.keys(rsd.whMap).sort(function(a,b){return (rsd.whMap[b]||0)-(rsd.whMap[a]||0);}).forEach(function(w){ ctx += w+':AED '+Math.round(rsd.whMap[w]||0).toLocaleString()+' '; }); ctx += ' | '; }
-      if (rsd.buMap) { ctx += 'By BU: '; Object.keys(rsd.buMap).forEach(function(b){ ctx += b+':AED '+Math.round(rsd.buMap[b]||0).toLocaleString()+' '; }); ctx += ' | '; }
-      // Month breakdown (always from full summary)
-      if (rs.monthMap && Object.keys(rs.monthMap).length) {
-        ctx += 'Monthly Breakdown: ';
-        var mkeys = Object.keys(rs.monthMap).map(Number).sort(function(a,b){return a-b;});
-        mkeys.forEach(function(m){
-          var mo=rs.monthMap[m]||{};
-          var mv=typeof mo==='object'?mo.val:mo;
-          var mc=typeof mo==='object'?mo.count:0;
-          ctx += (MNAMES_J[m]||m)+':AED '+Math.round(mv).toLocaleString()+'('+mc+' orders) ';
+    // ── DISPATCH ──────────────────────────────────────────────
+    if (typeof DS_CURRENT_SUMMARY !== 'undefined' && DS_CURRENT_SUMMARY) {
+      var s = DS_CURRENT_SUMMARY;
+      ctx += '=== DISPATCH DATA ===\n';
+      ctx += 'Total Orders: ' + (s.total_orders||0) + ' | Total Value: AED ' + Math.round(s.total_value||0).toLocaleString() + ' | ';
+      ctx += 'Drops: ' + (s.total_drops||0) + ' | Drivers: ' + (s.total_drivers||0) + ' | Routes: ' + (s.total_routes||0) + ' | ';
+      ctx += 'Food: ' + (s.food_orders||0) + ' orders AED ' + Math.round(s.food_value||0).toLocaleString() + ' | ';
+      ctx += 'Non-Food: ' + (s.non_food_orders||0) + ' orders AED ' + Math.round(s.non_food_value||0).toLocaleString() + ' | ';
+      ctx += '3PL: ' + (s.pl_orders||0) + ' | Van: ' + (s.van_orders||0) + ' | ';
+      if (s.type_breakdown) {
+        var tb = s.type_breakdown;
+        ctx += 'ORG: ';
+        ['DCV','DCF','DGC','DGS','DSN','DPS','HCP'].forEach(function(org) {
+          if (tb[org] && tb[org].orders > 0) ctx += org + ':' + tb[org].orders + ' AED ' + Math.round(tb[org].value||0).toLocaleString() + ' | ';
         });
+      }
+      if (s.by_city) {
+        ctx += 'By City: ';
+        Object.keys(s.by_city).forEach(function(city) { ctx += city + ':' + s.by_city[city] + ' '; });
         ctx += ' | ';
       }
-      // Date breakdown — show for active month or last 20 dates
-      var dmSource = (rsd.dateMap && Object.keys(rsd.dateMap).length) ? rsd.dateMap : (rs.dateMap||{});
-      if (dmSource && Object.keys(dmSource).length) {
-        ctx += 'Daily Returns Data: ';
-        var dkeys = Object.keys(dmSource).sort(function(a,b){
-          var da=dmSource[a],db=dmSource[b];
-          return (da.month*100+(da.day||0))-(db.month*100+(db.day||0));
-        }).slice(-20);
-        dkeys.forEach(function(dk){
-          var dv=dmSource[dk];
-          ctx += dk+':AED '+Math.round(dv.val||0).toLocaleString()+'('+( dv.count||0)+') ';
-        });
-        ctx += ' | ';
-      }
-      // Top customers
-      if (rsd.custMap && Object.keys(rsd.custMap).length) {
+      if (s.top_customers && s.top_customers.length) {
         ctx += 'Top Customers: ';
-        Object.keys(rsd.custMap).sort(function(a,b){return (rsd.custMap[b]||0)-(rsd.custMap[a]||0);}).slice(0,5).forEach(function(c){ ctx += c+':AED '+Math.round(rsd.custMap[c]||0).toLocaleString()+' '; });
+        s.top_customers.slice(0,5).forEach(function(c) { ctx += c.name + '(' + c.orders + ' orders AED ' + Math.round(c.value||0).toLocaleString() + ') '; });
         ctx += ' | ';
       }
-    }
+      if (s.top_drivers && s.top_drivers.length) {
+        ctx += 'Top Drivers: ';
+        s.top_drivers.slice(0,5).forEach(function(d) { ctx += d.name + '(' + (d.drops||d.orders) + ' drops AED ' + Math.round(d.value||0).toLocaleString() + ') '; });
+        ctx += ' | ';
+      }
+      ctx += '\n';
+    } else { ctx += '=== DISPATCH: no data uploaded yet ===\n'; }
 
-    if (VC_CURRENT_TAB === 'geninfo' && GI_RAW && GI_RAW.length) {
-      ctx += 'General Info - Team Directory. '+GI_RAW.length+' members. ';
-      ctx += 'IMPORTANT: When asked for contact or phone number, read the PHONE field exactly as shown. ';
-      var gu={};
-      GI_RAW.forEach(function(r){var u=giGetVal(r,'unit')||'Other';gu[u]=(gu[u]||0)+1;});
-      Object.keys(gu).forEach(function(u){ctx+=u+':'+gu[u]+'. ';});
-      ctx += 'Team members with contact details: ';
-      GI_RAW.forEach(function(r){
-        var name=giGetVal(r,'name');
-        var unit=giGetVal(r,'unit');
-        var desig=giGetVal(r,'designation');
-        var phone=giGetVal(r,'contact'); if(phone&&!phone.startsWith('+'))phone='+'+phone;
-        var branch=giGetVal(r,'branch');
-        var outlet=giGetVal(r,'outlet');
-        var buType=giGetVal(r,'buType');
-        var acctNo=giGetVal(r,'acctNo');
-        var resp=giGetVal(r,'responsibility');
-        ctx += name+' | Unit:'+unit+' | Role:'+desig+' | PHONE:'+phone+(branch?' | Branch:'+branch:'')+(resp?' | Responsibility:'+resp:'')+(outlet?' | Outlets:'+outlet:'')+(buType?' | BU:'+buType:'')+(acctNo?' | AccountNo:'+acctNo:'')+'. ';
-      });
-      ctx += ' | ';
-    }
-    if (VC_CURRENT_TAB === 'rejection' && typeof ORG_DATA !== 'undefined') {
-      var MNAMES_R={1:'January',2:'February',3:'March',4:'April',5:'May',6:'June',7:'July',8:'August',9:'September',10:'October',11:'November',12:'December'};
+    // ── REJECTION YTD ─────────────────────────────────────────
+    if (typeof ORG_DATA !== 'undefined' && ORG_DATA) {
+      var MNAMES_R = {1:'January',2:'February',3:'March',4:'April',5:'May',6:'June',7:'July',8:'August',9:'September',10:'October',11:'November',12:'December'};
       try {
-        ctx += 'Rejection YTD Analysis Dashboard. | ';
-
-        // ── Active filters ──
-        var rejActive=[];
-        if(typeof rejORG!=='undefined'&&rejORG!=='all') rejActive.push('ORG: '+rejORG);
-        if(typeof rejMonth!=='undefined'&&rejMonth!=='all') rejActive.push('Month: '+(MNAMES_R[rejMonth]||rejMonth));
-        if(typeof rejDay!=='undefined'&&rejDay!=='all') rejActive.push('Day: '+rejDay);
-        if(typeof rejBU!=='undefined'&&rejBU!=='all') rejActive.push('BU: '+rejBU);
-        if(typeof rejType!=='undefined'&&rejType!=='all') rejActive.push('Type: '+rejType);
-        if(typeof rejSrc!=='undefined'&&rejSrc!=='all') rejActive.push('Source: '+rejSrc);
-        if(rejActive.length) ctx += 'ACTIVE FILTERS: '+rejActive.join(', ')+' | ';
-
-        // ── Overall totals from ORG_DATA all ──
+        ctx += '=== REJECTION YTD DATA ===\n';
         var allD = ORG_DATA['all'] || {};
         var totalDel = allD.tDel||0, totalRej = allD.tRej||0;
-        var overallRate = totalDel>0?((totalRej/totalDel)*100).toFixed(2):0;
-        var totalVal = allD.val||'';
-        ctx += 'Overall YTD: '+totalDel+' delivered, '+totalRej+' rejected, rejection rate '+overallRate+'%, value at risk: '+totalVal+' | ';
-
-        // ── Per ORG breakdown ──
+        var overallRate = totalDel > 0 ? ((totalRej/totalDel)*100).toFixed(2) : 0;
+        ctx += 'Overall: ' + totalDel + ' delivered, ' + totalRej + ' rejected, rate ' + overallRate + '%, value at risk: ' + (allD.val||'') + ' | ';
         ctx += 'By ORG: ';
         Object.keys(ORG_DATA).forEach(function(org) {
-          if(org==='all') return;
+          if (org === 'all') return;
           var d = ORG_DATA[org];
-          if(d && d.tDel) {
-            var rr = d.tDel>0?((d.tRej/d.tDel)*100).toFixed(1):0;
-            ctx += org+': '+d.tDel+' del, '+d.tRej+' rej ('+rr+'%) '+d.val+' | ';
+          if (d && d.tDel) {
+            var rr = d.tDel > 0 ? ((d.tRej/d.tDel)*100).toFixed(1) : 0;
+            ctx += org + ':' + d.tDel + ' del,' + d.tRej + ' rej(' + rr + '%) ' + d.val + ' | ';
           }
         });
-
-        // ── Monthly breakdown from ORG_DATA[all].rej and .del arrays ──
-        if(allD.rej && allD.del) {
-          ctx += 'Monthly Rejection Trend: ';
-          var moNamesShort=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-          allD.rej.forEach(function(rejCount,i){
-            if(rejCount>0||allD.del[i]>0){
-              var mRate=allD.del[i]>0?((rejCount/allD.del[i])*100).toFixed(1):0;
-              ctx += moNamesShort[i]+': '+rejCount+' rej/'+allD.del[i]+' del ('+mRate+'%) ';
+        if (allD.rej && allD.del) {
+          ctx += 'Monthly Trend: ';
+          var moShort = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+          allD.rej.forEach(function(rc, i) {
+            if (rc > 0 || allD.del[i] > 0) {
+              var mr = allD.del[i] > 0 ? ((rc/allD.del[i])*100).toFixed(1) : 0;
+              ctx += moShort[i] + ':' + rc + ' rej/' + allD.del[i] + ' del(' + mr + '%) ';
             }
           });
           ctx += ' | ';
         }
-
-        // ── If month filter active: show that month detail from DAY_DATA ──
-        if(typeof rejMonth!=='undefined' && rejMonth!=='all' && typeof DAY_DATA!=='undefined') {
-          var moData = DAY_DATA[rejMonth] || DAY_DATA[String(rejMonth)] || {};
-          if(moData.tRej||moData.tDel) {
-            var mRate2=moData.tDel>0?((moData.tRej/moData.tDel)*100).toFixed(1):0;
-            ctx += (MNAMES_R[rejMonth]||rejMonth)+' Detail: '+moData.tDel+' delivered, '+moData.tRej+' rejected ('+mRate2+'%), value: '+(moData.val||'')+ ' | ';
-            // Top reasons for that month
-            if(moData.reasons&&moData.reasons.length) {
-              ctx += 'Top Rejection Reasons in '+(MNAMES_R[rejMonth]||rejMonth)+': ';
-              moData.reasons.slice(0,5).forEach(function(r){ctx+=r.l+'('+r.n+') ';});
-              ctx += ' | ';
-            }
-            // Top customers for that month
-            if(moData.custs&&moData.custs.length) {
-              ctx += 'Top Rejected Customers in '+(MNAMES_R[rejMonth]||rejMonth)+': ';
-              moData.custs.slice(0,5).forEach(function(c){ctx+=c.n+'('+c.c+') ';});
-              ctx += ' | ';
-            }
-            // Daily data for the month
-            if(moData.data && Object.keys(moData.data).length) {
-              ctx += 'Daily Rejections in '+(MNAMES_R[rejMonth]||rejMonth)+': ';
-              Object.keys(moData.data).sort(function(a,b){return parseInt(a)-parseInt(b);}).forEach(function(day){
-                var dd=moData.data[day];
-                if(dd.tRej>0) ctx+='Day '+day+': '+dd.tRej+' rej/'+dd.tDel+' del ';
-              });
-              ctx += ' | ';
-            }
-          }
-        } else if(typeof DAY_DATA!=='undefined') {
-          // Show all months summary from DAY_DATA
-          ctx += 'Month-by-Month Detail: ';
-          Object.keys(DAY_DATA).sort(function(a,b){return parseInt(a)-parseInt(b);}).forEach(function(mo){
-            var md=DAY_DATA[mo];
-            if(md&&md.tRej) {
-              var mR=md.tDel>0?((md.tRej/md.tDel)*100).toFixed(1):0;
-              ctx += (MNAMES_R[parseInt(mo)]||mo)+': '+md.tRej+' rej/'+md.tDel+' del ('+mR+'%) '+(md.val||'')+' ';
+        if (typeof DAY_DATA !== 'undefined') {
+          ctx += 'Month Detail: ';
+          Object.keys(DAY_DATA).sort(function(a,b){return parseInt(a)-parseInt(b);}).forEach(function(mo) {
+            var md = DAY_DATA[mo];
+            if (md && md.tRej) {
+              var mR = md.tDel > 0 ? ((md.tRej/md.tDel)*100).toFixed(1) : 0;
+              ctx += (MNAMES_R[parseInt(mo)]||mo) + ':' + md.tRej + ' rej/' + md.tDel + ' del(' + mR + '%) ' + (md.val||'') + ' | ';
+              if (md.reasons && md.reasons.length) {
+                ctx += 'Reasons: ';
+                md.reasons.slice(0,3).forEach(function(r){ctx += r.l + '(' + r.n + ') ';});
+                ctx += '| ';
+              }
+              if (md.custs && md.custs.length) {
+                ctx += 'Customers: ';
+                md.custs.slice(0,3).forEach(function(c){ctx += c.n + '(' + c.c + ') ';});
+                ctx += '| ';
+              }
             }
           });
+        }
+        if (allD.reasons && allD.reasons.length) {
+          ctx += 'Top Reasons: ';
+          allD.reasons.slice(0,5).forEach(function(r){ctx += r.l + '(' + r.n + ') ';});
           ctx += ' | ';
         }
+        ctx += '\n';
+      } catch(e2) { ctx += '=== REJECTION: read error ===\n'; }
+    } else { ctx += '=== REJECTION: no data uploaded yet ===\n'; }
 
-        // ── Top reasons overall ──
-        if(allD.reasons&&allD.reasons.length) {
-          ctx += 'Top Rejection Reasons: ';
-          allD.reasons.slice(0,5).forEach(function(r){ctx+=r.l+'('+r.n+') ';});
-          ctx += ' | ';
-        }
-      } catch(e) { ctx += 'Rejection data available. | '; }
-    }
-
-    if (VC_CURRENT_TAB === 'backlog') {
-      // Read from saved summary in DOM
-      var blSummary = window.BL_LAST_SUMMARY || null;
-      if (blSummary) {
-        ctx += 'WH Backlog Total Orders: ' + (blSummary.totalOrders||0) + ' | ';
-        ctx += 'Total Value: AED ' + Math.round(blSummary.totalVal||0).toLocaleString() + ' | ';
-        // Category breakdown
-        if (blSummary.catMap) {
-          var cm = blSummary.catMap;
-          ctx += 'WH Backlog (Before Cut-Off): ' + ((cm['Before Cut-Off']||{}).count||0) + ' orders AED ' + Math.round((cm['Before Cut-Off']||{}).val||0).toLocaleString() + ' | ';
-          ctx += 'Advance Orders (RSD >30): ' + ((cm['RSD >30 Advance']||{}).count||0) + ' orders AED ' + Math.round((cm['RSD >30 Advance']||{}).val||0).toLocaleString() + ' | ';
-          ctx += 'Credit Hold/Cut-Off Frozen: ' + ((cm['Cut-Off Frozen']||{}).count||0) + ' orders AED ' + Math.round((cm['Cut-Off Frozen']||{}).val||0).toLocaleString() + ' | ';
-          ctx += 'Unplanned Frozen: ' + ((cm['Unplanned Frozen']||{}).count||0) + ' orders AED ' + Math.round((cm['Unplanned Frozen']||{}).val||0).toLocaleString() + ' | ';
-        }
-        // ORG breakdown
-        if (blSummary.orgMap) {
-          ctx += 'Backlog by ORG: ';
-          Object.keys(blSummary.orgMap).forEach(function(o){ ctx += o + ':' + (blSummary.orgMap[o].count||0) + ' orders AED ' + Math.round(blSummary.orgMap[o].val||0).toLocaleString() + ' '; });
-          ctx += ' | ';
-        }
-      } else {
-        ctx += 'WH Backlog dashboard. Upload backlog file to get data. | ';
+    // ── MARKET RETURNS ────────────────────────────────────────
+    if (typeof RET_FULL_SUMMARY !== 'undefined' && RET_FULL_SUMMARY) {
+      var rs = RET_FULL_SUMMARY;
+      var MNAMES_J = {1:'January',2:'February',3:'March',4:'April',5:'May',6:'June',7:'July',8:'August',9:'September',10:'October',11:'November',12:'December'};
+      ctx += '=== MARKET RETURNS DATA ===\n';
+      ctx += 'Total: AED ' + Math.round(rs.totalVal||0).toLocaleString() + ' (' + (rs.totalOrders||0) + ' orders) | ';
+      ctx += 'Invoice Cancellations: ' + (rs.invCount||0) + ' AED ' + Math.round(rs.invVal||0).toLocaleString() + ' | ';
+      ctx += 'GRV Returns: ' + (rs.grvCount||0) + ' AED ' + Math.round(rs.grvVal||0).toLocaleString() + ' | ';
+      if (rs.monthMap && Object.keys(rs.monthMap).length) {
+        ctx += 'Monthly: ';
+        Object.keys(rs.monthMap).map(Number).sort(function(a,b){return a-b;}).forEach(function(m) {
+          var mo = rs.monthMap[m] || {};
+          var mv = typeof mo === 'object' ? mo.val : mo;
+          var mc = typeof mo === 'object' ? mo.count : 0;
+          ctx += (MNAMES_J[m]||m) + ':AED ' + Math.round(mv).toLocaleString() + '(' + mc + ') ';
+        });
+        ctx += ' | ';
       }
-    }
+      if (rs.custMap && Object.keys(rs.custMap).length) {
+        ctx += 'Top Customers: ';
+        Object.keys(rs.custMap).sort(function(a,b){return (rs.custMap[b]||0)-(rs.custMap[a]||0);}).slice(0,5).forEach(function(c){
+          ctx += c + ':AED ' + Math.round(rs.custMap[c]||0).toLocaleString() + ' ';
+        });
+        ctx += ' | ';
+      }
+      ctx += '\n';
+    } else { ctx += '=== RETURNS: no data uploaded yet ===\n'; }
 
+    // ── WH BACKLOG ────────────────────────────────────────────
+    if (typeof window.BL_LAST_SUMMARY !== 'undefined' && window.BL_LAST_SUMMARY) {
+      var bl = window.BL_LAST_SUMMARY;
+      ctx += '=== WH BACKLOG DATA ===\n';
+      ctx += 'Total: ' + (bl.totalOrders||0) + ' orders AED ' + Math.round(bl.totalVal||0).toLocaleString() + ' | ';
+      if (bl.catMap) {
+        var cm = bl.catMap;
+        ctx += 'Before Cut-Off: ' + ((cm['Before Cut-Off']||{}).count||0) + ' AED ' + Math.round((cm['Before Cut-Off']||{}).val||0).toLocaleString() + ' | ';
+        ctx += 'Advance(RSD>30): ' + ((cm['RSD >30 Advance']||{}).count||0) + ' AED ' + Math.round((cm['RSD >30 Advance']||{}).val||0).toLocaleString() + ' | ';
+        ctx += 'Cut-Off Frozen: ' + ((cm['Cut-Off Frozen']||{}).count||0) + ' AED ' + Math.round((cm['Cut-Off Frozen']||{}).val||0).toLocaleString() + ' | ';
+      }
+      if (bl.orgMap) {
+        ctx += 'By ORG: ';
+        Object.keys(bl.orgMap).forEach(function(o){ ctx += o + ':' + (bl.orgMap[o].count||0) + ' AED ' + Math.round(bl.orgMap[o].val||0).toLocaleString() + ' '; });
+        ctx += ' | ';
+      }
+      ctx += '\n';
+    } else { ctx += '=== WH BACKLOG: no data uploaded yet ===\n'; }
 
-    if (VC_CURRENT_TAB === 'delivery' && DS_DATA) {
-      ctx += 'Delivery Schedule Compliance Dashboard. ';
-      ctx += 'Total Orders: ' + (DS_DATA.total||0).toLocaleString() + ' | ';
-      ctx += 'Scheduled: ' + (DS_DATA.scheduled||0).toLocaleString() + ' (' + (DS_DATA.schedPct||0) + '%) | ';
-      ctx += 'Out of Schedule: ' + (DS_DATA.oos||0).toLocaleString() + ' (' + (DS_DATA.oosPct||0) + '%) | ';
-      ctx += 'No Schedule: ' + (DS_DATA.noSched||0).toLocaleString() + ' (' + (DS_DATA.noSchedPct||0) + '%) | ';
-      ctx += 'Compliance Rate: ' + (DS_DATA.schedPct||0) + '% | ';
-    }
-
-    if (VC_CURRENT_TAB === 'automation' && AUTO_DATA) {
+    // ── AUTOMATION ────────────────────────────────────────────
+    if (typeof AUTO_DATA !== 'undefined' && AUTO_DATA) {
       var ad = AUTO_DATA;
-      ctx += 'Automation Tracking YTD Dashboard. ';
-      ctx += 'Total Orders: ' + (ad.total||0).toLocaleString() + ' | ';
-      ctx += 'Auto Booked: ' + (ad.totalAuto||0).toLocaleString() + ' (' + (ad.rate||0) + '%) | ';
-      ctx += 'Manually Booked: ' + (ad.totalManual||0).toLocaleString() + ' | ';
-      ctx += 'Latest Month: ' + (ad.latestMonth||'') + ' at ' + (ad.latestRate||0) + '% | ';
+      ctx += '=== AUTOMATION DATA ===\n';
+      ctx += 'Total: ' + (ad.total||0) + ' | Auto: ' + (ad.totalAuto||0) + '(' + (ad.rate||0) + '%) | Manual: ' + (ad.totalManual||0) + ' | Latest: ' + (ad.latestMonth||'') + ' at ' + (ad.latestRate||0) + '% | ';
       if (ad.monthData) {
-        ctx += 'Monthly breakdown: ';
+        ctx += 'Monthly: ';
         Object.keys(ad.monthData).forEach(function(m) {
           var d = ad.monthData[m];
           var p = d.total ? Math.round(d.auto/d.total*100) : 0;
-          ctx += m + ':' + d.total + ' orders ' + p + '% auto | ';
+          ctx += m + ':' + d.total + ' orders ' + p + '% | ';
         });
       }
       if (ad.orgData) {
-        ctx += 'Organisation breakdown: ';
+        ctx += 'By ORG: ';
         Object.keys(ad.orgData).forEach(function(org) {
           var d = ad.orgData[org];
           var p = d.total ? Math.round(d.auto/d.total*100) : 0;
-          ctx += org + ':' + d.total + ' orders ' + p + '% auto | ';
+          ctx += org + ':' + d.total + ' orders ' + p + '% | ';
         });
       }
-    }
+      ctx += '\n';
+    } else { ctx += '=== AUTOMATION: no data uploaded yet ===\n'; }
 
-    if (VC_CURRENT_TAB === 'sales' && typeof SALES_DATA !== 'undefined' && SALES_DATA) {
-      var sd = SALES_DATA;
-      ctx += 'Daily Sales dashboard. Total Orders: ' + (sd.totalOrders||0) + ' | ';
-      ctx += 'Total Value: AED ' + Math.round(sd.totalValue||0).toLocaleString() + ' | ';
-      if (sd.byBU) {
-        ctx += 'Sales by BU: ';
-        Object.keys(sd.byBU).forEach(function(bu){ 
-          ctx += bu + ':' + (sd.byBU[bu].orders||0) + ' orders AED ' + Math.round(sd.byBU[bu].value||0).toLocaleString() + ' '; 
-        });
-        ctx += ' | ';
-      }
-      if (sd.byOrg) {
-        ctx += 'Sales by ORG: ';
-        Object.keys(sd.byOrg).forEach(function(o){ 
-          ctx += o + ':' + (sd.byOrg[o].orders||0) + ' orders AED ' + Math.round(sd.byOrg[o].value||0).toLocaleString() + ' '; 
-        });
-        ctx += ' | ';
-      }
+    // ── DELIVERY SCHEDULE ─────────────────────────────────────
+    if (typeof DS_DATA !== 'undefined' && DS_DATA) {
+      ctx += '=== DELIVERY SCHEDULE COMPLIANCE ===\n';
+      ctx += 'Total: ' + (DS_DATA.total||0) + ' | Scheduled: ' + (DS_DATA.scheduled||0) + '(' + (DS_DATA.schedPct||0) + '%) | Out of Schedule: ' + (DS_DATA.oos||0) + '(' + (DS_DATA.oosPct||0) + '%) | No Schedule: ' + (DS_DATA.noSched||0) + '(' + (DS_DATA.noSchedPct||0) + '%) | Compliance: ' + (DS_DATA.schedPct||0) + '% | \n';
+    } else { ctx += '=== DELIVERY SCHEDULE: no data uploaded yet ===\n'; }
+
+    // ── GENERAL INFO / TEAM ───────────────────────────────────
+    if (typeof GI_RAW !== 'undefined' && GI_RAW && GI_RAW.length) {
+      ctx += '=== TEAM DIRECTORY ===\n';
+      GI_RAW.forEach(function(r) {
+        var name  = giGetVal(r,'name');
+        var unit  = giGetVal(r,'unit');
+        var desig = giGetVal(r,'designation');
+        var phone = giGetVal(r,'contact'); if (phone && !phone.startsWith('+')) phone = '+' + phone;
+        var branch = giGetVal(r,'branch');
+        var outlet = giGetVal(r,'outlet');
+        ctx += name + '|Unit:' + unit + '|Role:' + desig + '|PHONE:' + phone + (branch?'|Branch:'+branch:'') + (outlet?'|Outlets:'+outlet:'') + '. ';
+      });
+      ctx += '\n';
     }
 
   } catch(e) { ctx += 'Error reading context: ' + e.message; }
@@ -6828,7 +6559,7 @@ function jarvisStopAll() {
 // Keep old name as alias
 function jarvisStop() { jarvisStopAll(); }
 
-function jarvisSpeak(text, onDone) {
+function jarvisSpeak(text) {
   if (!window.speechSynthesis) return;
   window.speechSynthesis.cancel();
   // Show stop buttons while speaking
@@ -6902,7 +6633,6 @@ function jarvisSpeak(text, onDone) {
     utter.onend = function(){
       if(micBtn) micBtn.style.color = '';
       if(orbEl){ orbEl.style.background='rgba(201,168,76,0.1)'; orbEl.style.borderColor='rgba(201,168,76,0.4)'; orbEl.style.boxShadow='none'; }
-      if (typeof onDone === 'function') onDone();
     };
     window.speechSynthesis.speak(utter);
   }
