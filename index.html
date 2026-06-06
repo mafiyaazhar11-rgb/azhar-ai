@@ -5921,7 +5921,7 @@ function initVoIP() {
 var vcListening = false;
 var vcRecognition = null;
 var VC_CURRENT_TAB = 'dispatch';
-var JARVIS_HISTORY = []; // conversation memory
+var JARVIS_HISTORY = [];
 
 function toggleVoiceCommand() {
   // On mobile - open fullscreen JARVIS mode
@@ -6021,7 +6021,7 @@ function openJarvisFullscreen() {
     document.getElementById('jarvis-status').textContent = 'TAP MIC TO SPEAK';
     document.getElementById('jarvis-status').style.color = '#7a7660';
     setJarvisOrb('idle');
-    JARVIS_HISTORY = []; // fresh conversation each time panel opens
+    JARVIS_HISTORY = []; // reset conversation each session
     // Show quick commands for current dashboard
     var qEl = document.getElementById('jarvis-quick-cmds');
     if (qEl) qEl.style.display = 'block';
@@ -6160,27 +6160,24 @@ async function processVoiceCommandFS(text) {
   if (slBtn2) slBtn2.style.display = 'none';
   document.getElementById('jarvis-interim-fs').textContent = '"' + text + '"';
 
-  // Add to conversation history
-  JARVIS_HISTORY.push({ role: 'user', content: text });
-  if (JARVIS_HISTORY.length > 20) JARVIS_HISTORY = JARVIS_HISTORY.slice(-20);
-
   var context = buildVoiceContext();
 
   try {
     var response = await fetch('/api/voice', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-auth-token': AUTH_TOKEN },
-      body: JSON.stringify({ text: text, context: context, tab: VC_CURRENT_TAB, history: JARVIS_HISTORY.slice(0,-1) })
+      body: JSON.stringify({ text: text, context: context, tab: VC_CURRENT_TAB, history: JARVIS_HISTORY.slice(-10) })
     });
     var data = await response.json();
     if (!data.success) throw new Error(data.error || 'Error');
     var parsed = data.result;
 
-    // Save reply to history
+    // Save to conversation history
+    JARVIS_HISTORY.push({ role: 'user', content: text });
     JARVIS_HISTORY.push({ role: 'assistant', content: parsed.answer || '' });
     if (JARVIS_HISTORY.length > 20) JARVIS_HISTORY = JARVIS_HISTORY.slice(-20);
 
-    // Execute action — auto filter dashboards
+    // Execute action
     if (parsed.action && parsed.action !== 'none') {
       executeVoiceAction(parsed.action, parsed.action_detail);
     }
@@ -6199,7 +6196,7 @@ async function processVoiceCommandFS(text) {
     
     jarvisSpeak(parsed.answer || 'No answer.');
     
-    // After speaking go back to idle
+    // After speaking, go back to idle and show quick commands again
     setTimeout(function() {
       setJarvisOrb('idle');
       document.getElementById('jarvis-status').textContent = 'TAP MIC OR CHOOSE BELOW';
@@ -6209,7 +6206,6 @@ async function processVoiceCommandFS(text) {
     }, (parsed.answer || '').length * 60 + 1500);
 
   } catch(e) {
-    if (JARVIS_HISTORY.length > 0 && JARVIS_HISTORY[JARVIS_HISTORY.length-1].role === 'user') JARVIS_HISTORY.pop();
     setJarvisOrb('idle');
     document.getElementById('jarvis-status').textContent = 'ERROR - TRY AGAIN';
     document.getElementById('jarvis-text-fs').textContent = 'Sorry, I could not process that. Please try again.';
@@ -6660,22 +6656,14 @@ function executeVoiceAction(action, detail) {
   try {
     if (!action || action === 'none') return;
     var d = (detail || '').toLowerCase();
-    var MONTH_MAP = {
-      'january':1,'jan':1,'february':2,'feb':2,'march':3,'mar':3,
-      'april':4,'apr':4,'may':5,'june':6,'jun':6,'july':7,'jul':7,
-      'august':8,'aug':8,'september':9,'sep':9,'october':10,'oct':10,
-      'november':11,'nov':11,'december':12,'dec':12
-    };
 
-    // ── NAVIGATE ──────────────────────────────────────
     if (action === 'navigate') {
-      var tabs = {dispatch:'dispatch',rejection:'rejection',returns:'returns',backlog:'backlog',sales:'sales',summary:'summary',email:'email',invoice:'invoice',automation:'automation',delivery:'delivery',geninfo:'geninfo'};
+      var tabs = {dispatch:'dispatch',rejection:'rejection',returns:'returns',backlog:'backlog',sales:'sales',summary:'summary',email:'email',invoice:'invoice'};
       Object.keys(tabs).forEach(function(k) {
         if (d.includes(k) && typeof goTab === 'function') goTab(tabs[k], null);
       });
     }
 
-    // ── FILTER DISPATCH ───────────────────────────────
     if (action === 'filter' && VC_CURRENT_TAB === 'dispatch') {
       var routes = ['DCV','DGC','DCF','DGS','DPS','DSN','TPW'];
       routes.forEach(function(r) {
@@ -6685,58 +6673,17 @@ function executeVoiceAction(action, detail) {
       cities.forEach(function(c) {
         if (d.includes(c.toLowerCase()) && typeof dsFilter === 'function') dsFilter('city', c);
       });
-      if (d.includes('food') && !d.includes('non') && typeof dsFilter === 'function') dsFilter('type','food');
-      else if (d.includes('non food') || d.includes('nonfood')) { if (typeof dsFilter === 'function') dsFilter('type','nonfood'); }
     }
 
-    // ── FILTER REJECTION ──────────────────────────────
-    if (action === 'filter' && VC_CURRENT_TAB === 'rejection') {
-      // Month filter
-      Object.keys(MONTH_MAP).forEach(function(name) {
-        if (d.includes(name) && typeof setRejFilter === 'function') setRejFilter('month', MONTH_MAP[name]);
-        else if (d.includes(name) && typeof rejMonth !== 'undefined') {
-          rejMonth = MONTH_MAP[name];
-          if (typeof renderRejection === 'function') renderRejection();
-        }
-      });
-      // ORG filter
-      ['DCV','DGC','DCF','DGS','DPS','DSN','HCP'].forEach(function(org) {
-        if (detail.toUpperCase().includes(org) && typeof rejORG !== 'undefined') {
-          rejORG = org;
-          if (typeof renderRejection === 'function') renderRejection();
-        }
-      });
-      // Food / non-food
-      if (d.includes('food') && !d.includes('non') && typeof rejBU !== 'undefined') {
-        rejBU = 'food'; if (typeof renderRejection === 'function') renderRejection();
-      } else if ((d.includes('non food')||d.includes('nonfood')) && typeof rejBU !== 'undefined') {
-        rejBU = 'nonfood'; if (typeof renderRejection === 'function') renderRejection();
-      }
-      // Day filter — "day 15" or "15th" or just a number
-      var dayMatch = d.match(/(day\s*)?(\d{1,2})(st|nd|rd|th)?/);
-      if (dayMatch && typeof rejDay !== 'undefined') {
-        var dayNum = parseInt(dayMatch[2]);
-        if (dayNum >= 1 && dayNum <= 31) {
-          rejDay = dayNum; if (typeof renderRejection === 'function') renderRejection();
-        }
-      }
-    }
-
-    // ── FILTER RETURNS ────────────────────────────────
     if (action === 'filter' && VC_CURRENT_TAB === 'returns') {
       if (d.includes('invoice')) retFilter('cat','Invoice Cancellation');
       else if (d.includes('grv')) retFilter('cat','GRV-Return');
       if (d.includes('food') && !d.includes('non')) retFilter('bu','food');
-      else if (d.includes('non food')||d.includes('nonfood')) retFilter('bu','nonfood');
+      else if (d.includes('non')) retFilter('bu','nonfood');
       ['DCV','DGC','DCF','DGS','DLL','DGN'].forEach(function(w) {
         if (detail.toUpperCase().includes(w)) retFilter('wh', w);
       });
-      // Month filter for returns
-      Object.keys(MONTH_MAP).forEach(function(name) {
-        if (d.includes(name)) retFilter('month', MONTH_MAP[name]);
-      });
     }
-
   } catch(e) { console.error('Voice action error:', e); }
 }
 
