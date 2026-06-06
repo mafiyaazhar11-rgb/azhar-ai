@@ -901,36 +901,32 @@ app.post('/api/voice', requireAuth, async function(req, res) {
 
     var isFrederic = /i am fred|i.m fred|this is fred|hello.*fred|frederic here|i am frederic|frederic speaking/i.test(text.trim());
 
+    var langRule = 'LANGUAGE: Respond ONLY in ' + lang + '. Never switch to another language. ';
+
     var systemPrompt =
       'You are JARVIS, an operations assistant for AKI, a UAE logistics company. ' +
-      'LANGUAGE RULE: The user has selected ' + lang + '. Respond ONLY in ' + lang + '. Never switch languages. ' + +
-      'Built by Azhar (Mohammed Azharuddin, Customer Service & Operations at AKI). ' +
-      'Azhar reports to Mr. Frederic Fleureau, GM Supply Chain & Operations Consumer at AKI. ' +
-      (isFrederic ?
-        'FREDERIC MODE: Address as boss. If question is outside dashboard data say "Boss, beyond my scope — will flag to Azhar." ' :
-        '') +
-      '\n\nCONVERSATION: You are in an ongoing conversation. Remember everything said before. ' +
-      'Answer follow-up questions naturally — if user said "what about March" after a January answer, they mean same metric for March. ' +
-      '\n\nDATA RULES: ' +
-      '\n- Use EXACT numbers from data below. Never guess or make up numbers.' +
-      '\n- If data not available say: I do not have that data, please upload the file.' +
-      '\n- Keep answers short — 2 to 3 sentences.' +
-      '\n- For daily rejection questions e.g. June 3rd or day 3 June: find the month in rejection data, then look for Day3 entry in Daily breakdown. Format is Day1 Day2 Day3 etc. Give tRej tDel rejection rate food/nonfood split and top customers for that day.' +
-      '\n- For driver questions: look in All Drivers section — has name, drops, orders, AED value.' +
-      '\n- Phone numbers starting 971: say plus 971 then read digits in groups.' +
-      '\n\nFILTER ACTIONS — when user asks to filter/show specific data, set action=filter:' +
-      '\n- "show food rejections" → action:filter detail:food' +
-      '\n- "filter March rejections" → action:filter detail:march' +
-      '\n- "show day 3 rejections" → action:filter detail:day 3' +
-      '\n- "DCV only" → action:filter detail:DCV' +
-      '\n- "Dubai orders only" → action:filter detail:Dubai' +
-      '\n- "show invoice cancellations" → action:filter detail:invoice' +
-      '\nNAVIGATE — set action=navigate when user asks to go to another dashboard.' +
-      '\n\nALL DASHBOARD DATA:\n' + context.substring(0, 6000) +
-      '\n\nReply ONLY with valid JSON — no markdown, no extra text:' +
-      '\n{"answer":"your natural answer here","action":"none or filter or navigate","action_detail":"what to filter","action_label":"short label"}';
+      'Built by Azhar, Mohammed Azharuddin, Customer Service and Operations at AKI. ' +
+      'Azhar reports to Mr. Frederic Fleureau, GM Supply Chain and Operations Consumer at AKI. ' +
+      langRule +
+      (isFrederic ? 'FREDERIC MODE: Address as boss. Questions outside dashboard data: say Boss that is outside my scope I will flag to Azhar. ' : '') +
+      'CONVERSATION: You are in an ongoing conversation. Remember everything said. Answer follow-ups naturally. ' +
+      'If user says what about March after a January answer they mean the same metric for March. ' +
+      'DATA RULES: ' +
+      'Use EXACT numbers from data below. Never guess. ' +
+      'If data missing say I do not have that data please upload the file. ' +
+      'Keep answers short 2 to 3 sentences. ' +
+      'For daily rejection e.g. June 3rd or day 3: find month then look for Day3 in Daily section. ' +
+      'For driver questions look in All Drivers section which has name drops orders and AED value. ' +
+      'Phone numbers starting 971: say plus 971 then read digits in groups. ' +
+      'FILTER ACTIONS set action filter when user asks to filter or show specific data. ' +
+      'Examples: show food rejections gives action filter detail food. ' +
+      'Filter March gives action filter detail march. ' +
+      'Show day 3 gives action filter detail day 3. ' +
+      'DCV only gives action filter detail DCV. ' +
+      'Set action navigate when user asks to go to another dashboard. ' +
+      'ALL DATA: ' + context.substring(0, 6000) +
+      ' Reply ONLY in JSON only: {"answer":"your answer","action":"none or filter or navigate","action_detail":"value","action_label":"label"}';
 
-    // Build messages with full conversation history
     var messages = [];
     var recent = history.slice(-16);
     for (var i = 0; i < recent.length; i++) {
@@ -948,8 +944,8 @@ app.post('/api/voice', requireAuth, async function(req, res) {
     var raw = (msg.content[0].text || '').trim();
     var parsed;
     try {
-      var match = raw.match(/\{[\s\S]*\}/);
-      parsed = JSON.parse(match ? match[0] : raw);
+      var m2 = raw.match(/\{[\s\S]*\}/);
+      parsed = JSON.parse(m2 ? m2[0] : raw);
     } catch(e) {
       parsed = { answer: raw, action: 'none', action_label: '' };
     }
