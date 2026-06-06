@@ -6021,7 +6021,7 @@ function openJarvisFullscreen() {
     document.getElementById('jarvis-status').textContent = 'TAP MIC TO SPEAK';
     document.getElementById('jarvis-status').style.color = '#7a7660';
     setJarvisOrb('idle');
-    JARVIS_HISTORY = []; // reset conversation each session
+    JARVIS_HISTORY = []; // fresh conversation each session
     // Show quick commands for current dashboard
     var qEl = document.getElementById('jarvis-quick-cmds');
     if (qEl) qEl.style.display = 'block';
@@ -6166,7 +6166,7 @@ async function processVoiceCommandFS(text) {
     var response = await fetch('/api/voice', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-auth-token': AUTH_TOKEN },
-      body: JSON.stringify({ text: text, context: context, tab: VC_CURRENT_TAB, history: JARVIS_HISTORY.slice(-10) })
+      body: JSON.stringify({ text: text, context: context, tab: VC_CURRENT_TAB, history: JARVIS_HISTORY.slice(-16) })
     });
     var data = await response.json();
     if (!data.success) throw new Error(data.error || 'Error');
@@ -6177,7 +6177,7 @@ async function processVoiceCommandFS(text) {
     JARVIS_HISTORY.push({ role: 'assistant', content: parsed.answer || '' });
     if (JARVIS_HISTORY.length > 20) JARVIS_HISTORY = JARVIS_HISTORY.slice(-20);
 
-    // Execute action
+    // Execute action — auto filter
     if (parsed.action && parsed.action !== 'none') {
       executeVoiceAction(parsed.action, parsed.action_detail);
     }
@@ -6376,9 +6376,10 @@ function buildVoiceContext() {
         ctx += ' | ';
       }
       if (s.top_drivers && s.top_drivers.length) {
-        ctx += 'Top Drivers: ';
-        s.top_drivers.slice(0,5).forEach(function(d) { ctx += d.name + '(' + (d.drops||d.orders) + ' drops) '; });
-        ctx += ' | ';
+        ctx += 'All Drivers today: ';
+        s.top_drivers.forEach(function(d) {
+          ctx += d.name + ':' + (d.drops||0) + ' drops ' + (d.orders||0) + ' orders AED ' + Math.round(d.value||0).toLocaleString() + ' | ';
+        });
       }
       ctx += '\n';
     } else { ctx += '=== DISPATCH: no file uploaded ===\n'; }
@@ -6420,7 +6421,21 @@ function buildVoiceContext() {
               var mR = md.tDel > 0 ? ((md.tRej/md.tDel)*100).toFixed(1) : 0;
               ctx += (MNAMES_R[parseInt(mo)]||mo) + ':' + md.tRej + ' rej ' + md.tDel + ' del(' + mR + '%) ' + (md.val||'') + ' | ';
               if (md.reasons && md.reasons.length) { ctx += 'Reasons: '; md.reasons.slice(0,3).forEach(function(r){ctx += r.l+'('+r.n+') ';}); ctx += '| '; }
-              if (md.custs && md.custs.length) { ctx += 'Customers: '; md.custs.slice(0,3).forEach(function(c){ctx += c.n+'('+c.c+') ';}); ctx += '| '; }
+              if (md.custs && md.custs.length) { ctx += 'Top rejected customers: '; md.custs.slice(0,5).forEach(function(c){ctx += c.n+'('+c.c+' rejections) ';}); ctx += '| '; }
+              // Daily breakdown per day of this month
+              if (md.data && Object.keys(md.data).length) {
+                ctx += 'Daily: ';
+                Object.keys(md.data).sort(function(a,b){return parseInt(a)-parseInt(b);}).forEach(function(day) {
+                  var dd = md.data[day];
+                  if (dd && dd.tRej > 0) {
+                    var dr = dd.tDel > 0 ? ((dd.tRej/dd.tDel)*100).toFixed(1) : 0;
+                    ctx += 'Day' + day + ':' + dd.tRej + ' rej/' + dd.tDel + ' del(' + dr + '%)';
+                    if (dd.food !== undefined) ctx += ' Food:' + (dd.food||0) + ' NonFood:' + (dd.nonfood||0);
+                    if (dd.custs && dd.custs.length) { ctx += ' TopCusts:'; dd.custs.slice(0,3).forEach(function(c){ctx += c.n+'('+c.c+'),';}); }
+                    ctx += ' | ';
+                  }
+                });
+              }
             }
           });
         }
@@ -6656,34 +6671,70 @@ function executeVoiceAction(action, detail) {
   try {
     if (!action || action === 'none') return;
     var d = (detail || '').toLowerCase();
+    var MMAP = {'january':1,'jan':1,'february':2,'feb':2,'march':3,'mar':3,'april':4,'apr':4,'may':5,'june':6,'jun':6,'july':7,'jul':7,'august':8,'aug':8,'september':9,'sep':9,'october':10,'oct':10,'november':11,'nov':11,'december':12,'dec':12};
 
+    // ── NAVIGATE ──────────────────────────────────────
     if (action === 'navigate') {
-      var tabs = {dispatch:'dispatch',rejection:'rejection',returns:'returns',backlog:'backlog',sales:'sales',summary:'summary',email:'email',invoice:'invoice'};
+      var tabs = {dispatch:'dispatch',rejection:'rejection',returns:'returns',backlog:'backlog',sales:'sales',summary:'summary',email:'email',invoice:'invoice',automation:'automation',delivery:'delivery',geninfo:'geninfo'};
       Object.keys(tabs).forEach(function(k) {
         if (d.includes(k) && typeof goTab === 'function') goTab(tabs[k], null);
       });
     }
 
+    // ── FILTER DISPATCH ───────────────────────────────
     if (action === 'filter' && VC_CURRENT_TAB === 'dispatch') {
-      var routes = ['DCV','DGC','DCF','DGS','DPS','DSN','TPW'];
-      routes.forEach(function(r) {
+      ['DCV','DGC','DCF','DGS','DPS','DSN','TPW'].forEach(function(r) {
         if (detail.toUpperCase().includes(r) && typeof dsFilter === 'function') dsFilter('route', r);
       });
-      var cities = ['Dubai','AbuDhabi','Sharjah','Ajman','AlAin','RAK','Fujairah','UAQ'];
-      cities.forEach(function(c) {
+      ['Dubai','AbuDhabi','Sharjah','Ajman','AlAin','RAK','Fujairah','UAQ'].forEach(function(c) {
         if (d.includes(c.toLowerCase()) && typeof dsFilter === 'function') dsFilter('city', c);
       });
+      if (d.includes('food') && !d.includes('non') && typeof dsFilter === 'function') dsFilter('type','food');
+      else if ((d.includes('non food')||d.includes('nonfood')) && typeof dsFilter === 'function') dsFilter('type','nonfood');
     }
 
+    // ── FILTER REJECTION ──────────────────────────────
+    if (action === 'filter' && VC_CURRENT_TAB === 'rejection') {
+      // Month
+      Object.keys(MMAP).forEach(function(name) {
+        if (d.includes(name)) { rejMonth = MMAP[name]; if (typeof renderRejection === 'function') renderRejection(); }
+      });
+      // ORG
+      ['DCV','DGC','DCF','DGS','DPS','DSN'].forEach(function(org) {
+        if (detail.toUpperCase().includes(org)) { rejORG = org; if (typeof renderRejection === 'function') renderRejection(); }
+      });
+      // Food/nonfood type
+      if (d.includes('food') && !d.includes('non')) { rejType = 'food'; if (typeof renderRejection === 'function') renderRejection(); }
+      else if (d.includes('non food')||d.includes('nonfood')) { rejType = 'nonfood'; if (typeof renderRejection === 'function') renderRejection(); }
+      // Day — "day 3" or "3rd" or just number
+      var dayM = d.match(/day\s*(\d{1,2})|(\d{1,2})(st|nd|rd|th)/);
+      if (dayM) {
+        var dn = parseInt(dayM[1]||dayM[2]);
+        if (dn >= 1 && dn <= 31) {
+          rejDay = dn;
+          // Also click that day button if available
+          var dayBtn = document.querySelector('[data-day="'+dn+'"]') || document.querySelector('.day-btn[onclick*="'+dn+'"]');
+          if (dayBtn) dayBtn.click();
+          if (typeof renderRejection === 'function') renderRejection();
+        }
+      }
+      // Reset all = go back to all
+      if (d === 'all' || d === 'reset' || d === 'clear') {
+        rejMonth = 'all'; rejORG = 'all'; rejDay = 'all'; rejType = 'all';
+        if (typeof renderRejection === 'function') renderRejection();
+      }
+    }
+
+    // ── FILTER RETURNS ────────────────────────────────
     if (action === 'filter' && VC_CURRENT_TAB === 'returns') {
       if (d.includes('invoice')) retFilter('cat','Invoice Cancellation');
       else if (d.includes('grv')) retFilter('cat','GRV-Return');
       if (d.includes('food') && !d.includes('non')) retFilter('bu','food');
-      else if (d.includes('non')) retFilter('bu','nonfood');
-      ['DCV','DGC','DCF','DGS','DLL','DGN'].forEach(function(w) {
-        if (detail.toUpperCase().includes(w)) retFilter('wh', w);
-      });
+      else if (d.includes('non food')||d.includes('nonfood')) retFilter('bu','nonfood');
+      ['DCV','DGC','DCF','DGS','DLL','DGN'].forEach(function(w) { if (detail.toUpperCase().includes(w)) retFilter('wh', w); });
+      Object.keys(MMAP).forEach(function(name) { if (d.includes(name)) retFilter('month', MMAP[name]); });
     }
+
   } catch(e) { console.error('Voice action error:', e); }
 }
 
