@@ -6216,114 +6216,18 @@ async function processVoiceCommandFS(text) {
     document.getElementById('jarvis-answer-fs').style.display = 'block';
     document.getElementById('jarvis-interim-fs').textContent = '';
 
-    // Speak the answer
+    // Speak the answer — auto-listen fires EXACTLY when speech ends via onDone callback
     setJarvisOrb('speaking');
     document.getElementById('jarvis-status').textContent = 'JARVIS SPEAKING...';
     document.getElementById('jarvis-status').style.color = '#4ecb8d';
-    jarvisSpeak(parsed.answer || 'No answer.');
 
-    // After Jarvis finishes speaking — AUTO RESTART LISTENING for follow-up
-    var speakDuration = (parsed.answer || '').length * 60 + 1500;
-    setTimeout(function() {
-      // Check panel still open before restarting
+    jarvisSpeak(parsed.answer || 'No answer.', function() {
+      // Called exactly when Jarvis finishes speaking
       var fsPanel = document.getElementById('jarvis-fullscreen');
       if (!fsPanel || fsPanel.style.display === 'none') return;
 
-      setJarvisOrb('listening');
-      document.getElementById('jarvis-status').textContent = 'LISTENING — ASK FOLLOW-UP OR SAY GOODBYE...';
-      document.getElementById('jarvis-status').style.color = '#e84b4b';
-      var qEl = document.getElementById('jarvis-quick-cmds');
-      if (qEl) qEl.style.display = 'none';
-
-      // Auto-restart microphone — no tap needed
-      var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (!SpeechRecognition) return;
-      var autoRec = new SpeechRecognition();
-      autoRec.lang = 'en-US';
-      autoRec.continuous = false;
-      autoRec.interimResults = true;
-      vcListening = true;
-      vcRecognition = autoRec;
-
-      var autoSilenceTimer = null;
-      var autoFinal = '';
-
-      autoRec.onresult = function(event) {
-        var interim = '', final = '';
-        for (var i = event.resultIndex; i < event.results.length; i++) {
-          if (event.results[i].isFinal) final += event.results[i][0].transcript;
-          else interim += event.results[i][0].transcript;
-        }
-        var interimEl = document.getElementById('jarvis-interim-fs');
-        if (interimEl) interimEl.textContent = '"' + (interim || final) + '"';
-        if (autoSilenceTimer) clearTimeout(autoSilenceTimer);
-        if (final) {
-          autoFinal = final.trim();
-          // Check if user said goodbye
-          if (/bye|goodbye|thanks|thank you|close|exit|stop|that.s all|no thanks/i.test(autoFinal)) {
-            stopVoiceCommand();
-            setJarvisOrb('speaking');
-            document.getElementById('jarvis-status').textContent = 'GOODBYE...';
-            jarvisSpeak('Alright, take care! Have a great day!');
-            setTimeout(function() {
-              if (fsPanel) fsPanel.style.display = 'none';
-              JARVIS_HISTORY = [];
-            }, 2500);
-            return;
-          }
-          autoSilenceTimer = setTimeout(function() {
-            stopVoiceCommand();
-            if (autoFinal) processVoiceCommandFS(autoFinal);
-          }, 1200);
-        }
-      };
-
-      autoRec.onerror = function(e) {
-        vcListening = false;
-        // On error or no-speech — just go idle, let user tap manually
-        setJarvisOrb('idle');
-        document.getElementById('jarvis-status').textContent = 'TAP MIC TO CONTINUE...';
-        document.getElementById('jarvis-status').style.color = '#7a7660';
-        var qEl2 = document.getElementById('jarvis-quick-cmds');
-        if (qEl2) { qEl2.style.display = 'block'; buildQuickCmds(); }
-        // Auto-close after 8 seconds of no activity
-        JARVIS_SILENCE_TIMER = setTimeout(function() {
-          var fp = document.getElementById('jarvis-fullscreen');
-          if (fp && fp.style.display !== 'none') {
-            jarvisSpeak('Alright, I will leave you to it. Have a great day!');
-            setTimeout(function() {
-              if (fp) fp.style.display = 'none';
-              JARVIS_HISTORY = [];
-            }, 2500);
-          }
-        }, 8000);
-      };
-
-      autoRec.onend = function() {
-        // If nothing said and panel still open — go idle
-        if (!autoFinal) {
-          vcListening = false;
-          setJarvisOrb('idle');
-          document.getElementById('jarvis-status').textContent = 'TAP MIC TO CONTINUE...';
-          document.getElementById('jarvis-status').style.color = '#7a7660';
-          var qEl3 = document.getElementById('jarvis-quick-cmds');
-          if (qEl3) { qEl3.style.display = 'block'; buildQuickCmds(); }
-          JARVIS_SILENCE_TIMER = setTimeout(function() {
-            var fp2 = document.getElementById('jarvis-fullscreen');
-            if (fp2 && fp2.style.display !== 'none') {
-              jarvisSpeak('Alright, I will leave you to it. Have a great day!');
-              setTimeout(function() {
-                if (fp2) fp2.style.display = 'none';
-                JARVIS_HISTORY = [];
-              }, 2500);
-            }
-          }, 8000);
-        }
-      };
-
-      autoRec.start();
-
-    }, speakDuration);
+      jarvisAutoListen(fsPanel);
+    });
 
   } catch(e) {
     if (JARVIS_HISTORY.length > 0 && JARVIS_HISTORY[JARVIS_HISTORY.length-1].role === 'user') {
@@ -6334,6 +6238,114 @@ async function processVoiceCommandFS(text) {
     document.getElementById('jarvis-text-fs').textContent = 'Sorry, something went wrong. Please try again.';
     document.getElementById('jarvis-answer-fs').style.display = 'block';
   }
+}
+
+
+function jarvisAutoListen(fsPanel) {
+  // Cancel any pending silence timer
+  if (JARVIS_SILENCE_TIMER) { clearTimeout(JARVIS_SILENCE_TIMER); JARVIS_SILENCE_TIMER = null; }
+
+  var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    // Browser doesn't support auto-listen — go idle, let user tap
+    setJarvisOrb('idle');
+    document.getElementById('jarvis-status').textContent = 'TAP MIC TO CONTINUE...';
+    document.getElementById('jarvis-status').style.color = '#7a7660';
+    var qElFb = document.getElementById('jarvis-quick-cmds');
+    if (qElFb) { qElFb.style.display = 'block'; buildQuickCmds(); }
+    return;
+  }
+
+  setJarvisOrb('listening');
+  document.getElementById('jarvis-status').textContent = 'LISTENING... ASK FOLLOW-UP OR SAY BYE';
+  document.getElementById('jarvis-status').style.color = '#e84b4b';
+  var qEl = document.getElementById('jarvis-quick-cmds');
+  if (qEl) qEl.style.display = 'none';
+
+  var autoRec = new SpeechRecognition();
+  autoRec.lang = 'en-US';
+  autoRec.continuous = false;
+  autoRec.interimResults = true;
+  vcListening = true;
+  vcRecognition = autoRec;
+
+  var autoSilenceTimer = null;
+  var autoFinal = '';
+  var gotSomething = false;
+
+  autoRec.onresult = function(event) {
+    var interim = '', final = '';
+    for (var i = event.resultIndex; i < event.results.length; i++) {
+      if (event.results[i].isFinal) final += event.results[i][0].transcript;
+      else interim += event.results[i][0].transcript;
+    }
+    gotSomething = true;
+    var interimEl = document.getElementById('jarvis-interim-fs');
+    if (interimEl) interimEl.textContent = '"' + (interim || final) + '"';
+    if (autoSilenceTimer) clearTimeout(autoSilenceTimer);
+    if (final) {
+      autoFinal = final.trim();
+      // Goodbye phrases — close gracefully
+      if (/^(bye|goodbye|thanks|thank you|close|exit|stop|that.s all|no thanks|ok thanks|okay thanks)/i.test(autoFinal)) {
+        stopVoiceCommand();
+        setJarvisOrb('speaking');
+        document.getElementById('jarvis-status').textContent = 'GOODBYE...';
+        jarvisSpeak('Alright, take care! Have a great day!');
+        setTimeout(function() {
+          if (fsPanel) fsPanel.style.display = 'none';
+          JARVIS_HISTORY = [];
+        }, 2500);
+        return;
+      }
+      // Real question — process it
+      autoSilenceTimer = setTimeout(function() {
+        vcListening = false;
+        if (autoFinal) processVoiceCommandFS(autoFinal);
+      }, 1000);
+    }
+  };
+
+  autoRec.onerror = function(e) {
+    vcListening = false;
+    // no-speech is normal — just go idle
+    setJarvisOrb('idle');
+    document.getElementById('jarvis-status').textContent = 'TAP MIC TO CONTINUE...';
+    document.getElementById('jarvis-status').style.color = '#7a7660';
+    var qEl2 = document.getElementById('jarvis-quick-cmds');
+    if (qEl2) { qEl2.style.display = 'block'; buildQuickCmds(); }
+    // Auto-close after 10s silence
+    JARVIS_SILENCE_TIMER = setTimeout(function() {
+      if (fsPanel && fsPanel.style.display !== 'none') {
+        jarvisSpeak('Alright, I will leave you to it. Have a great day!');
+        setTimeout(function() {
+          if (fsPanel) fsPanel.style.display = 'none';
+          JARVIS_HISTORY = [];
+        }, 2500);
+      }
+    }, 10000);
+  };
+
+  autoRec.onend = function() {
+    if (!gotSomething && !autoFinal) {
+      vcListening = false;
+      setJarvisOrb('idle');
+      document.getElementById('jarvis-status').textContent = 'TAP MIC TO CONTINUE...';
+      document.getElementById('jarvis-status').style.color = '#7a7660';
+      var qEl3 = document.getElementById('jarvis-quick-cmds');
+      if (qEl3) { qEl3.style.display = 'block'; buildQuickCmds(); }
+      JARVIS_SILENCE_TIMER = setTimeout(function() {
+        if (fsPanel && fsPanel.style.display !== 'none') {
+          jarvisSpeak('Alright, I will leave you to it. Have a great day!');
+          setTimeout(function() {
+            if (fsPanel) fsPanel.style.display = 'none';
+            JARVIS_HISTORY = [];
+          }, 2500);
+        }
+      }, 10000);
+    }
+  };
+
+  autoRec.start();
 }
 
 function startVoiceCommand() {
@@ -6816,7 +6828,7 @@ function jarvisStopAll() {
 // Keep old name as alias
 function jarvisStop() { jarvisStopAll(); }
 
-function jarvisSpeak(text) {
+function jarvisSpeak(text, onDone) {
   if (!window.speechSynthesis) return;
   window.speechSynthesis.cancel();
   // Show stop buttons while speaking
@@ -6890,6 +6902,7 @@ function jarvisSpeak(text) {
     utter.onend = function(){
       if(micBtn) micBtn.style.color = '';
       if(orbEl){ orbEl.style.background='rgba(201,168,76,0.1)'; orbEl.style.borderColor='rgba(201,168,76,0.4)'; orbEl.style.boxShadow='none'; }
+      if (typeof onDone === 'function') onDone();
     };
     window.speechSynthesis.speak(utter);
   }
