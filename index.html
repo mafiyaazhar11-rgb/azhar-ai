@@ -6422,16 +6422,24 @@ function buildVoiceContext() {
               ctx += (MNAMES_R[parseInt(mo)]||mo) + ':' + md.tRej + ' rej ' + md.tDel + ' del(' + mR + '%) ' + (md.val||'') + ' | ';
               if (md.reasons && md.reasons.length) { ctx += 'Reasons: '; md.reasons.slice(0,3).forEach(function(r){ctx += r.l+'('+r.n+') ';}); ctx += '| '; }
               if (md.custs && md.custs.length) { ctx += 'Top rejected customers: '; md.custs.slice(0,5).forEach(function(c){ctx += c.n+'('+c.c+' rejections) ';}); ctx += '| '; }
-              // Daily breakdown per day of this month
+              // Daily breakdown per day of this month — full detail
               if (md.data && Object.keys(md.data).length) {
-                ctx += 'Daily: ';
+                ctx += 'Daily breakdown: ';
                 Object.keys(md.data).sort(function(a,b){return parseInt(a)-parseInt(b);}).forEach(function(day) {
                   var dd = md.data[day];
-                  if (dd && dd.tRej > 0) {
+                  if (dd && (dd.tRej > 0 || dd.tDel > 0)) {
                     var dr = dd.tDel > 0 ? ((dd.tRej/dd.tDel)*100).toFixed(1) : 0;
-                    ctx += 'Day' + day + ':' + dd.tRej + ' rej/' + dd.tDel + ' del(' + dr + '%)';
-                    if (dd.food !== undefined) ctx += ' Food:' + (dd.food||0) + ' NonFood:' + (dd.nonfood||0);
-                    if (dd.custs && dd.custs.length) { ctx += ' TopCusts:'; dd.custs.slice(0,3).forEach(function(c){ctx += c.n+'('+c.c+'),';}); }
+                    ctx += 'Day' + day + ':' + (dd.tRej||0) + ' rej/' + (dd.tDel||0) + ' del(' + dr + '%)';
+                    if (dd.food_rej !== undefined) ctx += ' Food:' + (dd.food_rej||0) + ' NonFood:' + (dd.nonfood_rej||0);
+                    if (dd.val) ctx += ' ' + dd.val;
+                    if (dd.custs && dd.custs.length) {
+                      ctx += ' Customers:';
+                      dd.custs.slice(0,5).forEach(function(c){ ctx += c.n + '(' + c.c + 'rej)'; });
+                    }
+                    if (dd.reasons && dd.reasons.length) {
+                      ctx += ' Reasons:';
+                      dd.reasons.slice(0,3).forEach(function(r){ ctx += r.l + '(' + r.n + ')'; });
+                    }
                     ctx += ' | ';
                   }
                 });
