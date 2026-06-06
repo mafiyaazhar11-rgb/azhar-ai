@@ -913,7 +913,7 @@ app.post('/api/voice', requireAuth, async function(req, res) {
       '\n- Use EXACT numbers from data below. Never guess or make up numbers.' +
       '\n- If data not available say: I do not have that data, please upload the file.' +
       '\n- Keep answers short — 2 to 3 sentences.' +
-      '\n- For daily rejection questions: look in Daily section under the month — format is Day3, Day15 etc.' +
+      '\n- For daily rejection questions (e.g. 'June 3rd', 'day 3 June'): find the month in rejection data, then look for 'Day3:' entry in Daily breakdown. The format is Day1, Day2, Day3 etc. Give tRej, tDel, rejection rate, food/nonfood split, and top customers for that day.' +
       '\n- For driver questions: look in All Drivers section — has name, drops, orders, AED value.' +
       '\n- Phone numbers starting 971: say plus 971 then read digits in groups.' +
       '\n\nFILTER ACTIONS — when user asks to filter/show specific data, set action=filter:' +
