@@ -5922,6 +5922,7 @@ var vcListening = false;
 var vcRecognition = null;
 var VC_CURRENT_TAB = 'dispatch';
 var JARVIS_HISTORY = [];
+var JARVIS_LANG = { speech: 'en-US', label: 'EN', name: 'English' };
 
 function toggleVoiceCommand() {
   // On mobile - open fullscreen JARVIS mode
@@ -6012,6 +6013,35 @@ function askJarvisQuick(text) {
   processVoiceCommandFS(text);
 }
 
+function setJarvisLang(code, label, name) {
+  JARVIS_LANG = { speech: code, label: label, name: name };
+  JARVIS_HISTORY = []; // reset conversation when language changes
+  // Update button styles
+  ['en','ar','hi','ta','ur'].forEach(function(l) {
+    var btn = document.getElementById('jl-' + l);
+    if (!btn) return;
+    btn.style.background = 'transparent';
+    btn.style.color = '#7a7660';
+    btn.style.borderColor = 'rgba(201,168,76,0.3)';
+  });
+  var activeBtn = document.getElementById('jl-' + label.toLowerCase().substring(0,2));
+  if (activeBtn) {
+    activeBtn.style.background = 'rgba(201,168,76,0.2)';
+    activeBtn.style.color = '#c9a84c';
+    activeBtn.style.borderColor = '#c9a84c';
+  }
+  // Update status
+  var statusEl = document.getElementById('jarvis-status');
+  if (statusEl) {
+    statusEl.textContent = name.toUpperCase() + ' — TAP MIC TO SPEAK';
+    statusEl.style.color = '#c9a84c';
+    setTimeout(function() {
+      statusEl.textContent = 'TAP MIC TO SPEAK';
+      statusEl.style.color = '#7a7660';
+    }, 1500);
+  }
+}
+
 function openJarvisFullscreen() {
   var fs = document.getElementById('jarvis-fullscreen');
   if (fs) {
@@ -6099,7 +6129,7 @@ function startVoiceCommandFS() {
 function startJarvisRecognition() {
   var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   vcRecognition = new SpeechRecognition();
-  vcRecognition.lang = 'en-US';
+  vcRecognition.lang = JARVIS_LANG.speech;
   vcRecognition.continuous = true;
   vcRecognition.interimResults = true;
 
@@ -6166,7 +6196,7 @@ async function processVoiceCommandFS(text) {
     var response = await fetch('/api/voice', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-auth-token': AUTH_TOKEN },
-      body: JSON.stringify({ text: text, context: context, tab: VC_CURRENT_TAB, history: JARVIS_HISTORY.slice(-16) })
+      body: JSON.stringify({ text: text, context: context, tab: VC_CURRENT_TAB, history: JARVIS_HISTORY.slice(-16), lang: JARVIS_LANG.name })
     });
     var data = await response.json();
     if (!data.success) throw new Error(data.error || 'Error');
@@ -6224,7 +6254,7 @@ function startVoiceCommand() {
     stream.getTracks().forEach(function(t) { t.stop(); });
 
     vcRecognition = new SpeechRecognition();
-    vcRecognition.lang = 'en-US';
+    vcRecognition.lang = JARVIS_LANG.speech;
     vcRecognition.continuous = true;
     vcRecognition.interimResults = true;
 
@@ -7155,6 +7185,15 @@ window.addEventListener('load', authBoot);
   
   <!-- Close button -->
   <button onclick="closeJarvisFullscreen()" style="position:absolute;top:16px;right:16px;background:transparent;border:1px solid rgba(255,255,255,0.15);color:#7a7660;font-size:12px;padding:6px 14px;cursor:pointer;font-family:Montserrat,sans-serif;letter-spacing:1px;">✕ CLOSE</button>
+
+  <!-- Language selector -->
+  <div style="position:absolute;top:16px;left:16px;display:flex;gap:6px;flex-wrap:wrap;max-width:220px;" id="jarvis-lang-selector">
+    <button onclick="setJarvisLang('en-US','EN','English')" id="jl-en" style="background:rgba(201,168,76,0.2);border:1px solid #c9a84c;color:#c9a84c;font-size:10px;padding:4px 9px;cursor:pointer;font-family:Montserrat,sans-serif;border-radius:3px;">EN</button>
+    <button onclick="setJarvisLang('ar-AE','AR','Arabic')" id="jl-ar" style="background:transparent;border:1px solid rgba(201,168,76,0.3);color:#7a7660;font-size:10px;padding:4px 9px;cursor:pointer;font-family:Montserrat,sans-serif;border-radius:3px;">عربي</button>
+    <button onclick="setJarvisLang('hi-IN','HI','Hindi')" id="jl-hi" style="background:transparent;border:1px solid rgba(201,168,76,0.3);color:#7a7660;font-size:10px;padding:4px 9px;cursor:pointer;font-family:Montserrat,sans-serif;border-radius:3px;">हिंदी</button>
+    <button onclick="setJarvisLang('ta-IN','TA','Tamil')" id="jl-ta" style="background:transparent;border:1px solid rgba(201,168,76,0.3);color:#7a7660;font-size:10px;padding:4px 9px;cursor:pointer;font-family:Montserrat,sans-serif;border-radius:3px;">தமிழ்</button>
+    <button onclick="setJarvisLang('ur-PK','UR','Urdu')" id="jl-ur" style="background:transparent;border:1px solid rgba(201,168,76,0.3);color:#7a7660;font-size:10px;padding:4px 9px;cursor:pointer;font-family:Montserrat,sans-serif;border-radius:3px;">اردو</button>
+  </div>
 
   <!-- JARVIS identity -->
   <div style="text-align:center;margin-bottom:32px;">
