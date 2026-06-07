@@ -6019,15 +6019,12 @@ function setJarvisLang(code, label, name) {
   ['en','ar','hi','ta','ur'].forEach(function(l) {
     var b = document.getElementById('jl-' + l);
     if (!b) return;
-    b.style.background = 'transparent';
-    b.style.color = '#7a7660';
-    b.style.borderColor = 'rgba(201,168,76,0.3)';
+    b.style.background = 'transparent'; b.style.color = '#7a7660'; b.style.borderColor = 'rgba(201,168,76,0.3)';
   });
   var ab = document.getElementById('jl-' + label);
   if (ab) { ab.style.background = 'rgba(201,168,76,0.2)'; ab.style.color = '#c9a84c'; ab.style.borderColor = '#c9a84c'; }
   var st = document.getElementById('jarvis-status');
-  if (st) { st.textContent = name.toUpperCase() + ' MODE — TAP MIC'; st.style.color = '#c9a84c';
-    setTimeout(function(){ st.textContent = 'TAP MIC TO SPEAK'; st.style.color = '#7a7660'; }, 1500); }
+  if (st) { st.textContent = name.toUpperCase() + ' — TAP MIC'; st.style.color = '#c9a84c'; setTimeout(function(){ st.textContent = 'TAP MIC TO SPEAK'; st.style.color = '#7a7660'; }, 1500); }
 }
 
 function openJarvisFullscreen() {
@@ -6040,7 +6037,6 @@ function openJarvisFullscreen() {
     document.getElementById('jarvis-status').style.color = '#7a7660';
     setJarvisOrb('idle');
     JARVIS_HISTORY = [];
-    // Highlight active language button
     var ab2 = document.getElementById('jl-' + JARVIS_LANG.label);
     if (ab2) { ab2.style.background = 'rgba(201,168,76,0.2)'; ab2.style.color = '#c9a84c'; ab2.style.borderColor = '#c9a84c'; }
     // Show quick commands for current dashboard
@@ -6198,7 +6194,7 @@ async function processVoiceCommandFS(text) {
     JARVIS_HISTORY.push({ role: 'assistant', content: parsed.answer || '' });
     if (JARVIS_HISTORY.length > 20) JARVIS_HISTORY = JARVIS_HISTORY.slice(-20);
 
-    // Execute action — auto filter
+    // Execute action
     if (parsed.action && parsed.action !== 'none') {
       executeVoiceAction(parsed.action, parsed.action_detail);
     }
@@ -6210,80 +6206,38 @@ async function processVoiceCommandFS(text) {
     document.getElementById('jarvis-answer-fs').style.display = 'block';
     document.getElementById('jarvis-interim-fs').textContent = '';
 
-    // Speak + show speaking orb
+    // Speak then auto-restart mic
     setJarvisOrb('speaking');
     document.getElementById('jarvis-status').textContent = 'JARVIS SPEAKING...';
     document.getElementById('jarvis-status').style.color = '#4ecb8d';
-    
     jarvisSpeak(parsed.answer || 'No answer.');
-    
-    // After speaking — wait then auto-restart mic for next question
-    var speakMs = Math.min(Math.max((parsed.answer || '').length * 55, 1500), 8000);
+
+    var speakMs = Math.min(Math.max((parsed.answer||'').length*55,1500),8000);
     setTimeout(function() {
       var fsPanel = document.getElementById('jarvis-fullscreen');
       if (!fsPanel || fsPanel.style.display === 'none') return;
-      // Auto restart listening
+      var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SR) { setJarvisOrb('idle'); document.getElementById('jarvis-status').textContent = 'TAP MIC TO CONTINUE'; document.getElementById('jarvis-status').style.color='#7a7660'; return; }
       try {
-        var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-        if (!SR) throw new Error('no SR');
-        var ar = new SR();
-        ar.lang = JARVIS_LANG.speech;
-        ar.continuous = false;
-        ar.interimResults = true;
-        vcListening = true;
-        vcRecognition = ar;
-        var arFinal = '';
-        var arTimer = null;
-        setJarvisOrb('listening');
-        document.getElementById('jarvis-status').textContent = 'LISTENING...';
-        document.getElementById('jarvis-status').style.color = '#e84b4b';
+        var ar = new SR(); ar.lang = JARVIS_LANG.speech; ar.continuous = false; ar.interimResults = true;
+        vcListening = true; vcRecognition = ar;
+        var arFinal = ''; var arTimer = null;
+        setJarvisOrb('listening'); document.getElementById('jarvis-status').textContent = 'LISTENING...'; document.getElementById('jarvis-status').style.color = '#e84b4b';
         ar.onresult = function(ev) {
-          var interim = '', final = '';
-          for (var i = ev.resultIndex; i < ev.results.length; i++) {
-            if (ev.results[i].isFinal) final += ev.results[i][0].transcript;
-            else interim += ev.results[i][0].transcript;
-          }
-          var intEl = document.getElementById('jarvis-interim-fs');
-          if (intEl) intEl.textContent = interim || final;
-          if (arTimer) clearTimeout(arTimer);
-          if (final) {
-            arFinal = final.trim();
-            arTimer = setTimeout(function() {
-              vcListening = false;
-              if (arFinal) processVoiceCommandFS(arFinal);
-            }, 900);
-          }
+          var interim='',final='';
+          for(var i=ev.resultIndex;i<ev.results.length;i++){if(ev.results[i].isFinal)final+=ev.results[i][0].transcript;else interim+=ev.results[i][0].transcript;}
+          var intEl=document.getElementById('jarvis-interim-fs'); if(intEl)intEl.textContent=interim||final;
+          if(arTimer)clearTimeout(arTimer);
+          if(final){arFinal=final.trim();arTimer=setTimeout(function(){vcListening=false;if(arFinal)processVoiceCommandFS(arFinal);},900);}
         };
-        ar.onerror = function() {
-          vcListening = false;
-          setJarvisOrb('idle');
-          document.getElementById('jarvis-status').textContent = 'TAP MIC TO CONTINUE';
-          document.getElementById('jarvis-status').style.color = '#7a7660';
-          var qEl = document.getElementById('jarvis-quick-cmds');
-          if (qEl) { qEl.style.display = 'block'; buildQuickCmds(); }
-        };
-        ar.onend = function() {
-          if (!arFinal) {
-            vcListening = false;
-            setJarvisOrb('idle');
-            document.getElementById('jarvis-status').textContent = 'TAP MIC TO CONTINUE';
-            document.getElementById('jarvis-status').style.color = '#7a7660';
-            var qEl = document.getElementById('jarvis-quick-cmds');
-            if (qEl) { qEl.style.display = 'block'; buildQuickCmds(); }
-          }
-        };
+        ar.onerror=function(){vcListening=false;setJarvisOrb('idle');document.getElementById('jarvis-status').textContent='TAP MIC TO CONTINUE';document.getElementById('jarvis-status').style.color='#7a7660';var qEl=document.getElementById('jarvis-quick-cmds');if(qEl){qEl.style.display='block';buildQuickCmds();}};
+        ar.onend=function(){if(!arFinal){vcListening=false;setJarvisOrb('idle');document.getElementById('jarvis-status').textContent='TAP MIC TO CONTINUE';document.getElementById('jarvis-status').style.color='#7a7660';var qEl2=document.getElementById('jarvis-quick-cmds');if(qEl2){qEl2.style.display='block';buildQuickCmds();}}};
         ar.start();
-      } catch(ex) {
-        vcListening = false;
-        setJarvisOrb('idle');
-        document.getElementById('jarvis-status').textContent = 'TAP MIC TO CONTINUE';
-        document.getElementById('jarvis-status').style.color = '#7a7660';
-        var qEl2 = document.getElementById('jarvis-quick-cmds');
-        if (qEl2) { qEl2.style.display = 'block'; buildQuickCmds(); }
-      }
+      } catch(ex){vcListening=false;setJarvisOrb('idle');document.getElementById('jarvis-status').textContent='TAP MIC TO CONTINUE';document.getElementById('jarvis-status').style.color='#7a7660';}
     }, speakMs);
 
   } catch(e) {
+    if(JARVIS_HISTORY.length>0&&JARVIS_HISTORY[JARVIS_HISTORY.length-1].role==='user')JARVIS_HISTORY.pop();
     setJarvisOrb('idle');
     document.getElementById('jarvis-status').textContent = 'ERROR - TRY AGAIN';
     document.getElementById('jarvis-text-fs').textContent = 'Sorry, I could not process that. Please try again.';
@@ -6390,17 +6344,12 @@ async function processVoiceCommand(text) {
     var response = await fetch('/api/voice', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-auth-token': AUTH_TOKEN },
-      body: JSON.stringify({ text: text, context: context, tab: VC_CURRENT_TAB, history: JARVIS_HISTORY.slice(-16), lang: JARVIS_LANG.name })
+      body: JSON.stringify({ text: text, context: context, tab: VC_CURRENT_TAB })
     });
 
     var data = await response.json();
     if (!data.success) throw new Error(data.error || 'Server error');
     var parsed = data.result;
-
-    // Save to conversation history
-    JARVIS_HISTORY.push({ role: 'user', content: text });
-    JARVIS_HISTORY.push({ role: 'assistant', content: parsed.answer || '' });
-    if (JARVIS_HISTORY.length > 20) JARVIS_HISTORY = JARVIS_HISTORY.slice(-20);
 
     // Execute action if needed
     if (parsed.action && parsed.action !== 'none') {
@@ -6428,246 +6377,181 @@ async function processVoiceCommand(text) {
 }
 
 function buildVoiceContext() {
-  // Build active filter state so Jarvis knows what's currently selected
-  var activeFilters = '';
-  if (VC_CURRENT_TAB === 'rejection') {
-    var MN_F = {1:'January',2:'February',3:'March',4:'April',5:'May',6:'June',7:'July',8:'August',9:'September',10:'October',11:'November',12:'December'};
-    activeFilters += 'ACTIVE_FILTERS on rejection dashboard: ';
-    activeFilters += 'Month=' + (rejMonth === 'all' ? 'All Months' : (MN_F[rejMonth]||rejMonth)) + ' ';
-    activeFilters += 'Type=' + (rejType === 'all' ? 'All Types' : rejType) + ' ';
-    activeFilters += 'ORG=' + (rejORG === 'all' ? 'All ORGs' : rejORG) + ' ';
-    activeFilters += 'Day=' + (rejDay === 'all' ? 'All Days' : ('Day '+rejDay)) + ' ';
-    activeFilters += 'Source=' + (rejSrc === 'all' ? 'All Sources' : rejSrc) + ' | ';
-    // Get currently filtered data result
-    try {
-      var fd = getFilteredData();
-      if (fd) {
-        // Grand total = same calculation as screen: all-type data for current month/day filter
-        var _savedType2 = rejType, _savedSrc2 = rejSrc;
-        rejType = 'all'; rejSrc = 'all';
-        var fdAll = getFilteredData();
-        rejType = _savedType2; rejSrc = _savedSrc2;
-        var fGrandTotal = fdAll ? ((fdAll.tRej||0)+(fdAll.tDel||0)) : 1;
-        var fRate = (fd.tRej+fd.tDel) > 0 ? ((fd.tRej/(fd.tRej+fd.tDel))*100).toFixed(2) : 0;
-        var fContrib = fGrandTotal > 0 ? ((fd.tRej/fGrandTotal)*100).toFixed(2) : 0;
-        activeFilters += 'CURRENT_FILTERED_RESULT: tRej=' + fd.tRej + ' tDel=' + fd.tDel;
-        activeFilters += ' rate=' + fRate + '% contrib=' + fContrib + '%';
-        activeFilters += ' val=' + (fd.val||'') + ' foodRej=' + (fd.food_rej||0) + ' nonFoodRej=' + (fd.nonfood_rej||0);
-        if (fd.reasons && fd.reasons.length) {
-          activeFilters += ' TopReasons:';
-          fd.reasons.slice(0,5).forEach(function(r){activeFilters += r.l+'('+r.n+') ';});
-        }
-        if (fd.custs && fd.custs.length) {
-          activeFilters += ' TopCustomers:';
-          fd.custs.slice(0,10).forEach(function(c){activeFilters += c.n+'('+c.c+'rej) ';});
-        }
-        activeFilters += ' | ';
-      }
-    } catch(fe) { activeFilters += ' (filter read error) | '; }
-  }
-
-  var ctx = 'Current tab: ' + VC_CURRENT_TAB + '. ' + activeFilters + 'Full data below.\n\n';
+  var ctx = 'Current tab: ' + VC_CURRENT_TAB + '. All data below — answer ANY question from ANY dashboard.\n\n';
   try {
 
-    // ═══ DISPATCH ═══════════════════════════════════════════
+    // ═══ REJECTION ═══════════════════════════════════════════════
+    // Uses getFilteredData() same as screen — guaranteed same numbers
+    if (typeof ORG_DATA !== 'undefined' && ORG_DATA && typeof getFilteredData === 'function') {
+      var MN = {1:'January',2:'February',3:'March',4:'April',5:'May',6:'June',7:'July',8:'August',9:'September',10:'October',11:'November',12:'December'};
+      var MNS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      try {
+        ctx += '=== REJECTION ===\n';
+
+        // ── Current view (whatever is selected on screen) ──
+        var curFiltered = getFilteredData();
+        if (curFiltered) {
+          // Get grand total for contribution % (all-type, same month filter)
+          var _st=rejType,_ss=rejSrc; rejType='all'; rejSrc='all';
+          var allFiltered = getFilteredData();
+          rejType=_st; rejSrc=_ss;
+          var grandT = allFiltered ? (allFiltered.tRej+allFiltered.tDel) : 1;
+          var curRate = curFiltered.tDel+curFiltered.tRej > 0 ? ((curFiltered.tRej/(curFiltered.tRej+curFiltered.tDel))*100).toFixed(2) : 0;
+          var curContrib = grandT > 0 ? ((curFiltered.tRej/grandT)*100).toFixed(2) : 0;
+          ctx += 'SCREEN_NOW[Month=' + (rejMonth==='all'?'All':(MN[rejMonth]||rejMonth));
+          ctx += ' Type=' + (rejType==='all'?'All':rejType);
+          ctx += ' ORG=' + (rejORG==='all'?'All':rejORG);
+          ctx += ' Day=' + (rejDay==='all'?'AllDays':('Day'+rejDay)) + ']: ';
+          ctx += 'tRej=' + curFiltered.tRej + ' tDel=' + curFiltered.tDel;
+          ctx += ' rate=' + curRate + '% contrib=' + curContrib + '%';
+          ctx += ' val=' + (curFiltered.val||'');
+          ctx += ' foodRej=' + (curFiltered.food_rej||0) + ' nonFoodRej=' + (curFiltered.nonfood_rej||0);
+          if (curFiltered.reasons && curFiltered.reasons.length) {
+            ctx += ' TopReasons:';
+            curFiltered.reasons.slice(0,5).forEach(function(r){ctx+=r.l+'('+r.n+'),';});
+          }
+          if (curFiltered.custs && curFiltered.custs.length) {
+            ctx += ' TopCustomers:';
+            curFiltered.custs.slice(0,10).forEach(function(c){ctx+=c.n+'('+c.c+'rej),';});
+          }
+          ctx += ' | \n';
+        }
+
+        // ── Per-month breakdown using ORG arrays (same source as screen) ──
+        var allD = ORG_DATA['all'] || {};
+        var ytdGrand = (allD.tRej||0)+(allD.tDel||0);
+        ctx += 'YTD_TOTAL(allMonths): tRej=' + (allD.tRej||0) + ' tDel=' + (allD.tDel||0);
+        ctx += ' rate=' + (ytdGrand>0?((allD.tRej/ytdGrand)*100).toFixed(2):0) + '%';
+        ctx += ' val=' + (allD.val||'') + ' foodRej=' + (allD.food_rej||0) + ' nonFoodRej=' + (allD.nonfood_rej||0) + ' | \n';
+
+        // Per month from ORG_DATA arrays (same source as getFilteredData)
+        ctx += 'MONTHLY(using same source as screen):\n';
+        var _savedMonth=rejMonth,_savedDay=rejDay,_savedType2=rejType,_savedSrc2=rejSrc,_savedORG=rejORG;
+        rejDay='all'; rejSrc='all';
+        for (var mo=1; mo<=12; mo++) {
+          var moRej = (allD.rej&&allD.rej[mo-1]) ? allD.rej[mo-1] : 0;
+          var moDel = (allD.del&&allD.del[mo-1]) ? allD.del[mo-1] : 0;
+          if (moRej===0 && moDel===0) continue;
+          // Get this month all-types via getFilteredData for exact numbers
+          rejMonth=mo; rejType='all'; rejORG='all';
+          var moAllData = getFilteredData();
+          var moGrand = moAllData ? (moAllData.tRej+moAllData.tDel) : 1;
+          var moRate = moAllData && moGrand>0 ? ((moAllData.tRej/moGrand)*100).toFixed(2) : 0;
+          ctx += MN[mo]+'(mo='+mo+'): tRej='+moRej+' tDel='+moDel+' rate='+moRate+'% val='+(moAllData?(moAllData.val||''):'');
+          // Food data for this month
+          rejType='food'; rejORG='all';
+          var moFood = getFilteredData();
+          // Nonfood
+          rejType='nonfood'; rejORG='all';
+          var moNF = getFilteredData();
+          rejType='all';
+          if (moFood) ctx += ' foodRej='+(moFood.tRej||0)+' foodDel='+(moFood.tDel||0);
+          if (moNF) ctx += ' nonFoodRej='+(moNF.tRej||0)+' nonFoodDel='+(moNF.tDel||0);
+          // Reasons and customers from DAY_DATA (for display purposes only)
+          var mdx = (typeof DAY_DATA!=='undefined') ? (DAY_DATA[mo]||DAY_DATA[String(mo)]||{}) : {};
+          if (mdx.reasons&&mdx.reasons.length) { ctx+=' TopReasons:'; mdx.reasons.slice(0,5).forEach(function(r){ctx+=r.l+'('+r.n+'),';});}
+          if (mdx.custs&&mdx.custs.length) { ctx+=' TopCusts:'; mdx.custs.slice(0,8).forEach(function(c){ctx+=c.n+'('+c.c+'),';});}
+          ctx += ' | \n';
+          // Per day for this month
+          if (mdx.data && Object.keys(mdx.data).length) {
+            ctx += '  Days: ';
+            Object.keys(mdx.data).sort(function(a,b){return parseInt(a)-parseInt(b);}).forEach(function(day){
+              var dd=mdx.data[day];
+              if(!dd||(dd.tRej===0&&dd.tDel===0))return;
+              var dr=dd.tDel>0?((dd.tRej/(dd.tRej+dd.tDel))*100).toFixed(1):0;
+              ctx+='Day'+day+'[rej='+dd.tRej+'/del='+dd.tDel+'/rate='+dr+'%/food='+(dd.food_rej||0)+'/nf='+(dd.nonfood_rej||0);
+              if(dd.custs&&dd.custs.length){ctx+='/custs:';dd.custs.slice(0,3).forEach(function(c){ctx+=c.n+'('+c.c+'),';}); }
+              if(dd.reasons&&dd.reasons.length){ctx+='/reasons:';dd.reasons.slice(0,2).forEach(function(r){ctx+=r.l+'('+r.n+'),';}); }
+              ctx+='] ';
+            });
+            ctx += '\n';
+          }
+        }
+        // Restore original filters
+        rejMonth=_savedMonth; rejDay=_savedDay; rejType=_savedType2; rejSrc=_savedSrc2; rejORG=_savedORG;
+
+        // ORG breakdown YTD
+        ctx += 'ORGs: ';
+        Object.keys(ORG_DATA).forEach(function(o){
+          if(o==='all')return;
+          var d=ORG_DATA[o]; if(!d||(d.tRej===0&&d.tDel===0))return;
+          var oGrand=(d.tRej+d.tDel); var oRate=oGrand>0?((d.tRej/oGrand)*100).toFixed(2):0;
+          var oContrib=ytdGrand>0?((d.tRej/ytdGrand)*100).toFixed(2):0;
+          ctx+=o+'[ytdRej='+d.tRej+' ytdDel='+d.tDel+' ownRate='+oRate+'% contribBadge='+oContrib+'% val='+d.val+' food='+( d.food_rej||0)+' nf='+(d.nonfood_rej||0);
+          // Per month for this ORG
+          if(d.rej&&d.del){
+            ctx+=' Monthly:';
+            d.rej.forEach(function(r,i){
+              if(r>0||d.del[i]>0){
+                var mr=(r+d.del[i])>0?((r/(r+d.del[i]))*100).toFixed(2):0;
+                ctx+=MNS[i]+':rej='+r+'/del='+d.del[i]+'/rate='+mr+'% ';
+              }
+            });
+          }
+          ctx+='] | ';
+        });
+        ctx += '\n';
+
+        if(allD.reasons&&allD.reasons.length){ctx+='YTD_TopReasons:';allD.reasons.slice(0,5).forEach(function(r){ctx+=r.l+'('+r.n+') ';});ctx+=' | ';}
+        if(allD.custs&&allD.custs.length){ctx+='YTD_TopCusts:';allD.custs.slice(0,10).forEach(function(c){ctx+=c.n+'('+c.c+'rej) ';});ctx+=' | ';}
+        ctx += '\n';
+      } catch(e2){ctx+='=== REJECTION: error '+e2.message+' ===\n';}
+    } else { ctx += '=== REJECTION: no file uploaded ===\n'; }
+
+    // ═══ DISPATCH ════════════════════════════════════════════════
     if (typeof DS_CURRENT_SUMMARY !== 'undefined' && DS_CURRENT_SUMMARY) {
       var s = DS_CURRENT_SUMMARY;
       ctx += '=== DISPATCH ===\n';
-      ctx += 'TotalOrders:' + (s.total_orders||0) + ' TotalValueAED:' + Math.round(s.total_value||0).toLocaleString();
-      ctx += ' Drops:' + (s.total_drops||0) + ' Drivers:' + (s.total_drivers||0) + ' Routes:' + (s.total_routes||0) + ' | ';
-      ctx += 'FoodOrders:' + (s.food_orders||0) + ' FoodValueAED:' + Math.round(s.food_value||0).toLocaleString();
-      ctx += ' NonFoodOrders:' + (s.non_food_orders||0) + ' NonFoodValueAED:' + Math.round(s.non_food_value||0).toLocaleString();
-      ctx += ' 3PL:' + (s.pl_orders||0) + ' Van:' + (s.van_orders||0) + ' | ';
-      if (s.type_breakdown) {
-        var tb = s.type_breakdown;
-        ['DCV','DCF','DGC','DGS','DSN','DPS','HCP'].forEach(function(o) {
-          if (tb[o] && tb[o].orders > 0) ctx += o + ':' + tb[o].orders + 'orders AED' + Math.round(tb[o].value||0).toLocaleString() + ' | ';
-        });
-      }
-      if (s.by_city) {
-        ctx += 'Cities: ';
-        Object.keys(s.by_city).forEach(function(c) { ctx += c + ':' + s.by_city[c] + ' '; });
-        ctx += ' | ';
-      }
-      if (s.top_customers && s.top_customers.length) {
-        ctx += 'TopCustomers: ';
-        s.top_customers.slice(0,5).forEach(function(c) { ctx += c.name + '(' + c.orders + 'orders AED' + Math.round(c.value||0).toLocaleString() + ') '; });
-        ctx += ' | ';
-      }
-      if (s.top_drivers && s.top_drivers.length) {
-        ctx += 'AllDrivers: ';
-        s.top_drivers.forEach(function(d) { ctx += d.name + ':' + (d.drops||0) + 'drops ' + (d.orders||0) + 'orders AED' + Math.round(d.value||0).toLocaleString() + ' | '; });
-      }
+      ctx += 'Orders:' + (s.total_orders||0) + ' ValueAED:' + Math.round(s.total_value||0).toLocaleString();
+      ctx += ' Drops:' + (s.total_drops||0) + ' Drivers:' + (s.total_drivers||0) + ' | ';
+      ctx += 'Food:' + (s.food_orders||0) + ' AED' + Math.round(s.food_value||0).toLocaleString();
+      ctx += ' NonFood:' + (s.non_food_orders||0) + ' AED' + Math.round(s.non_food_value||0).toLocaleString() + ' | ';
+      if (s.type_breakdown) { var tb=s.type_breakdown; ['DCV','DCF','DGC','DGS','DSN','DPS','HCP'].forEach(function(o){if(tb[o]&&tb[o].orders>0)ctx+=o+':'+tb[o].orders+'orders AED'+Math.round(tb[o].value||0).toLocaleString()+' | ';}); }
+      if (s.by_city) { ctx+='Cities:'; Object.keys(s.by_city).forEach(function(c){ctx+=c+':'+s.by_city[c]+' ';}); ctx+=' | '; }
+      if (s.top_customers&&s.top_customers.length) { ctx+='TopCusts:'; s.top_customers.slice(0,5).forEach(function(c){ctx+=c.name+'('+c.orders+'orders AED'+Math.round(c.value||0).toLocaleString()+') ';}); ctx+=' | '; }
+      if (s.top_drivers&&s.top_drivers.length) { ctx+='AllDrivers:'; s.top_drivers.forEach(function(d){ctx+=d.name+':'+( d.drops||0)+'drops '+(d.orders||0)+'orders AED'+Math.round(d.value||0).toLocaleString()+' | ';}); }
       ctx += '\n';
-    } else { ctx += '=== DISPATCH: no file uploaded ===\n'; }
+    } else { ctx += '=== DISPATCH: no file ===\n'; }
 
-    // ═══ REJECTION YTD ══════════════════════════════════════
-    if (typeof ORG_DATA !== 'undefined' && ORG_DATA && typeof DAY_DATA !== 'undefined') {
-      var MN = {1:'January',2:'February',3:'March',4:'April',5:'May',6:'June',7:'July',8:'August',9:'September',10:'October',11:'November',12:'December'};
-      try {
-        ctx += '=== REJECTION ===\n';
-        var allD = ORG_DATA['all'] || {};
-        var ytdDel = allD.tDel||0, ytdRej = allD.tRej||0;
-        var ytdRate = ytdDel > 0 ? ((ytdRej/ytdDel)*100).toFixed(2) : 0;
-        ctx += 'YTD(ALL_MONTHS_COMBINED): tDel=' + ytdDel + ' tRej=' + ytdRej + ' rate=' + ytdRate + '% val=' + (allD.val||'') + ' | ';
-        ctx += 'FoodRej:' + (allD.food_rej||0) + ' NonFoodRej:' + (allD.nonfood_rej||0) + ' | ';
-
-        // ORG breakdown - YTD totals + per-month breakdown
-        var grandTotal = (allD.tRej||0) + (allD.tDel||0);
-        var moNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-        ctx += 'ByORG: ';
-        Object.keys(ORG_DATA).forEach(function(o) {
-          if (o === 'all') return;
-          var d = ORG_DATA[o];
-          if (!d || (d.tRej === 0 && d.tDel === 0)) return;
-          var ytdContrib = grandTotal > 0 ? ((d.tRej/grandTotal)*100).toFixed(2) : 0;
-          var ytdRate = (d.tRej+d.tDel) > 0 ? ((d.tRej/(d.tRej+d.tDel))*100).toFixed(2) : 0;
-          ctx += o + '[YTD: tRej=' + d.tRej + ' tDel=' + d.tDel + ' ownRate=' + ytdRate + '% contribToGrand=' + ytdContrib + '% val=' + d.val + ' foodRej=' + (d.food_rej||0) + ' nonFoodRej=' + (d.nonfood_rej||0);
-          // Per month breakdown for this ORG
-          if (d.del && d.rej) {
-            ctx += ' Monthly(';
-            d.rej.forEach(function(r, i) {
-              if (r > 0 || d.del[i] > 0) {
-                var moRate = (r + d.del[i]) > 0 ? ((r/(r+d.del[i]))*100).toFixed(2) : 0;
-                ctx += moNames[i] + ':rej=' + r + '/del=' + d.del[i] + '/rate=' + moRate + '% ';
-              }
-            });
-            ctx += ')';
-          }
-          ctx += '] | ';
-        });
-        ctx += '\n';
-
-        // PER MONTH from DAY_DATA — this has the CORRECT per-month totals
-        ctx += 'MONTHLY_BREAKDOWN:\n';
-        Object.keys(DAY_DATA).sort(function(a,b){return parseInt(a)-parseInt(b);}).forEach(function(mo) {
-          var md = DAY_DATA[mo];
-          if (!md) return;
-          var mRate = md.tDel > 0 ? ((md.tRej/md.tDel)*100).toFixed(2) : 0;
-          var mRateFixed = md.tRej > 0 && md.tDel > 0 ? ((md.tRej/(md.tRej+md.tDel))*100).toFixed(2) : mRate;
-        ctx += 'MONTH_' + (MN[parseInt(mo)]||mo) + '(mo=' + mo + '): tDel=' + md.tDel + ' tRej=' + md.tRej + ' rate=' + mRateFixed + '% VALUE_AT_RISK=' + (md.val||'') + ' foodRej=' + (md.food_rej||0) + ' nonFoodRej=' + (md.nonfood_rej||0) + ' | ';
-
-          // Top reasons for this month
-          if (md.reasons && md.reasons.length) {
-            ctx += 'TopReasons:';
-            md.reasons.slice(0,5).forEach(function(r) { ctx += r.l + '(' + r.n + ') '; });
-            ctx += ' | ';
-          }
-          // Top customers for this month
-          if (md.custs && md.custs.length) {
-            ctx += 'TopCustomers:';
-            md.custs.slice(0,10).forEach(function(c) { ctx += c.n + '(' + c.c + 'rej) '; });
-            ctx += ' | ';
-          }
-
-          // DAILY breakdown for this month
-          if (md.data && Object.keys(md.data).length) {
-            ctx += 'DailyDetail:';
-            Object.keys(md.data).sort(function(a,b){return parseInt(a)-parseInt(b);}).forEach(function(day) {
-              var dd = md.data[day];
-              if (!dd || (dd.tRej === 0 && dd.tDel === 0)) return;
-              var dRate = dd.tDel > 0 ? ((dd.tRej/dd.tDel)*100).toFixed(1) : 0;
-              ctx += 'Day' + day + '[tDel=' + dd.tDel + ' tRej=' + dd.tRej + ' rate=' + dRate + '% foodRej=' + (dd.food_rej||0) + ' nonFoodRej=' + (dd.nonfood_rej||0);
-              if (dd.val) ctx += ' val=' + dd.val;
-              if (dd.custs && dd.custs.length) {
-                ctx += ' custs:';
-                dd.custs.slice(0,5).forEach(function(c) { ctx += c.n + '(' + c.c + '),'; });
-              }
-              if (dd.reasons && dd.reasons.length) {
-                ctx += ' reasons:';
-                dd.reasons.slice(0,3).forEach(function(r) { ctx += r.l + '(' + r.n + '),'; });
-              }
-              ctx += '] ';
-            });
-            ctx += ' | ';
-          }
-          ctx += '\n';
-        });
-
-        // Top reasons and customers overall
-        if (allD.reasons && allD.reasons.length) {
-          ctx += 'YTD_TopReasons: ';
-          allD.reasons.slice(0,5).forEach(function(r){ctx += r.l+'('+r.n+') ';});
-          ctx += ' | ';
-        }
-        if (allD.custs && allD.custs.length) {
-          ctx += 'YTD_TopCustomers: ';
-          allD.custs.slice(0,10).forEach(function(c){ctx += c.n+'('+c.c+'rej) ';});
-          ctx += ' | ';
-        }
-        ctx += '\n';
-      } catch(e2) { ctx += '=== REJECTION: error reading — ' + e2.message + ' ===\n'; }
-    } else { ctx += '=== REJECTION: no file uploaded ===\n'; }
-
-    // ═══ MARKET RETURNS ══════════════════════════════════════
+    // ═══ RETURNS ═════════════════════════════════════════════════
     if (typeof RET_FULL_SUMMARY !== 'undefined' && RET_FULL_SUMMARY) {
-      var rs = RET_FULL_SUMMARY;
-      var MNJ = {1:'January',2:'February',3:'March',4:'April',5:'May',6:'June',7:'July',8:'August',9:'September',10:'October',11:'November',12:'December'};
-      ctx += '=== MARKET RETURNS ===\n';
-      ctx += 'Total:AED' + Math.round(rs.totalVal||0).toLocaleString() + '(' + (rs.totalOrders||0) + 'orders) InvCancel:' + (rs.invCount||0) + ' AED' + Math.round(rs.invVal||0).toLocaleString() + ' GRV:' + (rs.grvCount||0) + ' AED' + Math.round(rs.grvVal||0).toLocaleString() + ' | ';
-      if (rs.monthMap) {
-        ctx += 'Monthly: ';
-        Object.keys(rs.monthMap).map(Number).sort(function(a,b){return a-b;}).forEach(function(m) {
-          var mo = rs.monthMap[m] || {};
-          ctx += (MNJ[m]||m) + ':AED' + Math.round(typeof mo==='object'?mo.val:mo).toLocaleString() + '(' + (typeof mo==='object'?mo.count:0) + 'orders) ';
-        });
-        ctx += ' | ';
-      }
-      if (rs.custMap) {
-        ctx += 'TopCustomers: ';
-        Object.keys(rs.custMap).sort(function(a,b){return (rs.custMap[b]||0)-(rs.custMap[a]||0);}).slice(0,5).forEach(function(c){
-          ctx += c + ':AED' + Math.round(rs.custMap[c]||0).toLocaleString() + ' ';
-        });
-        ctx += ' | ';
-      }
-      ctx += '\n';
-    } else { ctx += '=== RETURNS: no file uploaded ===\n'; }
+      var rs=RET_FULL_SUMMARY;
+      var MNJ={1:'January',2:'February',3:'March',4:'April',5:'May',6:'June',7:'July',8:'August',9:'September',10:'October',11:'November',12:'December'};
+      ctx+='=== RETURNS ===\n';
+      ctx+='Total:AED'+Math.round(rs.totalVal||0).toLocaleString()+'('+( rs.totalOrders||0)+') InvCancel:'+(rs.invCount||0)+' GRV:'+(rs.grvCount||0)+' | ';
+      if(rs.monthMap){ctx+='Monthly:';Object.keys(rs.monthMap).map(Number).sort(function(a,b){return a-b;}).forEach(function(m){var mo=rs.monthMap[m]||{};ctx+=(MNJ[m]||m)+':AED'+Math.round(typeof mo==='object'?mo.val:mo).toLocaleString()+'('+( typeof mo==='object'?mo.count:0)+') ';});ctx+=' | ';}
+      ctx+='\n';
+    } else { ctx+='=== RETURNS: no file ===\n'; }
 
-    // ═══ WH BACKLOG ══════════════════════════════════════════
+    // ═══ BACKLOG ══════════════════════════════════════════════════
     if (typeof window.BL_LAST_SUMMARY !== 'undefined' && window.BL_LAST_SUMMARY) {
-      var bl = window.BL_LAST_SUMMARY;
-      ctx += '=== WH BACKLOG ===\n';
-      ctx += 'Total:' + (bl.totalOrders||0) + 'orders AED' + Math.round(bl.totalVal||0).toLocaleString() + ' | ';
-      if (bl.catMap) {
-        var cm = bl.catMap;
-        ctx += 'BeforeCutOff:' + ((cm['Before Cut-Off']||{}).count||0) + ' Advance:' + ((cm['RSD >30 Advance']||{}).count||0) + ' Frozen:' + ((cm['Cut-Off Frozen']||{}).count||0) + ' | ';
-      }
-      if (bl.orgMap) {
-        ctx += 'ByORG: ';
-        Object.keys(bl.orgMap).forEach(function(o){ctx += o + ':' + (bl.orgMap[o].count||0) + ' AED' + Math.round(bl.orgMap[o].val||0).toLocaleString() + ' ';});
-        ctx += ' | ';
-      }
-      ctx += '\n';
-    } else { ctx += '=== BACKLOG: no file uploaded ===\n'; }
+      var bl=window.BL_LAST_SUMMARY;
+      ctx+='=== BACKLOG ===\nTotal:'+(bl.totalOrders||0)+' AED'+Math.round(bl.totalVal||0).toLocaleString()+' | ';
+      if(bl.catMap){var cm=bl.catMap;ctx+='BeforeCutOff:'+((cm['Before Cut-Off']||{}).count||0)+' Advance:'+((cm['RSD >30 Advance']||{}).count||0)+' Frozen:'+((cm['Cut-Off Frozen']||{}).count||0)+' | ';}
+      ctx+='\n';
+    } else { ctx+='=== BACKLOG: no file ===\n'; }
 
-    // ═══ AUTOMATION ══════════════════════════════════════════
+    // ═══ AUTOMATION ═══════════════════════════════════════════════
     if (typeof AUTO_DATA !== 'undefined' && AUTO_DATA) {
-      var ad = AUTO_DATA;
-      ctx += '=== AUTOMATION ===\n';
-      ctx += 'Total:' + (ad.total||0) + ' Auto:' + (ad.totalAuto||0) + '(' + (ad.rate||0) + '%) Manual:' + (ad.totalManual||0) + ' Latest:' + (ad.latestMonth||'') + '@' + (ad.latestRate||0) + '% | ';
-      if (ad.monthData) {
-        ctx += 'Monthly: ';
-        Object.keys(ad.monthData).forEach(function(m){var d=ad.monthData[m];var p=d.total?Math.round(d.auto/d.total*100):0;ctx+=m+':'+d.total+'orders '+p+'%auto | ';});
-      }
-      ctx += '\n';
-    } else { ctx += '=== AUTOMATION: no file uploaded ===\n'; }
+      var ad=AUTO_DATA;
+      ctx+='=== AUTOMATION ===\nTotal:'+(ad.total||0)+' Auto:'+(ad.totalAuto||0)+'('+(ad.rate||0)+'%) Latest:'+(ad.latestMonth||'')+' '+(ad.latestRate||0)+'%\n';
+    } else { ctx+='=== AUTOMATION: no file ===\n'; }
 
-    // ═══ DELIVERY SCHEDULE ═══════════════════════════════════
+    // ═══ DELIVERY ════════════════════════════════════════════════
     if (typeof DS_DATA !== 'undefined' && DS_DATA) {
-      ctx += '=== DELIVERY SCHEDULE ===\n';
-      ctx += 'Total:' + (DS_DATA.total||0) + ' Scheduled:' + (DS_DATA.scheduled||0) + '(' + (DS_DATA.schedPct||0) + '%) OOS:' + (DS_DATA.oos||0) + '(' + (DS_DATA.oosPct||0) + '%) Compliance:' + (DS_DATA.schedPct||0) + '%\n';
-    } else { ctx += '=== DELIVERY: no file uploaded ===\n'; }
+      ctx+='=== DELIVERY ===\nTotal:'+(DS_DATA.total||0)+' Scheduled:'+(DS_DATA.scheduled||0)+'('+(DS_DATA.schedPct||0)+'%) OOS:'+(DS_DATA.oos||0)+'('+(DS_DATA.oosPct||0)+'%) Compliance:'+(DS_DATA.schedPct||0)+'%\n';
+    } else { ctx+='=== DELIVERY: no file ===\n'; }
 
-    // ═══ TEAM DIRECTORY ══════════════════════════════════════
+    // ═══ TEAM ════════════════════════════════════════════════════
     if (typeof GI_RAW !== 'undefined' && GI_RAW && GI_RAW.length) {
-      ctx += '=== TEAM DIRECTORY ===\n';
-      GI_RAW.forEach(function(r) {
-        var name=giGetVal(r,'name'), unit=giGetVal(r,'unit'), desig=giGetVal(r,'designation');
-        var phone=giGetVal(r,'contact'); if(phone&&!phone.startsWith('+'))phone='+'+phone;
-        var branch=giGetVal(r,'branch'), outlet=giGetVal(r,'outlet');
-        ctx += name + '|Unit:' + unit + '|Role:' + desig + '|PHONE:' + phone + (branch?'|Branch:'+branch:'') + (outlet?'|Outlets:'+outlet:'') + '. ';
+      ctx+='=== TEAM ===\n';
+      GI_RAW.forEach(function(r){
+        var name=giGetVal(r,'name'),unit=giGetVal(r,'unit'),desig=giGetVal(r,'designation');
+        var phone=giGetVal(r,'contact');if(phone&&!phone.startsWith('+'))phone='+'+phone;
+        var outlet=giGetVal(r,'outlet');
+        ctx+=name+'|Unit:'+unit+'|Role:'+desig+'|PHONE:'+phone+(outlet?'|Outlets:'+outlet:'')+'. ';
       });
-      ctx += '\n';
+      ctx+='\n';
     }
 
   } catch(e) { ctx += 'Error:' + e.message; }
@@ -6802,37 +6686,33 @@ function executeVoiceAction(action, detail) {
   try {
     if (!action || action === 'none') return;
     var d = (detail || '').toLowerCase();
-    var MMAP = {'january':1,'jan':1,'february':2,'feb':2,'march':3,'mar':3,'april':4,'apr':4,'may':5,'june':6,'jun':6,'july':7,'jul':7,'august':8,'aug':8,'september':9,'sep':9,'october':10,'oct':10,'november':11,'nov':11,'december':12,'dec':12};
 
     if (action === 'navigate') {
-      var tabs = {dispatch:'dispatch',rejection:'rejection',returns:'returns',backlog:'backlog',sales:'sales',summary:'summary',email:'email',invoice:'invoice',automation:'automation',delivery:'delivery',geninfo:'geninfo'};
-      Object.keys(tabs).forEach(function(k) { if (d.includes(k) && typeof goTab === 'function') goTab(tabs[k], null); });
+      var tabs = {dispatch:'dispatch',rejection:'rejection',returns:'returns',backlog:'backlog',sales:'sales',summary:'summary',email:'email',invoice:'invoice'};
+      Object.keys(tabs).forEach(function(k) {
+        if (d.includes(k) && typeof goTab === 'function') goTab(tabs[k], null);
+      });
     }
 
     if (action === 'filter' && VC_CURRENT_TAB === 'dispatch') {
-      ['DCV','DGC','DCF','DGS','DPS','DSN','TPW'].forEach(function(r) { if (detail.toUpperCase().includes(r) && typeof dsFilter === 'function') dsFilter('route', r); });
-      ['Dubai','AbuDhabi','Sharjah','Ajman','AlAin','RAK','Fujairah','UAQ'].forEach(function(c) { if (d.includes(c.toLowerCase()) && typeof dsFilter === 'function') dsFilter('city', c); });
-      if (d.includes('food') && !d.includes('non') && typeof dsFilter === 'function') dsFilter('type','food');
-      else if ((d.includes('non food')||d.includes('nonfood')) && typeof dsFilter === 'function') dsFilter('type','nonfood');
-    }
-
-    if (action === 'filter' && VC_CURRENT_TAB === 'rejection') {
-      Object.keys(MMAP).forEach(function(name) { if (d.includes(name)) { rejMonth = MMAP[name]; if (typeof renderRejection === 'function') renderRejection(); } });
-      ['DCV','DGC','DCF','DGS','DPS','DSN'].forEach(function(org) { if (detail.toUpperCase().includes(org)) { rejORG = org; if (typeof renderRejection === 'function') renderRejection(); } });
-      if (d.includes('food') && !d.includes('non')) { rejType = 'food'; if (typeof renderRejection === 'function') renderRejection(); }
-      else if (d.includes('non food')||d.includes('nonfood')) { rejType = 'nonfood'; if (typeof renderRejection === 'function') renderRejection(); }
-      var dayM = d.match(/day\s*(\d{1,2})|(\d{1,2})(st|nd|rd|th)/);
-      if (dayM) { var dn=parseInt(dayM[1]||dayM[2]); if (dn>=1&&dn<=31) { rejDay=dn; if (typeof renderRejection === 'function') renderRejection(); } }
-      if (d === 'all' || d === 'reset') { rejMonth='all'; rejORG='all'; rejDay='all'; rejType='all'; if (typeof renderRejection === 'function') renderRejection(); }
+      var routes = ['DCV','DGC','DCF','DGS','DPS','DSN','TPW'];
+      routes.forEach(function(r) {
+        if (detail.toUpperCase().includes(r) && typeof dsFilter === 'function') dsFilter('route', r);
+      });
+      var cities = ['Dubai','AbuDhabi','Sharjah','Ajman','AlAin','RAK','Fujairah','UAQ'];
+      cities.forEach(function(c) {
+        if (d.includes(c.toLowerCase()) && typeof dsFilter === 'function') dsFilter('city', c);
+      });
     }
 
     if (action === 'filter' && VC_CURRENT_TAB === 'returns') {
       if (d.includes('invoice')) retFilter('cat','Invoice Cancellation');
       else if (d.includes('grv')) retFilter('cat','GRV-Return');
       if (d.includes('food') && !d.includes('non')) retFilter('bu','food');
-      else if (d.includes('non food')||d.includes('nonfood')) retFilter('bu','nonfood');
-      ['DCV','DGC','DCF','DGS','DLL','DGN'].forEach(function(w) { if (detail.toUpperCase().includes(w)) retFilter('wh', w); });
-      Object.keys(MMAP).forEach(function(name) { if (d.includes(name)) retFilter('month', MMAP[name]); });
+      else if (d.includes('non')) retFilter('bu','nonfood');
+      ['DCV','DGC','DCF','DGS','DLL','DGN'].forEach(function(w) {
+        if (detail.toUpperCase().includes(w)) retFilter('wh', w);
+      });
     }
   } catch(e) { console.error('Voice action error:', e); }
 }
@@ -7246,14 +7126,12 @@ window.addEventListener('load', authBoot);
   
   <!-- Close button -->
   <button onclick="closeJarvisFullscreen()" style="position:absolute;top:16px;right:16px;background:transparent;border:1px solid rgba(255,255,255,0.15);color:#7a7660;font-size:12px;padding:6px 14px;cursor:pointer;font-family:Montserrat,sans-serif;letter-spacing:1px;">✕ CLOSE</button>
-
-  <!-- Language selector -->
-  <div style="position:absolute;top:16px;left:16px;display:flex;gap:5px;flex-wrap:wrap;max-width:200px;">
-    <button id="jl-en" onclick="setJarvisLang('en-US','en','English')" style="background:rgba(201,168,76,0.2);border:1px solid #c9a84c;color:#c9a84c;font-size:10px;padding:4px 8px;cursor:pointer;font-family:Montserrat,sans-serif;border-radius:3px;">EN</button>
-    <button id="jl-ar" onclick="setJarvisLang('ar-AE','ar','Arabic')" style="background:transparent;border:1px solid rgba(201,168,76,0.3);color:#7a7660;font-size:10px;padding:4px 8px;cursor:pointer;font-family:Montserrat,sans-serif;border-radius:3px;">عربي</button>
-    <button id="jl-hi" onclick="setJarvisLang('hi-IN','hi','Hindi')" style="background:transparent;border:1px solid rgba(201,168,76,0.3);color:#7a7660;font-size:10px;padding:4px 8px;cursor:pointer;font-family:Montserrat,sans-serif;border-radius:3px;">हिंदी</button>
-    <button id="jl-ta" onclick="setJarvisLang('ta-IN','ta','Tamil')" style="background:transparent;border:1px solid rgba(201,168,76,0.3);color:#7a7660;font-size:10px;padding:4px 8px;cursor:pointer;font-family:Montserrat,sans-serif;border-radius:3px;">தமிழ்</button>
-    <button id="jl-ur" onclick="setJarvisLang('ur-PK','ur','Urdu')" style="background:transparent;border:1px solid rgba(201,168,76,0.3);color:#7a7660;font-size:10px;padding:4px 8px;cursor:pointer;font-family:Montserrat,sans-serif;border-radius:3px;">اردو</button>
+  <div style="position:absolute;top:16px;left:16px;display:flex;gap:5px;">
+    <button id="jl-en" onclick="setJarvisLang('en-US','en','English')" style="background:rgba(201,168,76,0.2);border:1px solid #c9a84c;color:#c9a84c;font-size:10px;padding:3px 7px;cursor:pointer;border-radius:3px;">EN</button>
+    <button id="jl-ar" onclick="setJarvisLang('ar-AE','ar','Arabic')" style="background:transparent;border:1px solid rgba(201,168,76,0.3);color:#7a7660;font-size:10px;padding:3px 7px;cursor:pointer;border-radius:3px;">عربي</button>
+    <button id="jl-hi" onclick="setJarvisLang('hi-IN','hi','Hindi')" style="background:transparent;border:1px solid rgba(201,168,76,0.3);color:#7a7660;font-size:10px;padding:3px 7px;cursor:pointer;border-radius:3px;">हिंदी</button>
+    <button id="jl-ta" onclick="setJarvisLang('ta-IN','ta','Tamil')" style="background:transparent;border:1px solid rgba(201,168,76,0.3);color:#7a7660;font-size:10px;padding:3px 7px;cursor:pointer;border-radius:3px;">தமிழ்</button>
+    <button id="jl-ur" onclick="setJarvisLang('ur-PK','ur','Urdu')" style="background:transparent;border:1px solid rgba(201,168,76,0.3);color:#7a7660;font-size:10px;padding:3px 7px;cursor:pointer;border-radius:3px;">اردو</button>
   </div>
 
   <!-- JARVIS identity -->
