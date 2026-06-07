@@ -6217,14 +6217,71 @@ async function processVoiceCommandFS(text) {
     
     jarvisSpeak(parsed.answer || 'No answer.');
     
-    // After speaking, go back to idle and show quick commands again
+    // After speaking — wait then auto-restart mic for next question
+    var speakMs = Math.min(Math.max((parsed.answer || '').length * 55, 1500), 8000);
     setTimeout(function() {
-      setJarvisOrb('idle');
-      document.getElementById('jarvis-status').textContent = 'TAP MIC OR CHOOSE BELOW';
-      document.getElementById('jarvis-status').style.color = '#7a7660';
-      var qEl = document.getElementById('jarvis-quick-cmds');
-      if (qEl) { qEl.style.display = 'block'; buildQuickCmds(); }
-    }, (parsed.answer || '').length * 60 + 1500);
+      var fsPanel = document.getElementById('jarvis-fullscreen');
+      if (!fsPanel || fsPanel.style.display === 'none') return;
+      // Auto restart listening
+      try {
+        var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SR) throw new Error('no SR');
+        var ar = new SR();
+        ar.lang = JARVIS_LANG.speech;
+        ar.continuous = false;
+        ar.interimResults = true;
+        vcListening = true;
+        vcRecognition = ar;
+        var arFinal = '';
+        var arTimer = null;
+        setJarvisOrb('listening');
+        document.getElementById('jarvis-status').textContent = 'LISTENING...';
+        document.getElementById('jarvis-status').style.color = '#e84b4b';
+        ar.onresult = function(ev) {
+          var interim = '', final = '';
+          for (var i = ev.resultIndex; i < ev.results.length; i++) {
+            if (ev.results[i].isFinal) final += ev.results[i][0].transcript;
+            else interim += ev.results[i][0].transcript;
+          }
+          var intEl = document.getElementById('jarvis-interim-fs');
+          if (intEl) intEl.textContent = interim || final;
+          if (arTimer) clearTimeout(arTimer);
+          if (final) {
+            arFinal = final.trim();
+            arTimer = setTimeout(function() {
+              vcListening = false;
+              if (arFinal) processVoiceCommandFS(arFinal);
+            }, 900);
+          }
+        };
+        ar.onerror = function() {
+          vcListening = false;
+          setJarvisOrb('idle');
+          document.getElementById('jarvis-status').textContent = 'TAP MIC TO CONTINUE';
+          document.getElementById('jarvis-status').style.color = '#7a7660';
+          var qEl = document.getElementById('jarvis-quick-cmds');
+          if (qEl) { qEl.style.display = 'block'; buildQuickCmds(); }
+        };
+        ar.onend = function() {
+          if (!arFinal) {
+            vcListening = false;
+            setJarvisOrb('idle');
+            document.getElementById('jarvis-status').textContent = 'TAP MIC TO CONTINUE';
+            document.getElementById('jarvis-status').style.color = '#7a7660';
+            var qEl = document.getElementById('jarvis-quick-cmds');
+            if (qEl) { qEl.style.display = 'block'; buildQuickCmds(); }
+          }
+        };
+        ar.start();
+      } catch(ex) {
+        vcListening = false;
+        setJarvisOrb('idle');
+        document.getElementById('jarvis-status').textContent = 'TAP MIC TO CONTINUE';
+        document.getElementById('jarvis-status').style.color = '#7a7660';
+        var qEl2 = document.getElementById('jarvis-quick-cmds');
+        if (qEl2) { qEl2.style.display = 'block'; buildQuickCmds(); }
+      }
+    }, speakMs);
 
   } catch(e) {
     setJarvisOrb('idle');
@@ -6333,12 +6390,17 @@ async function processVoiceCommand(text) {
     var response = await fetch('/api/voice', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-auth-token': AUTH_TOKEN },
-      body: JSON.stringify({ text: text, context: context, tab: VC_CURRENT_TAB })
+      body: JSON.stringify({ text: text, context: context, tab: VC_CURRENT_TAB, history: JARVIS_HISTORY.slice(-16), lang: JARVIS_LANG.name })
     });
 
     var data = await response.json();
     if (!data.success) throw new Error(data.error || 'Server error');
     var parsed = data.result;
+
+    // Save to conversation history
+    JARVIS_HISTORY.push({ role: 'user', content: text });
+    JARVIS_HISTORY.push({ role: 'assistant', content: parsed.answer || '' });
+    if (JARVIS_HISTORY.length > 20) JARVIS_HISTORY = JARVIS_HISTORY.slice(-20);
 
     // Execute action if needed
     if (parsed.action && parsed.action !== 'none') {
@@ -6391,7 +6453,7 @@ function buildVoiceContext() {
         ctx += '=== REJECTION YTD ===\n';
         var allD = ORG_DATA['all'] || {};
         var tDel = allD.tDel||0, tRej = allD.tRej||0;
-        ctx += 'Overall:' + tDel + ' del ' + tRej + ' rej rate:' + (tDel>0?((tRej/tDel)*100).toFixed(2):0) + '% value:' + (allD.val||'') + ' | ';
+        ctx += 'YTD_ALL_MONTHS: tDel=' + tDel + ' tRej=' + tRej + ' rate=' + (tDel>0?((tRej/tDel)*100).toFixed(2):0) + '% YTD_VALUE=' + (allD.val||'') + ' WARNING:this is ALL months combined not one month | ';
         ctx += 'ORG: ';
         Object.keys(ORG_DATA).forEach(function(o) { if (o==='all') return; var d=ORG_DATA[o]; if (d&&d.tDel) ctx += o+':'+d.tDel+' del '+d.tRej+' rej('+((d.tRej/d.tDel)*100).toFixed(1)+'%) | '; });
         if (allD.rej && allD.del) {
@@ -6404,7 +6466,7 @@ function buildVoiceContext() {
           Object.keys(DAY_DATA).sort(function(a,b){return parseInt(a)-parseInt(b);}).forEach(function(mo) {
             var md = DAY_DATA[mo];
             if (!md || !md.tRej) return;
-            ctx += (MN[parseInt(mo)]||mo) + ':' + md.tRej + ' rej/' + md.tDel + ' del(' + (md.tDel>0?((md.tRej/md.tDel)*100).toFixed(1):0) + '%) ' + (md.val||'') + ' | ';
+            ctx += (MN[parseInt(mo)]||mo) + '_MONTH: tRej=' + md.tRej + ' tDel=' + md.tDel + ' rate=' + (md.tDel>0?((md.tRej/md.tDel)*100).toFixed(1):0) + '% THIS_MONTH_VALUE=' + (md.val||'') + ' | ';
             if (md.reasons && md.reasons.length) { ctx += 'Reasons:'; md.reasons.slice(0,3).forEach(function(r){ctx+=r.l+'('+r.n+') ';}); ctx += '| '; }
             if (md.custs && md.custs.length) { ctx += 'TopCusts:'; md.custs.slice(0,5).forEach(function(c){ctx+=c.n+'('+c.c+'rej) ';}); ctx += '| '; }
             if (md.data && Object.keys(md.data).length) {
@@ -6413,7 +6475,7 @@ function buildVoiceContext() {
                 var dd = md.data[day];
                 if (dd && (dd.tRej>0||dd.tDel>0)) {
                   ctx += 'Day'+day+':'+( dd.tRej||0)+'rej/'+(dd.tDel||0)+'del('+( dd.tDel>0?((dd.tRej/dd.tDel)*100).toFixed(1):0)+'%)';
-                  if (dd.food_rej!==undefined) ctx += ' F:'+(dd.food_rej||0)+' NF:'+(dd.nonfood_rej||0);
+                  if (dd.food_rej!==undefined) ctx += ' FoodRej:'+(dd.food_rej||0)+' NonFoodRej:'+(dd.nonfood_rej||0)+' FoodDel:'+(dd.food_del||0)+' NonFoodDel:'+(dd.nonfood_del||0);
                   if (dd.custs&&dd.custs.length) { ctx += ' C:'; dd.custs.slice(0,3).forEach(function(c){ctx+=c.n+'('+c.c+'),';}); }
                   ctx += ' | ';
                 }
