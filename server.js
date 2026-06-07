@@ -909,7 +909,11 @@ app.post('/api/voice', requireAuth, async function(req, res) {
       (isFrederic ? 'FREDERIC MODE: Address as boss. Outside dashboard data: say Boss that is outside my scope I will flag to Azhar. ' : '') +
       'CONVERSATION: You are in an ongoing conversation. Remember what was said. Answer follow-ups naturally. ' +
       'NUMBER ONE RULE: The context contains SCREEN_NOW which shows EXACTLY what is on screen right now including active filters. Use these numbers FIRST. ' +
-      'SCREEN_NOW has tRej tDel rate contrib val foodRej nonFoodRej TopReasons TopCustomers for the current filter selection. ' +
+      'SCREEN_NOW has: tRej=TOTAL_REJECTIONS tDel=DELIVERED rate=REJECTION_RATE contrib=contribution%. ' +
+      'tDel is DELIVERED. tRej+tDel = total orders. NEVER say tRej+tDel as delivered. ' +
+      'For VALUE AT RISK: use val from MONTHLY section e.g. January(mo=1) val field — this is the exact figure shown on screen. ' +
+      'The val in SCREEN_NOW is estimated — do NOT use it for VALUE AT RISK. ' +
+      'Map screen labels: TOTAL_REJECTIONS=tRej REJECTION_RATE=rate DELIVERED=tDel VALUE_AT_RISK=monthly val. ' +
       'REJECTION RATE always = tRej divided by (tRej + tDel) then multiply by 100. Never divide by tDel alone. ' +
       'For monthly questions not in current filter: use MONTHLY section which also uses the same data source as screen. ' +
       'For ORG breakdown: use ORGs section. ownRate = that ORG own rate. contribBadge = small % shown on screen card. ' +
