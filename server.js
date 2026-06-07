@@ -911,7 +911,10 @@ app.post('/api/voice', requireAuth, async function(req, res) {
       (isFrederic ? 'FREDERIC MODE: Address as boss. Questions outside dashboard data: say Boss that is outside my scope I will flag to Azhar. ' : '') +
       'CONVERSATION: You are in an ongoing conversation. Remember everything said. Answer follow-ups naturally. ' +
       'If user says what about March after a January answer they mean the same metric for March. ' +
-      'DATA RULES: ' +
+      'CRITICAL RULE: Always check ACTIVE_FILTERS and CURRENT_FILTERED_RESULT in the context first. ' +
+      'These show what filter is active on screen right now. Use CURRENT_FILTERED_RESULT numbers to answer. ' +
+      'Example: if ACTIVE_FILTERS shows Type=food, user wants food numbers — use CURRENT_FILTERED_RESULT. ' +
+      'If ACTIVE_FILTERS shows Month=January Type=food, answer only for January food rejections. ' +
       'DATA RULES: Use EXACT numbers only. Never estimate or calculate. ' +
       'REJECTION DATA STRUCTURE: ' +
       'YTD line shows ALL months combined — NEVER use this val for single month questions. ' +
