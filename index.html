@@ -6428,7 +6428,45 @@ async function processVoiceCommand(text) {
 }
 
 function buildVoiceContext() {
-  var ctx = 'Current tab: ' + VC_CURRENT_TAB + '. You have ALL data below — answer ANY question from ANY dashboard.\n\n';
+  // Build active filter state so Jarvis knows what's currently selected
+  var activeFilters = '';
+  if (VC_CURRENT_TAB === 'rejection') {
+    var MN_F = {1:'January',2:'February',3:'March',4:'April',5:'May',6:'June',7:'July',8:'August',9:'September',10:'October',11:'November',12:'December'};
+    activeFilters += 'ACTIVE_FILTERS on rejection dashboard: ';
+    activeFilters += 'Month=' + (rejMonth === 'all' ? 'All Months' : (MN_F[rejMonth]||rejMonth)) + ' ';
+    activeFilters += 'Type=' + (rejType === 'all' ? 'All Types' : rejType) + ' ';
+    activeFilters += 'ORG=' + (rejORG === 'all' ? 'All ORGs' : rejORG) + ' ';
+    activeFilters += 'Day=' + (rejDay === 'all' ? 'All Days' : ('Day '+rejDay)) + ' ';
+    activeFilters += 'Source=' + (rejSrc === 'all' ? 'All Sources' : rejSrc) + ' | ';
+    // Get currently filtered data result
+    try {
+      var fd = getFilteredData();
+      if (fd) {
+        // Grand total = same calculation as screen: all-type data for current month/day filter
+        var _savedType2 = rejType, _savedSrc2 = rejSrc;
+        rejType = 'all'; rejSrc = 'all';
+        var fdAll = getFilteredData();
+        rejType = _savedType2; rejSrc = _savedSrc2;
+        var fGrandTotal = fdAll ? ((fdAll.tRej||0)+(fdAll.tDel||0)) : 1;
+        var fRate = (fd.tRej+fd.tDel) > 0 ? ((fd.tRej/(fd.tRej+fd.tDel))*100).toFixed(2) : 0;
+        var fContrib = fGrandTotal > 0 ? ((fd.tRej/fGrandTotal)*100).toFixed(2) : 0;
+        activeFilters += 'CURRENT_FILTERED_RESULT: tRej=' + fd.tRej + ' tDel=' + fd.tDel;
+        activeFilters += ' rate=' + fRate + '% contrib=' + fContrib + '%';
+        activeFilters += ' val=' + (fd.val||'') + ' foodRej=' + (fd.food_rej||0) + ' nonFoodRej=' + (fd.nonfood_rej||0);
+        if (fd.reasons && fd.reasons.length) {
+          activeFilters += ' TopReasons:';
+          fd.reasons.slice(0,5).forEach(function(r){activeFilters += r.l+'('+r.n+') ';});
+        }
+        if (fd.custs && fd.custs.length) {
+          activeFilters += ' TopCustomers:';
+          fd.custs.slice(0,10).forEach(function(c){activeFilters += c.n+'('+c.c+'rej) ';});
+        }
+        activeFilters += ' | ';
+      }
+    } catch(fe) { activeFilters += ' (filter read error) | '; }
+  }
+
+  var ctx = 'Current tab: ' + VC_CURRENT_TAB + '. ' + activeFilters + 'Full data below.\n\n';
   try {
 
     // ═══ DISPATCH ═══════════════════════════════════════════
