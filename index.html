@@ -6434,9 +6434,16 @@ function buildVoiceContext() {
           var moRate = moGrand>0 ? ((moRej/moGrand)*100).toFixed(2) : 0;
           ctx += MN[mo]+'(mo='+mo+'): tRej='+moRej+' tDel='+moDel+' rate='+moRate+'%';
           // Food/nonfood per month from ORG-level arrays
-          var moFoodRej=0, moNFRej=0;
-          ['DCV','DCF'].forEach(function(o){var d=ORG_DATA[o];if(d&&d.rej)moFoodRej+=(d.rej[mo-1]||0);});
-          ['DGC','DGS','DSN'].forEach(function(o){var d=ORG_DATA[o];if(d&&d.rej)moNFRej+=(d.rej[mo-1]||0);});
+          // food_rej/nonfood_rej are TYPE-based, not ORG-based
+          // Get from DAY_DATA which has correct type split from server
+          var moFoodRej = mdx.food_rej||0;
+          var moNFRej = mdx.nonfood_rej||0;
+          // Fallback to allD if DAY_DATA not available
+          if (moFoodRej===0 && moNFRej===0 && allD.food_rej > 0) {
+            var allFoodRatio = allD.tRej > 0 ? (allD.food_rej/allD.tRej) : 0;
+            moFoodRej = Math.round(moRej * allFoodRatio);
+            moNFRej = moRej - moFoodRej;
+          }
           ctx += ' foodRej='+moFoodRej+' nonFoodRej='+moNFRej;
           // Val from DAY_DATA (only for display - may differ slightly)
           var mdx = (typeof DAY_DATA!=='undefined') ? (DAY_DATA[mo]||DAY_DATA[String(mo)]||{}) : {};
