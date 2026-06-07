@@ -6474,16 +6474,29 @@ function buildVoiceContext() {
         ctx += 'YTD(ALL_MONTHS_COMBINED): tDel=' + ytdDel + ' tRej=' + ytdRej + ' rate=' + ytdRate + '% val=' + (allD.val||'') + ' | ';
         ctx += 'FoodRej:' + (allD.food_rej||0) + ' NonFoodRej:' + (allD.nonfood_rej||0) + ' | ';
 
-        // ORG breakdown with contribution % matching screen
+        // ORG breakdown - YTD totals + per-month breakdown
         var grandTotal = (allD.tRej||0) + (allD.tDel||0);
-        ctx += 'ByORG(contribution%=orgRej/grandTotal*100): ';
+        var moNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        ctx += 'ByORG: ';
         Object.keys(ORG_DATA).forEach(function(o) {
           if (o === 'all') return;
           var d = ORG_DATA[o];
-          if (d && (d.tRej > 0 || d.tDel > 0)) {
-            var contrib = grandTotal > 0 ? ((d.tRej/grandTotal)*100).toFixed(2) : 0;
-            ctx += o + ':tRej=' + d.tRej + ' tDel=' + d.tDel + ' contrib=' + contrib + '% val=' + d.val + ' foodRej=' + (d.food_rej||0) + ' nonFoodRej=' + (d.nonfood_rej||0) + ' | ';
+          if (!d || (d.tRej === 0 && d.tDel === 0)) return;
+          var ytdContrib = grandTotal > 0 ? ((d.tRej/grandTotal)*100).toFixed(2) : 0;
+          var ytdRate = (d.tRej+d.tDel) > 0 ? ((d.tRej/(d.tRej+d.tDel))*100).toFixed(2) : 0;
+          ctx += o + '[YTD: tRej=' + d.tRej + ' tDel=' + d.tDel + ' ownRate=' + ytdRate + '% contribToGrand=' + ytdContrib + '% val=' + d.val + ' foodRej=' + (d.food_rej||0) + ' nonFoodRej=' + (d.nonfood_rej||0);
+          // Per month breakdown for this ORG
+          if (d.del && d.rej) {
+            ctx += ' Monthly(';
+            d.rej.forEach(function(r, i) {
+              if (r > 0 || d.del[i] > 0) {
+                var moRate = (r + d.del[i]) > 0 ? ((r/(r+d.del[i]))*100).toFixed(2) : 0;
+                ctx += moNames[i] + ':rej=' + r + '/del=' + d.del[i] + '/rate=' + moRate + '% ';
+              }
+            });
+            ctx += ')';
           }
+          ctx += '] | ';
         });
         ctx += '\n';
 
@@ -6493,7 +6506,8 @@ function buildVoiceContext() {
           var md = DAY_DATA[mo];
           if (!md) return;
           var mRate = md.tDel > 0 ? ((md.tRej/md.tDel)*100).toFixed(2) : 0;
-          ctx += (MN[parseInt(mo)]||mo) + '(month' + mo + '): tDel=' + md.tDel + ' tRej=' + md.tRej + ' rate=' + mRate + '% val=' + (md.val||'') + ' foodRej=' + (md.food_rej||0) + ' nonFoodRej=' + (md.nonfood_rej||0) + ' | ';
+          var mRateFixed = md.tRej > 0 && md.tDel > 0 ? ((md.tRej/(md.tRej+md.tDel))*100).toFixed(2) : mRate;
+        ctx += 'MONTH_' + (MN[parseInt(mo)]||mo) + '(mo=' + mo + '): tDel=' + md.tDel + ' tRej=' + md.tRej + ' rate=' + mRateFixed + '% VALUE_AT_RISK=' + (md.val||'') + ' foodRej=' + (md.food_rej||0) + ' nonFoodRej=' + (md.nonfood_rej||0) + ' | ';
 
           // Top reasons for this month
           if (md.reasons && md.reasons.length) {
