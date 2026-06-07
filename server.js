@@ -918,7 +918,11 @@ app.post('/api/voice', requireAuth, async function(req, res) {
       'For a specific month e.g. February: find MONTHLY_BREAKDOWN February(month2) line — use its tDel tRej rate val foodRej nonFoodRej. ' +
       'For a specific day e.g. February 10th: find February DailyDetail section then find Day10[...] entry — use its tDel tRej rate foodRej nonFoodRej custs reasons. ' +
       'For top customers of a month: use TopCustomers list under that month in MONTHLY_BREAKDOWN. ' +
-      'For rejection rate: always calculate as tRej/tDel*100 from the exact month line, never guess. ' +
+      'REJECTION RATE RULES: ' +
+      'Overall rate = tRej/(tRej+tDel)*100. Example: 1804/(1804+24840)*100 = 6.77%. ' +
+      'ORG contribution % badge = orgRej/grandTotalOrders*100 where grandTotalOrders = all orgs tRej+tDel combined. ' +
+      'Example: DCV 1417 rejections out of 26644 total orders = 1417/26644*100 = 5.32% contribution. ' +
+      'When user asks about ORG breakdown: give each ORG tRej count, their contribution %, their value, food vs nonfood split. ' +
       'If data missing say I do not have that data please upload the file. Keep answers 2 to 3 sentences max. ' +
       'For driver questions look in All Drivers section which has name drops orders and AED value. ' +
       'Phone numbers starting 971: say plus 971 then read digits in groups. ' +
