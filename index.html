@@ -6474,14 +6474,15 @@ function buildVoiceContext() {
         ctx += 'YTD(ALL_MONTHS_COMBINED): tDel=' + ytdDel + ' tRej=' + ytdRej + ' rate=' + ytdRate + '% val=' + (allD.val||'') + ' | ';
         ctx += 'FoodRej:' + (allD.food_rej||0) + ' NonFoodRej:' + (allD.nonfood_rej||0) + ' | ';
 
-        // ORG breakdown
-        ctx += 'ByORG: ';
+        // ORG breakdown with contribution % matching screen
+        var grandTotal = (allD.tRej||0) + (allD.tDel||0);
+        ctx += 'ByORG(contribution%=orgRej/grandTotal*100): ';
         Object.keys(ORG_DATA).forEach(function(o) {
           if (o === 'all') return;
           var d = ORG_DATA[o];
-          if (d && d.tDel > 0) {
-            var rr = ((d.tRej/d.tDel)*100).toFixed(1);
-            ctx += o + ':tDel=' + d.tDel + ' tRej=' + d.tRej + '(' + rr + '%) val=' + d.val + ' food=' + (d.food_rej||0) + ' nonfood=' + (d.nonfood_rej||0) + ' | ';
+          if (d && (d.tRej > 0 || d.tDel > 0)) {
+            var contrib = grandTotal > 0 ? ((d.tRej/grandTotal)*100).toFixed(2) : 0;
+            ctx += o + ':tRej=' + d.tRej + ' tDel=' + d.tDel + ' contrib=' + contrib + '% val=' + d.val + ' foodRej=' + (d.food_rej||0) + ' nonFoodRej=' + (d.nonfood_rej||0) + ' | ';
           }
         });
         ctx += '\n';
