@@ -920,9 +920,12 @@ app.post('/api/voice', requireAuth, async function(req, res) {
       'For top customers of a month: use TopCustomers list under that month in MONTHLY_BREAKDOWN. ' +
       'REJECTION RATE RULES: ' +
       'Overall rate = tRej/(tRej+tDel)*100. Example: 1804/(1804+24840)*100 = 6.77%. ' +
-      'ORG contribution % badge = orgRej/grandTotalOrders*100 where grandTotalOrders = all orgs tRej+tDel combined. ' +
-      'Example: DCV 1417 rejections out of 26644 total orders = 1417/26644*100 = 5.32% contribution. ' +
-      'When user asks about ORG breakdown: give each ORG tRej count, their contribution %, their value, food vs nonfood split. ' +
+      'ORG own rejection rate = ORG_tRej/(ORG_tRej+ORG_tDel)*100 — use ownRate field in ByORG section. ' +
+      'ORG contribToGrand = ORG_tRej/grandTotal*100 — this is what screen shows as small % badge. ' +
+      'For ORG monthly rate: use Monthly() section inside each ORG — format is Jan:rej=X/del=Y/rate=Z%. ' +
+      'For DCV January rate: find DCV Monthly() then Jan entry — use rate field there. ' +
+      'VALUE_AT_RISK per month = actual AED value of rejected orders that month — use VALUE_AT_RISK field. ' +
+      'When user asks about ORG breakdown for a month: give each ORG their monthly rej count, monthly rate, food/nonfood split. ' +
       'If data missing say I do not have that data please upload the file. Keep answers 2 to 3 sentences max. ' +
       'For driver questions look in All Drivers section which has name drops orders and AED value. ' +
       'Phone numbers starting 971: say plus 971 then read digits in groups. ' +
