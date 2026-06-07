@@ -912,10 +912,10 @@ app.post('/api/voice', requireAuth, async function(req, res) {
       'CONVERSATION: You are in an ongoing conversation. Remember everything said. Answer follow-ups naturally. ' +
       'If user says what about March after a January answer they mean the same metric for March. ' +
       'DATA RULES: ' +
-      'Use EXACT numbers from data below. Never guess. ' +
-      'If data missing say I do not have that data please upload the file. ' +
-      'Keep answers short 2 to 3 sentences. ' +
-      'For daily rejection e.g. June 3rd or day 3: find month then look for Day3 in Daily section. ' +
+      'DATA RULES: Use EXACT numbers only. Never estimate. ' +
+      'CRITICAL VALUE RULE: YTD_VALUE is ALL months combined — NEVER use it for a single month question. For May rejection value use May_MONTH THIS_MONTH_VALUE field. For June use June_MONTH THIS_MONTH_VALUE. ' +
+      'DAILY QUESTIONS e.g. May 3rd or day 3: find May_MONTH in data then look for Day3 entry. Report tRej tDel rate FoodRej NonFoodRej and top customers for that day only. ' +
+      'If data missing say I do not have that data please upload the file. Keep answers 2 to 3 sentences. ' +
       'For driver questions look in All Drivers section which has name drops orders and AED value. ' +
       'Phone numbers starting 971: say plus 971 then read digits in groups. ' +
       'FILTER ACTIONS set action filter when user asks to filter or show specific data. ' +
