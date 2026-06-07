@@ -6428,114 +6428,195 @@ async function processVoiceCommand(text) {
 }
 
 function buildVoiceContext() {
-  var ctx = 'Current tab: ' + VC_CURRENT_TAB + '. Answer ANY question from ANY dashboard below.\n\n';
+  var ctx = 'Current tab: ' + VC_CURRENT_TAB + '. You have ALL data below — answer ANY question from ANY dashboard.\n\n';
   try {
-    // DISPATCH
+
+    // ═══ DISPATCH ═══════════════════════════════════════════
     if (typeof DS_CURRENT_SUMMARY !== 'undefined' && DS_CURRENT_SUMMARY) {
       var s = DS_CURRENT_SUMMARY;
       ctx += '=== DISPATCH ===\n';
-      ctx += 'Orders:' + (s.total_orders||0) + ' Value:AED ' + Math.round(s.total_value||0).toLocaleString() + ' Drops:' + (s.total_drops||0) + ' Drivers:' + (s.total_drivers||0) + ' Routes:' + (s.total_routes||0) + ' | ';
-      ctx += 'Food:' + (s.food_orders||0) + ' AED ' + Math.round(s.food_value||0).toLocaleString() + ' NonFood:' + (s.non_food_orders||0) + ' AED ' + Math.round(s.non_food_value||0).toLocaleString() + ' 3PL:' + (s.pl_orders||0) + ' Van:' + (s.van_orders||0) + ' | ';
+      ctx += 'TotalOrders:' + (s.total_orders||0) + ' TotalValueAED:' + Math.round(s.total_value||0).toLocaleString();
+      ctx += ' Drops:' + (s.total_drops||0) + ' Drivers:' + (s.total_drivers||0) + ' Routes:' + (s.total_routes||0) + ' | ';
+      ctx += 'FoodOrders:' + (s.food_orders||0) + ' FoodValueAED:' + Math.round(s.food_value||0).toLocaleString();
+      ctx += ' NonFoodOrders:' + (s.non_food_orders||0) + ' NonFoodValueAED:' + Math.round(s.non_food_value||0).toLocaleString();
+      ctx += ' 3PL:' + (s.pl_orders||0) + ' Van:' + (s.van_orders||0) + ' | ';
       if (s.type_breakdown) {
-        var tb = s.type_breakdown; ctx += 'ORG: ';
-        ['DCV','DCF','DGC','DGS','DSN','DPS','HCP'].forEach(function(o) { if (tb[o] && tb[o].orders > 0) ctx += o + ':' + tb[o].orders + ' AED' + Math.round(tb[o].value||0).toLocaleString() + ' | '; });
+        var tb = s.type_breakdown;
+        ['DCV','DCF','DGC','DGS','DSN','DPS','HCP'].forEach(function(o) {
+          if (tb[o] && tb[o].orders > 0) ctx += o + ':' + tb[o].orders + 'orders AED' + Math.round(tb[o].value||0).toLocaleString() + ' | ';
+        });
       }
-      if (s.by_city) { ctx += 'Cities: '; Object.keys(s.by_city).forEach(function(c) { ctx += c + ':' + s.by_city[c] + ' '; }); ctx += ' | '; }
-      if (s.top_customers && s.top_customers.length) { ctx += 'Top Customers: '; s.top_customers.slice(0,5).forEach(function(c) { ctx += c.name + '(' + c.orders + ' AED' + Math.round(c.value||0).toLocaleString() + ') '; }); ctx += ' | '; }
-      if (s.top_drivers && s.top_drivers.length) { ctx += 'All Drivers: '; s.top_drivers.forEach(function(d) { ctx += d.name + ':' + (d.drops||0) + 'drops ' + (d.orders||0) + 'orders AED' + Math.round(d.value||0).toLocaleString() + ' | '; }); }
+      if (s.by_city) {
+        ctx += 'Cities: ';
+        Object.keys(s.by_city).forEach(function(c) { ctx += c + ':' + s.by_city[c] + ' '; });
+        ctx += ' | ';
+      }
+      if (s.top_customers && s.top_customers.length) {
+        ctx += 'TopCustomers: ';
+        s.top_customers.slice(0,5).forEach(function(c) { ctx += c.name + '(' + c.orders + 'orders AED' + Math.round(c.value||0).toLocaleString() + ') '; });
+        ctx += ' | ';
+      }
+      if (s.top_drivers && s.top_drivers.length) {
+        ctx += 'AllDrivers: ';
+        s.top_drivers.forEach(function(d) { ctx += d.name + ':' + (d.drops||0) + 'drops ' + (d.orders||0) + 'orders AED' + Math.round(d.value||0).toLocaleString() + ' | '; });
+      }
       ctx += '\n';
     } else { ctx += '=== DISPATCH: no file uploaded ===\n'; }
 
-    // REJECTION
-    if (typeof ORG_DATA !== 'undefined' && ORG_DATA) {
+    // ═══ REJECTION YTD ══════════════════════════════════════
+    if (typeof ORG_DATA !== 'undefined' && ORG_DATA && typeof DAY_DATA !== 'undefined') {
       var MN = {1:'January',2:'February',3:'March',4:'April',5:'May',6:'June',7:'July',8:'August',9:'September',10:'October',11:'November',12:'December'};
       try {
-        ctx += '=== REJECTION YTD ===\n';
+        ctx += '=== REJECTION ===\n';
         var allD = ORG_DATA['all'] || {};
-        var tDel = allD.tDel||0, tRej = allD.tRej||0;
-        ctx += 'YTD_ALL_MONTHS: tDel=' + tDel + ' tRej=' + tRej + ' rate=' + (tDel>0?((tRej/tDel)*100).toFixed(2):0) + '% YTD_VALUE=' + (allD.val||'') + ' WARNING:this is ALL months combined not one month | ';
-        ctx += 'ORG: ';
-        Object.keys(ORG_DATA).forEach(function(o) { if (o==='all') return; var d=ORG_DATA[o]; if (d&&d.tDel) ctx += o+':'+d.tDel+' del '+d.tRej+' rej('+((d.tRej/d.tDel)*100).toFixed(1)+'%) | '; });
-        if (allD.rej && allD.del) {
-          ctx += 'Monthly: ';
-          var ms=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-          allD.rej.forEach(function(rc,i){ if(rc>0||allD.del[i]>0) ctx += ms[i]+':'+rc+'/'+allD.del[i]+'('+(allD.del[i]>0?((rc/allD.del[i])*100).toFixed(1):0)+'%) '; });
+        var ytdDel = allD.tDel||0, ytdRej = allD.tRej||0;
+        var ytdRate = ytdDel > 0 ? ((ytdRej/ytdDel)*100).toFixed(2) : 0;
+        ctx += 'YTD(ALL_MONTHS_COMBINED): tDel=' + ytdDel + ' tRej=' + ytdRej + ' rate=' + ytdRate + '% val=' + (allD.val||'') + ' | ';
+        ctx += 'FoodRej:' + (allD.food_rej||0) + ' NonFoodRej:' + (allD.nonfood_rej||0) + ' | ';
+
+        // ORG breakdown
+        ctx += 'ByORG: ';
+        Object.keys(ORG_DATA).forEach(function(o) {
+          if (o === 'all') return;
+          var d = ORG_DATA[o];
+          if (d && d.tDel > 0) {
+            var rr = ((d.tRej/d.tDel)*100).toFixed(1);
+            ctx += o + ':tDel=' + d.tDel + ' tRej=' + d.tRej + '(' + rr + '%) val=' + d.val + ' food=' + (d.food_rej||0) + ' nonfood=' + (d.nonfood_rej||0) + ' | ';
+          }
+        });
+        ctx += '\n';
+
+        // PER MONTH from DAY_DATA — this has the CORRECT per-month totals
+        ctx += 'MONTHLY_BREAKDOWN:\n';
+        Object.keys(DAY_DATA).sort(function(a,b){return parseInt(a)-parseInt(b);}).forEach(function(mo) {
+          var md = DAY_DATA[mo];
+          if (!md) return;
+          var mRate = md.tDel > 0 ? ((md.tRej/md.tDel)*100).toFixed(2) : 0;
+          ctx += (MN[parseInt(mo)]||mo) + '(month' + mo + '): tDel=' + md.tDel + ' tRej=' + md.tRej + ' rate=' + mRate + '% val=' + (md.val||'') + ' foodRej=' + (md.food_rej||0) + ' nonFoodRej=' + (md.nonfood_rej||0) + ' | ';
+
+          // Top reasons for this month
+          if (md.reasons && md.reasons.length) {
+            ctx += 'TopReasons:';
+            md.reasons.slice(0,5).forEach(function(r) { ctx += r.l + '(' + r.n + ') '; });
+            ctx += ' | ';
+          }
+          // Top customers for this month
+          if (md.custs && md.custs.length) {
+            ctx += 'TopCustomers:';
+            md.custs.slice(0,10).forEach(function(c) { ctx += c.n + '(' + c.c + 'rej) '; });
+            ctx += ' | ';
+          }
+
+          // DAILY breakdown for this month
+          if (md.data && Object.keys(md.data).length) {
+            ctx += 'DailyDetail:';
+            Object.keys(md.data).sort(function(a,b){return parseInt(a)-parseInt(b);}).forEach(function(day) {
+              var dd = md.data[day];
+              if (!dd || (dd.tRej === 0 && dd.tDel === 0)) return;
+              var dRate = dd.tDel > 0 ? ((dd.tRej/dd.tDel)*100).toFixed(1) : 0;
+              ctx += 'Day' + day + '[tDel=' + dd.tDel + ' tRej=' + dd.tRej + ' rate=' + dRate + '% foodRej=' + (dd.food_rej||0) + ' nonFoodRej=' + (dd.nonfood_rej||0);
+              if (dd.val) ctx += ' val=' + dd.val;
+              if (dd.custs && dd.custs.length) {
+                ctx += ' custs:';
+                dd.custs.slice(0,5).forEach(function(c) { ctx += c.n + '(' + c.c + '),'; });
+              }
+              if (dd.reasons && dd.reasons.length) {
+                ctx += ' reasons:';
+                dd.reasons.slice(0,3).forEach(function(r) { ctx += r.l + '(' + r.n + '),'; });
+              }
+              ctx += '] ';
+            });
+            ctx += ' | ';
+          }
+          ctx += '\n';
+        });
+
+        // Top reasons and customers overall
+        if (allD.reasons && allD.reasons.length) {
+          ctx += 'YTD_TopReasons: ';
+          allD.reasons.slice(0,5).forEach(function(r){ctx += r.l+'('+r.n+') ';});
           ctx += ' | ';
         }
-        if (typeof DAY_DATA !== 'undefined') {
-          Object.keys(DAY_DATA).sort(function(a,b){return parseInt(a)-parseInt(b);}).forEach(function(mo) {
-            var md = DAY_DATA[mo];
-            if (!md || !md.tRej) return;
-            ctx += (MN[parseInt(mo)]||mo) + '_MONTH: tRej=' + md.tRej + ' tDel=' + md.tDel + ' rate=' + (md.tDel>0?((md.tRej/md.tDel)*100).toFixed(1):0) + '% THIS_MONTH_VALUE=' + (md.val||'') + ' | ';
-            if (md.reasons && md.reasons.length) { ctx += 'Reasons:'; md.reasons.slice(0,3).forEach(function(r){ctx+=r.l+'('+r.n+') ';}); ctx += '| '; }
-            if (md.custs && md.custs.length) { ctx += 'TopCusts:'; md.custs.slice(0,5).forEach(function(c){ctx+=c.n+'('+c.c+'rej) ';}); ctx += '| '; }
-            if (md.data && Object.keys(md.data).length) {
-              ctx += 'Daily: ';
-              Object.keys(md.data).sort(function(a,b){return parseInt(a)-parseInt(b);}).forEach(function(day) {
-                var dd = md.data[day];
-                if (dd && (dd.tRej>0||dd.tDel>0)) {
-                  ctx += 'Day'+day+':'+( dd.tRej||0)+'rej/'+(dd.tDel||0)+'del('+( dd.tDel>0?((dd.tRej/dd.tDel)*100).toFixed(1):0)+'%)';
-                  if (dd.food_rej!==undefined) ctx += ' FoodRej:'+(dd.food_rej||0)+' NonFoodRej:'+(dd.nonfood_rej||0)+' FoodDel:'+(dd.food_del||0)+' NonFoodDel:'+(dd.nonfood_del||0);
-                  if (dd.custs&&dd.custs.length) { ctx += ' C:'; dd.custs.slice(0,3).forEach(function(c){ctx+=c.n+'('+c.c+'),';}); }
-                  ctx += ' | ';
-                }
-              });
-            }
-          });
+        if (allD.custs && allD.custs.length) {
+          ctx += 'YTD_TopCustomers: ';
+          allD.custs.slice(0,10).forEach(function(c){ctx += c.n+'('+c.c+'rej) ';});
+          ctx += ' | ';
         }
-        if (allD.reasons&&allD.reasons.length) { ctx += 'TopReasons:'; allD.reasons.slice(0,5).forEach(function(r){ctx+=r.l+'('+r.n+') ';}); ctx += ' | '; }
         ctx += '\n';
-      } catch(e2) { ctx += '=== REJECTION: error ===\n'; }
-    } else { ctx += '=== REJECTION: no file ===\n'; }
+      } catch(e2) { ctx += '=== REJECTION: error reading — ' + e2.message + ' ===\n'; }
+    } else { ctx += '=== REJECTION: no file uploaded ===\n'; }
 
-    // RETURNS
+    // ═══ MARKET RETURNS ══════════════════════════════════════
     if (typeof RET_FULL_SUMMARY !== 'undefined' && RET_FULL_SUMMARY) {
       var rs = RET_FULL_SUMMARY;
       var MNJ = {1:'January',2:'February',3:'March',4:'April',5:'May',6:'June',7:'July',8:'August',9:'September',10:'October',11:'November',12:'December'};
       ctx += '=== MARKET RETURNS ===\n';
-      ctx += 'Total:AED ' + Math.round(rs.totalVal||0).toLocaleString() + '(' + (rs.totalOrders||0) + ') InvCancel:' + (rs.invCount||0) + ' AED' + Math.round(rs.invVal||0).toLocaleString() + ' GRV:' + (rs.grvCount||0) + ' AED' + Math.round(rs.grvVal||0).toLocaleString() + ' | ';
-      if (rs.monthMap) { ctx += 'Monthly: '; Object.keys(rs.monthMap).map(Number).sort(function(a,b){return a-b;}).forEach(function(m){ var mo=rs.monthMap[m]||{}; ctx+=(MNJ[m]||m)+':AED'+Math.round(typeof mo==='object'?mo.val:mo).toLocaleString()+'('+(typeof mo==='object'?mo.count:0)+') '; }); ctx += ' | '; }
-      if (rs.custMap) { ctx += 'TopCusts:'; Object.keys(rs.custMap).sort(function(a,b){return (rs.custMap[b]||0)-(rs.custMap[a]||0);}).slice(0,5).forEach(function(c){ctx+=c+':AED'+Math.round(rs.custMap[c]||0).toLocaleString()+' ';}); ctx += ' | '; }
+      ctx += 'Total:AED' + Math.round(rs.totalVal||0).toLocaleString() + '(' + (rs.totalOrders||0) + 'orders) InvCancel:' + (rs.invCount||0) + ' AED' + Math.round(rs.invVal||0).toLocaleString() + ' GRV:' + (rs.grvCount||0) + ' AED' + Math.round(rs.grvVal||0).toLocaleString() + ' | ';
+      if (rs.monthMap) {
+        ctx += 'Monthly: ';
+        Object.keys(rs.monthMap).map(Number).sort(function(a,b){return a-b;}).forEach(function(m) {
+          var mo = rs.monthMap[m] || {};
+          ctx += (MNJ[m]||m) + ':AED' + Math.round(typeof mo==='object'?mo.val:mo).toLocaleString() + '(' + (typeof mo==='object'?mo.count:0) + 'orders) ';
+        });
+        ctx += ' | ';
+      }
+      if (rs.custMap) {
+        ctx += 'TopCustomers: ';
+        Object.keys(rs.custMap).sort(function(a,b){return (rs.custMap[b]||0)-(rs.custMap[a]||0);}).slice(0,5).forEach(function(c){
+          ctx += c + ':AED' + Math.round(rs.custMap[c]||0).toLocaleString() + ' ';
+        });
+        ctx += ' | ';
+      }
       ctx += '\n';
-    } else { ctx += '=== RETURNS: no file ===\n'; }
+    } else { ctx += '=== RETURNS: no file uploaded ===\n'; }
 
-    // BACKLOG
+    // ═══ WH BACKLOG ══════════════════════════════════════════
     if (typeof window.BL_LAST_SUMMARY !== 'undefined' && window.BL_LAST_SUMMARY) {
       var bl = window.BL_LAST_SUMMARY;
       ctx += '=== WH BACKLOG ===\n';
-      ctx += 'Total:' + (bl.totalOrders||0) + ' AED' + Math.round(bl.totalVal||0).toLocaleString() + ' | ';
-      if (bl.catMap) { var cm=bl.catMap; ctx+='BeforeCutOff:'+((cm['Before Cut-Off']||{}).count||0)+' Advance:'+((cm['RSD >30 Advance']||{}).count||0)+' Frozen:'+((cm['Cut-Off Frozen']||{}).count||0)+' | '; }
-      if (bl.orgMap) { ctx += 'ORG: '; Object.keys(bl.orgMap).forEach(function(o){ctx+=o+':'+(bl.orgMap[o].count||0)+' AED'+Math.round(bl.orgMap[o].val||0).toLocaleString()+' ';}); ctx += ' | '; }
+      ctx += 'Total:' + (bl.totalOrders||0) + 'orders AED' + Math.round(bl.totalVal||0).toLocaleString() + ' | ';
+      if (bl.catMap) {
+        var cm = bl.catMap;
+        ctx += 'BeforeCutOff:' + ((cm['Before Cut-Off']||{}).count||0) + ' Advance:' + ((cm['RSD >30 Advance']||{}).count||0) + ' Frozen:' + ((cm['Cut-Off Frozen']||{}).count||0) + ' | ';
+      }
+      if (bl.orgMap) {
+        ctx += 'ByORG: ';
+        Object.keys(bl.orgMap).forEach(function(o){ctx += o + ':' + (bl.orgMap[o].count||0) + ' AED' + Math.round(bl.orgMap[o].val||0).toLocaleString() + ' ';});
+        ctx += ' | ';
+      }
       ctx += '\n';
-    } else { ctx += '=== BACKLOG: no file ===\n'; }
+    } else { ctx += '=== BACKLOG: no file uploaded ===\n'; }
 
-    // AUTOMATION
+    // ═══ AUTOMATION ══════════════════════════════════════════
     if (typeof AUTO_DATA !== 'undefined' && AUTO_DATA) {
       var ad = AUTO_DATA;
       ctx += '=== AUTOMATION ===\n';
-      ctx += 'Total:'+(ad.total||0)+' Auto:'+(ad.totalAuto||0)+'('+(ad.rate||0)+'%) Manual:'+(ad.totalManual||0)+' Latest:'+(ad.latestMonth||'')+' '+(ad.latestRate||0)+'% | ';
-      if (ad.monthData) { ctx += 'Monthly: '; Object.keys(ad.monthData).forEach(function(m){var d=ad.monthData[m];var p=d.total?Math.round(d.auto/d.total*100):0;ctx+=m+':'+d.total+' '+p+'% | ';}); }
-      if (ad.orgData) { ctx += 'ORG: '; Object.keys(ad.orgData).forEach(function(o){var d=ad.orgData[o];var p=d.total?Math.round(d.auto/d.total*100):0;ctx+=o+':'+d.total+' '+p+'% | ';}); }
+      ctx += 'Total:' + (ad.total||0) + ' Auto:' + (ad.totalAuto||0) + '(' + (ad.rate||0) + '%) Manual:' + (ad.totalManual||0) + ' Latest:' + (ad.latestMonth||'') + '@' + (ad.latestRate||0) + '% | ';
+      if (ad.monthData) {
+        ctx += 'Monthly: ';
+        Object.keys(ad.monthData).forEach(function(m){var d=ad.monthData[m];var p=d.total?Math.round(d.auto/d.total*100):0;ctx+=m+':'+d.total+'orders '+p+'%auto | ';});
+      }
       ctx += '\n';
-    } else { ctx += '=== AUTOMATION: no file ===\n'; }
+    } else { ctx += '=== AUTOMATION: no file uploaded ===\n'; }
 
-    // DELIVERY
+    // ═══ DELIVERY SCHEDULE ═══════════════════════════════════
     if (typeof DS_DATA !== 'undefined' && DS_DATA) {
       ctx += '=== DELIVERY SCHEDULE ===\n';
-      ctx += 'Total:'+(DS_DATA.total||0)+' Scheduled:'+(DS_DATA.scheduled||0)+'('+(DS_DATA.schedPct||0)+'%) OutOfSchedule:'+(DS_DATA.oos||0)+'('+(DS_DATA.oosPct||0)+'%) Compliance:'+(DS_DATA.schedPct||0)+'% | \n';
-    } else { ctx += '=== DELIVERY: no file ===\n'; }
+      ctx += 'Total:' + (DS_DATA.total||0) + ' Scheduled:' + (DS_DATA.scheduled||0) + '(' + (DS_DATA.schedPct||0) + '%) OOS:' + (DS_DATA.oos||0) + '(' + (DS_DATA.oosPct||0) + '%) Compliance:' + (DS_DATA.schedPct||0) + '%\n';
+    } else { ctx += '=== DELIVERY: no file uploaded ===\n'; }
 
-    // TEAM
+    // ═══ TEAM DIRECTORY ══════════════════════════════════════
     if (typeof GI_RAW !== 'undefined' && GI_RAW && GI_RAW.length) {
       ctx += '=== TEAM DIRECTORY ===\n';
-      GI_RAW.forEach(function(r){
+      GI_RAW.forEach(function(r) {
         var name=giGetVal(r,'name'), unit=giGetVal(r,'unit'), desig=giGetVal(r,'designation');
         var phone=giGetVal(r,'contact'); if(phone&&!phone.startsWith('+'))phone='+'+phone;
         var branch=giGetVal(r,'branch'), outlet=giGetVal(r,'outlet');
-        ctx+=name+'|Unit:'+unit+'|Role:'+desig+'|PHONE:'+phone+(branch?'|Branch:'+branch:'')+(outlet?'|Outlets:'+outlet:'')+'. ';
+        ctx += name + '|Unit:' + unit + '|Role:' + desig + '|PHONE:' + phone + (branch?'|Branch:'+branch:'') + (outlet?'|Outlets:'+outlet:'') + '. ';
       });
       ctx += '\n';
     }
+
   } catch(e) { ctx += 'Error:' + e.message; }
   return ctx;
 }
