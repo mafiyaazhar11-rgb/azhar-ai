@@ -6417,48 +6417,40 @@ function buildVoiceContext() {
           ctx += ' | \n';
         }
 
-        // ── Per-month breakdown using ORG arrays (same source as screen) ──
+        // ── Per-month breakdown using ORG_DATA arrays directly (NO filter changes) ──
         var allD = ORG_DATA['all'] || {};
         var ytdGrand = (allD.tRej||0)+(allD.tDel||0);
-        ctx += 'YTD_TOTAL(allMonths): tRej=' + (allD.tRej||0) + ' tDel=' + (allD.tDel||0);
+        ctx += 'YTD_TOTAL: tRej=' + (allD.tRej||0) + ' tDel=' + (allD.tDel||0);
         ctx += ' rate=' + (ytdGrand>0?((allD.tRej/ytdGrand)*100).toFixed(2):0) + '%';
         ctx += ' val=' + (allD.val||'') + ' foodRej=' + (allD.food_rej||0) + ' nonFoodRej=' + (allD.nonfood_rej||0) + ' | \n';
 
-        // Per month from ORG_DATA arrays (same source as getFilteredData)
-        ctx += 'MONTHLY(using same source as screen):\n';
-        var _savedMonth=rejMonth,_savedDay=rejDay,_savedType2=rejType,_savedSrc2=rejSrc,_savedORG=rejORG;
-        rejDay='all'; rejSrc='all';
+        ctx += 'MONTHLY:\n';
         for (var mo=1; mo<=12; mo++) {
-          var moRej = (allD.rej&&allD.rej[mo-1]) ? allD.rej[mo-1] : 0;
-          var moDel = (allD.del&&allD.del[mo-1]) ? allD.del[mo-1] : 0;
+          // Read directly from ORG_DATA arrays — NO filter changes, NO getFilteredData
+          var moRej = (allD.rej && allD.rej[mo-1]) ? allD.rej[mo-1] : 0;
+          var moDel = (allD.del && allD.del[mo-1]) ? allD.del[mo-1] : 0;
           if (moRej===0 && moDel===0) continue;
-          // Get this month all-types via getFilteredData for exact numbers
-          rejMonth=mo; rejType='all'; rejORG='all';
-          var moAllData = getFilteredData();
-          var moGrand = moAllData ? (moAllData.tRej+moAllData.tDel) : 1;
-          var moRate = moAllData && moGrand>0 ? ((moAllData.tRej/moGrand)*100).toFixed(2) : 0;
-          ctx += MN[mo]+'(mo='+mo+'): tRej='+moRej+' tDel='+moDel+' rate='+moRate+'% val='+(moAllData?(moAllData.val||''):'');
-          // Food data for this month
-          rejType='food'; rejORG='all';
-          var moFood = getFilteredData();
-          // Nonfood
-          rejType='nonfood'; rejORG='all';
-          var moNF = getFilteredData();
-          rejType='all';
-          if (moFood) ctx += ' foodRej='+(moFood.tRej||0)+' foodDel='+(moFood.tDel||0);
-          if (moNF) ctx += ' nonFoodRej='+(moNF.tRej||0)+' nonFoodDel='+(moNF.tDel||0);
-          // Reasons and customers from DAY_DATA (for display purposes only)
+          var moGrand = moRej + moDel;
+          var moRate = moGrand>0 ? ((moRej/moGrand)*100).toFixed(2) : 0;
+          ctx += MN[mo]+'(mo='+mo+'): tRej='+moRej+' tDel='+moDel+' rate='+moRate+'%';
+          // Food/nonfood per month from ORG-level arrays
+          var moFoodRej=0, moNFRej=0;
+          ['DCV','DCF'].forEach(function(o){var d=ORG_DATA[o];if(d&&d.rej)moFoodRej+=(d.rej[mo-1]||0);});
+          ['DGC','DGS','DSN'].forEach(function(o){var d=ORG_DATA[o];if(d&&d.rej)moNFRej+=(d.rej[mo-1]||0);});
+          ctx += ' foodRej='+moFoodRej+' nonFoodRej='+moNFRej;
+          // Val from DAY_DATA (only for display - may differ slightly)
           var mdx = (typeof DAY_DATA!=='undefined') ? (DAY_DATA[mo]||DAY_DATA[String(mo)]||{}) : {};
+          if (mdx.val) ctx += ' val='+mdx.val;
           if (mdx.reasons&&mdx.reasons.length) { ctx+=' TopReasons:'; mdx.reasons.slice(0,5).forEach(function(r){ctx+=r.l+'('+r.n+'),';});}
           if (mdx.custs&&mdx.custs.length) { ctx+=' TopCusts:'; mdx.custs.slice(0,8).forEach(function(c){ctx+=c.n+'('+c.c+'),';});}
           ctx += ' | \n';
-          // Per day for this month
+          // Per day
           if (mdx.data && Object.keys(mdx.data).length) {
             ctx += '  Days: ';
             Object.keys(mdx.data).sort(function(a,b){return parseInt(a)-parseInt(b);}).forEach(function(day){
               var dd=mdx.data[day];
               if(!dd||(dd.tRej===0&&dd.tDel===0))return;
-              var dr=dd.tDel>0?((dd.tRej/(dd.tRej+dd.tDel))*100).toFixed(1):0;
+              var dr=(dd.tRej+dd.tDel)>0?((dd.tRej/(dd.tRej+dd.tDel))*100).toFixed(1):0;
               ctx+='Day'+day+'[rej='+dd.tRej+'/del='+dd.tDel+'/rate='+dr+'%/food='+(dd.food_rej||0)+'/nf='+(dd.nonfood_rej||0);
               if(dd.custs&&dd.custs.length){ctx+='/custs:';dd.custs.slice(0,3).forEach(function(c){ctx+=c.n+'('+c.c+'),';}); }
               if(dd.reasons&&dd.reasons.length){ctx+='/reasons:';dd.reasons.slice(0,2).forEach(function(r){ctx+=r.l+'('+r.n+'),';}); }
@@ -6467,8 +6459,6 @@ function buildVoiceContext() {
             ctx += '\n';
           }
         }
-        // Restore original filters
-        rejMonth=_savedMonth; rejDay=_savedDay; rejType=_savedType2; rejSrc=_savedSrc2; rejORG=_savedORG;
 
         // ORG breakdown YTD
         ctx += 'ORGs: ';
