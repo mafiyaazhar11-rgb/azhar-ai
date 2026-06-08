@@ -2530,9 +2530,36 @@ function getFilteredData(){
       : ((moInfo3.food_custs||[]).length>0 ? moInfo3.food_custs : (orgBase.food_custs||[]));
     if(fr.length>0) base.reasons = fr;
     if(fc.length>0) base.custs   = fc;
-    // tRej from actual food count
-    var foodRejCount = hasDayFilter ? (base.food_rej||0) : (rejMonth!=='all'?(moInfo3.food_rej||0):(orgBase.food_rej||0));
-    if(foodRejCount>0) base.tRej = foodRejCount;
+    // tRej = sum of food ORG (DCV+DCF) rejections for the current period
+    // NOT DAY_DATA.food_rej which counts food PRODUCTS across ALL ORGs
+    var foodRejCount = 0;
+    if(orgMatchesFood){
+      // Specific food ORG: use their rejection count directly (already in base.tRej from typeRatio=1)
+      foodRejCount = base.tRej;
+    } else {
+      // All ORGs + food filter: sum DCV+DCF rejections for current period
+      ['DCV','DCF'].forEach(function(o){
+        var od = ORG_DATA[o]; if(!od) return;
+        var oRej = 0;
+        if(hasDayFilter){
+          // Day filter: use org proportion of day
+          var moKeyF = DAY_DATA[rejMonth] ? rejMonth : String(rejMonth);
+          var dayF = ((DAY_DATA[moKeyF]||{}).data||{})[rejDay] || ((DAY_DATA[moKeyF]||{}).data||{})[String(rejDay)];
+          if(dayF){
+            var moTotF=0; ['DCV','DGC','DSN','DGS','DCF'].forEach(function(x){var dx=ORG_DATA[x];if(dx)moTotF+=(dx.rej||[])[rejMonth-1]||0;});
+            oRej = moTotF>0 ? Math.round((dayF.tRej||0)*((od.rej||[])[rejMonth-1]||0)/moTotF) : 0;
+          }
+        } else if(rejMonth !== 'all'){
+          oRej = (od.rej||[])[rejMonth-1] || 0;
+        } else {
+          oRej = od.tRej || 0;
+        }
+        // Apply food product ratio for this ORG
+        var oFoodRatio = od.tRej > 0 ? (od.food_rej||0)/od.tRej : 1;
+        foodRejCount += Math.round(oRej * oFoodRatio);
+      });
+    }
+    if(foodRejCount > 0) base.tRej = foodRejCount;
   } else if(rejType === 'nonfood'){
     // If selected ORG is a nonfood ORG → ALL its rejections are nonfood → ratio=1
     typeRatio = orgMatchesNF ? 1 : ((orgBase.nonfood_rej||0) / orgTotalRej);
@@ -2563,8 +2590,32 @@ function getFilteredData(){
       : ((moInfo3.nonfood_custs||[]).length>0 ? moInfo3.nonfood_custs : (orgBase.nonfood_custs||[]));
     if(nr.length>0) base.reasons = nr;
     if(nc.length>0) base.custs   = nc;
-    var nfRejCount = hasDayFilter ? (base.nonfood_rej||0) : (rejMonth!=='all'?(moInfo3.nonfood_rej||0):(orgBase.nonfood_rej||0));
-    if(nfRejCount>0) base.tRej = nfRejCount;
+    // tRej = sum of nonfood ORG (DGC+DGS+DSN) rejections for the current period
+    var nfRejCount = 0;
+    if(orgMatchesNF || effectiveORG === 'COOKWARE'){
+      nfRejCount = base.tRej;
+    } else {
+      var nfOrgs = (effectiveORG === 'DGC') ? ['DGC'] : ['DGC','DGS','DSN'];
+      nfOrgs.forEach(function(o){
+        var od = ORG_DATA[o]; if(!od) return;
+        var oRej = 0;
+        if(hasDayFilter){
+          var moKeyNF = DAY_DATA[rejMonth] ? rejMonth : String(rejMonth);
+          var dayNF = ((DAY_DATA[moKeyNF]||{}).data||{})[rejDay] || ((DAY_DATA[moKeyNF]||{}).data||{})[String(rejDay)];
+          if(dayNF){
+            var moTotNF=0; ['DCV','DGC','DSN','DGS','DCF'].forEach(function(x){var dx=ORG_DATA[x];if(dx)moTotNF+=(dx.rej||[])[rejMonth-1]||0;});
+            oRej = moTotNF>0 ? Math.round((dayNF.tRej||0)*((od.rej||[])[rejMonth-1]||0)/moTotNF) : 0;
+          }
+        } else if(rejMonth !== 'all'){
+          oRej = (od.rej||[])[rejMonth-1] || 0;
+        } else {
+          oRej = od.tRej || 0;
+        }
+        var oNFRatio = od.tRej > 0 ? (od.nonfood_rej||0)/od.tRej : 1;
+        nfRejCount += Math.round(oRej * oNFRatio);
+      });
+    }
+    if(nfRejCount > 0) base.tRej = nfRejCount;
   }
 
   if(rejSrc === 'external'){
@@ -8736,3 +8787,4 @@ function exportDSExcel() {
 
 </body>
 </html>
+s
