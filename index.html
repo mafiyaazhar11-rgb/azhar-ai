@@ -6344,12 +6344,17 @@ async function processVoiceCommand(text) {
     var response = await fetch('/api/voice', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-auth-token': AUTH_TOKEN },
-      body: JSON.stringify({ text: text, context: context, tab: VC_CURRENT_TAB })
+      body: JSON.stringify({ text: text, context: context, tab: VC_CURRENT_TAB, history: JARVIS_HISTORY.slice(-16), lang: JARVIS_LANG.name })
     });
 
     var data = await response.json();
     if (!data.success) throw new Error(data.error || 'Server error');
     var parsed = data.result;
+
+    // Save to conversation history
+    JARVIS_HISTORY.push({ role: 'user', content: text });
+    JARVIS_HISTORY.push({ role: 'assistant', content: parsed.answer || '' });
+    if (JARVIS_HISTORY.length > 20) JARVIS_HISTORY = JARVIS_HISTORY.slice(-20);
 
     // Execute action if needed
     if (parsed.action && parsed.action !== 'none') {
@@ -6366,7 +6371,6 @@ async function processVoiceCommand(text) {
       actEl.textContent = parsed.action_label ? '⚡ ' + parsed.action_label : '';
       actEl.style.display = parsed.action_label ? 'block' : 'none';
     }
-    // Speak the answer back
     jarvisSpeak(answerText);
 
   } catch(e) {
