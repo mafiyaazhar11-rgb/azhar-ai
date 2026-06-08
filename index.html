@@ -2415,7 +2415,15 @@ function getFilteredData(){
     var mRej = orgBase.rej[mi]||0;
     timeBase = {
       tDel:mDel, tRej:mRej,
-      val: (function(){ var r=mRej/(orgBase.tRej||1); var v=parseFloat((orgBase.val||'0').replace(/[^0-9.]/g,''))*((orgBase.val||'').includes('M')?1000000:1000); var n=v*r; return n>=1000000?'AED '+(n/1000000).toFixed(2)+'M':'AED '+Math.round(n/1000)+'K'; })(),
+      val: (function(){
+        // Use DAY_DATA[month].val as the actual month value (exact from server)
+        var moD = DAY_DATA[rejMonth] || DAY_DATA[String(rejMonth)] || {};
+        if(moD.val) return moD.val;
+        // Fallback: ratio from orgBase
+        var r=mRej/(orgBase.tRej||1);
+        var v=parseFloat((orgBase.val||'0').replace(/[^0-9.]/g,''))*((orgBase.val||'').includes('M')?1000000:1000);
+        var n=v*r; return n>=1000000?'AED '+(n/1000000).toFixed(2)+'M':'AED '+Math.round(n/1000)+'K';
+      })(),
       del:[0,0,0,0,0,0].map(function(_,i){return i===mi?mDel:0;}),
       rej:[0,0,0,0,0,0].map(function(_,i){return i===mi?mRej:0;}),
       reasons:(moInfo2.reasons&&moInfo2.reasons.length)?moInfo2.reasons:(orgBase.reasons||[]),
@@ -2487,15 +2495,32 @@ function getFilteredData(){
       // All months — use YTD food delivered
       base.tDel = orgBase.food_del || 0;
     }
-    var foodValNum = parseFloat((orgBase.food_val||'0').replace(/[^0-9.]/g,'')) * ((orgBase.food_val||'').includes('M')?1000000:1000);
+    // For food val: use month food_val from DAY_DATA if available
+    var fmtValFn = function(n){return n>=1000000?'AED '+(n/1000000).toFixed(2)+'M':'AED '+Math.round(n/1000)+'K';};
     var baseValNum = parseFloat((base.val||'0').replace(/[^0-9.]/g,'')) * ((base.val||'').includes('M')?1000000:1000);
     var orgValNum  = parseFloat((orgBase.val||'0').replace(/[^0-9.]/g,'')) * ((orgBase.val||'').includes('M')?1000000:1000);
-    if(foodValNum === 0 && (orgBase.food_rej||0) > 0 && (orgBase.tRej||0) > 0)
-      foodValNum = orgValNum * ((orgBase.food_rej||0) / (orgBase.tRej||1));
-    // If ORG is food ORG, all its value is food value
-    if(orgMatchesFood && foodValNum === 0) foodValNum = orgValNum;
-    var foodValRatio = orgValNum > 0 ? (orgMatchesFood ? 1 : foodValNum / orgValNum) : (orgBase.food_rej||0)/(orgBase.tRej||1);
-    base.val = (function(){var n=baseValNum*foodValRatio;return n>=1000000?'AED '+(n/1000000).toFixed(2)+'M':'AED '+Math.round(n/1000)+'K';})();
+    if(orgMatchesFood){
+      // Food ORG: val is already correctly set from timeBase (DAY_DATA month val)
+      // Scale by food rejection ratio if needed
+      var moD_f = (rejMonth !== 'all') ? (DAY_DATA[rejMonth]||DAY_DATA[String(rejMonth)]||{}) : {};
+      if(moD_f.food_val) {
+        base.val = moD_f.food_val; // Use exact month food val
+      }
+      // else base.val stays as timeBase.val (month val from DAY_DATA)
+    } else {
+      var foodValNum = parseFloat((orgBase.food_val||'0').replace(/[^0-9.]/g,'')) * ((orgBase.food_val||'').includes('M')?1000000:1000);
+      if(foodValNum === 0 && (orgBase.food_rej||0) > 0)
+        foodValNum = orgValNum * ((orgBase.food_rej||0) / (orgBase.tRej||1));
+      // For month-specific: scale food val by month food ratio
+      if(rejMonth !== 'all'){
+        var moD_f2 = DAY_DATA[rejMonth]||DAY_DATA[String(rejMonth)]||{};
+        if(moD_f2.food_val) { base.val = moD_f2.food_val; }
+        else { var fvr = orgValNum>0 ? foodValNum/orgValNum : typeRatio; base.val = fmtValFn(baseValNum*fvr); }
+      } else {
+        var foodValRatio = orgValNum > 0 ? foodValNum / orgValNum : typeRatio;
+        base.val = fmtValFn(baseValNum * foodValRatio);
+      }
+    }
     // Use most specific available data: day > month > YTD
     var fr = hasDayFilter
       ? ((base.food_reasons||[]).length>0 ? base.food_reasons : [])
