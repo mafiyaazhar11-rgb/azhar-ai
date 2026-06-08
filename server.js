@@ -915,11 +915,17 @@ app.post('/api/voice', requireAuth, async function(req, res) {
       'SCREEN_NOW contrib = CONTRIBUTION TO REJECTION RATE shown on screen. ' +
       'SCREEN_NOW val = VALUE AT RISK on screen. ' +
       'SCREEN_NOW foodRej = food type rejection count. nonFoodRej = non-food type rejection count. ' +
-      'When food or nonfood type filter is active: DELIVERED shows total food/nonfood deliveries YTD (large number). ' +
+      'When food or nonfood type filter is active: DELIVERED on screen shows total YTD food/nonfood deliveries (large number like 57237 or 68265). ' +
+      'For the actual June food delivered: add DCV.del[June] + DCF.del[June] from ByORG Monthly section. ' +
+      'For actual June nonfood delivered: add DGC.del[June] + DGS.del[June] + DSN.del[June] from ByORG Monthly section. ' +
       'MONTHLY section = data for each month without day filter. ' +
       'Days section under each month = day-by-day breakdown. ' +
       'ByORG section = per ORG stats. ownRate = ORG rejection rate. contribBadge = small % shown on ORG card. ' +
       'RATE: overall rate = tRej/(tRej+tDel)*100. When type filter active use contrib from SCREEN_NOW. ' +
+      'IMPORTANT: When day filter + type filter (food/nonfood) are both active: ' +
+      'reason and customer counts are estimates scaled from all-type data. ' +
+      'They may not add up exactly to tRej. Always state tRej as the exact total. ' +
+      'Do NOT sum up reason counts and claim that is the total — use tRej from SCREEN_NOW. ' +
       'Keep answers 2 to 3 sentences. If data missing say please upload the file. ' +
       'For dispatch/driver questions use AllDrivers section. ' +
       'Phone numbers: say plus then digits in groups. ' +
