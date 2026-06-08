@@ -2470,18 +2470,17 @@ function getFilteredData(){
     var orgValNum2 = parseFloat((orgBase.val||'0').replace(/[^0-9.]/g,'')) * ((orgBase.val||'').includes('M')?1000000:1000);
     var nfValRatio = orgValNum2 > 0 ? nfValNum / orgValNum2 : 0;
     base.val = (function(){var n=baseValNum2*nfValRatio;return n>=1000000?'AED '+(n/1000000).toFixed(2)+'M':'AED '+Math.round(n/1000)+'K';})();
-    if(!hasDayFilter){
-      var nr = hasDayFilter
-        ? ((base.nonfood_reasons||[]).length>0 ? base.nonfood_reasons : [])
-        : ((moInfo3.nonfood_reasons||[]).length>0 ? moInfo3.nonfood_reasons : (orgBase.nonfood_reasons||[]));
-      var nc = hasDayFilter
-        ? ((base.nonfood_custs||[]).length>0 ? base.nonfood_custs : [])
-        : ((moInfo3.nonfood_custs||[]).length>0 ? moInfo3.nonfood_custs : (orgBase.nonfood_custs||[]));
-      if(nr.length>0) base.reasons = nr;
-      if(nc.length>0) base.custs   = nc;
-      var nfRejCount = hasDayFilter ? (base.nonfood_rej||0) : (rejMonth!=='all'?(moInfo3.nonfood_rej||0):(orgBase.nonfood_rej||0));
-      if(nfRejCount>0) base.tRej = nfRejCount;
-    }
+    // Always try to use actual nonfood reasons/custs
+    var nr = hasDayFilter
+      ? ((base.nonfood_reasons||[]).length>0 ? base.nonfood_reasons : [])
+      : ((moInfo3.nonfood_reasons||[]).length>0 ? moInfo3.nonfood_reasons : (orgBase.nonfood_reasons||[]));
+    var nc = hasDayFilter
+      ? ((base.nonfood_custs||[]).length>0 ? base.nonfood_custs : [])
+      : ((moInfo3.nonfood_custs||[]).length>0 ? moInfo3.nonfood_custs : (orgBase.nonfood_custs||[]));
+    if(nr.length>0) base.reasons = nr;
+    if(nc.length>0) base.custs   = nc;
+    var nfRejCount = hasDayFilter ? (base.nonfood_rej||0) : (rejMonth!=='all'?(moInfo3.nonfood_rej||0):(orgBase.nonfood_rej||0));
+    if(nfRejCount>0) base.tRej = nfRejCount;
   }
 
   if(rejSrc === 'external'){
@@ -2515,9 +2514,14 @@ function getFilteredData(){
   // For day filter: scale reasons counts proportionally
   var finalRatio = typeRatio * srcRatio;
   if(hasDayFilter && finalRatio !== 1 && finalRatio > 0){
-    base.reasons = (base.reasons||[]).map(function(r){return{l:r.l,n:Math.round((r.n||0)*finalRatio)};}).filter(function(r){return r.n>0;});
-    base.custs   = (base.custs||[]).map(function(c){return{n:c.n,c:Math.round((c.c||0)*finalRatio),v:c.v||''};}).filter(function(c){return c.c>0;});
-    base.tRej = Math.round((base.tRej||0) * finalRatio);
+    // Only scale reasons if we don't already have type-specific reasons
+    // (food/nonfood reasons set above should NOT be double-scaled)
+    if(rejType === 'all' && rejSrc === 'all'){
+      base.reasons = (base.reasons||[]).map(function(r){return{l:r.l,n:Math.round((r.n||0)*finalRatio)};}).filter(function(r){return r.n>0;});
+      base.custs   = (base.custs||[]).map(function(c){return{n:c.n,c:Math.round((c.c||0)*finalRatio),v:c.v||''};}).filter(function(c){return c.c>0;});
+      base.tRej = Math.round((base.tRej||0) * finalRatio);
+    }
+    // For type filter: tRej already set to actual count, don't scale
   } else if(!hasDayFilter){
     // All months or Month only — use REAL counts from orgBase
     if(rejType === 'food'){
@@ -2539,18 +2543,29 @@ function getFilteredData(){
   // tDel scaling — use real food/nonfood delivered counts
   // food_del + food_rej = total food orders; nonfood_del + nonfood_rej = total nonfood orders
   if(rejType === 'food'){
-    var foodTotalDel = orgBase.food_del||0;
-    // If food_del seems low (less than food_rej), use tDel * typeRatio as fallback
-    if(foodTotalDel === 0 && (orgBase.food_rej||0) > 0){
-      foodTotalDel = Math.round((orgBase.tDel||0) * typeRatio);
+    // Use month-specific food del if month is selected
+    if(rejMonth !== 'all'){
+      var mi_food = rejMonth - 1;
+      var foodMonthDel = 0;
+      ['DCV','DCF'].forEach(function(o){
+        if(ORG_DATA[o] && ORG_DATA[o].del) foodMonthDel += (ORG_DATA[o].del[mi_food]||0);
+      });
+      base.tDel = foodMonthDel > 0 ? foodMonthDel : (orgBase.food_del||0);
+    } else {
+      base.tDel = orgBase.food_del||0;
     }
-    base.tDel = foodTotalDel;
   } else if(rejType === 'nonfood'){
-    var nfTotalDel = orgBase.nonfood_del||0;
-    if(nfTotalDel === 0 && (orgBase.nonfood_rej||0) > 0){
-      nfTotalDel = Math.round((orgBase.tDel||0) * typeRatio);
+    // Use month-specific nonfood del if month is selected
+    if(rejMonth !== 'all'){
+      var mi_nf = rejMonth - 1;
+      var nfMonthDel = 0;
+      ['DGC','DGS','DSN'].forEach(function(o){
+        if(ORG_DATA[o] && ORG_DATA[o].del) nfMonthDel += (ORG_DATA[o].del[mi_nf]||0);
+      });
+      base.tDel = nfMonthDel > 0 ? nfMonthDel : (orgBase.nonfood_del||0);
+    } else {
+      base.tDel = orgBase.nonfood_del||0;
     }
-    base.tDel = nfTotalDel;
   } else if(rejSrc === 'external'){
     base.tDel = Math.round((orgBase.tDel||0) * srcRatio);
   } else if(rejSrc === 'internal'){
