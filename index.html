@@ -2474,11 +2474,19 @@ function getFilteredData(){
   if(rejType === 'food'){
     // If selected ORG is a food ORG → ALL its rejections are food → ratio=1
     typeRatio = orgMatchesFood ? 1 : (orgTotalRej > 0 ? (orgBase.food_rej||0) / orgTotalRej : 0);
-    var foodDelRatioRaw = (orgBase.food_del||0) > 0 && (orgBase.tDel||0) > 0
-      ? (orgBase.food_del||0)/(orgBase.tDel||1)
-      : ((orgBase.food_rej||0) > 0 ? (orgBase.food_rej||0)/(orgBase.tRej||1) : typeRatio);
-    base.tDel = Math.round((base.tDel||0) * foodDelRatioRaw);
-    if(base.tDel === 0 && base.tRej > 0) base.tDel = Math.round(base.tRej * (1/typeRatio - 1));
+    if(orgMatchesFood){
+      // Specific food ORG selected — use their actual month deliveries
+      base.tDel = rejMonth !== 'all' ? (orgBase.del[rejMonth-1]||0) : (orgBase.tDel||0);
+    } else if(rejMonth !== 'all'){
+      // All ORGs + food + specific month — sum only food ORGs (DCV+DCF) for that month
+      var miF = rejMonth - 1;
+      var foodMonthDel = 0;
+      ['DCV','DCF'].forEach(function(o){ if(ORG_DATA[o]&&ORG_DATA[o].del) foodMonthDel+=(ORG_DATA[o].del[miF]||0); });
+      base.tDel = foodMonthDel > 0 ? foodMonthDel : Math.round((base.tDel||0)*((orgBase.food_del||0)/(orgBase.tDel||1)));
+    } else {
+      // All months — use YTD food delivered
+      base.tDel = orgBase.food_del || 0;
+    }
     var foodValNum = parseFloat((orgBase.food_val||'0').replace(/[^0-9.]/g,'')) * ((orgBase.food_val||'').includes('M')?1000000:1000);
     var baseValNum = parseFloat((base.val||'0').replace(/[^0-9.]/g,'')) * ((base.val||'').includes('M')?1000000:1000);
     var orgValNum  = parseFloat((orgBase.val||'0').replace(/[^0-9.]/g,'')) * ((orgBase.val||'').includes('M')?1000000:1000);
@@ -2592,10 +2600,14 @@ function getFilteredData(){
     }
   } else if(rejType === 'nonfood'){
     if(orgMatchesNF){
-      // Nonfood ORG selected: ALL their deliveries are nonfood deliveries
+      // Specific nonfood ORG selected — use their actual month deliveries
       base.tDel = rejMonth !== 'all' ? (orgBase.del[rejMonth-1]||0) : (orgBase.tDel||0);
     } else if(rejMonth !== 'all'){
-      base.tDel = (orgBase.nonfood_del||0) > 0 ? orgBase.nonfood_del : Math.round((orgBase.del[rejMonth-1]||0) * typeRatio);
+      // All ORGs + nonfood + specific month — sum DGC+DGS+DSN for that month
+      var miNF = rejMonth - 1;
+      var nfMonthDel = 0;
+      ['DGC','DGS','DSN'].forEach(function(o){ if(ORG_DATA[o]&&ORG_DATA[o].del) nfMonthDel+=(ORG_DATA[o].del[miNF]||0); });
+      base.tDel = nfMonthDel > 0 ? nfMonthDel : Math.round((base.tDel||0)*((orgBase.nonfood_del||0)/(orgBase.tDel||1)));
     } else {
       base.tDel = orgBase.nonfood_del || 0;
     }
