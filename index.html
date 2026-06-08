@@ -770,8 +770,7 @@ footer span{color:#60a5fa;}
           <span style="font-size:10px;color:var(--gold);margin:0 4px;">──FOOD──</span>
           <button class="rej-pill" id="ro-dcv" onclick="rejFilter('org','DCV')" title="Food ORG">DCV</button>
           <button class="rej-pill" id="ro-dcf" onclick="rejFilter('org','DCF')" title="Food ORG">DCF</button>
-          <span style="font-size:10px;color:#5b8dee;margin:0 4px;">──SALON──</span>
-          <button class="rej-pill" id="ro-dgc" onclick="rejFilter('org','DGC')" title="Salon / Non-Food">DGC</button>
+          <button class="rej-pill" id="ro-dgc" onclick="rejFilter('org','DGC')" title="Non-Food">DGC</button>
           <span style="font-size:10px;color:#4ecb8d;margin:0 4px;">──COOKWARE/ELEC──</span>
           <button class="rej-pill" id="ro-dgs" onclick="rejFilter('org','DGS')" title="Cookware &amp; Electronics">DGS</button>
           <button class="rej-pill" id="ro-dsn" onclick="rejFilter('org','DSN')" title="Cookware &amp; Electronics">DSN</button>
@@ -808,7 +807,7 @@ footer span{color:#60a5fa;}
           <button class="rej-pill on" id="rt-all" onclick="rejFilter('type','all')">All</button>
           <button class="rej-pill" id="rt-food" onclick="rejFilter('type','food')" title="DCV + DCF">Food</button>
           <button class="rej-pill" id="rt-nf" onclick="rejFilter('type','nonfood')" title="DGC + DGS + DSN">Non-Food</button>
-          <button class="rej-pill" id="rt-salon" onclick="rejFilter('type','salon')" title="DGC only">Salon</button>
+
           <button class="rej-pill" id="rt-cook" onclick="rejFilter('type','cookware')" title="DGS + DSN">Cookware/Elec</button>
           <span style="width:1px;height:16px;background:var(--border);margin:0 6px;"></span>
           <span style="font-size:13px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;min-width:40px;">SOURCE</span>
@@ -2182,7 +2181,7 @@ function rejFilter(dim, val){
     bu:   {all:'rb-all',consumer:'rb-con',salon:'rb-sal'},
     org:  {all:'ro-all',DCV:'ro-dcv',DGC:'ro-dgc',DSN:'ro-dsn',DGS:'ro-dgs',DCF:'ro-dcf',COOKWARE:'ro-cook'},
     month:{all:'rm-all',1:'rm-1',2:'rm-2',3:'rm-3',4:'rm-4',5:'rm-5',6:'rm-6'},
-    type: {all:'rt-all',food:'rt-food',nonfood:'rt-nf',salon:'rt-salon',cookware:'rt-cook'},
+    type: {all:'rt-all',food:'rt-food',nonfood:'rt-nf',cookware:'rt-cook'},
     src:  {all:'rs-all',external:'rs-ext',internal:'rs-int'}
   };
 
@@ -2290,7 +2289,6 @@ function getFilteredData(){
   if(rejBU === 'salon'    && rejORG === 'all') effectiveORG = 'DGC';
   if(rejBU === 'consumer' && rejORG === 'all') effectiveORG = 'CONSUMER_DIC';
   // New type filters map to ORG groups
-  if(rejType === 'salon')    effectiveORG = 'DGC';
   if(rejType === 'cookware') effectiveORG = 'COOKWARE';
 
   // Step 0: Check if selected ORG is compatible with type filter
