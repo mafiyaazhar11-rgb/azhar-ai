@@ -2811,10 +2811,12 @@ oc.innerHTML=ORG_SUMMARY.map(function(o){
   }).join('');
 
   // KPI Cards — compute rates correctly
-  var _savedType = rejType;
-  rejType = 'all';
+  // grandTotal MUST use all-type + all-source for current month/day/org
+  // This ensures contribution always adds up to overall rate
+  var _savedType = rejType, _savedSrc = rejSrc;
+  rejType = 'all'; rejSrc = 'all';
   var _allData = getFilteredData();
-  rejType = _savedType;
+  rejType = _savedType; rejSrc = _savedSrc;
   var grandTotal = (_allData.tDel + _allData.tRej) || 1;
   const overallRate = (_allData.tRej/grandTotal*100).toFixed(2)+'%';
   // Contribution = filtered rejections / ALL orders (not just filtered orders)
