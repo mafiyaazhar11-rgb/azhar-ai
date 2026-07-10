@@ -1060,7 +1060,8 @@ app.post('/api/voice', requireAuth, async function(req, res) {
       (isFrederic ? 'FREDERIC MODE: Address as boss. Questions outside data: say Boss that is outside my scope. ' : '') +
       'CONVERSATION: Ongoing conversation. Remember everything. Answer follow-ups naturally. ' +
       'HOW TO READ THE DATA: ' +
-      'SCREEN_NOW = exactly what the screen shows right now with all active filters. ALWAYS use this for current questions. ' +
+      'SCREEN_NOW = exactly what the screen shows right now with all active filters. Use this ONLY when the user asks about "now" / "current view" / doesn\'t name a specific month. ' +
+      'If the user names a SPECIFIC month (e.g. "June rejection details") and that month is NOT the one currently on screen, do NOT ask them to apply the filter — you already have every month\'s numbers in the MONTHLY section below. Read that month\'s data directly and answer immediately with the real numbers, in the SAME reply, every time. Never say "please apply the filter" or "I need to see that data" — you already have it. Set action=filter so the screen catches up to match your answer, but the spoken answer must stand on its own regardless of what the screen does. ' +
       'SCREEN_NOW tRej = TOTAL REJECTIONS on screen. ' +
       'SCREEN_NOW tDel = DELIVERED on screen. ' +
       'SCREEN_NOW contrib = CONTRIBUTION TO REJECTION RATE shown on screen. ' +
