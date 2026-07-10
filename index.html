@@ -349,6 +349,14 @@ footer span{color:#e8c878;}
   #rej-kpis { grid-template-columns: 1fr 1fr !important; gap: 8px !important; }
   .day-cell { width: 32px !important; height: 32px !important; font-size: 9px !important; }
 
+  /* Top Root Causes / Top Customers — number was getting squeezed off-screen next to long labels; force it onto its own line */
+  .rej-reason-row, .rej-cust-row { flex-wrap: wrap !important; }
+  .rej-reason-row .rej-reason-num, .rej-cust-row .rej-cust-num {
+    flex-basis: 100% !important;
+    justify-content: flex-end !important;
+    margin-top: 4px !important;
+  }
+
   /* ── FILTER PILLS ── */
   .ret-pill, .rej-pill, .dpill { font-size: 8px !important; padding: 4px 8px !important; white-space: nowrap; }
   div[style*="display:flex;flex-wrap:wrap;gap:8px"] { overflow-x: auto !important; flex-wrap: nowrap !important; padding-bottom: 6px !important; }
@@ -2940,12 +2948,12 @@ oc.innerHTML=ORG_SUMMARY.map(function(o){
         var pct = d.tRej > 0 ? ((r.n||0)/d.tRej*100).toFixed(1)+'%' : '0%';
         var rankMedal = i===0?'🥇':i===1?'🥈':i===2?'🥉':('  '+(i+1)+'.');
         return '<div style="margin-bottom:12px;">'
-          +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;gap:8px;">'
+          +'<div class="rej-reason-row" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;gap:8px;">'
           +'<div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0;">'
           +'<span style="font-size:15px;width:28px;flex-shrink:0;color:'+barColor+';">'+rankMedal+'</span>'
           +'<span style="font-size:15px;color:#ffffff;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+r.l+'</span>'
           +'</div>'
-          +'<div style="display:flex;gap:10px;align-items:center;flex-shrink:0;">'
+          +'<div class="rej-reason-num" style="display:flex;gap:10px;align-items:center;flex-shrink:0;">'
           +'<span style="font-size:15px;color:var(--gold);font-weight:700;">'+(r.n||0).toLocaleString()+'</span>'
           +'<span style="font-size:13px;color:var(--muted);min-width:38px;text-align:right;">'+pct+'</span>'
           +'</div>'
@@ -2971,12 +2979,12 @@ oc.innerHTML=ORG_SUMMARY.map(function(o){
         var pct = d.tRej > 0 ? (c.c/d.tRej*100).toFixed(1)+'%' : '0%';
         var barW = Math.round(c.c/maxC*100);
         return '<div style="padding:8px 0;border-bottom:1px solid rgba(60,60,40,0.5);">'
-          +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">'
+          +'<div class="rej-cust-row" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">'
           +'<div style="display:flex;align-items:center;gap:8px;min-width:0;flex:1;">'
           +'<span style="font-size:15px;font-weight:800;color:'+col+';width:22px;flex-shrink:0;">'+(i+1)+'</span>'
           +'<span style="font-size:15px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500;">'+c.n+'</span>'
           +'</div>'
-          +'<div style="display:flex;align-items:center;gap:10px;flex-shrink:0;margin-left:8px;">'
+          +'<div class="rej-cust-num" style="display:flex;align-items:center;gap:10px;flex-shrink:0;margin-left:8px;">'
           +'<span style="font-size:16px;font-weight:700;color:var(--text);">'+c.c.toLocaleString()+'</span>'
           +'<span style="font-size:14px;font-weight:700;color:var(--red);min-width:42px;text-align:right;">'+pct+'</span>'
           +'</div>'
