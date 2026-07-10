@@ -1072,7 +1072,12 @@ app.post('/api/voice', requireAuth, async function(req, res) {
   try {
     var text = req.body.text || '';
     var clientContext = req.body.context || '';
-    var context = clientContext + '\n\n' + buildServerDataContext();
+    var context = clientContext;
+    try {
+      context = clientContext + '\n\n' + buildServerDataContext();
+    } catch(ctxErr) {
+      console.error('buildServerDataContext failed, falling back to client-only context:', ctxErr.message);
+    }
     var tab = req.body.tab || 'dispatch';
     var history = req.body.history || [];
     var lang = req.body.lang || 'English';
@@ -1146,6 +1151,7 @@ app.post('/api/voice', requireAuth, async function(req, res) {
     }
     res.json({ success: true, result: parsed });
   } catch(e) {
+    console.error('/api/voice error:', e.message, e.stack);
     res.status(500).json({ error: e.message });
   }
 });
