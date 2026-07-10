@@ -28,7 +28,7 @@
   --accent:#2563eb;
   --sidebar:220px;
 }
-body{font-family:'Inter','Montserrat',sans-serif;background:var(--black);color:var(--text);min-height:100vh;display:flex;overflow:hidden;height:100vh;scrollbar-width:thin;scrollbar-color:var(--border) transparent;}
+body{font-family:'Inter','Montserrat',sans-serif;background:radial-gradient(ellipse 1200px 800px at 15% 0%,rgba(37,99,235,0.16),transparent 60%),radial-gradient(ellipse 1000px 700px at 100% 100%,rgba(59,130,246,0.10),transparent 55%),var(--black);color:var(--text);min-height:100vh;display:flex;overflow:hidden;height:100vh;scrollbar-width:thin;scrollbar-color:var(--border) transparent;}
 .sidebar{width:var(--sidebar);min-height:100vh;background:#0a1628;border-right:1px solid rgba(59,130,246,0.2);display:flex;flex-direction:column;flex-shrink:0;position:fixed;left:0;top:0;bottom:0;z-index:100;}
 .sb-logo{padding:20px 16px;border-bottom:1px solid rgba(59,130,246,0.2);display:flex;align-items:center;gap:12px;}
 .sb-logo-box{width:38px;height:38px;border:1px solid var(--gold);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
@@ -37,10 +37,12 @@ body{font-family:'Inter','Montserrat',sans-serif;background:var(--black);color:v
 .sb-name{font-family:'Montserrat',sans-serif;font-size:15px;font-weight:700;letter-spacing:2px;color:#ffffff;}
 .sb-sub{font-size:9px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;}
 .sb-section{padding:16px 12px 6px;font-size:9px;letter-spacing:2px;color:rgba(126,179,232,0.5);text-transform:uppercase;}
-.sb-item{display:flex;align-items:center;gap:10px;padding:10px 14px;margin:2px 8px;cursor:pointer;transition:all 0.2s;color:var(--muted);font-size:13px;font-weight:500;letter-spacing:0.3px;border:none;background:transparent;width:calc(100% - 16px);text-align:left;border-radius:8px;}
-.sb-item:hover{background:rgba(59,130,246,0.15);color:#ffffff;}
-.sb-item.on{background:rgba(59,130,246,0.2);color:#60a5fa;border-left:3px solid #3b82f6;}
-.sb-item .icon{font-size:15px;width:20px;text-align:center;flex-shrink:0;}
+.sb-item{display:flex;align-items:center;gap:11px;padding:9px 12px;margin:3px 8px;cursor:pointer;transition:all 0.2s;color:var(--muted);font-size:13px;font-weight:500;letter-spacing:0.3px;border:none;background:transparent;width:calc(100% - 16px);text-align:left;border-radius:10px;}
+.sb-item:hover{background:rgba(59,130,246,0.12);color:#ffffff;}
+.sb-item:hover .icon{background:rgba(59,130,246,0.25);}
+.sb-item.on{background:linear-gradient(90deg,rgba(59,130,246,0.22),rgba(59,130,246,0.06));color:#ffffff;box-shadow:inset 0 0 0 1px rgba(96,165,250,0.3);}
+.sb-item.on .icon{background:linear-gradient(135deg,#2563eb,#60a5fa);color:#ffffff;box-shadow:0 0 12px rgba(59,130,246,0.5);}
+.sb-item .icon{font-size:13px;width:28px;height:28px;text-align:center;flex-shrink:0;display:flex;align-items:center;justify-content:center;border-radius:50%;background:rgba(126,179,232,0.12);transition:all 0.2s;}
 .sb-footer{margin-top:auto;padding:16px;border-top:1px solid rgba(59,130,246,0.2);}
 .sb-user{display:flex;align-items:center;gap:10px;}
 .sb-avatar{width:34px;height:34px;background:linear-gradient(135deg,#2563eb,#3b82f6);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#ffffff;flex-shrink:0;}
@@ -56,7 +58,7 @@ body{font-family:'Inter','Montserrat',sans-serif;background:var(--black);color:v
 .dot-live{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--green);letter-spacing:1px;}
 .dot-live::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 2s infinite;}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
-.content{flex:1;overflow-y:auto;padding:24px 28px;background:var(--black);min-height:0;}
+.content{flex:1;overflow-y:auto;padding:24px 28px;background:radial-gradient(ellipse 1400px 700px at 50% -10%,rgba(59,130,246,0.08),transparent 55%);min-height:0;}
 .content::-webkit-scrollbar{width:4px;}
 .content::-webkit-scrollbar-track{background:var(--surface);}
 .content::-webkit-scrollbar-thumb{background:var(--border);}
@@ -1343,27 +1345,32 @@ footer span{color:#60a5fa;}
 
       <!-- KPI Cards -->
       <div id="auto-kpi-row" style="display:none;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px;">
-        <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px 16px;border-top:3px solid var(--gold);">
+        <div style="background:var(--card);border:1px solid rgba(59,130,246,0.25);border-radius:14px;padding:16px;box-shadow:0 4px 18px rgba(0,0,0,0.25);">
+          <div style="width:40px;height:40px;border-radius:50%;background:rgba(59,130,246,0.15);display:flex;align-items:center;justify-content:center;font-size:18px;margin-bottom:10px;">🛒</div>
           <div style="font-size:13px;font-weight:600;color:var(--gold);text-transform:uppercase;letter-spacing:0.8px;">Total Orders YTD</div>
           <div id="auto-kpi-total" style="font-family:Montserrat,sans-serif;font-size:30px;font-weight:800;color:var(--gold);margin-top:4px;">—</div>
           <div id="auto-kpi-period" style="font-size:13px;color:#c9c3b0;margin-top:2px;">—</div>
         </div>
-        <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px 16px;border-top:3px solid var(--green);">
+        <div style="background:var(--card);border:1px solid rgba(34,197,94,0.3);border-radius:14px;padding:16px;box-shadow:0 4px 18px rgba(0,0,0,0.25);">
+          <div style="width:40px;height:40px;border-radius:50%;background:rgba(34,197,94,0.15);display:flex;align-items:center;justify-content:center;font-size:18px;margin-bottom:10px;">🤖</div>
           <div style="font-size:13px;font-weight:600;color:var(--gold);text-transform:uppercase;letter-spacing:0.8px;">Auto Booked</div>
           <div id="auto-kpi-auto" style="font-family:Montserrat,sans-serif;font-size:30px;font-weight:800;color:var(--green);margin-top:4px;">—</div>
           <div id="auto-kpi-auto-pct" style="font-size:13px;color:#c9c3b0;margin-top:2px;">—</div>
         </div>
-        <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px 16px;border-top:3px solid #f85149;">
+        <div style="background:var(--card);border:1px solid rgba(248,81,73,0.3);border-radius:14px;padding:16px;box-shadow:0 4px 18px rgba(0,0,0,0.25);">
+          <div style="width:40px;height:40px;border-radius:50%;background:rgba(248,81,73,0.15);display:flex;align-items:center;justify-content:center;font-size:18px;margin-bottom:10px;">🧑</div>
           <div style="font-size:13px;font-weight:600;color:var(--gold);text-transform:uppercase;letter-spacing:0.8px;">Manually Booked</div>
           <div id="auto-kpi-manual" style="font-family:Montserrat,sans-serif;font-size:30px;font-weight:800;color:#f85149;margin-top:4px;">—</div>
           <div id="auto-kpi-manual-pct" style="font-size:13px;color:#c9c3b0;margin-top:2px;">—</div>
         </div>
-        <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px 16px;border-top:3px solid #58a6ff;">
+        <div style="background:var(--card);border:1px solid rgba(88,166,255,0.3);border-radius:14px;padding:16px;box-shadow:0 4px 18px rgba(0,0,0,0.25);">
+          <div style="width:40px;height:40px;border-radius:50%;background:rgba(88,166,255,0.15);display:flex;align-items:center;justify-content:center;font-size:18px;margin-bottom:10px;">📊</div>
           <div style="font-size:13px;font-weight:600;color:var(--gold);text-transform:uppercase;letter-spacing:0.8px;">Automation Rate</div>
           <div id="auto-kpi-rate" style="font-family:Montserrat,sans-serif;font-size:30px;font-weight:800;color:#58a6ff;margin-top:4px;">—</div>
           <div style="font-size:13px;color:#c9c3b0;margin-top:2px;">YTD average</div>
         </div>
-        <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px 16px;border-top:3px solid #a371f7;">
+        <div style="background:var(--card);border:1px solid rgba(163,113,247,0.3);border-radius:14px;padding:16px;box-shadow:0 4px 18px rgba(0,0,0,0.25);">
+          <div style="width:40px;height:40px;border-radius:50%;background:rgba(163,113,247,0.15);display:flex;align-items:center;justify-content:center;font-size:18px;margin-bottom:10px;">📅</div>
           <div style="font-size:13px;font-weight:600;color:var(--gold);text-transform:uppercase;letter-spacing:0.8px;">Latest Month</div>
           <div id="auto-kpi-latest" style="font-family:Montserrat,sans-serif;font-size:30px;font-weight:800;color:#a371f7;margin-top:4px;">—</div>
           <div id="auto-kpi-latest-lbl" style="font-size:13px;color:#c9c3b0;margin-top:2px;">—</div>
