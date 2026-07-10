@@ -1647,11 +1647,11 @@ async function loadAutomationFromDB() {
         }
       });
       var total = totalAuto + totalManual;
-      var rate  = total ? Math.round(totalAuto/total*100) : 0;
+      var rate  = total ? +(totalAuto/total*100).toFixed(2) : 0;
       var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
       var sortedMonths = months.filter(function(m){ return monthData[m]; });
       var latestMonth  = sortedMonths[sortedMonths.length-1] || '';
-      var latestRate   = latestMonth ? Math.round(monthData[latestMonth].auto/monthData[latestMonth].total*100) : 0;
+      var latestRate   = latestMonth ? +(monthData[latestMonth].auto/monthData[latestMonth].total*100).toFixed(2) : 0;
       automationData = {
         uploadedAt: latestAt, uploadedBy: latestBy, fileName: latestFile,
         totalRecords: total, rows: monthData, orgRows: orgData,
