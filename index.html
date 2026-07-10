@@ -74,7 +74,7 @@ body{font-family:'Inter','Montserrat',sans-serif;background:radial-gradient(elli
 .grid-3-1{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:16px;}
 .box{background:var(--card);border:1px solid rgba(201,168,76,0.2);padding:20px;position:relative;border-radius:12px;}
 .box::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,#c9a84c,transparent);opacity:0.4;}
-.box-title{font-size:13px;letter-spacing:1px;color:#e8c878;text-transform:uppercase;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;font-weight:600;}
+.box-title{font-size:13px;letter-spacing:1px;color:#e8c878;text-shadow:0 0 5px rgba(201,168,76,0.5);text-transform:uppercase;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;font-weight:600;}
 .box-title span{font-size:11px;color:var(--muted);}
 .chart-bars{display:flex;align-items:flex-end;gap:4px;height:140px;margin-bottom:4px;justify-content:space-around;}
 .chart-bar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;}
@@ -1338,7 +1338,7 @@ footer span{color:#e8c878;}
 
       <!-- Big title block for leadership screenshots -->
       <div style="margin-bottom:18px;">
-        <div style="font-family:Montserrat,sans-serif;font-size:26px;font-weight:800;color:#ffffff;letter-spacing:0.5px;">Automation Tracking YTD</div>
+        <div style="font-family:Montserrat,sans-serif;font-size:26px;font-weight:800;color:#f5d98b;text-shadow:0 0 8px rgba(201,168,76,0.6),0 0 16px rgba(201,168,76,0.3);letter-spacing:0.5px;">Automation Tracking YTD</div>
         <div style="font-size:13px;color:var(--muted);margin-top:4px;">DoxtrE Auto vs Manual Booking &middot; Organisation Breakdown &middot; Jan&ndash;Jun 2026</div>
       </div>
 
@@ -1354,7 +1354,7 @@ footer span{color:#e8c878;}
         <div style="background:var(--card);border:1px solid rgba(201,168,76,0.25);border-radius:14px;padding:16px;box-shadow:0 4px 18px rgba(0,0,0,0.25);">
           <div style="width:40px;height:40px;border-radius:50%;background:rgba(201,168,76,0.15);display:flex;align-items:center;justify-content:center;font-size:18px;margin-bottom:10px;">🛒</div>
           <div style="font-size:13px;font-weight:600;color:var(--gold);text-transform:uppercase;letter-spacing:0.8px;">Total Orders YTD</div>
-          <div id="auto-kpi-total" style="font-family:Montserrat,sans-serif;font-size:30px;font-weight:800;color:var(--gold);margin-top:4px;">—</div>
+          <div id="auto-kpi-total" style="font-family:Montserrat,sans-serif;font-size:30px;font-weight:800;color:#f5d98b;text-shadow:0 0 6px rgba(245,217,139,0.5);margin-top:4px;">—</div>
           <div id="auto-kpi-period" style="font-size:13px;color:#c9c3b0;margin-top:2px;">—</div>
         </div>
         <div style="background:var(--card);border:1px solid rgba(34,197,94,0.3);border-radius:14px;padding:16px;box-shadow:0 4px 18px rgba(0,0,0,0.25);">
@@ -1372,13 +1372,13 @@ footer span{color:#e8c878;}
         <div style="background:var(--card);border:1px solid rgba(88,166,255,0.3);border-radius:14px;padding:16px;box-shadow:0 4px 18px rgba(0,0,0,0.25);">
           <div style="width:40px;height:40px;border-radius:50%;background:rgba(88,166,255,0.15);display:flex;align-items:center;justify-content:center;font-size:18px;margin-bottom:10px;">📊</div>
           <div style="font-size:13px;font-weight:600;color:var(--gold);text-transform:uppercase;letter-spacing:0.8px;">Automation Rate</div>
-          <div id="auto-kpi-rate" style="font-family:Montserrat,sans-serif;font-size:30px;font-weight:800;color:#58a6ff;margin-top:4px;">—</div>
+          <div id="auto-kpi-rate" style="font-family:Montserrat,sans-serif;font-size:30px;font-weight:800;color:#f5d98b;text-shadow:0 0 6px rgba(245,217,139,0.5);margin-top:4px;">—</div>
           <div style="font-size:13px;color:#c9c3b0;margin-top:2px;">YTD average</div>
         </div>
         <div style="background:var(--card);border:1px solid rgba(163,113,247,0.3);border-radius:14px;padding:16px;box-shadow:0 4px 18px rgba(0,0,0,0.25);">
           <div style="width:40px;height:40px;border-radius:50%;background:rgba(163,113,247,0.15);display:flex;align-items:center;justify-content:center;font-size:18px;margin-bottom:10px;">📅</div>
           <div style="font-size:13px;font-weight:600;color:var(--gold);text-transform:uppercase;letter-spacing:0.8px;">Latest Month</div>
-          <div id="auto-kpi-latest" style="font-family:Montserrat,sans-serif;font-size:30px;font-weight:800;color:#a371f7;margin-top:4px;">—</div>
+          <div id="auto-kpi-latest" style="font-family:Montserrat,sans-serif;font-size:30px;font-weight:800;color:#f5d98b;text-shadow:0 0 6px rgba(245,217,139,0.5);margin-top:4px;">—</div>
           <div id="auto-kpi-latest-lbl" style="font-size:13px;color:#c9c3b0;margin-top:2px;">—</div>
         </div>
       </div>
@@ -1414,15 +1414,15 @@ footer span{color:#e8c878;}
       <div id="auto-org-section" class="box" style="display:none;">
         <div class="box-title">🏢 Organisation Breakdown — Auto-mapped from Order Type</div>
         <div style="overflow-x:auto;">
-          <table class="data-table" style="width:100%;min-width:700px;">
+          <table class="data-table" style="width:100%;min-width:700px;table-layout:fixed;">
             <thead><tr>
-              <th style="font-size:15px;color:var(--gold);font-weight:700;">Organisation</th>
-              <th style="font-size:15px;color:var(--gold);font-weight:700;">Order Type(s)</th>
-              <th style="text-align:center;font-size:15px;color:var(--gold);font-weight:700;">Total</th>
-              <th style="text-align:center;font-size:15px;color:var(--gold);font-weight:700;">Auto</th>
-              <th style="text-align:center;font-size:15px;color:var(--gold);font-weight:700;">Manual</th>
-              <th style="text-align:center;font-size:15px;color:var(--gold);font-weight:700;">Auto %</th>
-              <th style="text-align:center;font-size:15px;color:var(--gold);font-weight:700;">Progress</th>
+              <th style="font-size:15px;color:var(--gold);font-weight:700;width:16%;">Organisation</th>
+              <th style="font-size:15px;color:var(--gold);font-weight:700;width:34%;">Order Type(s)</th>
+              <th style="text-align:center;font-size:15px;color:var(--gold);font-weight:700;width:10%;">Total</th>
+              <th style="text-align:center;font-size:15px;color:var(--gold);font-weight:700;width:10%;">Auto</th>
+              <th style="text-align:center;font-size:15px;color:var(--gold);font-weight:700;width:10%;">Manual</th>
+              <th style="text-align:center;font-size:15px;color:var(--gold);font-weight:700;width:8%;">Auto %</th>
+              <th style="text-align:center;font-size:15px;color:var(--gold);font-weight:700;width:12%;">Progress</th>
             </tr></thead>
             <tbody id="auto-org-body"></tbody>
           </table>
@@ -7670,7 +7670,7 @@ function renderAutoFromAggregated(agg) {
     var col = p>=80?'var(--green)':p>=55?'#e3b341':'#f85149';
     tbody += '<tr><td style="font-size:15px;font-weight:700;color:var(--gold)">'+m+'</td><td style="text-align:center;font-size:15px;font-weight:600;color:#f5f0e8">'+d.total.toLocaleString()+'</td><td style="text-align:center;font-size:15px;font-weight:600;color:var(--green)">'+d.auto.toLocaleString()+'</td><td style="text-align:center;font-size:15px;font-weight:600;color:#f85149">'+d.manual.toLocaleString()+'</td><td style="text-align:center;font-size:15px;font-weight:800;color:'+col+'">'+p+'%</td></tr>';
   });
-  tbody += '<tr style="background:rgba(201,168,76,0.12);border-top:2px solid var(--gold)"><td style="color:var(--gold);font-weight:800;font-size:15px">TOTAL</td><td style="text-align:center;color:var(--gold);font-weight:800;font-size:15px">'+total.toLocaleString()+'</td><td style="text-align:center;color:var(--green);font-weight:800;font-size:15px">'+totalAuto.toLocaleString()+'</td><td style="text-align:center;color:#f85149;font-weight:800;font-size:15px">'+totalManual.toLocaleString()+'</td><td style="text-align:center;color:#58a6ff;font-weight:800;font-size:15px">'+rate+'%</td></tr>';
+  tbody += '<tr style="background:rgba(201,168,76,0.12);border-top:2px solid var(--gold)"><td style="color:var(--gold);font-weight:800;font-size:15px">TOTAL</td><td style="text-align:center;color:var(--gold);font-weight:800;font-size:15px">'+total.toLocaleString()+'</td><td style="text-align:center;color:var(--green);font-weight:800;font-size:15px">'+totalAuto.toLocaleString()+'</td><td style="text-align:center;color:#f85149;font-weight:800;font-size:15px">'+totalManual.toLocaleString()+'</td><td style="text-align:center;color:#f5d98b;font-weight:800;font-size:15px;text-shadow:0 0 5px rgba(201,168,76,0.5)">'+rate+'%</td></tr>';
   document.getElementById('auto-monthly-body').innerHTML = tbody;
 
   // Bar chart
@@ -7678,7 +7678,7 @@ function renderAutoFromAggregated(agg) {
   sortedMonths.forEach(function(m) {
     var d = monthData[m]; if (!d) return;
     var p = +(d.auto/d.total*100).toFixed(2);
-    bars += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;"><div style="min-width:42px;font-size:15px;font-weight:700;color:var(--gold);text-align:right">'+m+'</div><div style="flex:1;background:#21262d;border-radius:4px;height:28px;overflow:hidden;"><div style="background:linear-gradient(90deg,#238636,#3fb950);height:100%;width:'+p+'%;display:flex;align-items:center;justify-content:flex-end;padding-right:8px;"><span style="font-size:14px;font-weight:800;color:#fff">'+p+'%</span></div></div><div style="min-width:68px;font-size:15px;font-weight:600;color:#f5f0e8;text-align:right">'+d.total.toLocaleString()+'</div></div>';
+    bars += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;"><div style="min-width:42px;font-size:15px;font-weight:700;color:var(--gold);text-align:right">'+m+'</div><div style="flex:1;background:#21262d;border-radius:4px;height:28px;overflow:hidden;"><div style="background:linear-gradient(90deg,#238636,#3fb950);height:100%;width:'+p+'%;display:flex;align-items:center;justify-content:flex-end;padding-right:8px;"><span style="font-size:14px;font-weight:800;color:#fff">'+p+'%</span></div></div><div style="min-width:68px;font-size:15px;font-weight:700;color:#f5d98b;text-align:right">'+d.total.toLocaleString()+'</div></div>';
   });
   document.getElementById('auto-bar-chart').innerHTML = bars;
 
@@ -7691,7 +7691,7 @@ function renderAutoFromAggregated(agg) {
     var ots = Array.isArray(d.ots) ? d.ots.join(', ') : (d.ots||'');
     orgRows += '<tr><td style="font-size:15px;font-weight:700;color:var(--gold)">'+org+'</td><td style="font-size:14px;color:#d4c89a">'+ots+'</td><td style="text-align:center;font-size:15px;color:#f5f0e8;font-weight:600">'+d.total.toLocaleString()+'</td><td style="text-align:center;font-size:15px;color:var(--green);font-weight:600">'+d.auto.toLocaleString()+'</td><td style="text-align:center;font-size:15px;color:#f85149;font-weight:600">'+d.manual.toLocaleString()+'</td><td style="text-align:center;font-size:15px;font-weight:800;color:'+col+'">'+p+'%</td><td><div style="background:#21262d;border-radius:3px;height:10px;overflow:hidden"><div style="width:'+p+'%;height:100%;background:'+col+';border-radius:3px"></div></div></td></tr>';
   });
-  orgRows += '<tr style="background:rgba(201,168,76,0.12);border-top:2px solid var(--gold)"><td style="color:var(--gold);font-weight:800;font-size:15px">GRAND TOTAL</td><td style="font-size:14px;color:#d4c89a">All organisations</td><td style="text-align:center;color:var(--gold);font-weight:800;font-size:15px">'+total.toLocaleString()+'</td><td style="text-align:center;color:var(--green);font-weight:800;font-size:15px">'+totalAuto.toLocaleString()+'</td><td style="text-align:center;color:#f85149;font-weight:800;font-size:15px">'+totalManual.toLocaleString()+'</td><td style="text-align:center;color:#58a6ff;font-weight:800;font-size:15px">'+rate+'%</td><td><div style="background:#21262d;border-radius:3px;height:10px;overflow:hidden"><div style="width:'+rate+'%;height:100%;background:#58a6ff;border-radius:3px"></div></div></td></tr>';
+  orgRows += '<tr style="background:rgba(201,168,76,0.12);border-top:2px solid var(--gold)"><td style="color:var(--gold);font-weight:800;font-size:15px">GRAND TOTAL</td><td style="font-size:14px;color:#d4c89a">All organisations</td><td style="text-align:center;color:var(--gold);font-weight:800;font-size:15px">'+total.toLocaleString()+'</td><td style="text-align:center;color:var(--green);font-weight:800;font-size:15px">'+totalAuto.toLocaleString()+'</td><td style="text-align:center;color:#f85149;font-weight:800;font-size:15px">'+totalManual.toLocaleString()+'</td><td style="text-align:center;color:#f5d98b;font-weight:800;font-size:15px;text-shadow:0 0 5px rgba(201,168,76,0.5)">'+rate+'%</td><td><div style="background:#21262d;border-radius:3px;height:10px;overflow:hidden"><div style="width:'+rate+'%;height:100%;background:#f5d98b;border-radius:3px"></div></div></td></tr>';
   document.getElementById('auto-org-body').innerHTML = orgRows;
 }
 
@@ -7741,12 +7741,12 @@ function renderAutoTracking(data) {
     var col = p>=80?'var(--green)':p>=55?'#e3b341':'#f85149';
     tbody += '<tr><td style="font-size:15px;font-weight:700;color:var(--gold)">'+m+'</td><td style="text-align:center;font-size:15px;font-weight:600;color:#f5f0e8">'+d.total.toLocaleString()+'</td><td style="text-align:center;font-size:15px;font-weight:600;color:var(--green)">'+d.auto.toLocaleString()+'</td><td style="text-align:center;font-size:15px;font-weight:600;color:#f85149">'+d.manual.toLocaleString()+'</td><td style="text-align:center;font-size:15px;font-weight:800;color:'+col+'">'+p+'%</td></tr>';
   });
-  tbody += '<tr style="background:rgba(201,168,76,0.12);border-top:2px solid var(--gold)"><td style="color:var(--gold);font-weight:800;font-size:15px">TOTAL</td><td style="text-align:center;color:var(--gold);font-weight:800;font-size:15px">'+total.toLocaleString()+'</td><td style="text-align:center;color:var(--green);font-weight:800;font-size:15px">'+totalAuto.toLocaleString()+'</td><td style="text-align:center;color:#f85149;font-weight:800;font-size:15px">'+totalManual.toLocaleString()+'</td><td style="text-align:center;color:#58a6ff;font-weight:800;font-size:15px">'+rate+'%</td></tr>';
+  tbody += '<tr style="background:rgba(201,168,76,0.12);border-top:2px solid var(--gold)"><td style="color:var(--gold);font-weight:800;font-size:15px">TOTAL</td><td style="text-align:center;color:var(--gold);font-weight:800;font-size:15px">'+total.toLocaleString()+'</td><td style="text-align:center;color:var(--green);font-weight:800;font-size:15px">'+totalAuto.toLocaleString()+'</td><td style="text-align:center;color:#f85149;font-weight:800;font-size:15px">'+totalManual.toLocaleString()+'</td><td style="text-align:center;color:#f5d98b;font-weight:800;font-size:15px;text-shadow:0 0 5px rgba(201,168,76,0.5)">'+rate+'%</td></tr>';
   document.getElementById('auto-monthly-body').innerHTML = tbody;
   var bars = '';
   sortedMonths.forEach(function(m) {
     var d = monthData[m], p = Math.round(d.auto/d.total*100);
-    bars += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;"><div style="min-width:42px;font-size:15px;font-weight:700;color:var(--gold);text-align:right">'+m+'</div><div style="flex:1;background:#21262d;border-radius:4px;height:28px;overflow:hidden;"><div style="background:linear-gradient(90deg,#238636,#3fb950);height:100%;width:'+p+'%;display:flex;align-items:center;justify-content:flex-end;padding-right:8px;"><span style="font-size:14px;font-weight:800;color:#fff">'+p+'%</span></div></div><div style="min-width:68px;font-size:15px;font-weight:600;color:#f5f0e8;text-align:right">'+d.total.toLocaleString()+'</div></div>';
+    bars += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;"><div style="min-width:42px;font-size:15px;font-weight:700;color:var(--gold);text-align:right">'+m+'</div><div style="flex:1;background:#21262d;border-radius:4px;height:28px;overflow:hidden;"><div style="background:linear-gradient(90deg,#238636,#3fb950);height:100%;width:'+p+'%;display:flex;align-items:center;justify-content:flex-end;padding-right:8px;"><span style="font-size:14px;font-weight:800;color:#fff">'+p+'%</span></div></div><div style="min-width:68px;font-size:15px;font-weight:700;color:#f5d98b;text-align:right">'+d.total.toLocaleString()+'</div></div>';
   });
   document.getElementById('auto-bar-chart').innerHTML = bars;
   var orgRows = '';
@@ -7755,7 +7755,7 @@ function renderAutoTracking(data) {
     var col = p>=80?'var(--green)':p>=55?'#e3b341':'#f85149';
     orgRows += '<tr><td style="font-size:15px;font-weight:700;color:var(--gold)">'+org+'</td><td style="font-size:14px;color:#d4c89a">'+d.ots.join(', ')+'</td><td style="text-align:center;font-size:15px;color:#f5f0e8;font-weight:600">'+d.total.toLocaleString()+'</td><td style="text-align:center;font-size:15px;color:var(--green);font-weight:600">'+d.auto.toLocaleString()+'</td><td style="text-align:center;font-size:15px;color:#f85149;font-weight:600">'+d.manual.toLocaleString()+'</td><td style="text-align:center;font-size:15px;font-weight:800;color:'+col+'">'+p+'%</td><td><div style="background:#21262d;border-radius:3px;height:10px;overflow:hidden"><div style="width:'+p+'%;height:100%;background:'+col+';border-radius:3px"></div></div></td></tr>';
   });
-  orgRows += '<tr style="background:rgba(201,168,76,0.12);border-top:2px solid var(--gold)"><td style="color:var(--gold);font-weight:800;font-size:15px">GRAND TOTAL</td><td style="font-size:14px;color:#d4c89a">All organisations</td><td style="text-align:center;color:var(--gold);font-weight:800;font-size:15px">'+total.toLocaleString()+'</td><td style="text-align:center;color:var(--green);font-weight:800;font-size:15px">'+totalAuto.toLocaleString()+'</td><td style="text-align:center;color:#f85149;font-weight:800;font-size:15px">'+totalManual.toLocaleString()+'</td><td style="text-align:center;color:#58a6ff;font-weight:800;font-size:15px">'+rate+'%</td><td><div style="background:#21262d;border-radius:3px;height:10px;overflow:hidden"><div style="width:'+rate+'%;height:100%;background:#58a6ff;border-radius:3px"></div></div></td></tr>';
+  orgRows += '<tr style="background:rgba(201,168,76,0.12);border-top:2px solid var(--gold)"><td style="color:var(--gold);font-weight:800;font-size:15px">GRAND TOTAL</td><td style="font-size:14px;color:#d4c89a">All organisations</td><td style="text-align:center;color:var(--gold);font-weight:800;font-size:15px">'+total.toLocaleString()+'</td><td style="text-align:center;color:var(--green);font-weight:800;font-size:15px">'+totalAuto.toLocaleString()+'</td><td style="text-align:center;color:#f85149;font-weight:800;font-size:15px">'+totalManual.toLocaleString()+'</td><td style="text-align:center;color:#f5d98b;font-weight:800;font-size:15px;text-shadow:0 0 5px rgba(201,168,76,0.5)">'+rate+'%</td><td><div style="background:#21262d;border-radius:3px;height:10px;overflow:hidden"><div style="width:'+rate+'%;height:100%;background:#f5d98b;border-radius:3px"></div></div></td></tr>';
   document.getElementById('auto-org-body').innerHTML = orgRows;
 }
 
