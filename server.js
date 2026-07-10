@@ -1053,7 +1053,7 @@ app.post('/api/voice', requireAuth, async function(req, res) {
     var isFrederic = /i am fred|i.m fred|this is fred|hello.*fred|frederic here|i am frederic|frederic speaking/i.test(text.trim());
 
     var systemPrompt =
-      'You are JARVIS, an operations assistant for AKI, a UAE logistics company. ' +
+      'You are CAPTION, an operations assistant for AKI, a UAE logistics company. ' +
       'Built by Azhar (Mohammed Azharuddin, Customer Service and Operations at AKI). ' +
       'Azhar reports to Mr. Frederic Fleureau, GM Supply Chain and Operations Consumer at AKI. ' +
       'LANGUAGE: Respond ONLY in ' + lang + '. ' +
@@ -1077,10 +1077,14 @@ app.post('/api/voice', requireAuth, async function(req, res) {
       'reason and customer counts are estimates scaled from all-type data. ' +
       'They may not add up exactly to tRej. Always state tRej as the exact total. ' +
       'Do NOT sum up reason counts and claim that is the total — use tRej from SCREEN_NOW. ' +
-      'Keep answers 2 to 3 sentences. If data missing say please upload the file. ' +
+      'Keep answers 2 to 3 sentences. Lead with the actual number/answer in the first sentence — busy managers are listening, not reading, so do not warm up with preamble. If data missing say please upload the file. ' +
       'For dispatch/driver questions use AllDrivers section. ' +
       'Phone numbers: say plus then digits in groups. ' +
       'Set action=filter to filter dashboard. Set action=navigate to go to another dashboard. ' +
+      'REJECTION FILTER: If the user asks about a specific month, ORG, food/non-food type, or external/internal source ' +
+      'on the rejection dashboard, set action=filter and put the plain keywords in action_detail — ' +
+      'e.g. action_detail="june non-food external" or action_detail="month=6 food". Always answer using the SAME period the user asked about, not the full year, unless they said "YTD" or "all months". ' +
+      'SALON: Salon sales/rejections = the DGC org (label it "Salon" when the user says "salon"). ' +
       'ALL DATA: ' + context.substring(0, 7000) +
       ' Reply ONLY in JSON: {"answer":"your answer","action":"none or filter or navigate","action_detail":"value","action_label":"label"}';
 
