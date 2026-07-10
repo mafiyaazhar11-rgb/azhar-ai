@@ -878,6 +878,74 @@ app.get('/api/rejection/status', function(req, res) {
   res.json({ hasData:true, uploadedAt:rejectionData.uploadedAt, uploadedBy:rejectionData.uploadedBy, fileName:rejectionData.fileName, totalOrders:rejectionData.totalOrders, orgs:rejectionData.orgs, months:rejectionData.months, needsReupload:rejectionData.needsReupload||false });
 });
 
+// ── REJECTION EXCEL EXPORT (server-side, 2 sheets: Executive Summary + Detail) ──
+app.post('/api/rejection/export-excel', function(req, res) {
+  try {
+    var body = req.body || {};
+    var summary = body.summary || {};
+    var detailRows = body.detailRows || [];
+    var filterStr = body.filterStr || 'All Filters';
+
+    var totalRej = summary.tRej || 0;
+    var totalDel = summary.tDel || 0;
+    var rate = (totalRej + totalDel) > 0 ? (totalRej/(totalRej+totalDel)*100).toFixed(2)+'%' : '0%';
+    var topReasons = (summary.reasons || []).slice(0, 5);
+    var topCusts = (summary.custs || []).slice(0, 5);
+
+    var wb = XLSX.utils.book_new();
+
+    // ---- Sheet 1: Executive Summary ----
+    var esRows = [];
+    esRows.push(['AKI GROUP — REJECTION EXECUTIVE SUMMARY']);
+    esRows.push(['Generated', new Date().toLocaleString('en-AE')]);
+    esRows.push(['Filters Applied', filterStr]);
+    esRows.push([]);
+    esRows.push(['KEY METRICS']);
+    esRows.push(['Total Rejections', totalRej]);
+    esRows.push(['Total Delivered', totalDel]);
+    esRows.push(['Rejection Rate', rate]);
+    esRows.push(['Value at Risk', summary.val || '—']);
+    esRows.push([]);
+    esRows.push(['TOP 5 ROOT CAUSES', '', 'COUNT', '% OF TOTAL']);
+    topReasons.forEach(function(r){
+      esRows.push([r.l, '', r.n, totalRej>0 ? ((r.n/totalRej*100).toFixed(1)+'%') : '0%']);
+    });
+    esRows.push([]);
+    esRows.push(['TOP 5 CUSTOMERS BY REJECTIONS', '', 'COUNT', '% OF TOTAL']);
+    topCusts.forEach(function(c){
+      esRows.push([c.n, '', c.c, totalRej>0 ? ((c.c/totalRej*100).toFixed(1)+'%') : '0%']);
+    });
+    esRows.push([]);
+    esRows.push(['RECOMMENDED ACTIONS']);
+    if (topReasons[0]) esRows.push(['1. Prioritize a fix for "'+topReasons[0].l+'" — top root cause at '+topReasons[0].n+' rejections ('+(totalRej>0?(topReasons[0].n/totalRej*100).toFixed(1):'0')+'% of total).']);
+    if (topReasons[1]) esRows.push(['2. Address "'+topReasons[1].l+'" next — '+topReasons[1].n+' rejections.']);
+    if (topCusts[0]) esRows.push(['3. Engage account owner for "'+topCusts[0].n+'" — highest-rejecting customer with '+topCusts[0].c+' cases.']);
+    esRows.push(['4. Re-check merchandiser/route scheduling if route-related causes dominate the list above.']);
+
+    var esSheet = XLSX.utils.aoa_to_sheet(esRows);
+    esSheet['!cols'] = [{wch:42},{wch:16},{wch:12},{wch:14}];
+    XLSX.utils.book_append_sheet(wb, esSheet, 'Executive Summary');
+
+    // ---- Sheet 2: Rejection Detail ----
+    var detAoA = [['#','Customer Name','Full Address','Final Root Cause','Rejection Count','% of Total']];
+    detailRows.forEach(function(r, i){
+      var pct = totalRej>0 ? ((r.n/totalRej*100).toFixed(2)+'%') : '0%';
+      detAoA.push([i+1, r.cust||'', r.addr||'', r.root||'', r.n||0, pct]);
+    });
+    var detSheet = XLSX.utils.aoa_to_sheet(detAoA);
+    detSheet['!cols'] = [{wch:5},{wch:32},{wch:45},{wch:30},{wch:14},{wch:12}];
+    XLSX.utils.book_append_sheet(wb, detSheet, 'Rejection Detail');
+
+    var buf = XLSX.write(wb, { type:'buffer', bookType:'xlsx' });
+    res.setHeader('Content-Disposition', 'attachment; filename="Rejection_Report_'+Date.now()+'.xlsx"');
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.send(buf);
+  } catch(e) {
+    console.error('rejection export-excel error:', e.message);
+    res.status(500).json({ error: 'Export failed: '+e.message });
+  }
+});
+
 // ── SHARED PASSWORD CHECK FOR UPLOAD STARS ──
 app.post('/api/backlog/check-password', requireAuth, async function(req, res) {
   try {
