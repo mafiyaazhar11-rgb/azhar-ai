@@ -840,7 +840,7 @@ footer span{color:#e8c878;}
       <div class="box" style="margin-bottom:16px;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
           <div class="box-title" style="font-size:15px;margin:0;">📋 Customer · Location · Root Cause Detail</div>
-          <button onclick="exportRejDetailExcel()" style="background:rgba(201,168,76,0.12);border:1px solid var(--gold);color:var(--gold);font-family:Montserrat,sans-serif;font-size:12px;letter-spacing:1px;text-transform:uppercase;padding:7px 16px;cursor:pointer;">⬇ Export Excel</button>
+          <button id="rej-export-btn" onclick="exportRejDetailExcel()" style="background:rgba(201,168,76,0.12);border:1px solid var(--gold);color:var(--gold);font-family:Montserrat,sans-serif;font-size:12px;letter-spacing:1px;text-transform:uppercase;padding:7px 16px;cursor:pointer;">⬇ Export Excel</button>
         </div>
         <div style="overflow-x:auto;">
           <table style="width:100%;border-collapse:collapse;" id="rej-detail-table">
@@ -2690,9 +2690,13 @@ function getFilteredData(){
   base.rej  = base.rej.map(function(v){return Math.round(v*finalRatio);});
   // tDel scaling — already handled in Step 3 above for food/nonfood
   if(rejSrc === 'external'){
-    base.tDel = Math.round((orgBase.tDel||0) * srcRatio);
+    var refTotalRejD = hasDayFilter ? Math.max(orgTotalRej,1) : (rejMonth!=='all' ? Math.max((orgBase.rej[rejMonth-1]||0),1) : Math.max(orgTotalRej,1));
+    var refExtRejD = hasDayFilter ? (base.ext_rej||0) : (rejMonth!=='all' ? (moInfo3.ext_rej||0) : (orgBase.ext_rej||0));
+    base.tDel = Math.round((base.tDel||0) * (refExtRejD/refTotalRejD));
   } else if(rejSrc === 'internal'){
-    base.tDel = Math.round((orgBase.tDel||0) * srcRatio);
+    var refTotalRejD2 = hasDayFilter ? Math.max(orgTotalRej,1) : (rejMonth!=='all' ? Math.max((orgBase.rej[rejMonth-1]||0),1) : Math.max(orgTotalRej,1));
+    var refIntRejD = hasDayFilter ? (base.int_rej||0) : (rejMonth!=='all' ? (moInfo3.int_rej||0) : (orgBase.int_rej||0));
+    base.tDel = Math.round((base.tDel||0) * (refIntRejD/refTotalRejD2));
   } else {
     base.tDel = Math.round(base.tDel||0);
   }
@@ -2846,9 +2850,11 @@ oc.innerHTML=ORG_SUMMARY.map(function(o){
     } else if(rejType === 'nonfood'){
       filtDel = FOOD_ORGS.indexOf(o.org) >= 0 ? 0 : (orgD.nonfood_del||0);
     } else if(rejSrc === 'external'){
-      filtDel = Math.round((orgD.tDel||0) * ((orgD.ext_rej||0) / Math.max(orgD.tRej,1)));
+      var delBaseE = rejMonth !== 'all' ? ((orgD.del||[])[rejMonth-1]||0) : (orgD.tDel||0);
+      filtDel = Math.round(delBaseE * ((orgD.ext_rej||0) / Math.max(orgD.tRej,1)));
     } else if(rejSrc === 'internal'){
-      filtDel = Math.round((orgD.tDel||0) * ((orgD.int_rej||0) / Math.max(orgD.tRej,1)));
+      var delBaseI = rejMonth !== 'all' ? ((orgD.del||[])[rejMonth-1]||0) : (orgD.tDel||0);
+      filtDel = Math.round(delBaseI * ((orgD.int_rej||0) / Math.max(orgD.tRej,1)));
     } else if(rejMonth !== 'all'){
       var mi0 = rejMonth - 1;
       filtDel = (orgD.del||[])[mi0] || 0;
@@ -3090,37 +3096,33 @@ function exportRejDetailExcel(){
   if(rejSrc!=='all') filterDesc.push('Source: '+(rejSrc==='external'?'External':'Internal'));
   var filterStr = filterDesc.length ? filterDesc.join(' | ') : 'All Filters';
 
-  var totalRej = (ORG_DATA['all']||{}).tRej || 1;
+  var summary = getFilteredData();
 
-  var html = '<html><head><meta charset="UTF-8"></head><body>';
-  html += '<h2 style="color:#c9a84c;font-family:Arial;">REJECTION ANALYSIS — Customer · Location · Root Cause</h2>';
-  html += '<p style="font-family:Arial;font-size:13px;"><b>AKI Group — CST Operations Intelligence</b><br>';
-  html += 'Generated: '+new Date().toLocaleDateString('en-AE')+'<br>';
-  html += 'Filters Applied: '+filterStr+'<br>';
-  html += 'Total Rejections: '+(ORG_DATA[rejORG==='all'?'all':rejORG]||{}).tRej+'</p>';
-  html += '<table border="1" cellpadding="8" cellspacing="0" style="border-collapse:collapse;font-family:Arial;font-size:13px;width:100%;">';
-  html += '<thead><tr style="background:#1a1e26;color:#c9a84c;">';
-  html += '<th>#</th><th>Customer Name</th><th>Full Address for Address Matching</th><th>Final- Root Cause</th><th>Rejection Count</th><th>% of Total</th>';
-  html += '</tr></thead><tbody>';
-  detailRows.forEach(function(r,i){
-    var pct = (r.n/totalRej*100).toFixed(2)+'%';
-    var bg = i%2===0?'#ffffff':'#f5f5f5';
-    html += '<tr style="background:'+bg+';">';
-    html += '<td style="text-align:center;font-weight:bold;">'+(i+1)+'</td>';
-    html += '<td style="font-weight:600;">'+r.cust+'</td>';
-    html += '<td style="color:#555;">'+r.addr+'</td>';
-    html += '<td>'+r.root+'</td>';
-    html += '<td style="text-align:center;font-weight:bold;color:#c00;">'+r.n+'</td>';
-    html += '<td style="text-align:center;color:#c00;">'+pct+'</td>';
-    html += '</tr>';
+  var btn = document.getElementById('rej-export-btn');
+  var origLabel = btn ? btn.textContent : null;
+  if(btn){ btn.textContent = '⏳ Building report...'; btn.disabled = true; }
+
+  fetch('/api/rejection/export-excel', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      summary: { tRej: summary.tRej, tDel: summary.tDel, val: summary.val, reasons: summary.reasons, custs: summary.custs },
+      detailRows: detailRows,
+      filterStr: filterStr
+    })
+  }).then(function(r){
+    if(!r.ok) throw new Error('Export failed');
+    return r.blob();
+  }).then(function(blob){
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'Rejection_Report_'+filterStr.replace(/[^a-zA-Z0-9]/g,'_')+'_'+new Date().toISOString().slice(0,10)+'.xlsx';
+    a.click();
+  }).catch(function(err){
+    alert('Export failed: '+err.message);
+  }).finally(function(){
+    if(btn){ btn.textContent = origLabel; btn.disabled = false; }
   });
-  html += '</tbody></table></body></html>';
-
-  var blob = new Blob([html], {type:'application/vnd.ms-excel;charset=utf-8'});
-  var a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'Rejection_Detail_'+filterStr.replace(/[^a-zA-Z0-9]/g,'_')+'_'+new Date().toISOString().slice(0,10)+'.xls';
-  a.click();
 }
 
 // REJECTION AUTH
