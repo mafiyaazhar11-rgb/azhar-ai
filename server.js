@@ -1042,10 +1042,37 @@ app.post('/api/backlog/check-password', requireAuth, async function(req, res) {
   } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
+// Caption must always have full DB access, regardless of what's loaded in the requesting browser's
+// current session/tab. Pull directly from the server-side DB-backed globals every time.
+function buildServerDataContext() {
+  var parts = [];
+  function addJSON(obj, label, maxLen) {
+    try {
+      if (obj === null || obj === undefined) { parts.push('=== ' + label + ': no file uploaded ==='); return; }
+      var s = JSON.stringify(obj);
+      if (s && s.length > maxLen) s = s.substring(0, maxLen) + '...(truncated)';
+      parts.push('=== ' + label + ' (live from database) ===\n' + s);
+    } catch(e) { parts.push('=== ' + label + ': error reading data ==='); }
+  }
+
+  addJSON(rejectionData ? { orgs: rejectionData.orgs, months: rejectionData.months } : null, 'REJECTION_DB', 4500);
+  addJSON(currentDispatch ? { date: currentDispatch.date, summary: currentDispatch.summary } : null, 'DISPATCH_DB_LATEST', 3000);
+  addJSON(Object.keys(dispatchHistory || {}).sort().reverse().slice(0, 14), 'DISPATCH_AVAILABLE_DATES', 500);
+  addJSON(salesData ? salesData.summary : null, 'ORDER_BOOKING_DB (Todays Order Booking dashboard — BOOKED orders, NOT dispatch)', 3000);
+  addJSON(returnsData ? returnsData.summary : null, 'RETURNS_DB', 3000);
+  addJSON(backlogData ? backlogData.summary : null, 'BACKLOG_DB (WH Backlog)', 3000);
+  addJSON(automationData ? { summary: automationData.summary, latestMonth: automationData.latestMonth, latestRate: automationData.latestRate, sortedMonths: automationData.sortedMonths } : null, 'AUTOMATION_DB', 2500);
+  addJSON(deliveryData ? deliveryData.summary : null, 'DELIVERY_DB', 2000);
+  addJSON(genInfoData ? genInfoData.rows : null, 'TEAM_DB', 3000);
+
+  return parts.join('\n\n');
+}
+
 app.post('/api/voice', requireAuth, async function(req, res) {
   try {
     var text = req.body.text || '';
-    var context = req.body.context || '';
+    var clientContext = req.body.context || '';
+    var context = clientContext + '\n\n' + buildServerDataContext();
     var tab = req.body.tab || 'dispatch';
     var history = req.body.history || [];
     var lang = req.body.lang || 'English';
@@ -1081,12 +1108,18 @@ app.post('/api/voice', requireAuth, async function(req, res) {
       'Keep answers 2 to 3 sentences. Lead with the actual number/answer in the first sentence — busy managers are listening, not reading, so do not warm up with preamble. If data missing say please upload the file. ' +
       'For dispatch/driver questions use AllDrivers section. ' +
       'Phone numbers: say plus then digits in groups. ' +
+      'ORDER BOOKING vs DISPATCH — THESE ARE DIFFERENT THINGS, NEVER MIX THEM UP: ' +
+      'ORDER_BOOKING section = orders that were BOOKED/PLACED (the "Today\'s Order Booking" dashboard). Use this whenever the user says "booking", "booked", "order booking", or "placed". ' +
+      'DISPATCH section = orders that were physically DISPATCHED/sent out to customers already (a separate warehouse operation, often reflecting orders booked on a PREVIOUS day). Use this only when the user says "dispatch", "dispatched", or "delivery/route" questions. ' +
+      'If the user asks "today\'s order booking" or "what did we book today", answer from ORDER_BOOKING, never from DISPATCH — booking and dispatch can be completely different numbers since today\'s dispatch is often yesterday\'s booking catching up. ' +
       'Set action=filter to filter dashboard. Set action=navigate to go to another dashboard. ' +
       'REJECTION FILTER: If the user asks about a specific month, ORG, food/non-food type, or external/internal source ' +
       'on the rejection dashboard, set action=filter and put the plain keywords in action_detail — ' +
       'e.g. action_detail="june non-food external" or action_detail="month=6 food". Always answer using the SAME period the user asked about, not the full year, unless they said "YTD" or "all months". ' +
       'SALON: Salon sales/rejections = the DGC org (label it "Salon" when the user says "salon"). ' +
-      'ALL DATA: ' + context.substring(0, 7000) +
+      'CONTEXT SOURCES: the data below has two parts. The first part (SCREEN_NOW, MONTHLY, etc.) reflects exactly what is on the user\'s screen right now, including active filters — use it for "what am I looking at" style questions. ' +
+      'The second part (sections ending in _DB, e.g. REJECTION_DB, DISPATCH_DB_LATEST, ORDER_BOOKING_DB, RETURNS_DB, BACKLOG_DB, AUTOMATION_DB, DELIVERY_DB, TEAM_DB) is pulled directly from the database every time and is ALWAYS complete and current, regardless of which dashboard tab the user currently has open or what they\'ve loaded this session. If a dashboard-specific section from the first part is missing or says "no file", fall back to the matching _DB section before ever saying data is unavailable — only say data is missing if the _DB section for that topic also says "no file uploaded". ' +
+      'ALL DATA: ' + context.substring(0, 24000) +
       ' Reply ONLY in JSON: {"answer":"your answer","action":"none or filter or navigate","action_detail":"value","action_label":"label"}';
 
     var messages = [];
