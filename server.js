@@ -878,8 +878,8 @@ app.get('/api/rejection/status', function(req, res) {
   res.json({ hasData:true, uploadedAt:rejectionData.uploadedAt, uploadedBy:rejectionData.uploadedBy, fileName:rejectionData.fileName, totalOrders:rejectionData.totalOrders, orgs:rejectionData.orgs, months:rejectionData.months, needsReupload:rejectionData.needsReupload||false });
 });
 
-// ── REJECTION EXCEL EXPORT (server-side, 2 sheets: Executive Summary + Detail) ──
-app.post('/api/rejection/export-excel', function(req, res) {
+// ── REJECTION EXCEL EXPORT (server-side, 2 sheets: Executive Summary + Detail, styled) ──
+app.post('/api/rejection/export-excel', async function(req, res) {
   try {
     var body = req.body || {};
     var summary = body.summary || {};
@@ -892,54 +892,109 @@ app.post('/api/rejection/export-excel', function(req, res) {
     var topReasons = (summary.reasons || []).slice(0, 5);
     var topCusts = (summary.custs || []).slice(0, 5);
 
-    var wb = XLSX.utils.book_new();
+    // Group detail rows by customer to find repeat offenders (same customer, multiple branch addresses)
+    var custGroups = {};
+    detailRows.forEach(function(r){
+      var key = r.cust || 'Unknown';
+      if(!custGroups[key]) custGroups[key] = { branches: {}, total: 0 };
+      custGroups[key].branches[r.addr || 'Unknown address'] = true;
+      custGroups[key].total += (r.n || 0);
+    });
+    var repeatOffenders = Object.keys(custGroups)
+      .map(function(name){ return { name: name, branchCount: Object.keys(custGroups[name].branches).length, total: custGroups[name].total }; })
+      .filter(function(c){ return c.branchCount >= 2; })
+      .sort(function(a,b){ return (b.branchCount - a.branchCount) || (b.total - a.total); })
+      .slice(0, 8);
+
+    var GOLD = 'FFC9A84C', DARKBG = 'FF1A1E26', LIGHTGOLD = 'FFF5E9C8', WHITE = 'FFFFFFFF';
+    function styleHeaderRow(row){
+      row.eachCell(function(cell){
+        cell.fill = { type:'pattern', pattern:'solid', fgColor:{argb:DARKBG} };
+        cell.font = { bold:true, color:{argb:GOLD}, size:11 };
+        cell.alignment = { vertical:'middle' };
+      });
+    }
+    function styleSectionRow(row){
+      row.font = { bold:true, color:{argb:DARKBG}, size:12 };
+      row.eachCell(function(cell){ cell.fill = { type:'pattern', pattern:'solid', fgColor:{argb:GOLD} }; });
+    }
+    function styleTotalRow(row){
+      row.eachCell(function(cell){
+        cell.fill = { type:'pattern', pattern:'solid', fgColor:{argb:LIGHTGOLD} };
+        cell.font = { bold:true, color:{argb:DARKBG} };
+      });
+    }
+
+    var ExcelJS = require('exceljs');
+    var wb = new ExcelJS.Workbook();
+    wb.creator = 'AZHAR-AI';
+    wb.created = new Date();
 
     // ---- Sheet 1: Executive Summary ----
-    var esRows = [];
-    esRows.push(['AKI GROUP — REJECTION EXECUTIVE SUMMARY']);
-    esRows.push(['Generated', new Date().toLocaleString('en-AE')]);
-    esRows.push(['Filters Applied', filterStr]);
-    esRows.push([]);
-    esRows.push(['KEY METRICS']);
-    esRows.push(['Total Rejections', totalRej]);
-    esRows.push(['Total Delivered', totalDel]);
-    esRows.push(['Rejection Rate', rate]);
-    esRows.push(['Value at Risk', summary.val || '—']);
-    esRows.push([]);
-    esRows.push(['TOP 5 ROOT CAUSES', '', 'COUNT', '% OF TOTAL']);
-    topReasons.forEach(function(r){
-      esRows.push([r.l, '', r.n, totalRej>0 ? ((r.n/totalRej*100).toFixed(1)+'%') : '0%']);
-    });
-    esRows.push([]);
-    esRows.push(['TOP 5 CUSTOMERS BY REJECTIONS', '', 'COUNT', '% OF TOTAL']);
-    topCusts.forEach(function(c){
-      esRows.push([c.n, '', c.c, totalRej>0 ? ((c.c/totalRej*100).toFixed(1)+'%') : '0%']);
-    });
-    esRows.push([]);
-    esRows.push(['RECOMMENDED ACTIONS']);
-    if (topReasons[0]) esRows.push(['1. Prioritize a fix for "'+topReasons[0].l+'" — top root cause at '+topReasons[0].n+' rejections ('+(totalRej>0?(topReasons[0].n/totalRej*100).toFixed(1):'0')+'% of total).']);
-    if (topReasons[1]) esRows.push(['2. Address "'+topReasons[1].l+'" next — '+topReasons[1].n+' rejections.']);
-    if (topCusts[0]) esRows.push(['3. Engage account owner for "'+topCusts[0].n+'" — highest-rejecting customer with '+topCusts[0].c+' cases.']);
-    esRows.push(['4. Re-check merchandiser/route scheduling if route-related causes dominate the list above.']);
+    var es = wb.addWorksheet('Executive Summary');
+    es.columns = [{width:42},{width:20},{width:14},{width:14}];
 
-    var esSheet = XLSX.utils.aoa_to_sheet(esRows);
-    esSheet['!cols'] = [{wch:42},{wch:16},{wch:12},{wch:14}];
-    XLSX.utils.book_append_sheet(wb, esSheet, 'Executive Summary');
+    var titleRow = es.addRow(['AKI GROUP — REJECTION EXECUTIVE SUMMARY']);
+    titleRow.font = { bold:true, size:15, color:{argb:GOLD} };
+    es.mergeCells('A1:D1');
+    es.getRow(1).fill = { type:'pattern', pattern:'solid', fgColor:{argb:DARKBG} };
+    es.addRow(['Generated', new Date().toLocaleString('en-AE')]);
+    es.addRow(['Filters Applied', filterStr]);
+    es.addRow([]);
+    styleSectionRow(es.addRow(['KEY METRICS']));
+    es.addRow(['Total Rejections', totalRej]);
+    es.addRow(['Total Delivered', totalDel]);
+    es.addRow(['Rejection Rate', rate]);
+    es.addRow(['Value at Risk', summary.val || '—']);
+    es.addRow([]);
+
+    styleHeaderRow(es.addRow(['TOP 5 ROOT CAUSES', '', 'COUNT', '% OF TOTAL']));
+    topReasons.forEach(function(r){
+      es.addRow([r.l, '', r.n, totalRej>0 ? ((r.n/totalRej*100).toFixed(1)+'%') : '0%']);
+    });
+    es.addRow([]);
+
+    styleHeaderRow(es.addRow(['TOP 5 CUSTOMERS BY REJECTIONS', '', 'COUNT', '% OF TOTAL']));
+    topCusts.forEach(function(c){
+      es.addRow([c.n, '', c.c, totalRej>0 ? ((c.c/totalRej*100).toFixed(1)+'%') : '0%']);
+    });
+    es.addRow([]);
+
+    // Repeat Offenders — customers hitting multiple branches, needs action
+    styleHeaderRow(es.addRow(['REPEAT OFFENDERS — SAME CUSTOMER, MULTIPLE BRANCHES', '', 'BRANCHES', 'TOTAL REJECTIONS']));
+    if(repeatOffenders.length){
+      repeatOffenders.forEach(function(o){
+        es.addRow([o.name, '', o.branchCount, o.total]);
+      });
+    } else {
+      es.addRow(['No customer repeats across multiple branches in this filtered view.']);
+    }
+    es.addRow([]);
+
+    styleSectionRow(es.addRow(['RECOMMENDED ACTIONS']));
+    if (topReasons[0]) es.addRow(['1. Prioritize a fix for "'+topReasons[0].l+'" — top root cause at '+topReasons[0].n+' rejections ('+(totalRej>0?(topReasons[0].n/totalRej*100).toFixed(1):'0')+'% of total).']);
+    if (topReasons[1]) es.addRow(['2. Address "'+topReasons[1].l+'" next — '+topReasons[1].n+' rejections.']);
+    if (topCusts[0]) es.addRow(['3. Engage account owner for "'+topCusts[0].n+'" — highest-rejecting customer with '+topCusts[0].c+' cases.']);
+    if (repeatOffenders[0]) es.addRow(['4. Investigate "'+repeatOffenders[0].name+'" across '+repeatOffenders[0].branchCount+' branches — recurring issue, not a one-off location problem.']);
+    es.addRow(['5. Re-check merchandiser/route scheduling if route-related causes dominate the list above.']);
 
     // ---- Sheet 2: Rejection Detail ----
-    var detAoA = [['#','Customer Name','Full Address','Final Root Cause','Rejection Count','% of Total']];
+    var det = wb.addWorksheet('Rejection Detail');
+    det.columns = [{width:5},{width:32},{width:45},{width:30},{width:14},{width:12}];
+    styleHeaderRow(det.addRow(['#','Customer Name','Full Address','Final Root Cause','Rejection Count','% of Total']));
+    var sumN = 0;
     detailRows.forEach(function(r, i){
       var pct = totalRej>0 ? ((r.n/totalRej*100).toFixed(2)+'%') : '0%';
-      detAoA.push([i+1, r.cust||'', r.addr||'', r.root||'', r.n||0, pct]);
+      sumN += (r.n||0);
+      det.addRow([i+1, r.cust||'', r.addr||'', r.root||'', r.n||0, pct]);
     });
-    var detSheet = XLSX.utils.aoa_to_sheet(detAoA);
-    detSheet['!cols'] = [{wch:5},{wch:32},{wch:45},{wch:30},{wch:14},{wch:12}];
-    XLSX.utils.book_append_sheet(wb, detSheet, 'Rejection Detail');
+    var pctTotal = totalRej>0 ? ((sumN/totalRej*100).toFixed(2)+'%') : '0%';
+    styleTotalRow(det.addRow(['', 'TOTAL', '', '', sumN, pctTotal]));
 
-    var buf = XLSX.write(wb, { type:'buffer', bookType:'xlsx' });
+    var buf = await wb.xlsx.writeBuffer();
     res.setHeader('Content-Disposition', 'attachment; filename="Rejection_Report_'+Date.now()+'.xlsx"');
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.send(buf);
+    res.send(Buffer.from(buf));
   } catch(e) {
     console.error('rejection export-excel error:', e.message);
     res.status(500).json({ error: 'Export failed: '+e.message });
