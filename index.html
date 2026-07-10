@@ -637,7 +637,7 @@ footer span{color:#e8c878;}
     <!-- Listening state -->
     <div id="vc-listening" style="display:none;padding:16px 24px;display:flex;align-items:center;gap:16px;">
       <div id="vc-pulse" style="width:12px;height:12px;border-radius:50%;background:#e84b4b;animation:vc-pulse 1s infinite;flex-shrink:0;"></div>
-      <div style="font-size:11px;color:#e84b4b;letter-spacing:2px;font-family:Montserrat,sans-serif;">JARVIS LISTENING...</div>
+      <div style="font-size:11px;color:#e84b4b;letter-spacing:2px;font-family:Montserrat,sans-serif;">CAPTION LISTENING...</div>
       <div id="vc-interim" style="font-size:13px;color:rgba(201,168,76,0.6);font-family:Montserrat,sans-serif;flex:1;font-style:italic;"></div>
       <button onclick="stopVoiceCommand()" style="background:transparent;border:1px solid rgba(232,75,75,0.4);color:#e84b4b;font-size:9px;padding:4px 12px;cursor:pointer;font-family:Montserrat,sans-serif;letter-spacing:1px;">STOP</button>
     </div>
@@ -650,7 +650,7 @@ footer span{color:#e8c878;}
         </div>
         <div style="width:1px;background:rgba(201,168,76,0.2);align-self:stretch;flex-shrink:0;margin:0 8px;"></div>
         <div style="flex:1;">
-          <div style="font-size:9px;color:#7a7660;letter-spacing:2px;font-family:Montserrat,sans-serif;margin-bottom:8px;">✦ JARVIS — OPERATIONS INTELLIGENCE</div>
+          <div style="font-size:9px;color:#7a7660;letter-spacing:2px;font-family:Montserrat,sans-serif;margin-bottom:8px;">✦ CAPTION — OPERATIONS INTELLIGENCE</div>
           <div id="vc-answer-text" style="font-size:14px;color:#c9a84c;font-family:'Cormorant Garamond',serif;line-height:1.7;"></div>
           <div id="vc-action-taken" style="margin-top:10px;font-size:10px;color:#4ecb8d;font-family:Montserrat,sans-serif;letter-spacing:1px;"></div>
         </div>
@@ -663,7 +663,7 @@ footer span{color:#e8c878;}
     <!-- Processing state -->
     <div id="vc-processing" style="display:none;padding:16px 24px;display:flex;align-items:center;gap:12px;">
       <div class="ring" style="width:18px;height:18px;border-width:2px;"></div>
-      <div style="font-size:11px;color:var(--muted);letter-spacing:1px;font-family:Montserrat,sans-serif;">JARVIS is processing...</div>
+      <div style="font-size:11px;color:var(--muted);letter-spacing:1px;font-family:Montserrat,sans-serif;">CAPTION is processing...</div>
     </div>
   </div>
 
@@ -922,7 +922,7 @@ footer span{color:#e8c878;}
       <div id="merch-header-card" style="background:var(--surface);border:2px solid var(--gold);padding:18px;margin-bottom:12px;"></div>
       <div style="display:flex;gap:8px;margin-bottom:12px;">
         <button onclick="merchDownload()" style="padding:9px 20px;background:var(--glow);border:1px solid var(--gold);color:var(--gold);font-size:10px;letter-spacing:1px;cursor:pointer;font-family:Montserrat,sans-serif;">⬇ DOWNLOAD SUMMARY</button>
-        <button onclick="merchAskJarvis()" style="padding:9px 20px;background:rgba(78,203,141,0.1);border:1px solid #4ecb8d;color:#4ecb8d;font-size:10px;letter-spacing:1px;cursor:pointer;font-family:Montserrat,sans-serif;">🤖 ASK JARVIS</button>
+        <button onclick="merchAskJarvis()" style="padding:9px 20px;background:rgba(78,203,141,0.1);border:1px solid #4ecb8d;color:#4ecb8d;font-size:10px;letter-spacing:1px;cursor:pointer;font-family:Montserrat,sans-serif;">🤖 ASK CAPTION</button>
       </div>
       <div id="merch-orders-section" style="display:none;background:var(--surface);border:1px solid var(--border);padding:14px;">
         <div id="merch-orders-title" style="font-size:9px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;">📦 DELIVERY ORDERS</div>
@@ -5435,7 +5435,7 @@ function giShowDispatch(name, branch, acctNo){
   sec.scrollIntoView({behavior:'smooth',block:'nearest'});
   cnt.innerHTML='<div style="color:var(--gold);font-weight:600;margin-bottom:8px;">'+name+' — Branch: '+branch+(acctNo?' | Acct: '+acctNo:'')+'</div>'
     +'<div style="color:var(--muted);font-size:11px;">Upload todays dispatch file. Orders matching this merchandiser will appear here with driver name and contact number.</div>'
-    +'<div style="margin-top:10px;font-size:10px;color:rgba(201,168,76,0.5);">TIP: Ask JARVIS — What are the orders for '+name+' today?</div>';
+    +'<div style="margin-top:10px;font-size:10px;color:rgba(201,168,76,0.5);">TIP: Ask CAPTION — What are the orders for '+name+' today?</div>';
 }
 
 // ── DB SAVE / LOAD ──
@@ -6275,7 +6275,7 @@ function startJarvisRecognition() {
 
   vcListening = true;
   setJarvisOrb('listening');
-  document.getElementById('jarvis-status').textContent = 'JARVIS LISTENING...';
+  document.getElementById('jarvis-status').textContent = 'CAPTION LISTENING...';
   document.getElementById('jarvis-status').style.color = '#e84b4b';
   // Show stop-listening button
   var slBtn = document.getElementById('jarvis-stop-listen-btn');
@@ -6324,7 +6324,7 @@ function startJarvisRecognition() {
 async function processVoiceCommandFS(text) {
   stopVoiceCommand();
   setJarvisOrb('thinking');
-  document.getElementById('jarvis-status').textContent = 'JARVIS THINKING...';
+  document.getElementById('jarvis-status').textContent = 'CAPTION THINKING...';
   document.getElementById('jarvis-status').style.color = '#c9a84c';
   var slBtn2 = document.getElementById('jarvis-stop-listen-btn');
   if (slBtn2) slBtn2.style.display = 'none';
@@ -6361,7 +6361,7 @@ async function processVoiceCommandFS(text) {
 
     // Speak then auto-restart mic
     setJarvisOrb('speaking');
-    document.getElementById('jarvis-status').textContent = 'JARVIS SPEAKING...';
+    document.getElementById('jarvis-status').textContent = 'CAPTION SPEAKING...';
     document.getElementById('jarvis-status').style.color = '#4ecb8d';
     jarvisSpeak(parsed.answer || 'No answer.');
 
@@ -6716,6 +6716,7 @@ function buildVoiceContext() {
 function jarvisStopAll() {
   // Stop speaking
   if (window.speechSynthesis) window.speechSynthesis.cancel();
+  stopBargeInListener();
   // Stop listening
   if (typeof vcListening !== 'undefined' && vcListening) {
     vcListening = false;
@@ -6810,10 +6811,12 @@ function jarvisSpeak(text) {
     var orbEl = document.getElementById('jarvis-orb');
     utter.onstart = function(){
       if(micBtn) micBtn.style.color = '#c9a84c';
+      startBargeInListener();
     };
     utter.onend = function(){
       if(micBtn) micBtn.style.color = '';
       if(orbEl){ orbEl.style.background='rgba(201,168,76,0.1)'; orbEl.style.borderColor='rgba(201,168,76,0.4)'; orbEl.style.boxShadow='none'; }
+      stopBargeInListener();
     };
     window.speechSynthesis.speak(utter);
   }
@@ -6826,6 +6829,49 @@ function jarvisSpeak(text) {
     window.speechSynthesis.onvoiceschanged = function() {
       doSpeak(window.speechSynthesis.getVoices());
     };
+  }
+}
+
+// Listens in the background WHILE Caption is talking — say "stop" / "cancel" / "that's enough" to cut it off instantly
+var vcBargeIn = null;
+function startBargeInListener() {
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) return;
+  stopBargeInListener();
+  try {
+    vcBargeIn = new SR();
+    vcBargeIn.lang = (typeof JARVIS_LANG !== 'undefined' && JARVIS_LANG.speech) || 'en-US';
+    vcBargeIn.continuous = true;
+    vcBargeIn.interimResults = true;
+    vcBargeIn.onresult = function(ev){
+      for (var i = ev.resultIndex; i < ev.results.length; i++) {
+        var t = (ev.results[i][0].transcript || '').toLowerCase();
+        if (/\bstop\b|\bcancel\b|\bshut up\b|that'?s enough|\bquiet\b|\benough\b/.test(t)) {
+          window.speechSynthesis.cancel();
+          stopBargeInListener();
+          if (typeof setJarvisOrb === 'function') setJarvisOrb('idle');
+          var st = document.getElementById('jarvis-status');
+          if (st) { st.textContent = 'STOPPED'; st.style.color = '#e84b4b'; }
+          var mb = document.getElementById('vc-mic-btn');
+          if (mb) mb.style.color = '';
+          break;
+        }
+      }
+    };
+    vcBargeIn.onerror = function(){};
+    vcBargeIn.onend = function(){
+      // Recognition sessions time out on their own — restart while Caption is still talking
+      if (window.speechSynthesis && window.speechSynthesis.speaking && vcBargeIn) {
+        try { vcBargeIn.start(); } catch(e){}
+      }
+    };
+    vcBargeIn.start();
+  } catch(e) { vcBargeIn = null; }
+}
+function stopBargeInListener() {
+  if (vcBargeIn) {
+    try { vcBargeIn.onend = null; vcBargeIn.stop(); } catch(e){}
+    vcBargeIn = null;
   }
 }
 
@@ -6867,6 +6913,33 @@ function executeVoiceAction(action, detail) {
       ['DCV','DGC','DCF','DGS','DLL','DGN'].forEach(function(w) {
         if (detail.toUpperCase().includes(w)) retFilter('wh', w);
       });
+    }
+
+    if (action === 'filter' && VC_CURRENT_TAB === 'rejection' && typeof rejFilter === 'function') {
+      // Month — accepts names ("june") or numbers ("month=6", "6")
+      var monthNames = {jan:1,january:1,feb:2,february:2,mar:3,march:3,apr:4,april:4,may:5,jun:6,june:6};
+      var monthHit = null;
+      Object.keys(monthNames).forEach(function(mn){ if (d.includes(mn)) monthHit = monthNames[mn]; });
+      if (!monthHit) {
+        var mNum = d.match(/month\D*(\d{1,2})/);
+        if (mNum && mNum[1] >= 1 && mNum[1] <= 12) monthHit = parseInt(mNum[1]);
+      }
+      if (monthHit) rejFilter('month', monthHit);
+      else if (d.includes('all month') || d.includes('ytd') || d.includes('year to date')) rejFilter('month','all');
+
+      // ORG
+      ['DCV','DGC','DSN','DGS','DCF'].forEach(function(o) {
+        if (detail.toUpperCase().includes(o)) rejFilter('org', o);
+      });
+      if (d.includes('cookware') || d.includes('electronic')) rejFilter('org','COOKWARE');
+
+      // Type
+      if (d.includes('non food') || d.includes('non-food') || d.includes('nonfood')) rejFilter('type','nonfood');
+      else if (d.includes('food')) rejFilter('type','food');
+
+      // Source
+      if (d.includes('external')) rejFilter('src','external');
+      else if (d.includes('internal')) rejFilter('src','internal');
     }
   } catch(e) { console.error('Voice action error:', e); }
 }
@@ -7291,7 +7364,7 @@ window.addEventListener('load', authBoot);
   <!-- JARVIS identity -->
   <div style="text-align:center;margin-bottom:32px;">
     <div id="jarvis-orb" style="width:80px;height:80px;border-radius:50%;background:rgba(201,168,76,0.1);border:2px solid rgba(201,168,76,0.4);display:flex;align-items:center;justify-content:center;font-size:32px;margin:0 auto 16px;transition:all 0.3s;">🎤</div>
-    <div style="font-family:'Playfair Display',serif;font-size:22px;color:#c9a84c;letter-spacing:3px;">JARVIS</div>
+    <div style="font-family:'Playfair Display',serif;font-size:22px;color:#c9a84c;letter-spacing:3px;">CAPTION</div>
     <div style="font-size:9px;color:#7a7660;letter-spacing:3px;margin-top:4px;">OPERATIONS INTELLIGENCE</div>
   </div>
 
@@ -7311,7 +7384,7 @@ window.addEventListener('load', authBoot);
   <div id="jarvis-answer-fs" style="display:none;text-align:center;padding:0 16px;max-width:500px;">
     <div style="font-size:9px;color:#7a7660;letter-spacing:2px;margin-bottom:12px;font-family:Montserrat,sans-serif;">YOU ASKED</div>
     <div id="jarvis-question-fs" style="font-size:12px;color:rgba(201,168,76,0.6);font-style:italic;margin-bottom:20px;font-family:Montserrat,sans-serif;"></div>
-    <div style="font-size:9px;color:#7a7660;letter-spacing:2px;margin-bottom:12px;font-family:Montserrat,sans-serif;">✦ JARVIS SAYS</div>
+    <div style="font-size:9px;color:#7a7660;letter-spacing:2px;margin-bottom:12px;font-family:Montserrat,sans-serif;">✦ CAPTION SAYS</div>
     <div id="jarvis-text-fs" style="font-size:20px;color:#c9a84c;font-family:'Cormorant Garamond',serif;line-height:1.7;"></div>
     <div id="jarvis-action-fs" style="margin-top:16px;font-size:10px;color:#4ecb8d;font-family:Montserrat,sans-serif;letter-spacing:1px;"></div>
   </div>
