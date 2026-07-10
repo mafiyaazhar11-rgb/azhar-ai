@@ -892,16 +892,32 @@ app.post('/api/rejection/export-excel', async function(req, res) {
     var topReasons = (summary.reasons || []).slice(0, 5);
     var topCusts = (summary.custs || []).slice(0, 5);
 
+    // For each top root cause, find the single customer+branch driving the most cases of it
+    var rootCauseTop = {};
+    detailRows.forEach(function(r){
+      var key = r.root || 'Unknown';
+      if(!rootCauseTop[key] || (r.n||0) > rootCauseTop[key].n){
+        rootCauseTop[key] = { cust: r.cust||'—', addr: r.addr||'—', n: r.n||0 };
+      }
+    });
+
     // Group detail rows by customer to find repeat offenders (same customer, multiple branch addresses)
+    // Track rejection count PER branch (not just presence) so we can list the actual branches
     var custGroups = {};
     detailRows.forEach(function(r){
       var key = r.cust || 'Unknown';
       if(!custGroups[key]) custGroups[key] = { branches: {}, total: 0 };
-      custGroups[key].branches[r.addr || 'Unknown address'] = true;
+      var addrKey = r.addr || 'Unknown address';
+      custGroups[key].branches[addrKey] = (custGroups[key].branches[addrKey] || 0) + (r.n || 0);
       custGroups[key].total += (r.n || 0);
     });
     var repeatOffenders = Object.keys(custGroups)
-      .map(function(name){ return { name: name, branchCount: Object.keys(custGroups[name].branches).length, total: custGroups[name].total }; })
+      .map(function(name){
+        var branchList = Object.keys(custGroups[name].branches)
+          .map(function(a){ return { addr:a, n:custGroups[name].branches[a] }; })
+          .sort(function(x,y){ return y.n - x.n; });
+        return { name:name, branchCount: branchList.length, total: custGroups[name].total, branches: branchList };
+      })
       .filter(function(c){ return c.branchCount >= 2; })
       .sort(function(a,b){ return (b.branchCount - a.branchCount) || (b.total - a.total); })
       .slice(0, 8);
@@ -924,6 +940,10 @@ app.post('/api/rejection/export-excel', async function(req, res) {
         cell.font = { bold:true, color:{argb:DARKBG} };
       });
     }
+    function styleCustRow(row){
+      row.font = { bold:true };
+      row.eachCell(function(cell){ cell.fill = { type:'pattern', pattern:'solid', fgColor:{argb:'FFEFEFEF'} }; });
+    }
 
     var ExcelJS = require('exceljs');
     var wb = new ExcelJS.Workbook();
@@ -932,11 +952,11 @@ app.post('/api/rejection/export-excel', async function(req, res) {
 
     // ---- Sheet 1: Executive Summary ----
     var es = wb.addWorksheet('Executive Summary');
-    es.columns = [{width:42},{width:20},{width:14},{width:14}];
+    es.columns = [{width:38},{width:32},{width:14},{width:14},{width:34}];
 
     var titleRow = es.addRow(['AKI GROUP — REJECTION EXECUTIVE SUMMARY']);
     titleRow.font = { bold:true, size:15, color:{argb:GOLD} };
-    es.mergeCells('A1:D1');
+    es.mergeCells('A1:E1');
     es.getRow(1).fill = { type:'pattern', pattern:'solid', fgColor:{argb:DARKBG} };
     es.addRow(['Generated', new Date().toLocaleString('en-AE')]);
     es.addRow(['Filters Applied', filterStr]);
@@ -948,23 +968,28 @@ app.post('/api/rejection/export-excel', async function(req, res) {
     es.addRow(['Value at Risk', summary.val || '—']);
     es.addRow([]);
 
-    styleHeaderRow(es.addRow(['TOP 5 ROOT CAUSES', '', 'COUNT', '% OF TOTAL']));
+    // TOP 5 ROOT CAUSES — now shows WHO (customer + branch) is the biggest driver of each cause
+    styleHeaderRow(es.addRow(['ROOT CAUSE', 'TOP CUSTOMER DRIVING IT', 'COUNT', '% OF TOTAL', 'TOP BRANCH (CASES)']));
     topReasons.forEach(function(r){
-      es.addRow([r.l, '', r.n, totalRej>0 ? ((r.n/totalRej*100).toFixed(1)+'%') : '0%']);
+      var top = rootCauseTop[r.l] || { cust:'—', addr:'—', n:0 };
+      es.addRow([r.l, top.cust, r.n, totalRej>0 ? ((r.n/totalRej*100).toFixed(1)+'%') : '0%', top.addr + ' ('+top.n+')']);
     });
     es.addRow([]);
 
-    styleHeaderRow(es.addRow(['TOP 5 CUSTOMERS BY REJECTIONS', '', 'COUNT', '% OF TOTAL']));
+    styleHeaderRow(es.addRow(['TOP 5 CUSTOMERS BY REJECTIONS', '', 'COUNT', '% OF TOTAL', '']));
     topCusts.forEach(function(c){
-      es.addRow([c.n, '', c.c, totalRej>0 ? ((c.c/totalRej*100).toFixed(1)+'%') : '0%']);
+      es.addRow([c.n, '', c.c, totalRej>0 ? ((c.c/totalRej*100).toFixed(1)+'%') : '0%', '']);
     });
     es.addRow([]);
 
-    // Repeat Offenders — customers hitting multiple branches, needs action
-    styleHeaderRow(es.addRow(['REPEAT OFFENDERS — SAME CUSTOMER, MULTIPLE BRANCHES', '', 'BRANCHES', 'TOTAL REJECTIONS']));
+    // Repeat Offenders — customer name AND the actual branch addresses driving their total
+    styleHeaderRow(es.addRow(['REPEAT OFFENDERS — CUSTOMER / BRANCH', '', 'BRANCHES', 'TOTAL REJECTIONS', '']));
     if(repeatOffenders.length){
       repeatOffenders.forEach(function(o){
-        es.addRow([o.name, '', o.branchCount, o.total]);
+        styleCustRow(es.addRow([o.name, '', o.branchCount, o.total, '']));
+        o.branches.slice(0, 6).forEach(function(b){
+          es.addRow(['     • '+b.addr, '', '', b.n, '']);
+        });
       });
     } else {
       es.addRow(['No customer repeats across multiple branches in this filtered view.']);
@@ -972,10 +997,13 @@ app.post('/api/rejection/export-excel', async function(req, res) {
     es.addRow([]);
 
     styleSectionRow(es.addRow(['RECOMMENDED ACTIONS']));
-    if (topReasons[0]) es.addRow(['1. Prioritize a fix for "'+topReasons[0].l+'" — top root cause at '+topReasons[0].n+' rejections ('+(totalRej>0?(topReasons[0].n/totalRej*100).toFixed(1):'0')+'% of total).']);
+    if (topReasons[0]) {
+      var t0 = rootCauseTop[topReasons[0].l] || {};
+      es.addRow(['1. Prioritize a fix for "'+topReasons[0].l+'" — top root cause at '+topReasons[0].n+' rejections ('+(totalRej>0?(topReasons[0].n/totalRej*100).toFixed(1):'0')+'% of total). Biggest driver: "'+(t0.cust||'—')+'" at '+(t0.addr||'—')+' ('+(t0.n||0)+' cases).']);
+    }
     if (topReasons[1]) es.addRow(['2. Address "'+topReasons[1].l+'" next — '+topReasons[1].n+' rejections.']);
     if (topCusts[0]) es.addRow(['3. Engage account owner for "'+topCusts[0].n+'" — highest-rejecting customer with '+topCusts[0].c+' cases.']);
-    if (repeatOffenders[0]) es.addRow(['4. Investigate "'+repeatOffenders[0].name+'" across '+repeatOffenders[0].branchCount+' branches — recurring issue, not a one-off location problem.']);
+    if (repeatOffenders[0]) es.addRow(['4. Investigate "'+repeatOffenders[0].name+'" across '+repeatOffenders[0].branchCount+' branches (see list above) — recurring issue, not a one-off location problem.']);
     es.addRow(['5. Re-check merchandiser/route scheduling if route-related causes dominate the list above.']);
 
     // ---- Sheet 2: Rejection Detail ----
