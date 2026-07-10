@@ -7478,7 +7478,7 @@ async function loadAutomationFromServer() {
         var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
         var sortedMonths = months.filter(function(m){ return d.rows[m]; });
         var latestMonth = sortedMonths[sortedMonths.length-1] || '';
-        var latestRate = latestMonth ? Math.round(d.rows[latestMonth].auto/d.rows[latestMonth].total*100) : 0;
+        var latestRate = latestMonth ? +(d.rows[latestMonth].auto/d.rows[latestMonth].total*100).toFixed(2) : 0;
         var agg = {
           monthData: d.rows, orgData: d.orgRows,
           total: d.summary.total, totalAuto: d.summary.auto, totalManual: d.summary.manual,
@@ -7620,10 +7620,10 @@ async function aggregateAutoData(data) {
   }
 
   var total = totalAuto + totalManual;
-  var rate = total ? Math.round(totalAuto/total*100) : 0;
+  var rate = total ? +(totalAuto/total*100).toFixed(2) : 0;
   var sortedMonths = months.filter(function(m){ return monthData[m]; });
   var latestMonth = sortedMonths[sortedMonths.length-1] || '';
-  var latestRate = latestMonth ? Math.round(monthData[latestMonth].auto/monthData[latestMonth].total*100) : 0;
+  var latestRate = latestMonth ? +(monthData[latestMonth].auto/monthData[latestMonth].total*100).toFixed(2) : 0;
 
   return { monthData: monthData, orgData: orgData, total: total, totalAuto: totalAuto, totalManual: totalManual,
            rate: rate, sortedMonths: sortedMonths, latestMonth: latestMonth, latestRate: latestRate };
@@ -7640,7 +7640,7 @@ function renderAutoFromAggregated(agg) {
   document.getElementById('auto-kpi-auto').textContent = totalAuto.toLocaleString();
   document.getElementById('auto-kpi-auto-pct').textContent = rate + '% of total';
   document.getElementById('auto-kpi-manual').textContent = totalManual.toLocaleString();
-  document.getElementById('auto-kpi-manual-pct').textContent = Math.round(totalManual/total*100) + '% of total';
+  document.getElementById('auto-kpi-manual-pct').textContent = +(totalManual/total*100).toFixed(2) + '% of total';
   document.getElementById('auto-kpi-rate').textContent = rate + '%';
   document.getElementById('auto-kpi-latest').textContent = latestRate + '%';
   document.getElementById('auto-kpi-latest-lbl').textContent = latestMonth + ' 2026 ↑';
@@ -7653,7 +7653,7 @@ function renderAutoFromAggregated(agg) {
   var tbody = '';
   sortedMonths.forEach(function(m) {
     var d = monthData[m]; if (!d) return;
-    var p = Math.round(d.auto/d.total*100);
+    var p = +(d.auto/d.total*100).toFixed(2);
     var col = p>=80?'var(--green)':p>=55?'#e3b341':'#f85149';
     tbody += '<tr><td style="font-size:15px;font-weight:700;color:var(--gold)">'+m+'</td><td style="text-align:center;font-size:15px;font-weight:600;color:#f5f0e8">'+d.total.toLocaleString()+'</td><td style="text-align:center;font-size:15px;font-weight:600;color:var(--green)">'+d.auto.toLocaleString()+'</td><td style="text-align:center;font-size:15px;font-weight:600;color:#f85149">'+d.manual.toLocaleString()+'</td><td style="text-align:center;font-size:15px;font-weight:800;color:'+col+'">'+p+'%</td></tr>';
   });
@@ -7664,7 +7664,7 @@ function renderAutoFromAggregated(agg) {
   var bars = '';
   sortedMonths.forEach(function(m) {
     var d = monthData[m]; if (!d) return;
-    var p = Math.round(d.auto/d.total*100);
+    var p = +(d.auto/d.total*100).toFixed(2);
     bars += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;"><div style="min-width:42px;font-size:15px;font-weight:700;color:var(--gold);text-align:right">'+m+'</div><div style="flex:1;background:#21262d;border-radius:4px;height:28px;overflow:hidden;"><div style="background:linear-gradient(90deg,#238636,#3fb950);height:100%;width:'+p+'%;display:flex;align-items:center;justify-content:flex-end;padding-right:8px;"><span style="font-size:14px;font-weight:800;color:#fff">'+p+'%</span></div></div><div style="min-width:68px;font-size:15px;font-weight:600;color:#f5f0e8;text-align:right">'+d.total.toLocaleString()+'</div></div>';
   });
   document.getElementById('auto-bar-chart').innerHTML = bars;
@@ -7673,7 +7673,7 @@ function renderAutoFromAggregated(agg) {
   var orgRows = '';
   Object.keys(orgData).sort(function(a,b){ return orgData[b].total-orgData[a].total; }).forEach(function(org) {
     var d = orgData[org]; if (!d) return;
-    var p = Math.round(d.auto/d.total*100);
+    var p = +(d.auto/d.total*100).toFixed(2);
     var col = p>=80?'var(--green)':p>=55?'#e3b341':'#f85149';
     var ots = Array.isArray(d.ots) ? d.ots.join(', ') : (d.ots||'');
     orgRows += '<tr><td style="font-size:15px;font-weight:700;color:var(--gold)">'+org+'</td><td style="font-size:14px;color:#d4c89a">'+ots+'</td><td style="text-align:center;font-size:15px;color:#f5f0e8;font-weight:600">'+d.total.toLocaleString()+'</td><td style="text-align:center;font-size:15px;color:var(--green);font-weight:600">'+d.auto.toLocaleString()+'</td><td style="text-align:center;font-size:15px;color:#f85149;font-weight:600">'+d.manual.toLocaleString()+'</td><td style="text-align:center;font-size:15px;font-weight:800;color:'+col+'">'+p+'%</td><td><div style="background:#21262d;border-radius:3px;height:10px;overflow:hidden"><div style="width:'+p+'%;height:100%;background:'+col+';border-radius:3px"></div></div></td></tr>';
@@ -7705,16 +7705,16 @@ function renderAutoTracking(data) {
     if (isAuto) orgData[org].auto++; else orgData[org].manual++;
   });
   var total = totalAuto + totalManual;
-  var rate = total ? Math.round(totalAuto/total*100) : 0;
+  var rate = total ? +(totalAuto/total*100).toFixed(2) : 0;
   var sortedMonths = months.filter(function(m){ return monthData[m]; });
   var latestMonth = sortedMonths[sortedMonths.length-1] || '\u2014';
-  var latestRate = latestMonth !== '\u2014' ? Math.round(monthData[latestMonth].auto/monthData[latestMonth].total*100) : 0;
+  var latestRate = latestMonth !== '\u2014' ? +(monthData[latestMonth].auto/monthData[latestMonth].total*100).toFixed(2) : 0;
   document.getElementById('auto-kpi-total').textContent = total.toLocaleString();
   document.getElementById('auto-kpi-period').textContent = (sortedMonths[0]||'') + ' \u2013 ' + latestMonth + ' 2026';
   document.getElementById('auto-kpi-auto').textContent = totalAuto.toLocaleString();
   document.getElementById('auto-kpi-auto-pct').textContent = rate + '% of total';
   document.getElementById('auto-kpi-manual').textContent = totalManual.toLocaleString();
-  document.getElementById('auto-kpi-manual-pct').textContent = Math.round(totalManual/total*100) + '% of total';
+  document.getElementById('auto-kpi-manual-pct').textContent = +(totalManual/total*100).toFixed(2) + '% of total';
   document.getElementById('auto-kpi-rate').textContent = rate + '%';
   document.getElementById('auto-kpi-latest').textContent = latestRate + '%';
   document.getElementById('auto-kpi-latest-lbl').textContent = latestMonth + ' 2026 \u2191';
@@ -7839,7 +7839,7 @@ function exportAutoExcel() {
   months.forEach(function(m){
     var d = ad.monthData ? ad.monthData[m] : null;
     if (!d) return;
-    var p = Math.round(d.auto/d.total*100);
+    var p = +(d.auto/d.total*100).toFixed(2);
     html += '<tr><td>'+m+'</td><td>'+d.total.toLocaleString()+'</td><td class="green">'+d.auto.toLocaleString()+'</td><td class="red">'+d.manual.toLocaleString()+'</td><td class="'+pctClass(p)+'">'+p+'%</td></tr>';
   });
   html += '<tr class="total-row"><td>TOTAL</td><td>'+ad.total.toLocaleString()+'</td><td>'+ad.totalAuto.toLocaleString()+'</td><td>'+ad.totalManual.toLocaleString()+'</td><td>'+ad.rate+'%</td></tr>';
@@ -7853,7 +7853,7 @@ function exportAutoExcel() {
   months.forEach(function(m){
     var d = ad.monthData ? ad.monthData[m] : null;
     if (!d) return;
-    var p = Math.round(d.auto/d.total*100);
+    var p = +(d.auto/d.total*100).toFixed(2);
     html += '<tr>'
       + '<td class="bar-label-cell">'+m+'</td>'
       + '<td class="bar-track-cell"><div class="bar-track"><div class="bar-fill" style="width:'+p+'%"><div class="bar-fill-text">'+p+'%</div></div></div></td>'
@@ -7871,7 +7871,7 @@ function exportAutoExcel() {
   var orgData = ad.orgData || {};
   Object.keys(orgData).sort(function(a,b){ return orgData[b].total - orgData[a].total; }).forEach(function(org){
     var d = orgData[org];
-    var p = Math.round(d.auto/d.total*100);
+    var p = +(d.auto/d.total*100).toFixed(2);
     var ots = Array.isArray(d.ots) ? d.ots.join(', ') : (d.ots||'');
     var col = pctColor(p);
     html += '<tr>'
