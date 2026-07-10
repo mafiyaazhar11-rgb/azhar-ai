@@ -6598,6 +6598,8 @@ function buildVoiceContext() {
           var moGrand = moRej + moDel;
           var moRate = moGrand>0 ? ((moRej/moGrand)*100).toFixed(2) : 0;
           ctx += MN[mo]+'(mo='+mo+'): tRej='+moRej+' tDel='+moDel+' rate='+moRate+'%';
+          // Val from DAY_DATA (only for display - may differ slightly)
+          var mdx = (typeof DAY_DATA!=='undefined') ? (DAY_DATA[mo]||DAY_DATA[String(mo)]||{}) : {};
           // Food/nonfood per month from ORG-level arrays
           // food_rej/nonfood_rej are TYPE-based, not ORG-based
           // Get from DAY_DATA which has correct type split from server
@@ -6610,8 +6612,6 @@ function buildVoiceContext() {
             moNFRej = moRej - moFoodRej;
           }
           ctx += ' foodRej='+moFoodRej+' nonFoodRej='+moNFRej;
-          // Val from DAY_DATA (only for display - may differ slightly)
-          var mdx = (typeof DAY_DATA!=='undefined') ? (DAY_DATA[mo]||DAY_DATA[String(mo)]||{}) : {};
           if (mdx.val) ctx += ' val='+mdx.val;
           if (mdx.reasons&&mdx.reasons.length) { ctx+=' TopReasons:'; mdx.reasons.slice(0,5).forEach(function(r){ctx+=r.l+'('+r.n+'),';});}
           if (mdx.custs&&mdx.custs.length) { ctx+=' TopCusts:'; mdx.custs.slice(0,8).forEach(function(c){ctx+=c.n+'('+c.c+'),';});}
@@ -6674,6 +6674,21 @@ function buildVoiceContext() {
       if (s.top_drivers&&s.top_drivers.length) { ctx+='AllDrivers:'; s.top_drivers.forEach(function(d){ctx+=d.name+':'+( d.drops||0)+'drops '+(d.orders||0)+'orders AED'+Math.round(d.value||0).toLocaleString()+' | ';}); }
       ctx += '\n';
     } else { ctx += '=== DISPATCH: no file ===\n'; }
+
+    // ═══ TODAY'S ORDER BOOKING (distinct from DISPATCH — this is orders BOOKED/PLACED, not yet necessarily dispatched) ═══
+    if (typeof SALES_DATA !== 'undefined' && SALES_DATA) {
+      var sd = SALES_DATA;
+      ctx += '=== ORDER_BOOKING (Todays Order Booking dashboard — orders BOOKED/PLACED, NOT the same as DISPATCH which is orders physically sent out) ===\n';
+      ctx += 'Date:' + (sd.date||'') + ' TotalOrders:' + (sd.totalOrders||0) + ' TotalVal:' + fmtSales(sd.totalVal||0);
+      ctx += ' | Food(DCV+DCF):' + (sd.foodOrders||0) + ' ' + fmtSales(sd.foodVal||0);
+      ctx += ' | NonFood(DGC):' + (sd.nfOrders||0) + ' ' + fmtSales(sd.nfVal||0);
+      ctx += ' | Other(DSN+DGS+DPS):' + (sd.otherOrders||0) + ' ' + fmtSales(sd.otherVal||0);
+      ctx += ' | Frozen:' + (sd.frozenOrders||0) + ' ' + fmtSales(sd.frozenVal||0);
+      ctx += ' | Ambient:' + (sd.ambientOrders||0) + ' ' + fmtSales(sd.ambientVal||0);
+      if (sd.orgMap) { ctx += ' | ByORG:'; Object.keys(sd.orgMap).forEach(function(o){ var om=sd.orgMap[o]; ctx += o+':'+(om.orders||0)+'orders '+fmtSales(om.value||0)+' '; }); }
+      if (sd.statusMap) { ctx += ' | Status:'; Object.keys(sd.statusMap).forEach(function(st2){ ctx += st2+':'+(sd.statusMap[st2].orders||sd.statusMap[st2]||0)+' '; }); }
+      ctx += '\n';
+    } else { ctx += "=== ORDER_BOOKING: no file uploaded (Today's Order Booking dashboard is empty) ===\n"; }
 
     // ═══ RETURNS ═════════════════════════════════════════════════
     if (typeof RET_FULL_SUMMARY !== 'undefined' && RET_FULL_SUMMARY) {
