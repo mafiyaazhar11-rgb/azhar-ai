@@ -506,13 +506,20 @@ function parseDispatch(buffer) {
     var isInternalVanDrv = (typeForDrv === 'van') && custForDrv.indexOf('INTERNAL') !== -1;
     var cityForDrv = detectCityFromAddress(C.address ? toStr(row[C.address]) : '', C.city ? row[C.city] : '');
     var locId = isInternalVanDrv ? ('INTERNAL-HUB::' + (cityForDrv || 'Unknown')) : rawLocId;
-    if (!driverOrders[drv]) driverOrders[drv] = {orders:0, drops:{}, value:0};
+    var custNameForDrv = C.customer ? toStr(row[C.customer]) : '';
+    if (!driverOrders[drv]) driverOrders[drv] = {orders:0, drops:{}, value:0, customers:{}, types:{}};
     driverOrders[drv].orders++;
     driverOrders[drv].value += amt;
     if (locId) driverOrders[drv].drops[locId] = 1;
+    if (custNameForDrv) driverOrders[drv].customers[custNameForDrv] = (driverOrders[drv].customers[custNameForDrv] || 0) + 1;
+    if (typeForDrv) driverOrders[drv].types[typeForDrv] = (driverOrders[drv].types[typeForDrv] || 0) + 1;
   });
   var driverList = Object.keys(driverOrders).map(function(name) {
-    return { name:name, orders:driverOrders[name].orders, drops:Object.keys(driverOrders[name].drops).length, value:Math.round(driverOrders[name].value), isHired: name.indexOf('Hired Driver (ID:') === 0 };
+    var custMap = driverOrders[name].customers || {};
+    var typeMap = driverOrders[name].types || {};
+    var topCustomers = Object.keys(custMap).sort(function(a,b){ return custMap[b]-custMap[a]; }).slice(0,3);
+    var topTypes = Object.keys(typeMap).sort(function(a,b){ return typeMap[b]-typeMap[a]; });
+    return { name:name, orders:driverOrders[name].orders, drops:Object.keys(driverOrders[name].drops).length, value:Math.round(driverOrders[name].value), isHired: name.indexOf('Hired Driver (ID:') === 0, customers:topCustomers, types:topTypes };
   });
   var topDrivers = driverList.slice().sort(function(a,b) { return b.orders-a.orders; }).slice(0,5);
   // Order-count ranking hides drivers who carry only a few, very high-value deliveries
