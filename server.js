@@ -485,7 +485,14 @@ function parseDispatch(buffer) {
     var drv = C.driver && row[C.driver] ? extractDriverName(row[C.driver]) : '';
     if (!drv) return;
     var amt = C.amount ? parseFloat(row[C.amount]) || 0 : 0;
-    var locId = C.location ? toStr(row[C.location]) : '';
+    var rawLocId = C.location ? toStr(row[C.location]) : '';
+    // Same internal-van hub collapse + address-based city correction used for Route Summary,
+    // so the driver leaderboard's drop count matches what's shown everywhere else.
+    var typeForDrv = C.type ? normaliseType(row[C.type]) : '';
+    var custForDrv = C.customer ? toStr(row[C.customer]).toUpperCase() : '';
+    var isInternalVanDrv = (typeForDrv === 'van') && custForDrv.indexOf('INTERNAL') !== -1;
+    var cityForDrv = detectCityFromAddress(C.address ? toStr(row[C.address]) : '', C.city ? row[C.city] : '');
+    var locId = isInternalVanDrv ? ('INTERNAL-HUB::' + (cityForDrv || 'Unknown')) : rawLocId;
     if (!driverOrders[drv]) driverOrders[drv] = {orders:0, drops:{}, value:0};
     driverOrders[drv].orders++;
     driverOrders[drv].value += amt;
