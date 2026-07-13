@@ -730,21 +730,22 @@ footer span{color:#e8c878;}
             <div style="font-size:11px;color:var(--muted);margin-top:2px;">Not our fleet — third-party cost</div>
           </div>
           <div style="background:rgba(248,81,73,0.08);border:1px solid rgba(248,81,73,0.3);border-radius:8px;padding:12px;">
-            <div style="font-size:10px;color:#f85149;text-transform:uppercase;letter-spacing:1px;">Repeat-Visit Locations</div>
+            <div style="font-size:10px;color:#f85149;text-transform:uppercase;letter-spacing:1px;">Avoidable Repeat Drops</div>
             <div id="cost-repeat-count" style="font-size:22px;font-weight:800;color:#f85149;margin-top:4px;">—</div>
-            <div style="font-size:11px;color:var(--muted);margin-top:2px;">Same address, 2+ routes, same day</div>
+            <div id="cost-repeat-sub" style="font-size:11px;color:var(--muted);margin-top:2px;">Same order type, same address, 2+ trucks</div>
           </div>
           <div style="background:rgba(248,81,73,0.08);border:1px solid rgba(248,81,73,0.3);border-radius:8px;padding:12px;">
-            <div style="font-size:10px;color:#f85149;text-transform:uppercase;letter-spacing:1px;">Potential Avoidable Cost</div>
+            <div style="font-size:10px;color:#f85149;text-transform:uppercase;letter-spacing:1px;">Avoidable Cost</div>
             <div id="cost-repeat-extra" style="font-size:22px;font-weight:800;color:#f85149;margin-top:4px;">—</div>
             <div style="font-size:11px;color:var(--muted);margin-top:2px;">If these had been consolidated</div>
           </div>
         </div>
         <div id="ds-repeat-wrap" style="display:none;">
-          <div style="font-size:11px;color:var(--gold);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Locations Visited by 2+ Routes Today</div>
+          <div style="font-size:11px;color:var(--gold);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Locations Visited by 2+ Routes Today — Avoidable vs Legitimate Splits</div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Food and Non-Food often can't share a truck — those are marked "Required" below, not counted as extra cost. Only genuine same-type duplicates count toward the avoidable total.</div>
           <div style="overflow-x:auto;max-height:280px;overflow-y:auto;">
-            <table class="data-table" style="width:100%;min-width:600px;">
-              <thead><tr><th>Location ID</th><th>Customer</th><th>Address</th><th style="text-align:center;">Routes</th><th style="text-align:center;">Visits</th><th style="text-align:right;">Extra Cost (AED)</th></tr></thead>
+            <table class="data-table" style="width:100%;min-width:680px;">
+              <thead><tr><th>Location ID</th><th>Customer</th><th>Address</th><th style="text-align:center;">Routes (Type)</th><th style="text-align:center;">Status</th><th style="text-align:right;">Extra Cost (AED)</th></tr></thead>
               <tbody id="ds-repeat-body"></tbody>
             </table>
           </div>
@@ -2182,18 +2183,26 @@ function buildDashboard(d){
     document.getElementById('cost-own-drops').textContent = (ca.own_fleet_drops||0).toLocaleString();
     document.getElementById('cost-own-cost').textContent = 'AED '+(ca.own_fleet_cost_aed||0).toLocaleString()+' at AED '+(ca.drop_rate_aed||120)+'/drop';
     document.getElementById('cost-pl-drops').textContent = (ca.pl_drops||0).toLocaleString();
-    document.getElementById('cost-repeat-count').textContent = (ca.repeat_location_count||0).toLocaleString();
+    document.getElementById('cost-repeat-count').textContent = (ca.repeat_location_avoidable_count||0).toLocaleString();
+    document.getElementById('cost-repeat-sub').textContent = 'of '+(ca.repeat_location_count||0)+' total repeat-visit addresses ('+((ca.repeat_location_count||0)-(ca.repeat_location_avoidable_count||0))+' were required Food+Non-Food splits)';
     document.getElementById('cost-repeat-extra').textContent = 'AED '+(ca.repeat_location_extra_cost_aed||0).toLocaleString();
     document.getElementById('ds-cost-box').style.display='block';
   }
   if(s.repeat_locations && s.repeat_locations.length){
     document.getElementById('ds-repeat-body').innerHTML = s.repeat_locations.map(function(l){
+      var routesLabel = (l.route_types||[]).map(function(rt){ return rt.route+' ('+rt.types.join('+')+')'; }).join(', ') || l.routes.join(', ');
+      var statusBadge = l.is_legitimate_split
+        ? '<span style="color:#58a6ff;font-weight:700;">Required</span>'
+        : '<span style="color:#f85149;font-weight:700;">Avoidable</span>';
+      var costCell = l.is_legitimate_split
+        ? '<span style="color:var(--muted);">—</span>'
+        : 'AED '+l.extra_cost_aed.toLocaleString();
       return '<tr><td style="color:var(--gold);font-weight:600;">'+l.location_id+'</td>'
         +'<td>'+(l.customer||'—')+'</td>'
         +'<td style="color:var(--muted);font-size:11px;">'+(l.address||'—')+'</td>'
-        +'<td style="text-align:center;">'+l.routes.join(', ')+'</td>'
-        +'<td style="text-align:center;font-weight:700;color:#f85149;">'+l.visit_count+'</td>'
-        +'<td style="text-align:right;font-weight:700;color:#f85149;">AED '+l.extra_cost_aed.toLocaleString()+'</td></tr>';
+        +'<td style="text-align:center;font-size:11px;">'+routesLabel+'</td>'
+        +'<td style="text-align:center;">'+statusBadge+'</td>'
+        +'<td style="text-align:right;font-weight:700;">'+costCell+'</td></tr>';
     }).join('');
     document.getElementById('ds-repeat-wrap').style.display='block';
   } else {
