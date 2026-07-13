@@ -279,6 +279,26 @@ function normaliseCity(raw) {
   return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
 }
 
+// The CITY column is sometimes wrong (e.g. an internal transfer address that literally
+// contains "Sharjah" in the text gets logged under CITY="Dubai"). Scan the full address
+// text for a city name and prefer that over a mismatched CITY column value.
+function detectCityFromAddress(addressText, cityColumnValue) {
+  var fallback = normaliseCity(cityColumnValue);
+  var addr = toStr(addressText).toLowerCase();
+  if (!addr) return fallback;
+  var found = null;
+  if (addr.includes('abu dhabi')) found = 'Abu Dhabi';
+  else if (addr.includes('sharjah')) found = 'Sharjah';
+  else if (addr.includes('ajman')) found = 'Ajman';
+  else if (addr.includes('fujairah')) found = 'Fujairah';
+  else if (addr.includes('al ain') || addr.includes('al-ain')) found = 'Al Ain';
+  else if (addr.includes('ras al khaimah') || addr.includes('rak,') || addr.endsWith('rak')) found = 'Ras Al Khaimah';
+  else if (addr.includes('umm al quwain')) found = 'Umm Al Quwain';
+  else if (addr.includes('dubai')) found = 'Dubai';
+  // If the address text clearly names a different city than the CITY column, trust the address text.
+  return found || fallback;
+}
+
 function extractDriverName(contact) {
   var s = toStr(contact);
   if (!s) return '';
@@ -383,7 +403,15 @@ function parseDispatch(buffer) {
     if (C.route && row[C.route]) {
       var route = toStr(row[C.route]);
       if (!routes[route]) routes[route] = { locs:{}, drivers:{}, orders:0, value:0 };
-      var loc = C.location ? toStr(row[C.location]) : '';
+      var rawLoc = C.location ? toStr(row[C.location]) : '';
+      // Internal cash-van transfers all drop at a fixed hub per city (not a real unique customer
+      // address per transaction) — collapse them to one drop per city instead of counting every
+      // internal order's own LOCATION_ID as a separate physical stop.
+      var custForInternal = C.customer ? toStr(row[C.customer]).toUpperCase() : '';
+      var isInternalVan = (type === 'van') && custForInternal.indexOf('INTERNAL') !== -1;
+      var addrTextForCity = C.address ? toStr(row[C.address]) : '';
+      var cityForLoc = detectCityFromAddress(addrTextForCity, C.city ? row[C.city] : '');
+      var loc = isInternalVan ? ('INTERNAL-HUB::' + (cityForLoc || 'Unknown')) : rawLoc;
       if (loc) routes[route].locs[loc] = 1;
       routes[route].value += amt;
       routes[route].orders++;
