@@ -4107,8 +4107,8 @@ function processBacklogRows(rows, fileName, saveRaw){
   var C = {
     org:      fc('ORG','ORGNIZATION','ORGNISATION','ORGNAIZATION'),
     val:      fc('VALUE','SUM OF VALUE','AMOUNT','AMT','TOTAL_VALUE','TOTAL VALUE'),
-    cat:      fc('STATUS'),
-    statusCol: fc('STATUS'),
+    cat:      fc('COMMENTS') || fc('STATUS'),
+    statusCol: fc('COMMENTS') || fc('STATUS'),
     accType:  fc('ACCOUNT TYPE','ACCOUNTTYPE','ACC TYPE'),
     buCol:    fc('CATEGORY'),
     accName:  fc('ACCOUNT NAME','ACCOUNTNAME','ACC NAME'),
