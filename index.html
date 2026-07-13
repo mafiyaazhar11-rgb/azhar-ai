@@ -739,8 +739,8 @@ footer span{color:#e8c878;}
         <div id="ds-hired-list-wrap" style="display:none;">
           <div style="font-size:11px;color:var(--gold);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Hired Drivers Today (by value, highest first)</div>
           <div style="overflow-x:auto;max-height:220px;overflow-y:auto;">
-            <table class="data-table" style="width:100%;min-width:400px;">
-              <thead><tr><th>Phone/ID</th><th style="text-align:center;">Orders</th><th style="text-align:center;">Drops</th><th style="text-align:right;">Value (AED)</th></tr></thead>
+            <table class="data-table" style="width:100%;min-width:680px;">
+              <thead><tr><th>Phone/ID</th><th>Customer</th><th>Type</th><th style="text-align:center;">Orders</th><th style="text-align:center;">Drops</th><th style="text-align:right;">Value (AED)</th></tr></thead>
               <tbody id="ds-hired-body"></tbody>
             </table>
           </div>
@@ -2252,7 +2252,16 @@ function buildDashboard(d){
       document.getElementById('ds-hired-body').innerHTML = dss.hired_driver_details.map(function(d){
         var idMatch = d.name.match(/ID:\s*([\d]+)/);
         var idLabel = idMatch ? idMatch[1] : d.name;
+        var custLabel = (d.customers && d.customers.length) ? d.customers.join(', ') : '—';
+        var typeColors = {food:'var(--green)', nonfood:'#58a6ff', '3pl':'var(--gold)', van:'var(--muted)'};
+        var typeLabel = (d.types && d.types.length) ? d.types.map(function(t){
+          var col = typeColors[t] || 'var(--text)';
+          var label = t==='nonfood' ? 'Non-Food' : (t==='3pl' ? '3PL' : t.charAt(0).toUpperCase()+t.slice(1));
+          return '<span style="color:'+col+';font-weight:600;">'+label+'</span>';
+        }).join(', ') : '—';
         return '<tr><td style="color:#f85149;font-weight:600;">'+idLabel+'</td>'
+          +'<td style="font-size:12px;">'+custLabel+'</td>'
+          +'<td style="font-size:12px;">'+typeLabel+'</td>'
           +'<td style="text-align:center;">'+d.orders+'</td>'
           +'<td style="text-align:center;">'+d.drops+'</td>'
           +'<td style="text-align:right;font-weight:700;color:var(--gold);">'+d.value.toLocaleString()+'</td></tr>';
