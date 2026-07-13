@@ -405,7 +405,7 @@ function parseDispatch(buffer) {
             address: C.address ? toStr(row[C.address]) : '',
             customer: C.customer ? toStr(row[C.customer]) : '',
             isCashOrder: custNameForCash.indexOf('CASH') !== -1,
-            routes: {}, ownRoutes: {}, typesByRoute: {}, valueByRoute: {}
+            routes: {}, ownRoutes: {}, typesByRoute: {}, valueByRoute: {}, orderCountByRoute: {}
           };
         }
         locationVisits[loc].routes[route] = 1;
@@ -413,6 +413,7 @@ function parseDispatch(buffer) {
         if (!locationVisits[loc].typesByRoute[route]) locationVisits[loc].typesByRoute[route] = {};
         locationVisits[loc].typesByRoute[route][type || 'other'] = true;
         locationVisits[loc].valueByRoute[route] = (locationVisits[loc].valueByRoute[route] || 0) + amt;
+        locationVisits[loc].orderCountByRoute[route] = (locationVisits[loc].orderCountByRoute[route] || 0) + 1;
       }
     }
     if (C.driver && row[C.driver]) {
@@ -472,14 +473,16 @@ function parseDispatch(buffer) {
     });
   });
 
+  var HIGH_VALUE_EXCEPTION_THRESHOLD = 100000;
+
   var repeatLocations = Object.keys(locationVisits)
     .map(function(loc) {
       var lv = locationVisits[loc];
       var ownRouteList = Object.keys(lv.ownRoutes);
-      // For each own-fleet route that visited this location, what order type(s) and value did it carry?
+      // For each own-fleet route that visited this location, what order type(s), value, and order count did it carry?
       var routeDetails = ownRouteList.map(function(r) {
         var typesHere = Object.keys(lv.typesByRoute[r] || {});
-        return { route: r, types: typesHere, value: Math.round(lv.valueByRoute[r] || 0) };
+        return { route: r, types: typesHere, value: Math.round(lv.valueByRoute[r] || 0), order_count: lv.orderCountByRoute[r] || 0 };
       });
       var totalValue = routeDetails.reduce(function(s, rd) { return s + rd.value; }, 0);
       // All distinct types seen across all routes at this location
@@ -490,6 +493,10 @@ function parseDispatch(buffer) {
       // (e.g. one route Food, another Non-Food) — those must use separate trucks.
       // A real avoidable duplicate = multiple routes carrying the SAME type to the same address.
       var isLegitimateSplit = distinctTypeCount > 1;
+      // High-value exception: an "avoidable" duplicate over AED 100k is more likely a genuinely
+      // large order that needed splitting across trucks for capacity — flag for manual review
+      // rather than assuming it's a routing mistake.
+      var isHighValueException = !isLegitimateSplit && totalValue > HIGH_VALUE_EXCEPTION_THRESHOLD;
       return {
         location_id: loc,
         address: lv.address,
@@ -500,9 +507,12 @@ function parseDispatch(buffer) {
         total_value: totalValue,
         visit_count: ownRouteList.length,
         is_legitimate_split: isLegitimateSplit,
+        is_high_value_exception: isHighValueException,
         reason: isLegitimateSplit
           ? 'Different order types (' + Object.keys(allTypes).join(' + ') + ') — separate trucks required'
-          : 'Same order type visited ' + ownRouteList.length + 'x — likely avoidable'
+          : (isHighValueException
+              ? 'EXCEPTION: AED ' + totalValue.toLocaleString() + ' — likely a genuinely large order needing capacity split, verify before flagging as routing error'
+              : 'Same order type visited ' + ownRouteList.length + 'x — likely avoidable')
       };
     })
     .filter(function(l) { return l.visit_count > 1 && !l.isCashOrder; })
@@ -1178,13 +1188,13 @@ app.post('/api/dispatch/export-excel', async function(req, res) {
     es.addRow([]);
 
     styleSectionRow(es.addRow(['KEY METRICS']));
-    es.addRow(['Total Orders', body.total_orders || 0]);
-    es.addRow(['Total Value (AED)', Math.round(body.total_value || 0)]);
-    es.addRow(['Total Routes', body.total_routes || 0]);
-    es.addRow(['Total Drivers', body.total_drivers || 0]);
-    es.addRow(['Total Drops', body.total_drops || 0]);
-    es.addRow(['Own Fleet Drops', ca.own_fleet_drops || 0]);
-    es.addRow(['3PL Drops (billed separately)', ca.pl_drops || 0]);
+    es.addRow(['Total Orders', body.total_orders || 0]).getCell(2).numFmt = '#,##0';
+    es.addRow(['Total Value (AED)', Math.round(body.total_value || 0)]).getCell(2).numFmt = '#,##0';
+    es.addRow(['Total Routes', body.total_routes || 0]).getCell(2).numFmt = '#,##0';
+    es.addRow(['Total Drivers', body.total_drivers || 0]).getCell(2).numFmt = '#,##0';
+    es.addRow(['Total Drops', body.total_drops || 0]).getCell(2).numFmt = '#,##0';
+    es.addRow(['Own Fleet Drops', ca.own_fleet_drops || 0]).getCell(2).numFmt = '#,##0';
+    es.addRow(['3PL Drops (billed separately)', ca.pl_drops || 0]).getCell(2).numFmt = '#,##0';
     es.addRow([]);
 
     styleSectionRow(es.addRow(['REPEAT-VISIT ADDRESSES — ACTION SUMMARY']));
@@ -1193,24 +1203,45 @@ app.post('/api/dispatch/export-excel', async function(req, res) {
     es.addRow(['— Avoidable (same order type, worth questioning)', avoidableCount]);
     es.addRow([]);
 
-    if (avoidableRows.length) {
-      var avoidableByValue = avoidableRows.slice().sort(function(a, b) { return (b.total_value || 0) - (a.total_value || 0); });
-      styleHeaderRow(es.addRow(['TOP AVOIDABLE REPEAT DROPS', 'CUSTOMER', 'ROUTES', 'TOTAL VALUE (AED)', '']));
-      avoidableByValue.slice(0, 10).forEach(function(l){
-        var routesLabel = (l.route_types||[]).map(function(rt){ return rt.route+' (AED '+(rt.value||0).toLocaleString()+')'; }).join(', ') || (l.routes||[]).join(', ');
-        es.addRow([l.location_id, l.customer, routesLabel, l.total_value || 0, '']);
+    var RED = 'FFB0201A';
+    var exceptionRows = avoidableRows.filter(function(l){ return l.is_high_value_exception; });
+    var genuineAvoidableRows = avoidableRows.filter(function(l){ return !l.is_high_value_exception; });
+
+    if (exceptionRows.length) {
+      var exceptionsByValue = exceptionRows.slice().sort(function(a, b) { return (b.total_value || 0) - (a.total_value || 0); });
+      styleHeaderRow(es.addRow(['⚠ HIGH-VALUE EXCEPTIONS (>AED 100,000)', 'CUSTOMER', 'ROUTES (TYPE · ORDERS · VALUE)', 'TOTAL VALUE (AED)', '']));
+      es.addRow(['These are same-order-type duplicates, but the value is large enough that they may be a genuinely large order needing a capacity split — verify before treating as a routing mistake.']);
+      exceptionsByValue.forEach(function(l){
+        var routesLabel = (l.route_types||[]).map(function(rt){ return rt.route+' ('+rt.types.join('+')+', '+(rt.order_count||0)+' orders, AED '+(rt.value||0).toLocaleString()+')'; }).join(', ') || (l.routes||[]).join(', ');
+        var row = es.addRow([l.location_id, l.customer, routesLabel, l.total_value || 0, '']);
+        row.getCell(4).numFmt = '#,##0';
+        row.font = { color:{argb:'FF8B6914'} };
+      });
+      es.addRow([]);
+    }
+
+    if (genuineAvoidableRows.length) {
+      styleHeaderRow(es.addRow(['TOP AVOIDABLE REPEAT DROPS', 'CUSTOMER', 'ROUTES (TYPE · ORDERS · VALUE)', 'TOTAL VALUE (AED)', '']));
+      genuineAvoidableRows.slice(0, 10).forEach(function(l){
+        var routesLabel = (l.route_types||[]).map(function(rt){ return rt.route+' ('+rt.types.join('+')+', '+(rt.order_count||0)+' orders, AED '+(rt.value||0).toLocaleString()+')'; }).join(', ') || (l.routes||[]).join(', ');
+        var row = es.addRow([l.location_id, l.customer, routesLabel, l.total_value || 0, '']);
+        row.getCell(4).numFmt = '#,##0';
+        row.font = { color:{argb:RED} };
       });
       es.addRow([]);
     }
 
     styleSectionRow(es.addRow(['RECOMMENDED ACTIONS']));
-    if (avoidableRows.length) {
-      var biggest = avoidableRows.slice().sort(function(a,b){ return (b.total_value||0)-(a.total_value||0); })[0];
-      es.addRow(['1. Raise the ' + avoidableCount + ' avoidable repeat-drop addresses with the transport team — same order type sent on 2+ separate trucks to the same address.']);
+    if (genuineAvoidableRows.length) {
+      var biggest = genuineAvoidableRows[0];
+      es.addRow(['1. Raise the ' + genuineAvoidableRows.length + ' avoidable repeat-drop addresses with the transport team — same order type sent on 2+ separate trucks to the same address.']);
       es.addRow(['2. Start with "' + biggest.customer + '" (Location ' + biggest.location_id + ') — highest combined value at AED ' + (biggest.total_value||0).toLocaleString() + ' split across routes ' + (biggest.routes||[]).join(', ') + '.']);
       es.addRow(['3. See "Repeat Location Detail" tab for the full list with per-route order values — check whether each split was due to genuine order size before assuming it was a routing error.']);
     } else {
       es.addRow(['No avoidable repeat drops found today — all multi-route visits were legitimate Food/Non-Food/3PL splits.']);
+    }
+    if (exceptionRows.length) {
+      es.addRow(['4. ' + exceptionRows.length + ' high-value exception(s) flagged above (>AED 100,000) — review order size before raising these with the transport team, as a large order may genuinely require 2 trucks.']);
     }
 
     // ---- Sheet 2: Route Summary ----
@@ -1220,19 +1251,29 @@ app.post('/api/dispatch/export-excel', async function(req, res) {
     var sumOrders = 0, sumDrops = 0, sumValue = 0;
     topRoutes.forEach(function(r){
       sumOrders += r.orders || 0; sumDrops += r.drops || 0; sumValue += r.value || 0;
-      rt.addRow([r.route, r.orders || 0, r.driverCount || 0, r.drops || 0, Math.round(r.value || 0)]);
+      var row = rt.addRow([r.route, r.orders || 0, r.driverCount || 0, r.drops || 0, Math.round(r.value || 0)]);
+      row.getCell(5).numFmt = '#,##0';
     });
-    styleTotalRow(rt.addRow(['TOTAL', sumOrders, '', sumDrops, Math.round(sumValue)]));
+    var totalRow = rt.addRow(['TOTAL', sumOrders, '', sumDrops, Math.round(sumValue)]);
+    totalRow.getCell(5).numFmt = '#,##0';
+    styleTotalRow(totalRow);
 
     // ---- Sheet 3: Repeat Location Detail ----
     var rl = wb.addWorksheet('Repeat Location Detail');
-    rl.columns = [{width:14},{width:30},{width:40},{width:44},{width:14},{width:16}];
-    styleHeaderRow(rl.addRow(['Location ID', 'Customer', 'Address', 'Routes (Type · Value)', 'Status', 'Total Value (AED)']));
+    rl.columns = [{width:14},{width:30},{width:40},{width:50},{width:14},{width:16}];
+    styleHeaderRow(rl.addRow(['Location ID', 'Customer', 'Address', 'Routes (Type · Orders · Value)', 'Status', 'Total Value (AED)']));
     repeatLocs.forEach(function(l){
-      var routesLabel = (l.route_types||[]).map(function(rt2){ return rt2.route+' ('+(rt2.types||[]).join('+')+', AED '+(rt2.value||0).toLocaleString()+')'; }).join(', ') || (l.routes||[]).join(', ');
-      var row = rl.addRow([l.location_id, l.customer, l.address, routesLabel, l.is_legitimate_split ? 'Required' : 'Avoidable', l.total_value || 0]);
-      row.getCell(5).fill = { type:'pattern', pattern:'solid', fgColor:{argb: l.is_legitimate_split ? REQBLUE : AVOIDRED} };
-      row.getCell(5).font = { bold:true, color:{argb: l.is_legitimate_split ? 'FF1B5E9E' : 'FFB0201A'} };
+      var routesLabel = (l.route_types||[]).map(function(rt2){ return rt2.route+' ('+(rt2.types||[]).join('+')+', '+(rt2.order_count||0)+' orders, AED '+(rt2.value||0).toLocaleString()+')'; }).join(', ') || (l.routes||[]).join(', ');
+      var statusText = l.is_legitimate_split ? 'Required' : (l.is_high_value_exception ? 'Exception — Review' : 'Avoidable');
+      var row = rl.addRow([l.location_id, l.customer, l.address, routesLabel, statusText, l.total_value || 0]);
+      row.getCell(6).numFmt = '#,##0';
+      var statusColor = l.is_legitimate_split ? REQBLUE : (l.is_high_value_exception ? 'FFFFE9A8' : AVOIDRED);
+      var fontColor = l.is_legitimate_split ? 'FF1B5E9E' : (l.is_high_value_exception ? 'FF8B6914' : 'FFB0201A');
+      row.getCell(5).fill = { type:'pattern', pattern:'solid', fgColor:{argb: statusColor} };
+      row.getCell(5).font = { bold:true, color:{argb: fontColor} };
+      if (!l.is_legitimate_split) {
+        row.getCell(6).font = { bold:true, color:{argb: fontColor} };
+      }
     });
 
     var buf = await wb.xlsx.writeBuffer();
