@@ -391,17 +391,27 @@ function parseDispatch(buffer) {
         if (drvName) routes[route].drivers[drvName] = 1;
       }
       // Track which routes visit each physical location, to catch the same address being
-      // driven to twice by two different routes on the same day (double-charged drop)
+      // driven to twice by two different routes on the same day (double-charged drop).
+      // Cash/walk-in orders ("**** Cash **** (Dxb)") share a generic placeholder location,
+      // not a real fixed address, so they're flagged and excluded from the repeat-visit REPORT
+      // further below (but still counted normally for the own-fleet/3PL drop-cost split).
+      // Also track the order TYPE per route-visit — Food and Non-Food often can't share a
+      // truck, so a "repeat visit" that's actually Food+Non-Food is a legitimate separate
+      // trip, not a duplicate/avoidable one.
       if (loc) {
+        var custNameForCash = C.customer ? toStr(row[C.customer]).toUpperCase() : '';
         if (!locationVisits[loc]) {
           locationVisits[loc] = {
             address: C.address ? toStr(row[C.address]) : '',
             customer: C.customer ? toStr(row[C.customer]) : '',
-            routes: {}, ownRoutes: {}
+            isCashOrder: custNameForCash.indexOf('CASH') !== -1,
+            routes: {}, ownRoutes: {}, typesByRoute: {}
           };
         }
         locationVisits[loc].routes[route] = 1;
         if (type !== '3pl') locationVisits[loc].ownRoutes[route] = 1;
+        if (!locationVisits[loc].typesByRoute[route]) locationVisits[loc].typesByRoute[route] = {};
+        locationVisits[loc].typesByRoute[route][type || 'other'] = true;
       }
     }
     if (C.driver && row[C.driver]) {
@@ -466,19 +476,39 @@ function parseDispatch(buffer) {
     .map(function(loc) {
       var lv = locationVisits[loc];
       var ownRouteList = Object.keys(lv.ownRoutes);
+      // For each own-fleet route that visited this location, what order type(s) did it carry?
+      var routeDetails = ownRouteList.map(function(r) {
+        var typesHere = Object.keys(lv.typesByRoute[r] || {});
+        return { route: r, types: typesHere };
+      });
+      // All distinct types seen across all routes at this location
+      var allTypes = {};
+      routeDetails.forEach(function(rd) { rd.types.forEach(function(t) { allTypes[t] = true; }); });
+      var distinctTypeCount = Object.keys(allTypes).length;
+      // Legitimate split = different routes carried genuinely different order types
+      // (e.g. one route Food, another Non-Food) — those must use separate trucks.
+      // A real avoidable duplicate = multiple routes carrying the SAME type to the same address.
+      var isLegitimateSplit = distinctTypeCount > 1;
       return {
         location_id: loc,
         address: lv.address,
         customer: lv.customer,
+        isCashOrder: lv.isCashOrder,
         routes: ownRouteList,
+        route_types: routeDetails,
         visit_count: ownRouteList.length,
-        extra_cost_aed: Math.max(0, ownRouteList.length - 1) * DROP_RATE_AED
+        is_legitimate_split: isLegitimateSplit,
+        reason: isLegitimateSplit
+          ? 'Different order types (' + Object.keys(allTypes).join(' + ') + ') — separate trucks required'
+          : 'Same order type visited ' + ownRouteList.length + 'x — likely avoidable',
+        extra_cost_aed: isLegitimateSplit ? 0 : Math.max(0, ownRouteList.length - 1) * DROP_RATE_AED
       };
     })
-    .filter(function(l) { return l.visit_count > 1; })
-    .sort(function(a, b) { return b.visit_count - a.visit_count; });
+    .filter(function(l) { return l.visit_count > 1 && !l.isCashOrder; })
+    .sort(function(a, b) { return (b.extra_cost_aed - a.extra_cost_aed) || (b.visit_count - a.visit_count); });
 
   var repeatLocationExtraCostTotal = repeatLocations.reduce(function(s, l) { return s + l.extra_cost_aed; }, 0);
+  var repeatLocationAvoidableCount = repeatLocations.filter(function(l) { return !l.is_legitimate_split; }).length;
 
   var cityTypeCrossOut = {};
   Object.keys(cityTypeCross).forEach(function(c) {
@@ -512,6 +542,7 @@ function parseDispatch(buffer) {
       pl_drops: plDrops,
       own_fleet_cost_aed: ownFleetDrops * DROP_RATE_AED,
       repeat_location_count: repeatLocations.length,
+      repeat_location_avoidable_count: repeatLocationAvoidableCount,
       repeat_location_extra_cost_aed: repeatLocationExtraCostTotal
     },
     repeat_locations: repeatLocations.slice(0, 50)
