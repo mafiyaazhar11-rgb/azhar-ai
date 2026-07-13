@@ -405,13 +405,14 @@ function parseDispatch(buffer) {
             address: C.address ? toStr(row[C.address]) : '',
             customer: C.customer ? toStr(row[C.customer]) : '',
             isCashOrder: custNameForCash.indexOf('CASH') !== -1,
-            routes: {}, ownRoutes: {}, typesByRoute: {}
+            routes: {}, ownRoutes: {}, typesByRoute: {}, valueByRoute: {}
           };
         }
         locationVisits[loc].routes[route] = 1;
         if (type !== '3pl') locationVisits[loc].ownRoutes[route] = 1;
         if (!locationVisits[loc].typesByRoute[route]) locationVisits[loc].typesByRoute[route] = {};
         locationVisits[loc].typesByRoute[route][type || 'other'] = true;
+        locationVisits[loc].valueByRoute[route] = (locationVisits[loc].valueByRoute[route] || 0) + amt;
       }
     }
     if (C.driver && row[C.driver]) {
@@ -458,10 +459,9 @@ function parseDispatch(buffer) {
     return { name:name, orders:driverOrders[name].orders, drops:Object.keys(driverOrders[name].drops).length, value:Math.round(driverOrders[name].value) };
   }).sort(function(a,b) { return b.orders-a.orders; }).slice(0,5);
 
-  // ── Cost & repeat-drop analysis ──
-  // Transport team bills AED 120 per drop. 3PL orders are fulfilled by a third party
-  // (not our own fleet), so they must be excluded from our own-fleet cost calculation.
-  var DROP_RATE_AED = 120;
+  // ── Own fleet vs 3PL drop split, and repeat-visit detection ──
+  // 3PL orders are fulfilled by a third party (not our own fleet), so they're tracked
+  // separately from our own-fleet drop count.
   var ownFleetDrops = 0, plDrops = 0;
   Object.keys(routes).forEach(function(r) {
     Object.keys(routes[r].locs).forEach(function(loc) {
@@ -476,11 +476,12 @@ function parseDispatch(buffer) {
     .map(function(loc) {
       var lv = locationVisits[loc];
       var ownRouteList = Object.keys(lv.ownRoutes);
-      // For each own-fleet route that visited this location, what order type(s) did it carry?
+      // For each own-fleet route that visited this location, what order type(s) and value did it carry?
       var routeDetails = ownRouteList.map(function(r) {
         var typesHere = Object.keys(lv.typesByRoute[r] || {});
-        return { route: r, types: typesHere };
+        return { route: r, types: typesHere, value: Math.round(lv.valueByRoute[r] || 0) };
       });
+      var totalValue = routeDetails.reduce(function(s, rd) { return s + rd.value; }, 0);
       // All distinct types seen across all routes at this location
       var allTypes = {};
       routeDetails.forEach(function(rd) { rd.types.forEach(function(t) { allTypes[t] = true; }); });
@@ -496,18 +497,17 @@ function parseDispatch(buffer) {
         isCashOrder: lv.isCashOrder,
         routes: ownRouteList,
         route_types: routeDetails,
+        total_value: totalValue,
         visit_count: ownRouteList.length,
         is_legitimate_split: isLegitimateSplit,
         reason: isLegitimateSplit
           ? 'Different order types (' + Object.keys(allTypes).join(' + ') + ') — separate trucks required'
-          : 'Same order type visited ' + ownRouteList.length + 'x — likely avoidable',
-        extra_cost_aed: isLegitimateSplit ? 0 : Math.max(0, ownRouteList.length - 1) * DROP_RATE_AED
+          : 'Same order type visited ' + ownRouteList.length + 'x — likely avoidable'
       };
     })
     .filter(function(l) { return l.visit_count > 1 && !l.isCashOrder; })
-    .sort(function(a, b) { return (b.extra_cost_aed - a.extra_cost_aed) || (b.visit_count - a.visit_count); });
+    .sort(function(a, b) { return (b.visit_count - a.visit_count); });
 
-  var repeatLocationExtraCostTotal = repeatLocations.reduce(function(s, l) { return s + l.extra_cost_aed; }, 0);
   var repeatLocationAvoidableCount = repeatLocations.filter(function(l) { return !l.is_legitimate_split; }).length;
 
   var cityTypeCrossOut = {};
@@ -537,13 +537,10 @@ function parseDispatch(buffer) {
     top_drivers: topDrivers, top_routes: topRoutes,
     city_type_cross: cityTypeCrossOut,
     cost_analysis: {
-      drop_rate_aed: DROP_RATE_AED,
       own_fleet_drops: ownFleetDrops,
       pl_drops: plDrops,
-      own_fleet_cost_aed: ownFleetDrops * DROP_RATE_AED,
       repeat_location_count: repeatLocations.length,
-      repeat_location_avoidable_count: repeatLocationAvoidableCount,
-      repeat_location_extra_cost_aed: repeatLocationExtraCostTotal
+      repeat_location_avoidable_count: repeatLocationAvoidableCount
     },
     repeat_locations: repeatLocations.slice(0, 50)
   };
@@ -1126,6 +1123,123 @@ app.post('/api/rejection/export-excel', async function(req, res) {
     res.send(Buffer.from(buf));
   } catch(e) {
     console.error('rejection export-excel error:', e.message);
+    res.status(500).json({ error: 'Export failed: '+e.message });
+  }
+});
+
+// ── DISPATCH DROP ANALYSIS + ROUTE SUMMARY EXCEL EXPORT ──
+app.post('/api/dispatch/export-excel', async function(req, res) {
+  try {
+    var body = req.body || {};
+    var ca = body.cost_analysis || {};
+    var topRoutes = body.top_routes || [];
+    var repeatLocs = body.repeat_locations || [];
+    var cityTypeCross = body.city_type_cross || {};
+
+    var GOLD = 'FFC9A84C', DARKBG = 'FF1A1E26', LIGHTGOLD = 'FFF5E9C8', REQBLUE = 'FFD6E8FF', AVOIDRED = 'FFFDE0DE';
+    function styleHeaderRow(row){
+      row.eachCell(function(cell){
+        cell.fill = { type:'pattern', pattern:'solid', fgColor:{argb:DARKBG} };
+        cell.font = { bold:true, color:{argb:GOLD}, size:11 };
+        cell.alignment = { vertical:'middle' };
+      });
+    }
+    function styleSectionRow(row){
+      row.font = { bold:true, color:{argb:DARKBG}, size:12 };
+      row.eachCell(function(cell){ cell.fill = { type:'pattern', pattern:'solid', fgColor:{argb:GOLD} }; });
+    }
+    function styleTotalRow(row){
+      row.eachCell(function(cell){
+        cell.fill = { type:'pattern', pattern:'solid', fgColor:{argb:LIGHTGOLD} };
+        cell.font = { bold:true, color:{argb:DARKBG} };
+      });
+    }
+
+    var ExcelJS = require('exceljs');
+    var wb = new ExcelJS.Workbook();
+    wb.creator = 'AZHAR-AI';
+    wb.created = new Date();
+
+    var avoidableCount = ca.repeat_location_avoidable_count || 0;
+    var totalRepeatCount = ca.repeat_location_count || 0;
+    var avoidableRows = repeatLocs.filter(function(l){ return !l.is_legitimate_split; });
+    var requiredRows = repeatLocs.filter(function(l){ return l.is_legitimate_split; });
+
+    // ---- Sheet 1: Executive Summary ----
+    var es = wb.addWorksheet('Executive Summary');
+    es.columns = [{width:36},{width:22},{width:16},{width:16},{width:16}];
+
+    var titleRow = es.addRow(['AKI GROUP — DAILY DISPATCH DROP ANALYSIS']);
+    titleRow.font = { bold:true, size:15, color:{argb:GOLD} };
+    es.mergeCells('A1:E1');
+    es.getRow(1).fill = { type:'pattern', pattern:'solid', fgColor:{argb:DARKBG} };
+    es.addRow(['Date', body.date || new Date().toLocaleDateString('en-AE')]);
+    es.addRow(['Generated', new Date().toLocaleString('en-AE')]);
+    es.addRow([]);
+
+    styleSectionRow(es.addRow(['KEY METRICS']));
+    es.addRow(['Total Orders', body.total_orders || 0]);
+    es.addRow(['Total Value (AED)', Math.round(body.total_value || 0)]);
+    es.addRow(['Total Routes', body.total_routes || 0]);
+    es.addRow(['Total Drivers', body.total_drivers || 0]);
+    es.addRow(['Total Drops', body.total_drops || 0]);
+    es.addRow(['Own Fleet Drops', ca.own_fleet_drops || 0]);
+    es.addRow(['3PL Drops (billed separately)', ca.pl_drops || 0]);
+    es.addRow([]);
+
+    styleSectionRow(es.addRow(['REPEAT-VISIT ADDRESSES — ACTION SUMMARY']));
+    es.addRow(['Total addresses visited by 2+ routes today', totalRepeatCount]);
+    es.addRow(['— Required (different order types, separate trucks needed)', requiredRows.length]);
+    es.addRow(['— Avoidable (same order type, worth questioning)', avoidableCount]);
+    es.addRow([]);
+
+    if (avoidableRows.length) {
+      styleHeaderRow(es.addRow(['TOP AVOIDABLE REPEAT DROPS', 'CUSTOMER', 'ROUTES', 'TOTAL VALUE (AED)', '']));
+      avoidableRows.slice(0, 10).forEach(function(l){
+        var routesLabel = (l.route_types||[]).map(function(rt){ return rt.route+' (AED '+(rt.value||0).toLocaleString()+')'; }).join(', ') || (l.routes||[]).join(', ');
+        es.addRow([l.location_id, l.customer, routesLabel, l.total_value || 0, '']);
+      });
+      es.addRow([]);
+    }
+
+    styleSectionRow(es.addRow(['RECOMMENDED ACTIONS']));
+    if (avoidableRows.length) {
+      var biggest = avoidableRows.slice().sort(function(a,b){ return (b.total_value||0)-(a.total_value||0); })[0];
+      es.addRow(['1. Raise the ' + avoidableCount + ' avoidable repeat-drop addresses with the transport team — same order type sent on 2+ separate trucks to the same address.']);
+      es.addRow(['2. Start with "' + biggest.customer + '" (Location ' + biggest.location_id + ') — highest combined value at AED ' + (biggest.total_value||0).toLocaleString() + ' split across routes ' + (biggest.routes||[]).join(', ') + '.']);
+      es.addRow(['3. See "Repeat Location Detail" tab for the full list with per-route order values — check whether each split was due to genuine order size before assuming it was a routing error.']);
+    } else {
+      es.addRow(['No avoidable repeat drops found today — all multi-route visits were legitimate Food/Non-Food/3PL splits.']);
+    }
+
+    // ---- Sheet 2: Route Summary ----
+    var rt = wb.addWorksheet('Route Summary');
+    rt.columns = [{width:14},{width:12},{width:12},{width:14},{width:16}];
+    styleHeaderRow(rt.addRow(['Route', 'Orders', 'Drivers', 'Locations (Drops)', 'Value (AED)']));
+    var sumOrders = 0, sumDrops = 0, sumValue = 0;
+    topRoutes.forEach(function(r){
+      sumOrders += r.orders || 0; sumDrops += r.drops || 0; sumValue += r.value || 0;
+      rt.addRow([r.route, r.orders || 0, r.driverCount || 0, r.drops || 0, Math.round(r.value || 0)]);
+    });
+    styleTotalRow(rt.addRow(['TOTAL', sumOrders, '', sumDrops, Math.round(sumValue)]));
+
+    // ---- Sheet 3: Repeat Location Detail ----
+    var rl = wb.addWorksheet('Repeat Location Detail');
+    rl.columns = [{width:14},{width:30},{width:40},{width:44},{width:14},{width:16}];
+    styleHeaderRow(rl.addRow(['Location ID', 'Customer', 'Address', 'Routes (Type · Value)', 'Status', 'Total Value (AED)']));
+    repeatLocs.forEach(function(l){
+      var routesLabel = (l.route_types||[]).map(function(rt2){ return rt2.route+' ('+(rt2.types||[]).join('+')+', AED '+(rt2.value||0).toLocaleString()+')'; }).join(', ') || (l.routes||[]).join(', ');
+      var row = rl.addRow([l.location_id, l.customer, l.address, routesLabel, l.is_legitimate_split ? 'Required' : 'Avoidable', l.total_value || 0]);
+      row.getCell(5).fill = { type:'pattern', pattern:'solid', fgColor:{argb: l.is_legitimate_split ? REQBLUE : AVOIDRED} };
+      row.getCell(5).font = { bold:true, color:{argb: l.is_legitimate_split ? 'FF1B5E9E' : 'FFB0201A'} };
+    });
+
+    var buf = await wb.xlsx.writeBuffer();
+    res.setHeader('Content-Disposition', 'attachment; filename="Dispatch_Drop_Analysis_'+Date.now()+'.xlsx"');
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.send(Buffer.from(buf));
+  } catch(e) {
+    console.error('dispatch export-excel error:', e.message);
     res.status(500).json({ error: 'Export failed: '+e.message });
   }
 });
