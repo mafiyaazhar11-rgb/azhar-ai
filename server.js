@@ -268,6 +268,7 @@ function normaliseType(raw) {
 function normaliseCity(raw) {
   var c = toStr(raw).toLowerCase();
   if (c.includes('abu dhabi')) return 'Abu Dhabi';
+  if (c.includes('hatta')) return 'Hatta';
   if (c.includes('dubai')) return 'Dubai';
   if (c.includes('sharjah')) return 'Sharjah';
   if (c.includes('ajman')) return 'Ajman';
@@ -288,6 +289,7 @@ function detectCityFromAddress(addressText, cityColumnValue) {
   if (!addr) return fallback;
   var found = null;
   if (addr.includes('abu dhabi')) found = 'Abu Dhabi';
+  else if (addr.includes('hatta')) found = 'Hatta';
   else if (addr.includes('sharjah')) found = 'Sharjah';
   else if (addr.includes('ajman')) found = 'Ajman';
   else if (addr.includes('fujairah')) found = 'Fujairah';
@@ -307,7 +309,11 @@ function extractDriverName(contact) {
   if (m) return m[1].trim();
   var parts = s.split(/[-+\d]/);
   var name = (parts[0] || '').trim();
-  return name.length > 2 ? name : s.trim();
+  if (name.length > 2) return name;
+  // No name at all in the source data — just a bare phone number/ID. Label it clearly
+  // instead of silently displaying the number, so it reads as "name missing", not a bug.
+  if (/^\d+$/.test(s)) return 'Hired Driver (ID: ' + s + ')';
+  return s.trim();
 }
 
 function stripBranch(name) {
@@ -366,6 +372,7 @@ function parseDispatch(buffer) {
 
   var totalOrders=0, totalValue=0, foodOrders=0, foodValue=0, nonFoodOrders=0, nonFoodValue=0, plOrders=0, vanOrders=0;
   var cities={}, customers={}, routes={}, driverSet={};
+  var dropsByCity = {}; // one increment per unique (route, location) drop — cannot exceed total_drops by construction
   var orgStats={ DCV:{o:0,v:0}, DCF:{o:0,v:0}, DGC:{o:0,v:0}, DGS:{o:0,v:0}, DSN:{o:0,v:0}, DPS:{o:0,v:0}, DPB:{o:0,v:0}, HCP:{o:0,v:0} };
   var cityTypeCross = {}; // city -> {food, nonfood, pl, van, other}
   var locationVisits = {}; // locationId -> { address, customer, routes:Set(all), ownRoutes:Set(non-3PL) }
@@ -412,7 +419,13 @@ function parseDispatch(buffer) {
       var addrTextForCity = C.address ? toStr(row[C.address]) : '';
       var cityForLoc = detectCityFromAddress(addrTextForCity, C.city ? row[C.city] : '');
       var loc = isInternalVan ? ('INTERNAL-HUB::' + (cityForLoc || 'Unknown')) : rawLoc;
-      if (loc) routes[route].locs[loc] = 1;
+      if (loc) {
+        if (!routes[route].locs[loc]) {
+          // First time this exact (route, location) pair is seen — this is a genuinely new drop.
+          dropsByCity[cityForLoc || 'Unknown'] = (dropsByCity[cityForLoc || 'Unknown'] || 0) + 1;
+        }
+        routes[route].locs[loc] = 1;
+      }
       routes[route].value += amt;
       routes[route].orders++;
       if (C.driver && row[C.driver]) {
@@ -498,9 +511,33 @@ function parseDispatch(buffer) {
     driverOrders[drv].value += amt;
     if (locId) driverOrders[drv].drops[locId] = 1;
   });
-  var topDrivers = Object.keys(driverOrders).map(function(name) {
-    return { name:name, orders:driverOrders[name].orders, drops:Object.keys(driverOrders[name].drops).length, value:Math.round(driverOrders[name].value) };
-  }).sort(function(a,b) { return b.orders-a.orders; }).slice(0,5);
+  var driverList = Object.keys(driverOrders).map(function(name) {
+    return { name:name, orders:driverOrders[name].orders, drops:Object.keys(driverOrders[name].drops).length, value:Math.round(driverOrders[name].value), isHired: name.indexOf('Hired Driver (ID:') === 0 };
+  });
+  var topDrivers = driverList.slice().sort(function(a,b) { return b.orders-a.orders; }).slice(0,5);
+  // Order-count ranking hides drivers who carry only a few, very high-value deliveries
+  // (e.g. a single route to a major supermarket) — surface those separately.
+  var topDriversByValue = driverList.slice().sort(function(a,b) { return b.value-a.value; }).slice(0,5);
+
+  // How much of today's dispatch relied on hired/agency drivers (no name in source data)
+  // vs named in-house drivers — a bare phone number is the signal of a hired driver.
+  var hiredDrivers = driverList.filter(function(d) { return d.isHired; });
+  var inhouseDrivers = driverList.filter(function(d) { return !d.isHired; });
+  var driverSourceSplit = {
+    hired: {
+      driver_count: hiredDrivers.length,
+      orders: hiredDrivers.reduce(function(s,d){ return s+d.orders; }, 0),
+      value: hiredDrivers.reduce(function(s,d){ return s+d.value; }, 0),
+      drops: hiredDrivers.reduce(function(s,d){ return s+d.drops; }, 0)
+    },
+    inhouse: {
+      driver_count: inhouseDrivers.length,
+      orders: inhouseDrivers.reduce(function(s,d){ return s+d.orders; }, 0),
+      value: inhouseDrivers.reduce(function(s,d){ return s+d.value; }, 0),
+      drops: inhouseDrivers.reduce(function(s,d){ return s+d.drops; }, 0)
+    },
+    hired_driver_details: hiredDrivers.sort(function(a,b){ return b.value-a.value; })
+  };
 
   // ── Own fleet vs 3PL drop split, and repeat-visit detection ──
   // 3PL orders are fulfilled by a third party (not our own fleet), so they're tracked
@@ -592,8 +629,9 @@ function parseDispatch(buffer) {
       HCP: { orders:orgStats.HCP.o, value:Math.round(orgStats.HCP.v) }
     },
     by_city: byCity, top_customers: topCustomers,
-    top_drivers: topDrivers, top_routes: topRoutes,
+    top_drivers: topDrivers, top_drivers_by_value: topDriversByValue, driver_source_split: driverSourceSplit, top_routes: topRoutes,
     city_type_cross: cityTypeCrossOut,
+    drops_by_city: dropsByCity,
     cost_analysis: {
       own_fleet_drops: ownFleetDrops,
       pl_drops: plDrops,
