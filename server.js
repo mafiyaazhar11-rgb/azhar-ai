@@ -336,6 +336,7 @@ function parseDispatch(buffer) {
     amount:   findCol('TOTAL_AMOUNT', 'AMOUNT', 'VALUE'),
     driver:   findCol('DRIVER CONTACT DETAILS', 'DRIVERS NAME', 'DRIVER NAME', 'DRIVER CONTACT', 'DRIVER_CONTACT', 'DRIVER_ID'),
     location: findCol('LOCATION_ID', 'LOCATION'),
+    address:  findCol('CUSTOMER ADDRESS', 'ADDRESS'),
     keep:     findCol('KEEP TOGETHER', 'KEEP_TOGETHER', 'KEEPTOGETHER', 'KEEP'),
     type:     findCol('TYPE'),
     org:      findCol('ORG') || findCol('BU') || findCol('ORGANIZATION') || findCol('ORG-BU')
@@ -345,6 +346,8 @@ function parseDispatch(buffer) {
   var totalOrders=0, totalValue=0, foodOrders=0, foodValue=0, nonFoodOrders=0, nonFoodValue=0, plOrders=0, vanOrders=0;
   var cities={}, customers={}, routes={}, driverSet={};
   var orgStats={ DCV:{o:0,v:0}, DCF:{o:0,v:0}, DGC:{o:0,v:0}, DGS:{o:0,v:0}, DSN:{o:0,v:0}, DPS:{o:0,v:0}, DPB:{o:0,v:0}, HCP:{o:0,v:0} };
+  var cityTypeCross = {}; // city -> {food, nonfood, pl, van, other}
+  var locationVisits = {}; // locationId -> { address, customer, routes:Set(all), ownRoutes:Set(non-3PL) }
 
   for (var i = 0; i < rows.length; i++) {
     var row = rows[i];
@@ -364,6 +367,12 @@ function parseDispatch(buffer) {
       var city = normaliseCity(row[C.city]);
       if (!cities[city]) cities[city] = { orders:0, value:0 };
       cities[city].orders++; cities[city].value += amt;
+      if (!cityTypeCross[city]) cityTypeCross[city] = { food:0, nonfood:0, pl:0, van:0, other:0 };
+      if (type === 'food') cityTypeCross[city].food++;
+      else if (type === 'nonfood') cityTypeCross[city].nonfood++;
+      else if (type === '3pl') cityTypeCross[city].pl++;
+      else if (type === 'van') cityTypeCross[city].van++;
+      else cityTypeCross[city].other++;
     }
     if (C.customer && row[C.customer]) {
       var cust = toStr(row[C.customer]);
@@ -380,6 +389,19 @@ function parseDispatch(buffer) {
       if (C.driver && row[C.driver]) {
         var drvName = extractDriverName(row[C.driver]);
         if (drvName) routes[route].drivers[drvName] = 1;
+      }
+      // Track which routes visit each physical location, to catch the same address being
+      // driven to twice by two different routes on the same day (double-charged drop)
+      if (loc) {
+        if (!locationVisits[loc]) {
+          locationVisits[loc] = {
+            address: C.address ? toStr(row[C.address]) : '',
+            customer: C.customer ? toStr(row[C.customer]) : '',
+            routes: {}, ownRoutes: {}
+          };
+        }
+        locationVisits[loc].routes[route] = 1;
+        if (type !== '3pl') locationVisits[loc].ownRoutes[route] = 1;
       }
     }
     if (C.driver && row[C.driver]) {
@@ -426,6 +448,43 @@ function parseDispatch(buffer) {
     return { name:name, orders:driverOrders[name].orders, drops:Object.keys(driverOrders[name].drops).length, value:Math.round(driverOrders[name].value) };
   }).sort(function(a,b) { return b.orders-a.orders; }).slice(0,5);
 
+  // ── Cost & repeat-drop analysis ──
+  // Transport team bills AED 120 per drop. 3PL orders are fulfilled by a third party
+  // (not our own fleet), so they must be excluded from our own-fleet cost calculation.
+  var DROP_RATE_AED = 120;
+  var ownFleetDrops = 0, plDrops = 0;
+  Object.keys(routes).forEach(function(r) {
+    Object.keys(routes[r].locs).forEach(function(loc) {
+      // A location counts as a "3PL drop" for this route only if EVERY visit to it
+      // on this route was 3PL; otherwise it's counted as an own-fleet drop.
+      if (locationVisits[loc] && locationVisits[loc].ownRoutes[r]) ownFleetDrops++;
+      else plDrops++;
+    });
+  });
+
+  var repeatLocations = Object.keys(locationVisits)
+    .map(function(loc) {
+      var lv = locationVisits[loc];
+      var ownRouteList = Object.keys(lv.ownRoutes);
+      return {
+        location_id: loc,
+        address: lv.address,
+        customer: lv.customer,
+        routes: ownRouteList,
+        visit_count: ownRouteList.length,
+        extra_cost_aed: Math.max(0, ownRouteList.length - 1) * DROP_RATE_AED
+      };
+    })
+    .filter(function(l) { return l.visit_count > 1; })
+    .sort(function(a, b) { return b.visit_count - a.visit_count; });
+
+  var repeatLocationExtraCostTotal = repeatLocations.reduce(function(s, l) { return s + l.extra_cost_aed; }, 0);
+
+  var cityTypeCrossOut = {};
+  Object.keys(cityTypeCross).forEach(function(c) {
+    cityTypeCrossOut[c] = cityTypeCross[c];
+  });
+
   return {
     total_orders: totalOrders, total_value: Math.round(totalValue),
     total_routes: Object.keys(routes).length,
@@ -445,7 +504,17 @@ function parseDispatch(buffer) {
       HCP: { orders:orgStats.HCP.o, value:Math.round(orgStats.HCP.v) }
     },
     by_city: byCity, top_customers: topCustomers,
-    top_drivers: topDrivers, top_routes: topRoutes
+    top_drivers: topDrivers, top_routes: topRoutes,
+    city_type_cross: cityTypeCrossOut,
+    cost_analysis: {
+      drop_rate_aed: DROP_RATE_AED,
+      own_fleet_drops: ownFleetDrops,
+      pl_drops: plDrops,
+      own_fleet_cost_aed: ownFleetDrops * DROP_RATE_AED,
+      repeat_location_count: repeatLocations.length,
+      repeat_location_extra_cost_aed: repeatLocationExtraCostTotal
+    },
+    repeat_locations: repeatLocations.slice(0, 50)
   };
 }
 
