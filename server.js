@@ -339,6 +339,7 @@ function parseDispatch(buffer) {
     address:  findCol('CUSTOMER ADDRESS', 'ADDRESS'),
     keep:     findCol('KEEP TOGETHER', 'KEEP_TOGETHER', 'KEEPTOGETHER', 'KEEP'),
     type:     findCol('TYPE'),
+    orderCode: findCol('ORDER CODE', 'ORDER_CODE') || findCol('ORDER '),
     org:      findCol('ORG') || findCol('BU') || findCol('ORGANIZATION') || findCol('ORG-BU')
   };
   console.log('Dispatch cols:', JSON.stringify(C));
@@ -405,7 +406,7 @@ function parseDispatch(buffer) {
             address: C.address ? toStr(row[C.address]) : '',
             customer: C.customer ? toStr(row[C.customer]) : '',
             isCashOrder: custNameForCash.indexOf('CASH') !== -1,
-            routes: {}, ownRoutes: {}, typesByRoute: {}, valueByRoute: {}, orderCountByRoute: {}
+            routes: {}, ownRoutes: {}, typesByRoute: {}, valueByRoute: {}, orderCountByRoute: {}, ordersByRoute: {}
           };
         }
         locationVisits[loc].routes[route] = 1;
@@ -414,6 +415,12 @@ function parseDispatch(buffer) {
         locationVisits[loc].typesByRoute[route][type || 'other'] = true;
         locationVisits[loc].valueByRoute[route] = (locationVisits[loc].valueByRoute[route] || 0) + amt;
         locationVisits[loc].orderCountByRoute[route] = (locationVisits[loc].orderCountByRoute[route] || 0) + 1;
+        if (!locationVisits[loc].ordersByRoute[route]) locationVisits[loc].ordersByRoute[route] = [];
+        locationVisits[loc].ordersByRoute[route].push({
+          order_code: C.orderCode ? toStr(row[C.orderCode]) : '',
+          type: type || 'other',
+          value: Math.round(amt)
+        });
       }
     }
     if (C.driver && row[C.driver]) {
@@ -442,7 +449,7 @@ function parseDispatch(buffer) {
 
   var topRoutes = Object.keys(routes).map(function(route) {
     return { route:route, orders:routes[route].orders, drops:Object.keys(routes[route].locs).length, driverCount:Object.keys(routes[route].drivers).length, value:Math.round(routes[route].value) };
-  }).sort(function(a,b) { return b.drops-a.drops; }).slice(0,30);
+  }).sort(function(a,b) { return b.drops-a.drops; });
 
   // Count actual orders per driver (not route drops)
   var driverOrders = {};
@@ -479,10 +486,16 @@ function parseDispatch(buffer) {
     .map(function(loc) {
       var lv = locationVisits[loc];
       var ownRouteList = Object.keys(lv.ownRoutes);
-      // For each own-fleet route that visited this location, what order type(s), value, and order count did it carry?
+      // For each own-fleet route that visited this location, what order type(s), value, order count,
+      // and the actual order codes did it carry? (for full traceability back to source rows)
       var routeDetails = ownRouteList.map(function(r) {
         var typesHere = Object.keys(lv.typesByRoute[r] || {});
-        return { route: r, types: typesHere, value: Math.round(lv.valueByRoute[r] || 0), order_count: lv.orderCountByRoute[r] || 0 };
+        return {
+          route: r, types: typesHere,
+          value: Math.round(lv.valueByRoute[r] || 0),
+          order_count: lv.orderCountByRoute[r] || 0,
+          orders: lv.ordersByRoute[r] || []
+        };
       });
       var totalValue = routeDetails.reduce(function(s, rd) { return s + rd.value; }, 0);
       // All distinct types seen across all routes at this location
@@ -552,7 +565,7 @@ function parseDispatch(buffer) {
       repeat_location_count: repeatLocations.length,
       repeat_location_avoidable_count: repeatLocationAvoidableCount
     },
-    repeat_locations: repeatLocations.slice(0, 50)
+    repeat_locations: repeatLocations
   };
 }
 
@@ -1318,22 +1331,37 @@ app.post('/api/dispatch/export-excel', async function(req, res) {
     totalRow.getCell(5).numFmt = '#,##0';
     styleTotalRow(totalRow);
 
-    // ---- Sheet 3: Repeat Location Detail ----
+    // ---- Sheet 3: Repeat Location Detail (one row per individual order for full traceability) ----
     var rl = wb.addWorksheet('Repeat Location Detail');
-    rl.columns = [{width:14},{width:30},{width:40},{width:50},{width:14},{width:16}];
-    styleHeaderRow(rl.addRow(['Location ID', 'Customer', 'Address', 'Routes (Type · Orders · Value)', 'Status', 'Total Value (AED)']));
+    rl.columns = [{width:14},{width:30},{width:40},{width:12},{width:26},{width:10},{width:14},{width:14},{width:16}];
+    styleHeaderRow(rl.addRow(['Location ID', 'Customer', 'Address', 'Route', 'Order Code', 'Type', 'Order Value (AED)', 'Status', 'Location Total (AED)']));
     repeatLocs.forEach(function(l){
-      var routesLabel = (l.route_types||[]).map(function(rt2){ return rt2.route+' ('+(rt2.types||[]).join('+')+', '+(rt2.order_count||0)+' orders, AED '+(rt2.value||0).toLocaleString()+')'; }).join(', ') || (l.routes||[]).join(', ');
       var statusText = l.is_legitimate_split ? 'Required' : (l.is_high_value_exception ? 'Exception — Review' : 'Avoidable');
-      var row = rl.addRow([l.location_id, l.customer, l.address, routesLabel, statusText, l.total_value || 0]);
-      row.getCell(6).numFmt = '#,##0';
       var statusColor = l.is_legitimate_split ? REQBLUE : (l.is_high_value_exception ? 'FFFFE9A8' : AVOIDRED);
       var fontColor = l.is_legitimate_split ? 'FF1B5E9E' : (l.is_high_value_exception ? 'FF8B6914' : 'FFB0201A');
-      row.getCell(5).fill = { type:'pattern', pattern:'solid', fgColor:{argb: statusColor} };
-      row.getCell(5).font = { bold:true, color:{argb: fontColor} };
-      if (!l.is_legitimate_split) {
-        row.getCell(6).font = { bold:true, color:{argb: fontColor} };
-      }
+      (l.route_types || []).forEach(function(rt2){
+        var orders = (rt2.orders && rt2.orders.length) ? rt2.orders : [{ order_code:'', type:(rt2.types||[])[0]||'', value: rt2.value }];
+        orders.forEach(function(ord, oi){
+          var row = rl.addRow([
+            oi === 0 ? l.location_id : '',
+            oi === 0 ? l.customer : '',
+            oi === 0 ? l.address : '',
+            rt2.route,
+            ord.order_code || '—',
+            ord.type || '',
+            ord.value || 0,
+            oi === 0 ? statusText : '',
+            oi === 0 ? (l.total_value || 0) : ''
+          ]);
+          row.getCell(7).numFmt = '#,##0';
+          if (oi === 0) {
+            row.getCell(9).numFmt = '#,##0';
+            row.getCell(8).fill = { type:'pattern', pattern:'solid', fgColor:{argb: statusColor} };
+            row.getCell(8).font = { bold:true, color:{argb: fontColor} };
+            if (!l.is_legitimate_split) row.getCell(9).font = { bold:true, color:{argb: fontColor} };
+          }
+        });
+      });
     });
 
     var buf = await wb.xlsx.writeBuffer();
