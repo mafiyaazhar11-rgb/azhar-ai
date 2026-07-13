@@ -717,35 +717,32 @@ footer span{color:#e8c878;}
 
       <!-- COST & DROP ANALYSIS -->
       <div class="box" id="ds-cost-box" style="display:none;margin-bottom:16px;">
-        <div class="box-title">💵 Transport Cost &amp; Drop Analysis <span style="font-size:10px;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0;">— transport team bills per drop</span></div>
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px;">
+        <div class="box-title" style="display:flex;align-items:center;justify-content:space-between;">
+          <span>🚚 Drop Analysis <span style="font-size:10px;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0;">— own fleet vs 3PL, and repeat-visit addresses</span></span>
+          <button id="ds-export-btn" onclick="exportDispatchExcel()" style="background:rgba(201,168,76,0.12);border:1px solid var(--gold);color:var(--gold);font-size:10px;font-weight:700;letter-spacing:1px;padding:6px 14px;cursor:pointer;font-family:Montserrat,sans-serif;text-transform:uppercase;">⬇ Export Excel</button>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px;">
           <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px;">
             <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Own Fleet Drops</div>
             <div id="cost-own-drops" style="font-size:22px;font-weight:800;color:var(--gold);margin-top:4px;">—</div>
-            <div id="cost-own-cost" style="font-size:11px;color:var(--muted);margin-top:2px;">—</div>
           </div>
           <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px;">
-            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">3PL Drops (billed separately)</div>
+            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">3PL Drops</div>
             <div id="cost-pl-drops" style="font-size:22px;font-weight:800;color:#58a6ff;margin-top:4px;">—</div>
-            <div style="font-size:11px;color:var(--muted);margin-top:2px;">Not our fleet — third-party cost</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px;">Third-party fleet, not ours</div>
           </div>
           <div style="background:rgba(248,81,73,0.08);border:1px solid rgba(248,81,73,0.3);border-radius:8px;padding:12px;">
             <div style="font-size:10px;color:#f85149;text-transform:uppercase;letter-spacing:1px;">Avoidable Repeat Drops</div>
             <div id="cost-repeat-count" style="font-size:22px;font-weight:800;color:#f85149;margin-top:4px;">—</div>
             <div id="cost-repeat-sub" style="font-size:11px;color:var(--muted);margin-top:2px;">Same order type, same address, 2+ trucks</div>
           </div>
-          <div style="background:rgba(248,81,73,0.08);border:1px solid rgba(248,81,73,0.3);border-radius:8px;padding:12px;">
-            <div style="font-size:10px;color:#f85149;text-transform:uppercase;letter-spacing:1px;">Avoidable Cost</div>
-            <div id="cost-repeat-extra" style="font-size:22px;font-weight:800;color:#f85149;margin-top:4px;">—</div>
-            <div style="font-size:11px;color:var(--muted);margin-top:2px;">If these had been consolidated</div>
-          </div>
         </div>
         <div id="ds-repeat-wrap" style="display:none;">
-          <div style="font-size:11px;color:var(--gold);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Locations Visited by 2+ Routes Today — Avoidable vs Legitimate Splits</div>
-          <div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Food and Non-Food often can't share a truck — those are marked "Required" below, not counted as extra cost. Only genuine same-type duplicates count toward the avoidable total.</div>
+          <div style="font-size:11px;color:var(--gold);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Locations Visited by 2+ Routes Today — Avoidable vs Required</div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:8px;"><strong style="color:#58a6ff;">Required</strong> = different order types (e.g. Food + Non-Food) — separate trucks are genuinely needed. <strong style="color:#f85149;">Avoidable</strong> = same order type sent twice to the same address — worth raising with the transport team.</div>
           <div style="overflow-x:auto;max-height:280px;overflow-y:auto;">
-            <table class="data-table" style="width:100%;min-width:680px;">
-              <thead><tr><th>Location ID</th><th>Customer</th><th>Address</th><th style="text-align:center;">Routes (Type)</th><th style="text-align:center;">Status</th><th style="text-align:right;">Extra Cost (AED)</th></tr></thead>
+            <table class="data-table" style="width:100%;min-width:600px;">
+              <thead><tr><th>Location ID</th><th>Customer</th><th>Address</th><th style="text-align:center;">Routes (Type · Value)</th><th style="text-align:center;">Status</th><th style="text-align:right;">Total Value (AED)</th></tr></thead>
               <tbody id="ds-repeat-body"></tbody>
             </table>
           </div>
@@ -2069,9 +2066,11 @@ async function loadDate(dk){
 }
 
 var DS_CURRENT_SUMMARY = null; // Global store for JARVIS to read
+var DS_CURRENT_DATE = null;
 
 function buildDashboard(d){
   DS_CURRENT_SUMMARY = d.summary; // Store for JARVIS voice context
+  DS_CURRENT_DATE = d.date;
   const s=d.summary;
   const today=new Date().toISOString().split('T')[0];
   const lbl=d.date===today?'Today':d.date;
@@ -2177,32 +2176,27 @@ function buildDashboard(d){
     document.getElementById('ds-routes-box').style.display='block';
   }
 
-  // COST & DROP ANALYSIS
+  // DROP ANALYSIS (own fleet vs 3PL, repeat-visit addresses)
   if(s.cost_analysis){
     var ca = s.cost_analysis;
     document.getElementById('cost-own-drops').textContent = (ca.own_fleet_drops||0).toLocaleString();
-    document.getElementById('cost-own-cost').textContent = 'AED '+(ca.own_fleet_cost_aed||0).toLocaleString()+' at AED '+(ca.drop_rate_aed||120)+'/drop';
     document.getElementById('cost-pl-drops').textContent = (ca.pl_drops||0).toLocaleString();
     document.getElementById('cost-repeat-count').textContent = (ca.repeat_location_avoidable_count||0).toLocaleString();
     document.getElementById('cost-repeat-sub').textContent = 'of '+(ca.repeat_location_count||0)+' total repeat-visit addresses ('+((ca.repeat_location_count||0)-(ca.repeat_location_avoidable_count||0))+' were required Food+Non-Food splits)';
-    document.getElementById('cost-repeat-extra').textContent = 'AED '+(ca.repeat_location_extra_cost_aed||0).toLocaleString();
     document.getElementById('ds-cost-box').style.display='block';
   }
   if(s.repeat_locations && s.repeat_locations.length){
     document.getElementById('ds-repeat-body').innerHTML = s.repeat_locations.map(function(l){
-      var routesLabel = (l.route_types||[]).map(function(rt){ return rt.route+' ('+rt.types.join('+')+')'; }).join(', ') || l.routes.join(', ');
+      var routesLabel = (l.route_types||[]).map(function(rt){ return rt.route+' ('+rt.types.join('+')+', AED '+rt.value.toLocaleString()+')'; }).join(', ') || l.routes.join(', ');
       var statusBadge = l.is_legitimate_split
         ? '<span style="color:#58a6ff;font-weight:700;">Required</span>'
         : '<span style="color:#f85149;font-weight:700;">Avoidable</span>';
-      var costCell = l.is_legitimate_split
-        ? '<span style="color:var(--muted);">—</span>'
-        : 'AED '+l.extra_cost_aed.toLocaleString();
       return '<tr><td style="color:var(--gold);font-weight:600;">'+l.location_id+'</td>'
         +'<td>'+(l.customer||'—')+'</td>'
         +'<td style="color:var(--muted);font-size:11px;">'+(l.address||'—')+'</td>'
         +'<td style="text-align:center;font-size:11px;">'+routesLabel+'</td>'
         +'<td style="text-align:center;">'+statusBadge+'</td>'
-        +'<td style="text-align:right;font-weight:700;">'+costCell+'</td></tr>';
+        +'<td style="text-align:right;font-weight:700;color:var(--gold);">AED '+(l.total_value||0).toLocaleString()+'</td></tr>';
     }).join('');
     document.getElementById('ds-repeat-wrap').style.display='block';
   } else {
@@ -3166,6 +3160,43 @@ oc.innerHTML=ORG_SUMMARY.map(function(o){
       +(!hasFullData?'<tr><td colspan="6" style="padding:8px;text-align:center;font-size:12px;color:rgba(201,168,76,0.5);background:rgba(201,168,76,0.03);">📌 Deploy new server.js + re-upload file to see Full Address and Root Cause</td></tr>':'');
     }
   }
+}
+
+// DISPATCH DROP ANALYSIS + ROUTE SUMMARY EXCEL EXPORT
+function exportDispatchExcel(){
+  if (typeof DS_CURRENT_SUMMARY === 'undefined' || !DS_CURRENT_SUMMARY) {
+    alert('No dispatch data loaded yet.');
+    return;
+  }
+  var s = DS_CURRENT_SUMMARY;
+  var btn = document.getElementById('ds-export-btn');
+  var origLabel = btn ? btn.textContent : null;
+  if (btn) { btn.textContent = '⏳ Building report...'; btn.disabled = true; }
+
+  fetch('/api/dispatch/export-excel', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      date: (typeof DS_CURRENT_DATE !== 'undefined' ? DS_CURRENT_DATE : '') || new Date().toLocaleDateString('en-AE'),
+      total_orders: s.total_orders, total_value: s.total_value,
+      total_routes: s.total_routes, total_drivers: s.total_drivers, total_drops: s.total_drops,
+      food_orders: s.food_orders, non_food_orders: s.non_food_orders, pl_orders: s.pl_orders,
+      cost_analysis: s.cost_analysis, top_routes: s.top_routes,
+      repeat_locations: s.repeat_locations, city_type_cross: s.city_type_cross
+    })
+  }).then(function(r){
+    if (!r.ok) throw new Error('Export failed');
+    return r.blob();
+  }).then(function(blob){
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'Dispatch_Drop_Analysis_'+new Date().toISOString().slice(0,10)+'.xlsx';
+    a.click();
+  }).catch(function(err){
+    alert('Export failed: '+err.message);
+  }).finally(function(){
+    if (btn) { btn.textContent = origLabel; btn.disabled = false; }
+  });
 }
 
 // REJECTION DETAIL EXCEL EXPORT
