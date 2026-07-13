@@ -506,7 +506,7 @@ function parseDispatch(buffer) {
       };
     })
     .filter(function(l) { return l.visit_count > 1 && !l.isCashOrder; })
-    .sort(function(a, b) { return (b.visit_count - a.visit_count); });
+    .sort(function(a, b) { return (b.total_value - a.total_value) || (b.visit_count - a.visit_count); });
 
   var repeatLocationAvoidableCount = repeatLocations.filter(function(l) { return !l.is_legitimate_split; }).length;
 
@@ -1194,8 +1194,9 @@ app.post('/api/dispatch/export-excel', async function(req, res) {
     es.addRow([]);
 
     if (avoidableRows.length) {
+      var avoidableByValue = avoidableRows.slice().sort(function(a, b) { return (b.total_value || 0) - (a.total_value || 0); });
       styleHeaderRow(es.addRow(['TOP AVOIDABLE REPEAT DROPS', 'CUSTOMER', 'ROUTES', 'TOTAL VALUE (AED)', '']));
-      avoidableRows.slice(0, 10).forEach(function(l){
+      avoidableByValue.slice(0, 10).forEach(function(l){
         var routesLabel = (l.route_types||[]).map(function(rt){ return rt.route+' (AED '+(rt.value||0).toLocaleString()+')'; }).join(', ') || (l.routes||[]).join(', ');
         es.addRow([l.location_id, l.customer, routesLabel, l.total_value || 0, '']);
       });
