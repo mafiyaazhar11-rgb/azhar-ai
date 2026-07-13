@@ -260,7 +260,7 @@ function normaliseType(raw) {
   if (t === 'FOOD' || t.startsWith('FOOD')) return 'food';
   if (t.includes('NON-FOOD') || t.includes('NON FOOD')) return 'nonfood';
   if (t === 'GSEB' || t === 'SHARKNINJA') return 'nonfood';
-  if (t === '3PL' || t === '3 PL') return '3pl';
+  if (t === '3PL' || t === '3 PL' || t === 'HCP') return '3pl';
   if (t === 'VAN') return 'van';
   return t.toLowerCase();
 }
@@ -357,7 +357,8 @@ function parseDispatch(buffer) {
     else if (type === '3pl')     { plOrders++; }
     else if (type === 'van')     { vanOrders++; }
     var org = C.org ? toStr(row[C.org]).toUpperCase() : '';
-    if (orgStats[org]) { orgStats[org].o++; orgStats[org].v += amt; }
+    if (type === '3pl') { orgStats.HCP.o++; orgStats.HCP.v += amt; }
+    else if (orgStats[org]) { orgStats[org].o++; orgStats[org].v += amt; }
     else if (org === '3 PL' || org === 'HCP' || org === '3PL') { orgStats.HCP.o++; orgStats.HCP.v += amt; }
     if (C.city && row[C.city]) {
       var city = normaliseCity(row[C.city]);
