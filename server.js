@@ -763,11 +763,71 @@ app.post('/api/rejection/upload', upload.single('file'), async function(req, res
     }
     function parseDate(v) {
       if (!v) return null;
-      if (v instanceof Date) return v;
+      if (v instanceof Date) return isNaN(v.getTime()) ? null : v;
+
+      // Excel serial date number (e.g. 46000)
       if (typeof v === 'number') {
-        try { var unix=Math.round((v-25569)*86400*1000); var dd=new Date(unix); if(!isNaN(dd.getTime()))return dd; } catch(e2){}
+        try { var unix = Math.round((v - 25569) * 86400 * 1000); var dd = new Date(unix); if (!isNaN(dd.getTime())) return dd; } catch(e2) {}
+        return null;
       }
-      var d=new Date(v); return isNaN(d.getTime())?null:d;
+
+      var s = String(v).trim();
+      if (!s) return null;
+
+      var MONTH_NAMES = { jan:0, feb:1, mar:2, apr:3, may:4, jun:5, jul:6, aug:7, sep:8, oct:9, nov:10, dec:11 };
+
+      // Format: "13-Apr-26" or "13-Apr-2026" or "13 Apr 2026" (day - month name - year)
+      var m1 = s.match(/^(\d{1,2})[\s\-\/]([A-Za-z]{3,})[\s\-\/](\d{2,4})$/);
+      if (m1) {
+        var mon1 = MONTH_NAMES[m1[2].toLowerCase().substring(0,3)];
+        if (mon1 !== undefined) {
+          var yr1 = parseInt(m1[3], 10); if (yr1 < 100) yr1 += 2000;
+          var dt1 = new Date(yr1, mon1, parseInt(m1[1], 10));
+          if (!isNaN(dt1.getTime())) return dt1;
+        }
+      }
+
+      // Format: "Apr-13-26" or "Apr 13 2026" (month name - day - year)
+      var m2 = s.match(/^([A-Za-z]{3,})[\s\-\/](\d{1,2})[\s\-\/](\d{2,4})$/);
+      if (m2) {
+        var mon2 = MONTH_NAMES[m2[1].toLowerCase().substring(0,3)];
+        if (mon2 !== undefined) {
+          var yr2 = parseInt(m2[3], 10); if (yr2 < 100) yr2 += 2000;
+          var dt2 = new Date(yr2, mon2, parseInt(m2[2], 10));
+          if (!isNaN(dt2.getTime())) return dt2;
+        }
+      }
+
+      // Format: "YYYY-MM-DD" (ISO)
+      var m3 = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+      if (m3) {
+        var dt3 = new Date(parseInt(m3[1],10), parseInt(m3[2],10)-1, parseInt(m3[3],10));
+        if (!isNaN(dt3.getTime())) return dt3;
+      }
+
+      // Format: "M/D/YYYY" or "D/M/YYYY" (slash-separated, ambiguous — resolved below)
+      var m4 = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+      if (m4) {
+        var a = parseInt(m4[1],10), b = parseInt(m4[2],10), yr4 = parseInt(m4[3],10);
+        if (yr4 < 100) yr4 += 2000;
+        var month4, day4;
+        if (a > 12 && b <= 12) { day4 = a; month4 = b; }       // first number can't be a month -> D/M/Y
+        else { month4 = a; day4 = b; }                         // default: M/D/Y (matches the real data seen)
+        var dt4 = new Date(yr4, month4-1, day4);
+        if (!isNaN(dt4.getTime())) return dt4;
+      }
+
+      // Format: "13.04.2026" (dot-separated, D.M.Y)
+      var m5 = s.match(/^(\d{1,2})\.(\d{1,2})\.(\d{2,4})$/);
+      if (m5) {
+        var yr5 = parseInt(m5[3],10); if (yr5 < 100) yr5 += 2000;
+        var dt5 = new Date(yr5, parseInt(m5[2],10)-1, parseInt(m5[1],10));
+        if (!isNaN(dt5.getTime())) return dt5;
+      }
+
+      // Last resort: native parser (handles anything unusual we haven't explicitly covered)
+      var d = new Date(s);
+      return isNaN(d.getTime()) ? null : d;
     }
 
     var orgMap={}, monthMap={};
