@@ -2187,16 +2187,24 @@ function buildDashboard(d){
   }
   if(s.repeat_locations && s.repeat_locations.length){
     document.getElementById('ds-repeat-body').innerHTML = s.repeat_locations.map(function(l){
-      var routesLabel = (l.route_types||[]).map(function(rt){ return rt.route+' ('+rt.types.join('+')+', AED '+rt.value.toLocaleString()+')'; }).join(', ') || l.routes.join(', ');
-      var statusBadge = l.is_legitimate_split
-        ? '<span style="color:#58a6ff;font-weight:700;">Required</span>'
-        : '<span style="color:#f85149;font-weight:700;">Avoidable</span>';
+      var routesLabel = (l.route_types||[]).map(function(rt){ return rt.route+' ('+rt.types.join('+')+', '+(rt.order_count||0)+' orders, AED '+rt.value.toLocaleString()+')'; }).join(', ') || l.routes.join(', ');
+      var statusBadge, valueColor;
+      if (l.is_legitimate_split) {
+        statusBadge = '<span style="color:#58a6ff;font-weight:700;">Required</span>';
+        valueColor = 'var(--gold)';
+      } else if (l.is_high_value_exception) {
+        statusBadge = '<span style="color:#e8c878;font-weight:700;">⚠ Exception</span>';
+        valueColor = '#e8c878';
+      } else {
+        statusBadge = '<span style="color:#f85149;font-weight:700;">Avoidable</span>';
+        valueColor = '#f85149';
+      }
       return '<tr><td style="color:var(--gold);font-weight:600;">'+l.location_id+'</td>'
         +'<td>'+(l.customer||'—')+'</td>'
         +'<td style="color:var(--muted);font-size:11px;">'+(l.address||'—')+'</td>'
         +'<td style="text-align:center;font-size:11px;">'+routesLabel+'</td>'
         +'<td style="text-align:center;">'+statusBadge+'</td>'
-        +'<td style="text-align:right;font-weight:700;color:var(--gold);">AED '+(l.total_value||0).toLocaleString()+'</td></tr>';
+        +'<td style="text-align:right;font-weight:700;color:'+valueColor+';">AED '+(l.total_value||0).toLocaleString()+'</td></tr>';
     }).join('');
     document.getElementById('ds-repeat-wrap').style.display='block';
   } else {
