@@ -959,11 +959,15 @@ app.post('/api/rejection/upload', upload.single('file'), async function(req, res
           orgMap[org].tRej++; orgMap[org].val+=val; if(mo)orgMap[org].rej[mo-1]++;
           if(mo){
             if(!orgMap[org].byMonth) orgMap[org].byMonth={};
-            if(!orgMap[org].byMonth[mo]) orgMap[org].byMonth[mo]={tRej:0,tDel:0,val:0,reasons:{},custs:{}};
+            if(!orgMap[org].byMonth[mo]) orgMap[org].byMonth[mo]={tRej:0,tDel:0,val:0,reasons:{},custs:{},detail:{}};
             orgMap[org].byMonth[mo].tRej++;
             orgMap[org].byMonth[mo].val+=val;
             if(root) orgMap[org].byMonth[mo].reasons[root]=(orgMap[org].byMonth[mo].reasons[root]||0)+1;
             if(cust) orgMap[org].byMonth[mo].custs[cust]=(orgMap[org].byMonth[mo].custs[cust]||0)+1;
+            if(cust||root){
+              var monthDetailKey = (cust||'Unknown')+'|||'+(addr||'No address')+'|||'+(root||'Unknown');
+              orgMap[org].byMonth[mo].detail[monthDetailKey]=(orgMap[org].byMonth[mo].detail[monthDetailKey]||0)+1;
+            }
           }
           if(isFood){orgMap[org].food_rej++;orgMap[org].food_val+=val;}
           else if(isNF){orgMap[org].nonfood_rej++;orgMap[org].nonfood_val+=val;}
@@ -1128,7 +1132,7 @@ app.post('/api/rejection/upload', upload.single('file'), async function(req, res
       if (v.byMonth) {
         Object.keys(v.byMonth).forEach(function(mo){
           var mData = v.byMonth[mo];
-          byMonthOut[mo] = { tRej: mData.tRej||0, val: fmtVal(mData.val||0), reasons: top10(mData.reasons||{}), custs: top8c(mData.custs||{}) };
+          byMonthOut[mo] = { tRej: mData.tRej||0, val: fmtVal(mData.val||0), reasons: top10(mData.reasons||{}), custs: top8c(mData.custs||{}), detail: topDetail(mData.detail||{}) };
         });
       }
       orgsOut[org]={tDel:v.tDel,tRej:v.tRej,val:fmtVal(v.val),food_rej:v.food_rej||0,food_del:v.food_del||0,nonfood_rej:v.nonfood_rej||0,nonfood_del:v.nonfood_del||0,ext_rej:v.ext_rej||0,int_rej:v.int_rej||0,food_val:fmtVal(v.food_val||0),nonfood_val:fmtVal(v.nonfood_val||0),del:v.del,rej:v.rej,reasons:top10(v.reasons),custs:top8c(v.custs),areas:top6a(v.areas),detail:topDetail(v.detail||{}),food_detail:topDetail(v.food_detail||{}),nonfood_detail:topDetail(v.nonfood_detail||{}),ext_detail:topDetail(v.ext_detail||{}),int_detail:topDetail(v.int_detail||{}),food_reasons:top10(v.food_reasons||{}),food_custs:top8c(v.food_custs||{}),nonfood_reasons:top10(v.nonfood_reasons||{}),nonfood_custs:top8c(v.nonfood_custs||{}),ext_reasons:top10(v.ext_reasons||{}),ext_custs:top8c(v.ext_custs||{}),int_reasons:top10(v.int_reasons||{}),int_custs:top8c(v.int_custs||{}),byMonth:byMonthOut};
