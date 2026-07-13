@@ -2643,6 +2643,8 @@ function getFilteredData(){
     var moInfo2 = DAY_DATA[rejMonth] || DAY_DATA[String(rejMonth)] || {};
     var mDel = orgBase.del[mi]||0;
     var mRej = orgBase.rej[mi]||0;
+    // Org+month specific reasons/customers (only available for a specific selected ORG, not 'all')
+    var orgMonthData = (orgBase.byMonth && (orgBase.byMonth[rejMonth] || orgBase.byMonth[String(rejMonth)])) || null;
     timeBase = {
       tDel:mDel, tRej:mRej,
       val: (function(){
@@ -2656,8 +2658,8 @@ function getFilteredData(){
       })(),
       del:[0,0,0,0,0,0,0,0,0,0,0,0].map(function(_,i){return i===mi?mDel:0;}),
       rej:[0,0,0,0,0,0,0,0,0,0,0,0].map(function(_,i){return i===mi?mRej:0;}),
-      reasons:(moInfo2.reasons&&moInfo2.reasons.length)?moInfo2.reasons:(orgBase.reasons||[]),
-      custs:(moInfo2.custs&&moInfo2.custs.length)?moInfo2.custs:(orgBase.custs||[]),
+      reasons: (orgMonthData&&orgMonthData.reasons&&orgMonthData.reasons.length) ? orgMonthData.reasons : ((effectiveORG==='all') ? ((moInfo2.reasons&&moInfo2.reasons.length)?moInfo2.reasons:(orgBase.reasons||[])) : (orgBase.reasons||[])),
+      custs: (orgMonthData&&orgMonthData.custs&&orgMonthData.custs.length) ? orgMonthData.custs : ((effectiveORG==='all') ? ((moInfo2.custs&&moInfo2.custs.length)?moInfo2.custs:(orgBase.custs||[])) : (orgBase.custs||[])),
       areas:(moInfo2.areas&&moInfo2.areas.length)?moInfo2.areas:(orgBase.areas||[]),
       food_rej:moInfo2.food_rej||0, nonfood_rej:moInfo2.nonfood_rej||0,
       ext_rej:moInfo2.ext_rej||0, int_rej:moInfo2.int_rej||0,
