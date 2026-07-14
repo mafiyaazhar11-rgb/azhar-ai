@@ -1475,17 +1475,41 @@ app.post('/api/dispatch/export-excel', async function(req, res) {
 
     // ---- Sheet 2: Route Summary ----
     var rt = wb.addWorksheet('Route Summary');
-    rt.columns = [{width:14},{width:12},{width:12},{width:14},{width:16}];
-    styleHeaderRow(rt.addRow(['Route', 'Orders', 'Drivers', 'Locations (Drops)', 'Value (AED)']));
+    rt.columns = [{width:14},{width:30},{width:14},{width:12},{width:12},{width:14},{width:16}];
+    styleHeaderRow(rt.addRow(['Route', 'Type', 'Vehicle', 'Orders', 'Drivers', 'Locations (Drops)', 'Value (AED)']));
     var sumOrders = 0, sumDrops = 0, sumValue = 0;
     topRoutes.forEach(function(r){
       sumOrders += r.orders || 0; sumDrops += r.drops || 0; sumValue += r.value || 0;
-      var row = rt.addRow([r.route, r.orders || 0, r.driverCount || 0, r.drops || 0, Math.round(r.value || 0)]);
-      row.getCell(5).numFmt = '#,##0';
+      var typeLabel = (r.types || []).join(', ');
+      var vehicleLabel = r.isPartitionVehicle ? 'Partition' : 'Single-Type';
+      var row = rt.addRow([r.route, typeLabel, vehicleLabel, r.orders || 0, r.driverCount || 0, r.drops || 0, Math.round(r.value || 0)]);
+      row.getCell(7).numFmt = '#,##0';
+      if (r.isPartitionVehicle) { row.getCell(3).font = { bold:true, color:{argb:GOLD} }; }
     });
-    var totalRow = rt.addRow(['TOTAL', sumOrders, '', sumDrops, Math.round(sumValue)]);
-    totalRow.getCell(5).numFmt = '#,##0';
+    var totalRow = rt.addRow(['TOTAL', '', '', sumOrders, '', sumDrops, Math.round(sumValue)]);
+    totalRow.getCell(7).numFmt = '#,##0';
     styleTotalRow(totalRow);
+
+    // ---- Sheet 3: In-House vs Hired Drivers ----
+    if (body.driver_source_split) {
+      var dss = body.driver_source_split;
+      var dh = wb.addWorksheet('In-House vs Hired Drivers');
+      dh.columns = [{width:30},{width:32},{width:16},{width:12},{width:12},{width:16}];
+      styleSectionRow(dh.addRow(['SUMMARY']));
+      dh.addRow(['In-House Drivers', dss.inhouse.driver_count || 0, '', dss.inhouse.orders||0, dss.inhouse.drops||0, dss.inhouse.value||0]).getCell(6).numFmt = '#,##0';
+      var hiredSummaryRow = dh.addRow(['Hired Drivers (no name on file)', dss.hired.driver_count || 0, '', dss.hired.orders||0, dss.hired.drops||0, dss.hired.value||0]);
+      hiredSummaryRow.getCell(6).numFmt = '#,##0';
+      hiredSummaryRow.font = { color:{argb:'FFB0201A'} };
+      dh.addRow([]);
+      styleHeaderRow(dh.addRow(['Phone/ID', 'Customer', 'Type', 'Orders', 'Drops', 'Value (AED)']));
+      (dss.hired_driver_details || []).forEach(function(d){
+        var custLabel = (d.customers && d.customers.length) ? d.customers.join(', ') : '—';
+        var typeLabel2 = (d.types && d.types.length) ? d.types.join(', ') : '—';
+        var row2 = dh.addRow([d.name, custLabel, typeLabel2, d.orders || 0, d.drops || 0, d.value || 0]);
+        row2.getCell(6).numFmt = '#,##0';
+        row2.getCell(1).font = { color:{argb:'FFB0201A'} };
+      });
+    }
 
     // ---- Sheet 3: Repeat Location Detail (one row per individual order for full traceability) ----
     var rl = wb.addWorksheet('Repeat Location Detail');
