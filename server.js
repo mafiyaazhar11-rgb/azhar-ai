@@ -301,6 +301,33 @@ function detectCityFromAddress(addressText, cityColumnValue) {
   return found || fallback;
 }
 
+// Transport team's FY26 rate card (AED per vehicle, per day/trip) — provided directly by
+// transport, not estimated. Matches on distinctive keywords so variations in how the truck-type
+// column gets typed ("Ambient-Multi", "AMBIENT MULTI", etc.) still resolve to the right rate.
+var TRUCK_RATE_CARD = [
+  { keywords: ['FROZEN', 'MULTI'], label: 'Frozen - Multi', rate: 120 },
+  { keywords: ['FROZEN', '4 TON'], label: 'Frozen - Bulk 4 Ton', rate: 850 },
+  { keywords: ['FROZEN', '10 TON'], label: 'Frozen - Bulk 10 Ton', rate: 1350 },
+  { keywords: ['AMBIENT', 'MULTI'], label: 'Ambient - Multi', rate: 104 },
+  { keywords: ['AMBIENT', '4 TON'], label: 'Ambient - Bulk 4 Ton', rate: 750 },
+  { keywords: ['AMBIENT', '10 TON'], label: 'Ambient - Bulk 10 Ton', rate: 950 },
+  { keywords: ['AMBIENT', '40'], label: 'Ambient - Bulk 40 FT', rate: 1200 },
+  { keywords: ['E-COMMERCE'], label: 'E-commerce', rate: 20 },
+  { keywords: ['ECOMMERCE'], label: 'E-commerce', rate: 20 },
+  { keywords: ['EXCLUSIVE', '1 TON'], label: 'Exclusive 1 Ton', rate: 550 },
+  { keywords: ['EXCLUSIVE', '4 TON'], label: 'Exclusive 4 Ton', rate: 750 }
+];
+function matchTruckRate(rawTruckType) {
+  var u = toStr(rawTruckType).toUpperCase();
+  if (!u) return null;
+  for (var i = 0; i < TRUCK_RATE_CARD.length; i++) {
+    var entry = TRUCK_RATE_CARD[i];
+    var allMatch = entry.keywords.every(function(kw) { return u.indexOf(kw) !== -1; });
+    if (allMatch) return entry;
+  }
+  return null;
+}
+
 function extractDriverName(contact) {
   var s = toStr(contact);
   if (!s) return '';
@@ -371,6 +398,8 @@ function parseDispatch(buffer) {
     keep:     findCol('KEEP TOGETHER', 'KEEP_TOGETHER', 'KEEPTOGETHER', 'KEEP'),
     type:     findCol('TYPE'),
     temperature: findCol('TEMPERATURE', 'TEMP'),
+    vehicleId: findCol('VEHICLE_ID', 'VEHICLE ID', 'VEHICLE'),
+    truckType: findCol('TRUCK TYPE', 'TRUCK_TYPE', 'VEHICLE TYPE', 'VEHICLE_TYPE', 'DROP TYPE', 'DROP_TYPE'),
     orderCode: findCol('ORDER CODE', 'ORDER_CODE') || findCol('ORDER '),
     org:      findCol('ORG') || findCol('BU') || findCol('ORGANIZATION') || findCol('ORG-BU')
   };
@@ -379,6 +408,7 @@ function parseDispatch(buffer) {
   var totalOrders=0, totalValue=0, foodOrders=0, foodValue=0, nonFoodOrders=0, nonFoodValue=0, plOrders=0, vanOrders=0;
   var cities={}, customers={}, routes={}, driverSet={};
   var dropsByCity = {}; // one increment per unique (route, location) drop — cannot exceed total_drops by construction
+  var dropRecords = {}; // route::loc -> { city, truckType, types:{}, vehicleId } — accumulated across ALL rows for that drop, so region/food-type breakdowns are based on complete data, not just whichever row happened to create the drop first
   var orgStats={ DCV:{o:0,v:0}, DCF:{o:0,v:0}, DGC:{o:0,v:0}, DGS:{o:0,v:0}, DSN:{o:0,v:0}, DPS:{o:0,v:0}, DPB:{o:0,v:0}, HCP:{o:0,v:0} };
   var cityTypeCross = {}; // city -> {food, nonfood, pl, van, other}
   var locationVisits = {}; // locationId -> { address, customer, routes:Set(all), ownRoutes:Set(non-3PL) }
@@ -391,6 +421,7 @@ function parseDispatch(buffer) {
     var type = normaliseType(C.type ? row[C.type] : '');
     var tempForRow = C.temperature ? toStr(row[C.temperature]).toUpperCase() : '';
     var isFrozenRow = tempForRow.indexOf('FROZEN') !== -1;
+    var rawTruckTypeForRow = C.truckType ? toStr(row[C.truckType]) : '';
     if (type === 'food')   { foodOrders++;    foodValue    += amt; }
     else if (type === 'nonfood') { nonFoodOrders++; nonFoodValue += amt; }
     else if (type === '3pl')     { plOrders++; }
@@ -438,6 +469,17 @@ function parseDispatch(buffer) {
           dropsByCity[cityForLoc || 'Unknown'] = (dropsByCity[cityForLoc || 'Unknown'] || 0) + 1;
         }
         routes[route].locs[loc] = 1;
+        // Accumulate this drop's full record across every row that contributes to it, so the
+        // region + Food/Non-Food breakdown (computed after the loop) sees ALL types on the
+        // drop, not just whichever row happened to create it first.
+        var dropKey = route + '::' + loc;
+        if (!dropRecords[dropKey]) {
+          dropRecords[dropKey] = { city: cityForLoc || 'Unknown', truckType: rawTruckTypeForRow, types: {}, vehicleId: '' };
+        }
+        if (rawTruckTypeForRow && !dropRecords[dropKey].truckType) dropRecords[dropKey].truckType = rawTruckTypeForRow;
+        dropRecords[dropKey].types[type || 'other'] = true;
+        var vehicleIdValForDrop = C.vehicleId ? toStr(row[C.vehicleId]) : '';
+        if (vehicleIdValForDrop) dropRecords[dropKey].vehicleId = vehicleIdValForDrop;
       }
       routes[route].value += amt;
       routes[route].orders++;
@@ -667,6 +709,69 @@ function parseDispatch(buffer) {
     top_drivers: topDrivers, top_drivers_by_value: topDriversByValue, driver_source_split: driverSourceSplit, top_routes: topRoutes,
     city_type_cross: cityTypeCrossOut,
     drops_by_city: dropsByCity,
+    truck_cost_estimate: (function(){
+      var unmatchedTruckTypes = {};
+      var byType = {};       // label -> { rate, drop_count, vehicles:{} }
+      var byRegion = {};     // city -> { label -> { rate, drop_count } }
+      var byFoodType = {};   // 'Food' | 'Non-Food' | 'Mixed (Partition)' | 'Other' -> { drop_count, estimated_cost }
+
+      Object.keys(dropRecords).forEach(function(key){
+        var d = dropRecords[key];
+        if (!d.truckType) return; // no truck-type column for this drop — excluded from cost, not guessed
+        var rateEntry = matchTruckRate(d.truckType);
+        if (!rateEntry) { unmatchedTruckTypes[d.truckType] = (unmatchedTruckTypes[d.truckType] || 0) + 1; return; }
+
+        if (!byType[rateEntry.label]) byType[rateEntry.label] = { rate: rateEntry.rate, drop_count: 0, vehicles: {} };
+        byType[rateEntry.label].drop_count++;
+        if (d.vehicleId) byType[rateEntry.label].vehicles[d.vehicleId] = 1;
+
+        var city = d.city || 'Unknown';
+        if (!byRegion[city]) byRegion[city] = {};
+        if (!byRegion[city][rateEntry.label]) byRegion[city][rateEntry.label] = { rate: rateEntry.rate, drop_count: 0 };
+        byRegion[city][rateEntry.label].drop_count++;
+
+        var hasFood = !!d.types['food'];
+        var hasNonFood = !!d.types['nonfood'];
+        var foodCategory = (hasFood && hasNonFood) ? 'Mixed (Partition)' : (hasFood ? 'Food' : (hasNonFood ? 'Non-Food' : 'Other (3PL/Van)'));
+        if (!byFoodType[foodCategory]) byFoodType[foodCategory] = { drop_count: 0, estimated_cost: 0 };
+        byFoodType[foodCategory].drop_count++;
+        byFoodType[foodCategory].estimated_cost += rateEntry.rate;
+      });
+
+      var byTypeArr = Object.keys(byType).map(function(label){
+        var d = byType[label];
+        return { label: label, rate: d.rate, drop_count: d.drop_count, vehicle_count: Object.keys(d.vehicles).length, estimated_cost: d.drop_count * d.rate };
+      }).sort(function(a,b){ return b.estimated_cost - a.estimated_cost; });
+
+      var byRegionArr = Object.keys(byRegion).map(function(city){
+        var types = Object.keys(byRegion[city]).map(function(label){
+          var d = byRegion[city][label];
+          return { label: label, rate: d.rate, drop_count: d.drop_count, estimated_cost: d.drop_count * d.rate };
+        }).sort(function(a,b){ return b.estimated_cost - a.estimated_cost; });
+        var regionCost = types.reduce(function(s,t){ return s + t.estimated_cost; }, 0);
+        var regionDrops = types.reduce(function(s,t){ return s + t.drop_count; }, 0);
+        return { city: city, types: types, total_cost: regionCost, total_drops: regionDrops };
+      }).sort(function(a,b){ return b.total_cost - a.total_cost; });
+
+      var byFoodTypeArr = Object.keys(byFoodType).map(function(cat){
+        return { category: cat, drop_count: byFoodType[cat].drop_count, estimated_cost: byFoodType[cat].estimated_cost };
+      }).sort(function(a,b){ return b.estimated_cost - a.estimated_cost; });
+
+      var totalCost = byTypeArr.reduce(function(s,t){ return s + t.estimated_cost; }, 0);
+      var totalVehicles = byTypeArr.reduce(function(s,t){ return s + t.vehicle_count; }, 0);
+      var totalDropsBilled = byTypeArr.reduce(function(s,t){ return s + t.drop_count; }, 0);
+
+      return {
+        available: byTypeArr.length > 0,
+        by_type: byTypeArr,
+        by_region: byRegionArr,
+        by_food_type: byFoodTypeArr,
+        total_estimated_cost: totalCost,
+        total_vehicles: totalVehicles,
+        total_drops_billed: totalDropsBilled,
+        unmatched_truck_types: unmatchedTruckTypes
+      };
+    })(),
     cost_analysis: {
       own_fleet_drops: ownFleetDrops,
       pl_drops: plDrops,
@@ -1490,7 +1595,49 @@ app.post('/api/dispatch/export-excel', async function(req, res) {
     totalRow.getCell(7).numFmt = '#,##0';
     styleTotalRow(totalRow);
 
-    // ---- Sheet 3: In-House vs Hired Drivers ----
+    // ---- Sheet 3: Transport Cost (rate-card based, only if truck-type column present) ----
+    if (body.truck_cost_estimate && body.truck_cost_estimate.available) {
+      var tce = body.truck_cost_estimate;
+      var tc = wb.addWorksheet('Transport Cost');
+      tc.columns = [{width:26},{width:14},{width:14},{width:16}];
+      styleSectionRow(tc.addRow(['SUMMARY']));
+      tc.addRow(['Total Estimated Cost (AED)', tce.total_estimated_cost || 0]).getCell(2).numFmt = '#,##0';
+      tc.addRow(['Total Drops Billed', tce.total_drops_billed || 0]);
+      tc.addRow(['Total Vehicles Used', tce.total_vehicles || 0]);
+      tc.addRow([]);
+
+      styleHeaderRow(tc.addRow(['BY VEHICLE TYPE', 'Rate (AED/Drop)', 'Drops Billed', 'Est. Cost (AED)']));
+      (tce.by_type || []).forEach(function(t){
+        var row = tc.addRow([t.label, t.rate, t.drop_count, t.estimated_cost]);
+        row.getCell(4).numFmt = '#,##0';
+      });
+      tc.addRow([]);
+
+      styleHeaderRow(tc.addRow(['BY REGION', '', 'Drops', 'Est. Cost (AED)']));
+      (tce.by_region || []).forEach(function(r){
+        var row = tc.addRow([r.city, '', r.total_drops, r.total_cost]);
+        row.getCell(4).numFmt = '#,##0';
+      });
+      tc.addRow([]);
+
+      styleHeaderRow(tc.addRow(['BY FOOD / NON-FOOD', '', 'Drops', 'Est. Cost (AED)']));
+      (tce.by_food_type || []).forEach(function(f){
+        var row = tc.addRow([f.category, '', f.drop_count, f.estimated_cost]);
+        row.getCell(4).numFmt = '#,##0';
+      });
+
+      var unmatchedKeysExport = Object.keys(tce.unmatched_truck_types || {});
+      if (unmatchedKeysExport.length) {
+        tc.addRow([]);
+        var warnRow = tc.addRow(['⚠ Unmatched truck-type text (excluded from cost, not guessed):']);
+        warnRow.font = { italic: true, color: {argb:'FFB0201A'} };
+        unmatchedKeysExport.forEach(function(k){
+          tc.addRow(['  ' + k, '', tce.unmatched_truck_types[k], '']);
+        });
+      }
+    }
+
+    // ---- Sheet 4: In-House vs Hired Drivers ----
     if (body.driver_source_split) {
       var dss = body.driver_source_split;
       var dh = wb.addWorksheet('In-House vs Hired Drivers');
@@ -1511,7 +1658,7 @@ app.post('/api/dispatch/export-excel', async function(req, res) {
       });
     }
 
-    // ---- Sheet 3: Repeat Location Detail (one row per individual order for full traceability) ----
+    // ---- Sheet 5: Repeat Location Detail (one row per individual order for full traceability) ----
     var rl = wb.addWorksheet('Repeat Location Detail');
     rl.columns = [{width:14},{width:30},{width:40},{width:12},{width:26},{width:10},{width:14},{width:14},{width:16}];
     styleHeaderRow(rl.addRow(['Location ID', 'Customer', 'Address', 'Route', 'Order Code', 'Type', 'Order Value (AED)', 'Status', 'Location Total (AED)']));
