@@ -758,6 +758,33 @@ footer span{color:#e8c878;}
           </div>
         </div>
       </div>
+
+      <!-- RE-DELIVERY TRACKING -->
+      <div class="box" id="ds-redelivery-box" style="display:none;margin-bottom:16px;">
+        <div class="box-title">🔁 Re-Delivery Tracking <span style="font-size:10px;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0;">— same order code seen again on a later day (failed first attempt, re-delivered now)</span></div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px;">
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px;">
+            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Re-Delivered Orders Today</div>
+            <div id="redelivery-count" style="font-size:22px;font-weight:800;color:#f85149;margin-top:4px;">—</div>
+          </div>
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px;">
+            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Value at Risk (AED)</div>
+            <div id="redelivery-value" style="font-size:22px;font-weight:800;color:var(--gold);margin-top:4px;">—</div>
+          </div>
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px;">
+            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Estimated Re-Delivery Cost</div>
+            <div id="redelivery-cost" style="font-size:22px;font-weight:800;color:#58a6ff;margin-top:4px;">—</div>
+            <div id="redelivery-cost-note" style="font-size:10px;color:var(--muted);margin-top:2px;"></div>
+          </div>
+        </div>
+        <div id="ds-redelivery-empty" style="display:none;padding:16px;text-align:center;color:var(--muted);font-size:12px;">✅ No repeated orders today — everything delivered on first attempt.</div>
+        <div id="ds-redelivery-table-wrap" style="display:none;overflow-x:auto;max-height:320px;overflow-y:auto;">
+          <table class="data-table" style="width:100%;min-width:700px;">
+            <thead><tr><th>Order Code</th><th>Customer</th><th>Type</th><th style="text-align:center;">Times Delivered</th><th>Dates</th><th style="text-align:right;">Value (AED)</th><th style="text-align:right;">Est. Re-Delivery Cost (AED)</th></tr></thead>
+            <tbody id="ds-redelivery-body"></tbody>
+          </table>
+        </div>
+      </div>
       <div class="box" id="ds-drivers-value-box" style="display:none;margin-bottom:16px;">
         <div class="box-title">💎 Top 5 Drivers by Value <span style="font-size:10px;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0;">— a driver with just a few high-value deliveries won't show up in the count-sorted list above</span></div>
         <div id="ds-drivers-value-list" style="overflow-x:hidden;"></div>
@@ -2147,6 +2174,7 @@ var DS_CURRENT_DATE = null;
 function buildDashboard(d){
   DS_CURRENT_SUMMARY = d.summary; // Store for JARVIS voice context
   DS_CURRENT_DATE = d.date;
+  loadRedeliveryData(d.date);
   const s=d.summary;
   const today=new Date().toISOString().split('T')[0];
   const lbl=d.date===today?'Today':d.date;
@@ -2423,6 +2451,73 @@ function buildDashboard(d){
 
   document.getElementById('ds-tables').style.display='grid';
   document.getElementById('ds-ask-box').style.display='block';
+}
+
+// RE-DELIVERY TRACKING — same order code seen again on a LATER dispatch date
+async function loadRedeliveryData(dateKey){
+  var box = document.getElementById('ds-redelivery-box');
+  if(!box) return;
+  try{
+    var r = await fetch('/api/dispatch/redelivery/'+dateKey);
+    var d = await r.json();
+    if(!d.hasData){ box.style.display='none'; return; }
+    box.style.display='block';
+
+    document.getElementById('redelivery-count').textContent = (d.total_repeated_orders||0).toLocaleString();
+    document.getElementById('redelivery-value').textContent = 'AED '+(d.total_value_at_risk||0).toLocaleString();
+
+    // Estimate re-delivery cost per-drop using the same rate card as Transport Cost,
+    // once transport's truck-type column exists in the file — until then, show that
+    // it's pending, same as the Transport Cost panel does.
+    var costEl = document.getElementById('redelivery-cost');
+    var costNoteEl = document.getElementById('redelivery-cost-note');
+    var perDropRate = null;
+    if(DS_CURRENT_SUMMARY && DS_CURRENT_SUMMARY.truck_cost_estimate && DS_CURRENT_SUMMARY.truck_cost_estimate.available){
+      var tce = DS_CURRENT_SUMMARY.truck_cost_estimate;
+      if(tce.total_drops_billed > 0) perDropRate = tce.total_estimated_cost / tce.total_drops_billed;
+    }
+    var totalExtraCost = 0;
+    (d.orders||[]).forEach(function(o){
+      var extraAttempts = Math.max(0, (o.times_delivered||1) - 1);
+      o._extraCost = perDropRate!=null ? Math.round(extraAttempts * perDropRate) : null;
+      if(o._extraCost!=null) totalExtraCost += o._extraCost;
+    });
+    if(perDropRate!=null){
+      costEl.textContent = 'AED '+Math.round(totalExtraCost).toLocaleString();
+      costNoteEl.textContent = 'Based on '+Math.round(perDropRate).toLocaleString()+' AED/drop average rate';
+    } else {
+      costEl.textContent = '—';
+      costNoteEl.textContent = 'Awaiting truck-type column from transport team';
+    }
+
+    var emptyEl = document.getElementById('ds-redelivery-empty');
+    var tableWrap = document.getElementById('ds-redelivery-table-wrap');
+    if(!d.orders || !d.orders.length){
+      emptyEl.style.display='block'; tableWrap.style.display='none';
+    } else {
+      emptyEl.style.display='none'; tableWrap.style.display='block';
+      var typeColors={food:'var(--green)',nonfood:'#58a6ff','3pl':'var(--gold)',van:'var(--muted)'};
+      document.getElementById('ds-redelivery-body').innerHTML = d.orders.map(function(o){
+        var typeLabel = o.drop_type==='nonfood'?'Non-Food':(o.drop_type==='3pl'?'3PL':(o.drop_type?o.drop_type.charAt(0).toUpperCase()+o.drop_type.slice(1):'—'));
+        var typeCol = typeColors[o.drop_type]||'var(--text)';
+        var datesLabel = (o.dates||[]).map(function(dt){
+          var parts=dt.split('-'); return parts[2]+'/'+parts[1];
+        }).join(', ');
+        var costCell = o._extraCost!=null ? o._extraCost.toLocaleString() : '—';
+        return '<tr><td style="color:var(--gold);font-weight:600;">'+o.order_code+'</td>'
+          +'<td>'+(o.customer||'—')+'</td>'
+          +'<td><span style="color:'+typeCol+';">'+typeLabel+'</span></td>'
+          +'<td style="text-align:center;font-weight:700;color:#f85149;">'+o.times_delivered+'x</td>'
+          +'<td style="font-size:12px;color:var(--muted);">'+datesLabel+'</td>'
+          +'<td style="text-align:right;color:var(--gold);font-weight:600;">'+(o.value||0).toLocaleString()+'</td>'
+          +'<td style="text-align:right;color:#58a6ff;">'+costCell+'</td>'
+          +'</tr>';
+      }).join('');
+    }
+  }catch(e){
+    console.error('Re-delivery load error:', e.message);
+    box.style.display='none';
+  }
 }
 
 async function doUpload(input){
