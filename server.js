@@ -923,6 +923,35 @@ app.post('/api/rejection/upload', upload.single('file'), async function(req, res
       return isNaN(d.getTime()) ? null : d;
     }
 
+// Translates raw, informally-typed root-cause text from transport staff into
+// professional wording for anything leadership sees. Matches on distinctive
+// substrings so minor wording/typo variants ("REFUSED DUE TO" vs "REFUSED TO
+// ACCEPT DUE TO") merge into the same clean category instead of showing as
+// separate duplicate rows.
+function polishRootCause(raw) {
+  var s = toStr(raw);
+  if (!s) return s;
+  var u = s.toUpperCase().trim();
+  if (u.indexOf('MERCHANDISER') !== -1 && u.indexOf('ROUTE') !== -1) return 'Merchandiser Unavailable on Route';
+  if (u.indexOf('FIRST GRV') !== -1 || u.indexOf('COLLECT GRV') !== -1) return 'Pending Goods Receipt Voucher Not Ready (GRV)';
+  if (u.indexOf('SYSTEM NOT WORKING') !== -1) return 'Customer System Down';
+  if (u.indexOf('SAME ITEM') !== -1 && u.indexOf('LPO') !== -1) return 'Duplicate Item Received Under Separate LPO';
+  if (u.indexOf('HEAVY RAIN') !== -1 || (u.indexOf('ROAD CLOSURE') !== -1 && u.indexOf('RETURN') !== -1)) return 'Returned — Weather/Road Closure';
+  if (u.indexOf('NO NEED STOCK') !== -1) return 'Declined — No Stock Requirement';
+  if (u.indexOf('LPO DELETED') !== -1) return 'Declined — LPO Cancelled in Customer System';
+  if (u.indexOf('RECEIVING CLOSED') !== -1) return 'Returned — Receiving Closed for the Day';
+  if (u.indexOf('NO SPACE') !== -1) return 'Declined — Insufficient Storage Space';
+  if (u.indexOf('NO SCHEDULE') !== -1) return 'Declined — No Delivery Schedule Confirmed';
+  if (u.indexOf('PAYMENT') !== -1 && (u.indexOf('NOT READY') !== -1 || u.indexOf('NOT READ') !== -1)) return 'Returned — Customer Payment Not Ready (Cheque/Cash)';
+  if (u.indexOf('NOT RELEECTED') !== -1 || u.indexOf('NOT REFLECTED') !== -1 || u.indexOf('NOT RELECTED') !== -1) return 'Declined — LPO Not Reflected in Customer System';
+  if (u.indexOf('SYSTEM UPDATING') !== -1) return 'Declined — Customer System Under Maintenance';
+  if (u.indexOf('UNABLE TO ACCOMMODATE') !== -1) return 'Declined — Insufficient Storage Capacity Today';
+  if (u.indexOf('RECEIVING TIME OVER') !== -1) return 'Declined — Outside Receiving Hours';
+  // Fallback for anything not yet mapped: tidy spacing + Title Case, so it's
+  // never worse than today even before someone adds a proper mapping for it.
+  return s.replace(/\s+/g, ' ').trim().toLowerCase().replace(/\b\w/g, function(c) { return c.toUpperCase(); });
+}
+
     var orgMap={}, monthMap={};
     var totalRej=0, totalDel=0, totalVal=0;
     var seenOrderVals={};
@@ -934,7 +963,7 @@ app.post('/api/rejection/upload', upload.single('file'), async function(req, res
       var d=parseDate(row[RC.date]);
       var mo=d?d.getMonth()+1:null, day=d?d.getDate():null;
       var org=toStr(row[RC.org]).toUpperCase().replace('NON-FOOD','DGC');
-      var root=toStr(row[RC.root]);
+      var root=polishRootCause(toStr(row[RC.root]));
       var cust=toStr(row[RC.cust]);
       var addr=RC.addr?toStr(row[RC.addr]):'';
       var area=toStr(row[RC.area]);
