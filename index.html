@@ -2507,13 +2507,39 @@ function rejFilter(dim, val){
     src:  {all:'rs-all',external:'rs-ext',internal:'rs-int'}
   };
 
+  // Internal/External only makes sense once a specific ORG is selected — combining it
+  // with "All ORG" was the source of the most confusing bugs (aggregating source data
+  // correctly across every org for a given month is far more error-prone than reading
+  // a single org's own numbers). Block the click entirely if no org is selected.
+  if(dim==='src' && val!=='all' && rejORG==='all' && rejBU==='all'){
+    return;
+  }
+
   if(dim!=='day'){
     const pref=prefMap[dim];
     if(pref) document.querySelectorAll('[id^="'+pref+'"]').forEach(e=>e.classList.remove('on'));
   }
 
-  if(dim==='bu') rejBU=val;
-  else if(dim==='org'){ rejORG=val; rejDay='all'; buildDayGrid(); }
+  if(dim==='bu'){
+    rejBU=val;
+    if(val==='all' && rejORG==='all'){
+      rejSrc='all';
+      document.querySelectorAll('[id^="rs-"]').forEach(e=>e.classList.remove('on'));
+      const rsAllBtn2=document.getElementById('rs-all'); if(rsAllBtn2) rsAllBtn2.classList.add('on');
+    }
+    updateSourceFilterEnabled();
+  }
+  else if(dim==='org'){
+    rejORG=val; rejDay='all'; buildDayGrid();
+    // Source (Internal/External) is only valid for a specific org — reset it whenever
+    // the user goes back to "All ORG", since it's about to become disabled below.
+    if(val==='all'){
+      rejSrc='all';
+      document.querySelectorAll('[id^="rs-"]').forEach(e=>e.classList.remove('on'));
+      const rsAllBtn=document.getElementById('rs-all'); if(rsAllBtn) rsAllBtn.classList.add('on');
+    }
+    updateSourceFilterEnabled();
+  }
   else if(dim==='month'){
     rejMonth=val==='all'?'all':parseInt(val);
     rejDay='all'; rejSelectedDays=[];
@@ -2557,6 +2583,28 @@ function rejFilter(dim, val){
   const tgt=idMap[dim]?.[val];
   if(tgt){const e=document.getElementById(tgt);if(e)e.classList.add('on');}
   rejRender();
+}
+
+// Visually enables/disables the Internal/External buttons based on whether a specific
+// ORG is currently selected. Internal/External is meaningless (and was the source of
+// the worst filtering bugs) when applied across "All ORG" at once.
+function updateSourceFilterEnabled(){
+  var enabled = (rejORG !== 'all' || rejBU !== 'all');
+  ['rs-ext','rs-int'].forEach(function(id){
+    var btn = document.getElementById(id);
+    if(!btn) return;
+    if(enabled){
+      btn.style.opacity = '';
+      btn.style.cursor = '';
+      btn.style.pointerEvents = '';
+      btn.title = '';
+    } else {
+      btn.style.opacity = '0.3';
+      btn.style.cursor = 'not-allowed';
+      btn.style.pointerEvents = 'none';
+      btn.title = 'Select a specific ORG first (DCV, DGC, DCF, DGS, or DSN)';
+    }
+  });
 }
 
 function buildDayGrid(){
@@ -2798,8 +2846,12 @@ function getFilteredData(){
       })(),
       del:[0,0,0,0,0,0,0,0,0,0,0,0].map(function(_,i){return i===mi?mDel:0;}),
       rej:[0,0,0,0,0,0,0,0,0,0,0,0].map(function(_,i){return i===mi?mRej:0;}),
-      reasons: (orgMonthData&&orgMonthData.reasons&&orgMonthData.reasons.length) ? orgMonthData.reasons : ((effectiveORG==='all') ? ((moInfo2.reasons&&moInfo2.reasons.length)?moInfo2.reasons:(orgBase.reasons||[])) : (orgBase.reasons||[])),
-      custs: (orgMonthData&&orgMonthData.custs&&orgMonthData.custs.length) ? orgMonthData.custs : ((effectiveORG==='all') ? ((moInfo2.custs&&moInfo2.custs.length)?moInfo2.custs:(orgBase.custs||[])) : (orgBase.custs||[])),
+      // When a specific org is selected, its month reasons/custs must reflect ONLY that
+      // month — even if that means empty/zero. Falling back to orgBase (the org's whole
+      // YEAR) here was the bug: a month with genuinely zero rejections showed the org's
+      // full-year root causes and customers instead of correctly showing nothing.
+      reasons: (effectiveORG!=='all') ? (orgMonthData&&orgMonthData.reasons||[]) : ((moInfo2.reasons&&moInfo2.reasons.length)?moInfo2.reasons:(orgBase.reasons||[])),
+      custs: (effectiveORG!=='all') ? (orgMonthData&&orgMonthData.custs||[]) : ((moInfo2.custs&&moInfo2.custs.length)?moInfo2.custs:(orgBase.custs||[])),
       areas:(moInfo2.areas&&moInfo2.areas.length)?moInfo2.areas:(orgBase.areas||[]),
       // Prefer the ORG's own month breakdown when a specific org is selected — falling back
       // to the all-org month total (moInfo2) here was the root cause of the >100% "Contribution
@@ -2870,6 +2922,15 @@ function getFilteredData(){
     ? ((effectiveORG !== 'all' && orgBase.byMonth && (orgBase.byMonth[rejMonth] || orgBase.byMonth[String(rejMonth)]))
         || DAY_DATA[rejMonth] || DAY_DATA[String(rejMonth)] || {})
     : {};
+  // When a specific month is selected, that month's own data is authoritative — even if
+  // it's genuinely empty (zero rejections of that type/source that month). Falling back
+  // to the org's whole-year total in that case was the bug: a month with zero rejections
+  // showed the org's full YTD root causes/customers instead of correctly showing nothing.
+  // The YTD fallback (ytdFallback) only applies when NO month is selected at all.
+  function monthAwareFallback(monthScoped, ytdFallback){
+    if(rejMonth !== 'all') return monthScoped || [];
+    return (monthScoped && monthScoped.length > 0) ? monthScoped : (ytdFallback || []);
+  }
   // ORG-type alignment: if selected ORG matches type filter, ratio=1 (all their rej are that type)
   var FOOD_ORGS_LIST   = ['DCV','DCF'];
   var NONFOOD_ORGS_LIST = ['DGC','DGS','DSN'];
@@ -2921,10 +2982,10 @@ function getFilteredData(){
     // Use most specific available data: day > month > YTD
     var fr = hasDayFilter
       ? ((base.food_reasons||[]).length>0 ? base.food_reasons : [])
-      : ((moInfo3.food_reasons||[]).length>0 ? moInfo3.food_reasons : (orgBase.food_reasons||[]));
+      : monthAwareFallback(moInfo3.food_reasons, orgBase.food_reasons);
     var fc = hasDayFilter
       ? ((base.food_custs||[]).length>0 ? base.food_custs : [])
-      : ((moInfo3.food_custs||[]).length>0 ? moInfo3.food_custs : (orgBase.food_custs||[]));
+      : monthAwareFallback(moInfo3.food_custs, orgBase.food_custs);
     if(fr.length>0) base.reasons = fr;
     if(fc.length>0) base.custs   = fc;
     // tRej = sum of food ORG (DCV+DCF) rejections for the current period
@@ -2979,10 +3040,10 @@ function getFilteredData(){
     // Always try to use actual nonfood reasons/custs
     var nr = hasDayFilter
       ? ((base.nonfood_reasons||[]).length>0 ? base.nonfood_reasons : [])
-      : ((moInfo3.nonfood_reasons||[]).length>0 ? moInfo3.nonfood_reasons : (orgBase.nonfood_reasons||[]));
+      : monthAwareFallback(moInfo3.nonfood_reasons, orgBase.nonfood_reasons);
     var nc = hasDayFilter
       ? ((base.nonfood_custs||[]).length>0 ? base.nonfood_custs : [])
-      : ((moInfo3.nonfood_custs||[]).length>0 ? moInfo3.nonfood_custs : (orgBase.nonfood_custs||[]));
+      : monthAwareFallback(moInfo3.nonfood_custs, orgBase.nonfood_custs);
     if(nr.length>0) base.reasons = nr;
     if(nc.length>0) base.custs   = nc;
     // tRej = sum of nonfood ORG (DGC+DGS+DSN) rejections for the current period
@@ -3017,10 +3078,10 @@ function getFilteredData(){
     srcRatio = (orgBase.ext_rej||0) / orgTotalRej;
     var er = hasDayFilter
       ? ((base.ext_reasons||[]).length>0 ? base.ext_reasons : [])
-      : ((moInfo3.ext_reasons||[]).length>0 ? moInfo3.ext_reasons : (orgBase.ext_reasons||[]));
+      : monthAwareFallback(moInfo3.ext_reasons, orgBase.ext_reasons);
     var ec = hasDayFilter
       ? ((base.ext_custs||[]).length>0 ? base.ext_custs : [])
-      : ((moInfo3.ext_custs||[]).length>0 ? moInfo3.ext_custs : (orgBase.ext_custs||[]));
+      : monthAwareFallback(moInfo3.ext_custs, orgBase.ext_custs);
     if(er.length>0) base.reasons = er;
     if(ec.length>0) base.custs   = ec;
     var extRejCount = hasDayFilter ? (base.ext_rej||0) : (rejMonth!=='all'?(moInfo3.ext_rej||0):(orgBase.ext_rej||0));
@@ -3030,10 +3091,10 @@ function getFilteredData(){
     srcRatio = (orgBase.int_rej||0) / orgTotalRej;
     var ir = hasDayFilter
       ? ((base.int_reasons||[]).length>0 ? base.int_reasons : [])
-      : ((moInfo3.int_reasons||[]).length>0 ? moInfo3.int_reasons : (orgBase.int_reasons||[]));
+      : monthAwareFallback(moInfo3.int_reasons, orgBase.int_reasons);
     var ic = hasDayFilter
       ? ((base.int_custs||[]).length>0 ? base.int_custs : [])
-      : ((moInfo3.int_custs||[]).length>0 ? moInfo3.int_custs : (orgBase.int_custs||[]));
+      : monthAwareFallback(moInfo3.int_custs, orgBase.int_custs);
     if(ir.length>0) base.reasons = ir;
     if(ic.length>0) base.custs   = ic;
     var intRejCount = hasDayFilter ? (base.int_rej||0) : (rejMonth!=='all'?(moInfo3.int_rej||0):(orgBase.int_rej||0));
@@ -3375,11 +3436,20 @@ oc.innerHTML=ORG_SUMMARY.map(function(o){
   // ── Customer · Location · Root Cause Detail Table ──
   var detailTbody = document.getElementById('rej-detail-tbody');
   if(detailTbody){
+    // Hard invariant: this table must never show rows when Total Rejections (d.tRej) is 0 —
+    // whether that's because the org+type combination is impossible (e.g. DCV is food-only,
+    // so DCV+Non-Food is always zero) or because this specific org+month genuinely had no
+    // rejections. Previously this table computed its own data independently and could show
+    // real-looking rows (with nonsensical percentages like 400%) even when every other KPI
+    // on screen correctly showed zero.
+    if(!d.tRej || d.tRej <= 0){
+      detailTbody.innerHTML = '<tr><td colspan="6" style="padding:20px;text-align:center;color:var(--muted);font-size:15px;">No rejections for the current filters</td></tr>';
+    } else {
     // Reuse the exact orgBase that getFilteredData() (called as `d` above) already
     // resolved — this correctly handles single orgs, the Consumer DIC combined group,
-    // Consumer DIC), and 'all'. Previously this re-derived its own lookup straight from
-    // ORG_DATA, which has no entry for combined groups and silently showed all orgs
-    // mixed together whenever Consumer DIC was selected.
+    // and 'all'. Previously this re-derived its own lookup straight from ORG_DATA, which
+    // has no entry for combined groups and silently showed all orgs mixed together
+    // whenever Consumer DIC was selected.
     var rejOrgBase = REJ_LAST_ORG_BASE || ORG_DATA['all'] || {};
 
     // Pick correct detail key based on filters
@@ -3443,6 +3513,7 @@ oc.innerHTML=ORG_SUMMARY.map(function(o){
       }).join('')
       +(!hasFullData?'<tr><td colspan="6" style="padding:8px;text-align:center;font-size:12px;color:rgba(201,168,76,0.5);background:rgba(201,168,76,0.03);">📌 Deploy new server.js + re-upload file to see Full Address and Root Cause</td></tr>':'');
     }
+    } // close the d.tRej zero-guard else block
   }
 }
 
@@ -3487,6 +3558,14 @@ function exportDispatchExcel(){
 
 // REJECTION DETAIL EXCEL EXPORT
 function exportRejDetailExcel(){
+  // Same hard invariant as the on-screen Detail table: never export rows when Total
+  // Rejections is 0 for the current filters (whether that's a genuine zero-rejection
+  // month, or an impossible org+type combination like DCV+Non-Food).
+  var summaryCheck = getFilteredData();
+  if(!summaryCheck.tRej || summaryCheck.tRej <= 0){
+    alert('No rejections for the current filters — nothing to export.');
+    return;
+  }
   // Reuse the exact org resolution getFilteredData() already computed — see the
   // matching fix in the Detail table above for why this matters (combined groups
   // like Consumer DIC have no entry in raw ORG_DATA).
@@ -3671,6 +3750,7 @@ async function rejLoadFromServer(){
       document.querySelectorAll('.rej-pill').forEach(p=>p.classList.remove('on'));
       ['rb-all','ro-all','rm-all','rt-all','rs-all'].forEach(id=>{const e=document.getElementById(id);if(e)e.classList.add('on');});
       const dr=document.getElementById('rej-day-row'); if(dr)dr.style.display='none';
+      updateSourceFilterEnabled();
 
       rejRender();
     }else{
@@ -3826,6 +3906,7 @@ setCompany('aki');
 addInvItem();
 loadStatus();
 rejLoadFromServer();
+updateSourceFilterEnabled();
 
 // Secret admin upload toggles
 var blUploadVisible = false;
