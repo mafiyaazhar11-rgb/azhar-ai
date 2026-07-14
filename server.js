@@ -1112,24 +1112,50 @@ function polishRootCause(raw) {
       if (rej) { totalRej++; totalVal+=val; }
       if (org) {
         if (!orgMap[org]) orgMap[org]={tDel:0,tRej:0,val:0,food_rej:0,food_del:0,nonfood_rej:0,nonfood_del:0,ext_rej:0,ext_del:0,int_rej:0,int_del:0,food_val:0,nonfood_val:0,del:new Array(12).fill(0),rej:new Array(12).fill(0),reasons:{},custs:{},areas:{},food_reasons:{},food_custs:{},nonfood_reasons:{},nonfood_custs:{},ext_reasons:{},ext_custs:{},int_reasons:{},int_custs:{},detail:{},food_detail:{},nonfood_detail:{},ext_detail:{},int_detail:{}};
+        // Full per-org, per-month breakdown (food/nonfood/external/internal) — without this,
+        // ORG + MONTH + SOURCE filters combined would fall back to all-org month totals,
+        // which is what caused the >100% "Contribution to Rejection Rate" bug.
+        if (mo) {
+          if(!orgMap[org].byMonth) orgMap[org].byMonth={};
+          if(!orgMap[org].byMonth[mo]) orgMap[org].byMonth[mo]={
+            tRej:0,tDel:0,val:0,food_rej:0,food_del:0,nonfood_rej:0,nonfood_del:0,
+            ext_rej:0,ext_del:0,int_rej:0,int_del:0,food_val:0,nonfood_val:0,
+            reasons:{},custs:{},detail:{},
+            food_reasons:{},food_custs:{},food_detail:{},
+            nonfood_reasons:{},nonfood_custs:{},nonfood_detail:{},
+            ext_reasons:{},ext_custs:{},ext_detail:{},
+            int_reasons:{},int_custs:{},int_detail:{}
+          };
+        }
+        var mb = mo ? orgMap[org].byMonth[mo] : null;
         if (del) {
           orgMap[org].tDel++; if(mo)orgMap[org].del[mo-1]++;
           if(isFood)orgMap[org].food_del++; else if(isNF)orgMap[org].nonfood_del++;
           if(srcStr==='EXTERNAL')orgMap[org].ext_del++; else if(srcStr==='INTERNAL')orgMap[org].int_del++;
+          if(mb){
+            mb.tDel++;
+            if(isFood)mb.food_del++; else if(isNF)mb.nonfood_del++;
+            if(srcStr==='EXTERNAL')mb.ext_del++; else if(srcStr==='INTERNAL')mb.int_del++;
+          }
         }
         if (rej) {
           orgMap[org].tRej++; orgMap[org].val+=val; if(mo)orgMap[org].rej[mo-1]++;
-          if(mo){
-            if(!orgMap[org].byMonth) orgMap[org].byMonth={};
-            if(!orgMap[org].byMonth[mo]) orgMap[org].byMonth[mo]={tRej:0,tDel:0,val:0,reasons:{},custs:{},detail:{}};
-            orgMap[org].byMonth[mo].tRej++;
-            orgMap[org].byMonth[mo].val+=val;
-            if(root) orgMap[org].byMonth[mo].reasons[root]=(orgMap[org].byMonth[mo].reasons[root]||0)+1;
-            if(cust) orgMap[org].byMonth[mo].custs[cust]=(orgMap[org].byMonth[mo].custs[cust]||0)+1;
+          if(mb){
+            mb.tRej++; mb.val+=val;
+            if(root) mb.reasons[root]=(mb.reasons[root]||0)+1;
+            if(cust) mb.custs[cust]=(mb.custs[cust]||0)+1;
             if(cust||root){
               var monthDetailKey = (cust||'Unknown')+'|||'+(addr||'No address')+'|||'+(root||'Unknown');
-              orgMap[org].byMonth[mo].detail[monthDetailKey]=(orgMap[org].byMonth[mo].detail[monthDetailKey]||0)+1;
+              mb.detail[monthDetailKey]=(mb.detail[monthDetailKey]||0)+1;
+              if(isFood)  mb.food_detail[monthDetailKey]=(mb.food_detail[monthDetailKey]||0)+1;
+              if(isNF)    mb.nonfood_detail[monthDetailKey]=(mb.nonfood_detail[monthDetailKey]||0)+1;
+              if(srcStr==='EXTERNAL') mb.ext_detail[monthDetailKey]=(mb.ext_detail[monthDetailKey]||0)+1;
+              if(srcStr==='INTERNAL') mb.int_detail[monthDetailKey]=(mb.int_detail[monthDetailKey]||0)+1;
             }
+            if(isFood){ mb.food_rej++; mb.food_val+=val; if(root)mb.food_reasons[root]=(mb.food_reasons[root]||0)+1; if(cust)mb.food_custs[cust]=(mb.food_custs[cust]||0)+1; }
+            else if(isNF){ mb.nonfood_rej++; mb.nonfood_val+=val; if(root)mb.nonfood_reasons[root]=(mb.nonfood_reasons[root]||0)+1; if(cust)mb.nonfood_custs[cust]=(mb.nonfood_custs[cust]||0)+1; }
+            if(srcStr==='EXTERNAL'){ mb.ext_rej++; if(root)mb.ext_reasons[root]=(mb.ext_reasons[root]||0)+1; if(cust)mb.ext_custs[cust]=(mb.ext_custs[cust]||0)+1; }
+            else if(srcStr==='INTERNAL'){ mb.int_rej++; if(root)mb.int_reasons[root]=(mb.int_reasons[root]||0)+1; if(cust)mb.int_custs[cust]=(mb.int_custs[cust]||0)+1; }
           }
           if(isFood){orgMap[org].food_rej++;orgMap[org].food_val+=val;}
           else if(isNF){orgMap[org].nonfood_rej++;orgMap[org].nonfood_val+=val;}
@@ -1294,7 +1320,18 @@ function polishRootCause(raw) {
       if (v.byMonth) {
         Object.keys(v.byMonth).forEach(function(mo){
           var mData = v.byMonth[mo];
-          byMonthOut[mo] = { tRej: mData.tRej||0, val: fmtVal(mData.val||0), reasons: top10(mData.reasons||{}), custs: top8c(mData.custs||{}), detail: topDetail(mData.detail||{}) };
+          byMonthOut[mo] = {
+            tRej: mData.tRej||0, tDel: mData.tDel||0, val: fmtVal(mData.val||0),
+            food_rej: mData.food_rej||0, food_del: mData.food_del||0, food_val: fmtVal(mData.food_val||0),
+            nonfood_rej: mData.nonfood_rej||0, nonfood_del: mData.nonfood_del||0, nonfood_val: fmtVal(mData.nonfood_val||0),
+            ext_rej: mData.ext_rej||0, ext_del: mData.ext_del||0,
+            int_rej: mData.int_rej||0, int_del: mData.int_del||0,
+            reasons: top10(mData.reasons||{}), custs: top8c(mData.custs||{}), detail: topDetail(mData.detail||{}),
+            food_reasons: top10(mData.food_reasons||{}), food_custs: top8c(mData.food_custs||{}), food_detail: topDetail(mData.food_detail||{}),
+            nonfood_reasons: top10(mData.nonfood_reasons||{}), nonfood_custs: top8c(mData.nonfood_custs||{}), nonfood_detail: topDetail(mData.nonfood_detail||{}),
+            ext_reasons: top10(mData.ext_reasons||{}), ext_custs: top8c(mData.ext_custs||{}), ext_detail: topDetail(mData.ext_detail||{}),
+            int_reasons: top10(mData.int_reasons||{}), int_custs: top8c(mData.int_custs||{}), int_detail: topDetail(mData.int_detail||{})
+          };
         });
       }
       orgsOut[org]={tDel:v.tDel,tRej:v.tRej,val:fmtVal(v.val),food_rej:v.food_rej||0,food_del:v.food_del||0,nonfood_rej:v.nonfood_rej||0,nonfood_del:v.nonfood_del||0,ext_rej:v.ext_rej||0,int_rej:v.int_rej||0,food_val:fmtVal(v.food_val||0),nonfood_val:fmtVal(v.nonfood_val||0),del:v.del,rej:v.rej,reasons:top10(v.reasons),custs:top8c(v.custs),areas:top6a(v.areas),detail:topDetail(v.detail||{}),food_detail:topDetail(v.food_detail||{}),nonfood_detail:topDetail(v.nonfood_detail||{}),ext_detail:topDetail(v.ext_detail||{}),int_detail:topDetail(v.int_detail||{}),food_reasons:top10(v.food_reasons||{}),food_custs:top8c(v.food_custs||{}),nonfood_reasons:top10(v.nonfood_reasons||{}),nonfood_custs:top8c(v.nonfood_custs||{}),ext_reasons:top10(v.ext_reasons||{}),ext_custs:top8c(v.ext_custs||{}),int_reasons:top10(v.int_reasons||{}),int_custs:top8c(v.int_custs||{}),byMonth:byMonthOut};
