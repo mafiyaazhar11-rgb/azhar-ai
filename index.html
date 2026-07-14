@@ -2354,7 +2354,7 @@ function buildDashboard(d){
     }).join('');
     var unmatchedKeys = Object.keys(tce.unmatched_truck_types || {});
     if(unmatchedKeys.length){
-      document.getElementById('ds-truckcost-unmatched').innerHTML = '⚠ Some rows had a truck-type value not on the rate card, so they\\'re excluded from this estimate: ' + unmatchedKeys.map(function(k){ return k+' ('+tce.unmatched_truck_types[k]+' rows)'; }).join(', ');
+      document.getElementById('ds-truckcost-unmatched').innerHTML = '⚠ Some rows had a truck-type value not on the rate card, so they are excluded from this estimate: ' + unmatchedKeys.map(function(k){ return k+' ('+tce.unmatched_truck_types[k]+' rows)'; }).join(', ');
       document.getElementById('ds-truckcost-unmatched').style.display = 'block';
     } else {
       document.getElementById('ds-truckcost-unmatched').style.display = 'none';
