@@ -2487,6 +2487,12 @@ function lockAdmin(){document.getElementById('admin-lock').style.display='flex';
 // 
 const DAY_DATA  = {};
 const ORG_DATA  = { all:{del:[0,0,0,0,0,0,0,0,0,0,0,0],rej:[0,0,0,0,0,0,0,0,0,0,0,0],tDel:0,tRej:0,val:'',reasons:[],custs:[],areas:[]} };
+// Holds the exact orgBase object (single org, combined group like Cookware/Elec or
+// Consumer DIC, or 'all') that getFilteredData() resolved on its most recent call.
+// Other rendering code (e.g. the Detail table) must reuse this instead of re-deriving
+// its own org lookup from ORG_DATA directly — ORG_DATA has no 'COOKWARE'/'CONSUMER_DIC'
+// entry, so any code doing that silently falls back to showing all orgs mixed together.
+var REJ_LAST_ORG_BASE = null;
 const ORG_SUMMARY = [];
 const REJ_MONTHS  = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
@@ -2622,6 +2628,73 @@ function getFilteredData(){
       return {tDel:0,tRej:0,val:'AED 0K',del:[0,0,0,0,0,0,0,0,0,0,0,0],rej:[0,0,0,0,0,0,0,0,0,0,0,0],reasons:[],custs:[],areas:[]};
   }
 
+  // Helpers to merge per-month org breakdowns for combined groups (Cookware/Elec = DGS+DSN,
+  // Consumer DIC = DCV+DCF+DGS+DSN) so ORG+MONTH+SOURCE filters work for these groups too,
+  // not just single named orgs.
+  function mergeMonthReasonArrays(a, b){
+    var map={}; (a||[]).forEach(function(r){map[r.l]=(map[r.l]||0)+(r.n||0);}); (b||[]).forEach(function(r){map[r.l]=(map[r.l]||0)+(r.n||0);});
+    return Object.keys(map).map(function(l){return{l:l,n:map[l]};}).sort(function(x,y){return y.n-x.n;}).slice(0,10);
+  }
+  function mergeMonthCustArrays(a, b){
+    var map={}; (a||[]).forEach(function(c){map[c.n]=(map[c.n]||0)+(c.c||0);}); (b||[]).forEach(function(c){map[c.n]=(map[c.n]||0)+(c.c||0);});
+    return Object.keys(map).map(function(n){return{n:n,c:map[n],v:''};}).sort(function(x,y){return y.c-x.c;}).slice(0,20);
+  }
+  function mergeMonthDetailArrays(a, b){
+    var map={};
+    (a||[]).forEach(function(d){var k=d.cust+'|||'+d.addr+'|||'+d.root; map[k]=(map[k]||0)+(d.n||0);});
+    (b||[]).forEach(function(d){var k=d.cust+'|||'+d.addr+'|||'+d.root; map[k]=(map[k]||0)+(d.n||0);});
+    return Object.keys(map).map(function(k){var p=k.split('|||'); return{cust:p[0],addr:p[1],root:p[2],n:map[k]};}).sort(function(x,y){return y.n-x.n;}).slice(0,100);
+  }
+  // Merge the YTD (all-months) detail arrays too, not just the per-month ones — otherwise
+  // a combined group (Cookware/Elec, Consumer DIC) has no Detail table data at all when
+  // no month filter is active.
+  function mergeYTDDetail(target, v){
+    target.detail = mergeMonthDetailArrays(target.detail||[], v.detail||[]);
+    target.food_detail = mergeMonthDetailArrays(target.food_detail||[], v.food_detail||[]);
+    target.nonfood_detail = mergeMonthDetailArrays(target.nonfood_detail||[], v.nonfood_detail||[]);
+    target.ext_detail = mergeMonthDetailArrays(target.ext_detail||[], v.ext_detail||[]);
+    target.int_detail = mergeMonthDetailArrays(target.int_detail||[], v.int_detail||[]);
+  }
+  function mergeOrgByMonth(target, v){
+    if(!v.byMonth) return;
+    if(!target.byMonth) target.byMonth = {};
+    Object.keys(v.byMonth).forEach(function(mo){
+      var mv=v.byMonth[mo];
+      if(!target.byMonth[mo]) target.byMonth[mo]={tRej:0,tDel:0,val:0,food_rej:0,food_del:0,nonfood_rej:0,nonfood_del:0,ext_rej:0,ext_del:0,int_rej:0,int_del:0,food_val:0,nonfood_val:0,reasons:[],custs:[],detail:[],food_reasons:[],food_custs:[],food_detail:[],nonfood_reasons:[],nonfood_custs:[],nonfood_detail:[],ext_reasons:[],ext_custs:[],ext_detail:[],int_reasons:[],int_custs:[],int_detail:[]};
+      var tb=target.byMonth[mo];
+      tb.tRej+=mv.tRej||0; tb.tDel+=mv.tDel||0;
+      tb.food_rej+=mv.food_rej||0; tb.food_del+=mv.food_del||0;
+      tb.nonfood_rej+=mv.nonfood_rej||0; tb.nonfood_del+=mv.nonfood_del||0;
+      tb.ext_rej+=mv.ext_rej||0; tb.ext_del+=mv.ext_del||0;
+      tb.int_rej+=mv.int_rej||0; tb.int_del+=mv.int_del||0;
+      tb.val += parseFloat((mv.val||'0').replace(/[^0-9.]/g,'')) * ((mv.val||'').includes('M')?1000000:1000);
+      tb.food_val += parseFloat((mv.food_val||'0').replace(/[^0-9.]/g,'')) * ((mv.food_val||'').includes('M')?1000000:1000);
+      tb.nonfood_val += parseFloat((mv.nonfood_val||'0').replace(/[^0-9.]/g,'')) * ((mv.nonfood_val||'').includes('M')?1000000:1000);
+      tb.reasons = mergeMonthReasonArrays(tb.reasons, mv.reasons);
+      tb.custs = mergeMonthCustArrays(tb.custs, mv.custs);
+      tb.detail = mergeMonthDetailArrays(tb.detail, mv.detail);
+      tb.food_reasons = mergeMonthReasonArrays(tb.food_reasons, mv.food_reasons);
+      tb.food_custs = mergeMonthCustArrays(tb.food_custs, mv.food_custs);
+      tb.food_detail = mergeMonthDetailArrays(tb.food_detail, mv.food_detail);
+      tb.nonfood_reasons = mergeMonthReasonArrays(tb.nonfood_reasons, mv.nonfood_reasons);
+      tb.nonfood_custs = mergeMonthCustArrays(tb.nonfood_custs, mv.nonfood_custs);
+      tb.nonfood_detail = mergeMonthDetailArrays(tb.nonfood_detail, mv.nonfood_detail);
+      tb.ext_reasons = mergeMonthReasonArrays(tb.ext_reasons, mv.ext_reasons);
+      tb.ext_custs = mergeMonthCustArrays(tb.ext_custs, mv.ext_custs);
+      tb.ext_detail = mergeMonthDetailArrays(tb.ext_detail, mv.ext_detail);
+      tb.int_reasons = mergeMonthReasonArrays(tb.int_reasons, mv.int_reasons);
+      tb.int_custs = mergeMonthCustArrays(tb.int_custs, mv.int_custs);
+      tb.int_detail = mergeMonthDetailArrays(tb.int_detail, mv.int_detail);
+    });
+  }
+  function finalizeByMonthValues(target, fmtFn){
+    if(!target.byMonth) return;
+    Object.keys(target.byMonth).forEach(function(mo){
+      var tb=target.byMonth[mo];
+      tb.val = fmtFn(tb.val); tb.food_val = fmtFn(tb.food_val); tb.nonfood_val = fmtFn(tb.nonfood_val);
+    });
+  }
+
   // Step 1: Get base ORG data (using effectiveORG from BU filter)
   var orgBase;
   if(effectiveORG === 'COOKWARE'){
@@ -2641,14 +2714,18 @@ function getFilteredData(){
       (v.del||[]).forEach(function(d,i){cookData.del[i]+=d;});
       (v.rej||[]).forEach(function(r,i){cookData.rej[i]+=r;});
       Object.keys(v.reasons||{}).forEach(function(k){cookData.reasons[k]=(cookData.reasons[k]||0)+(v.reasons[k]||0);});
+      mergeYTDDetail(cookData, v);
+      mergeOrgByMonth(cookData, v);
     });
     var fmtV3=function(n){return n>=1000000?'AED '+(n/1000000).toFixed(2)+'M':'AED '+Math.round(n/1000)+'K';};
     cookData.val=fmtV3(cookData.val); cookData.nonfood_val=fmtV3(cookNFVal);
     cookData.food_rej=0; cookData.food_del=0; // Cookware is 100% nonfood
+    finalizeByMonthValues(cookData, fmtV3);
     orgBase = JSON.parse(JSON.stringify(cookData));
   } else if(effectiveORG === 'CONSUMER_DIC'){
-    // Consumer DIC = DCV + DCF + DGS + DSN (not DGC/Salon)
-    var consOrgs = ['DCV','DCF','DGS','DSN'];
+    // Consumer DIC = DCV + DGC + DCF only. DGS and DSN belong exclusively to
+    // Cookware/Electrical — they must never be double-counted into Consumer DIC too.
+    var consOrgs = ['DCV','DCF','DGC'];
     var consData = {tDel:0,tRej:0,val:0,food_rej:0,food_del:0,nonfood_rej:0,nonfood_del:0,ext_rej:0,int_rej:0,del:[0,0,0,0,0,0,0,0,0,0,0,0],rej:[0,0,0,0,0,0,0,0,0,0,0,0],reasons:{},custs:{},areas:{}};
     var consFoodVal=0, consNFVal=0;
     consOrgs.forEach(function(o){
@@ -2666,11 +2743,14 @@ function getFilteredData(){
       (v.del||[]).forEach(function(d,i){consData.del[i]+=d;});
       (v.rej||[]).forEach(function(r,i){consData.rej[i]+=r;});
       Object.keys(v.reasons||{}).forEach(function(k){consData.reasons[k]=(consData.reasons[k]||0)+(v.reasons[k]||0);});
+      mergeYTDDetail(consData, v);
+      mergeOrgByMonth(consData, v);
     });
     var fmtV2=function(n){return n>=1000000?'AED '+(n/1000000).toFixed(2)+'M':'AED '+Math.round(n/1000)+'K';};
     consData.val        = fmtV2(consData.val);
     consData.food_val   = fmtV2(consFoodVal);
     consData.nonfood_val= fmtV2(consNFVal);
+    finalizeByMonthValues(consData, fmtV2);
     orgBase = JSON.parse(JSON.stringify(consData));
   } else {
     orgBase = JSON.parse(JSON.stringify(
@@ -2680,6 +2760,7 @@ function getFilteredData(){
   }
   while(orgBase.del.length < 12) orgBase.del.push(0);
   while(orgBase.rej.length < 12) orgBase.rej.push(0);
+  REJ_LAST_ORG_BASE = orgBase;
 
   // Step 2: Get time-filtered data (day/month)
   var timeBase = null;
@@ -2750,15 +2831,33 @@ function getFilteredData(){
       reasons: (orgMonthData&&orgMonthData.reasons&&orgMonthData.reasons.length) ? orgMonthData.reasons : ((effectiveORG==='all') ? ((moInfo2.reasons&&moInfo2.reasons.length)?moInfo2.reasons:(orgBase.reasons||[])) : (orgBase.reasons||[])),
       custs: (orgMonthData&&orgMonthData.custs&&orgMonthData.custs.length) ? orgMonthData.custs : ((effectiveORG==='all') ? ((moInfo2.custs&&moInfo2.custs.length)?moInfo2.custs:(orgBase.custs||[])) : (orgBase.custs||[])),
       areas:(moInfo2.areas&&moInfo2.areas.length)?moInfo2.areas:(orgBase.areas||[]),
-      food_rej:moInfo2.food_rej||0, nonfood_rej:moInfo2.nonfood_rej||0,
-      ext_rej:moInfo2.ext_rej||0, int_rej:moInfo2.int_rej||0,
-      food_reasons:moInfo2.food_reasons||[], food_custs:moInfo2.food_custs||[],
-      nonfood_reasons:moInfo2.nonfood_reasons||[], nonfood_custs:moInfo2.nonfood_custs||[],
-      ext_reasons:moInfo2.ext_reasons||[], ext_custs:moInfo2.ext_custs||[],
-      int_reasons:moInfo2.int_reasons||[], int_custs:moInfo2.int_custs||[],
-      detail:moInfo2.detail||[], food_detail:moInfo2.food_detail||[],
-      nonfood_detail:moInfo2.nonfood_detail||[], ext_detail:moInfo2.ext_detail||[],
-      int_detail:moInfo2.int_detail||[]
+      // Prefer the ORG's own month breakdown when a specific org is selected — falling back
+      // to the all-org month total (moInfo2) here was the root cause of the >100% "Contribution
+      // to Rejection Rate" bug when ORG + MONTH + SOURCE(Internal/External) were combined.
+      food_rej: (effectiveORG!=='all' && orgMonthData) ? (orgMonthData.food_rej||0) : (moInfo2.food_rej||0),
+      nonfood_rej: (effectiveORG!=='all' && orgMonthData) ? (orgMonthData.nonfood_rej||0) : (moInfo2.nonfood_rej||0),
+      ext_rej: (effectiveORG!=='all' && orgMonthData) ? (orgMonthData.ext_rej||0) : (moInfo2.ext_rej||0),
+      int_rej: (effectiveORG!=='all' && orgMonthData) ? (orgMonthData.int_rej||0) : (moInfo2.int_rej||0),
+      food_del: (effectiveORG!=='all' && orgMonthData) ? (orgMonthData.food_del||0) : 0,
+      nonfood_del: (effectiveORG!=='all' && orgMonthData) ? (orgMonthData.nonfood_del||0) : 0,
+      ext_del: (effectiveORG!=='all' && orgMonthData) ? (orgMonthData.ext_del||0) : 0,
+      int_del: (effectiveORG!=='all' && orgMonthData) ? (orgMonthData.int_del||0) : 0,
+      food_val: (effectiveORG!=='all' && orgMonthData) ? (orgMonthData.food_val||'AED 0K') : (moInfo2.food_val||'AED 0K'),
+      nonfood_val: (effectiveORG!=='all' && orgMonthData) ? (orgMonthData.nonfood_val||'AED 0K') : (moInfo2.nonfood_val||'AED 0K'),
+      food_reasons: (effectiveORG!=='all' && orgMonthData && orgMonthData.food_reasons && orgMonthData.food_reasons.length) ? orgMonthData.food_reasons : (moInfo2.food_reasons||[]),
+      food_custs: (effectiveORG!=='all' && orgMonthData && orgMonthData.food_custs && orgMonthData.food_custs.length) ? orgMonthData.food_custs : (moInfo2.food_custs||[]),
+      nonfood_reasons: (effectiveORG!=='all' && orgMonthData && orgMonthData.nonfood_reasons && orgMonthData.nonfood_reasons.length) ? orgMonthData.nonfood_reasons : (moInfo2.nonfood_reasons||[]),
+      nonfood_custs: (effectiveORG!=='all' && orgMonthData && orgMonthData.nonfood_custs && orgMonthData.nonfood_custs.length) ? orgMonthData.nonfood_custs : (moInfo2.nonfood_custs||[]),
+      ext_reasons: (effectiveORG!=='all' && orgMonthData && orgMonthData.ext_reasons && orgMonthData.ext_reasons.length) ? orgMonthData.ext_reasons : (moInfo2.ext_reasons||[]),
+      ext_custs: (effectiveORG!=='all' && orgMonthData && orgMonthData.ext_custs && orgMonthData.ext_custs.length) ? orgMonthData.ext_custs : (moInfo2.ext_custs||[]),
+      int_reasons: (effectiveORG!=='all' && orgMonthData && orgMonthData.int_reasons && orgMonthData.int_reasons.length) ? orgMonthData.int_reasons : (moInfo2.int_reasons||[]),
+      int_custs: (effectiveORG!=='all' && orgMonthData && orgMonthData.int_custs && orgMonthData.int_custs.length) ? orgMonthData.int_custs : (moInfo2.int_custs||[]),
+      detail: (effectiveORG!=='all' && orgMonthData && orgMonthData.detail && orgMonthData.detail.length) ? orgMonthData.detail : (moInfo2.detail||[]),
+      food_detail: (effectiveORG!=='all' && orgMonthData && orgMonthData.food_detail && orgMonthData.food_detail.length) ? orgMonthData.food_detail : (moInfo2.food_detail||[]),
+      nonfood_detail: (effectiveORG!=='all' && orgMonthData && orgMonthData.nonfood_detail && orgMonthData.nonfood_detail.length) ? orgMonthData.nonfood_detail : (moInfo2.nonfood_detail||[]),
+      ext_detail: (effectiveORG!=='all' && orgMonthData && orgMonthData.ext_detail && orgMonthData.ext_detail.length) ? orgMonthData.ext_detail : (moInfo2.ext_detail||[]),
+      int_detail: (effectiveORG!=='all' && orgMonthData && orgMonthData.int_detail && orgMonthData.int_detail.length) ? orgMonthData.int_detail : (moInfo2.int_detail||[]),
+      _orgMonthScoped: !!(effectiveORG!=='all' && orgMonthData)
     };
   }
 
@@ -2793,7 +2892,14 @@ function getFilteredData(){
   var hasTimeFilter = (rejMonth !== 'all' || rejDay !== 'all' || rejSelectedDays.length > 0);
   var hasDayFilter  = (rejDay !== 'all' || rejSelectedDays.length > 0);
   // Month-level data (has food/nonfood/ext/int breakdown)
-  var moInfo3 = (rejMonth !== 'all') ? (DAY_DATA[rejMonth] || DAY_DATA[String(rejMonth)] || {}) : {};
+  // When a specific ORG (or combined group like Cookware/Elec) is selected, prefer that
+  // ORG's own month breakdown over the all-org month total — using the all-org total here
+  // was the root cause of the >100% "Contribution to Rejection Rate" bug when
+  // ORG + MONTH + SOURCE (Internal/External) were combined.
+  var moInfo3 = (rejMonth !== 'all')
+    ? ((effectiveORG !== 'all' && orgBase.byMonth && (orgBase.byMonth[rejMonth] || orgBase.byMonth[String(rejMonth)]))
+        || DAY_DATA[rejMonth] || DAY_DATA[String(rejMonth)] || {})
+    : {};
   // ORG-type alignment: if selected ORG matches type filter, ratio=1 (all their rej are that type)
   var FOOD_ORGS_LIST   = ['DCV','DCF'];
   var NONFOOD_ORGS_LIST = ['DGC','DGS','DSN','COOKWARE'];
@@ -3301,11 +3407,12 @@ oc.innerHTML=ORG_SUMMARY.map(function(o){
   // ── Customer · Location · Root Cause Detail Table ──
   var detailTbody = document.getElementById('rej-detail-tbody');
   if(detailTbody){
-    // Define orgBase in THIS scope
-    var rejOrgBase = ORG_DATA[rejORG==='all'?'all':rejORG] || ORG_DATA['all'] || {};
-
-    // DEBUG: log what we have
-    console.log('[DETAIL] rejOrgBase.custs:', (rejOrgBase.custs||[]).length, 'd.custs:', (d.custs||[]).length, 'detail:', (rejOrgBase.detail||[]).length);
+    // Reuse the exact orgBase that getFilteredData() (called as `d` above) already
+    // resolved — this correctly handles single orgs, combined groups (Cookware/Elec,
+    // Consumer DIC), and 'all'. Previously this re-derived its own lookup straight from
+    // ORG_DATA, which has no entry for combined groups and silently showed all orgs
+    // mixed together whenever Cookware/Elec or Consumer DIC was selected.
+    var rejOrgBase = REJ_LAST_ORG_BASE || ORG_DATA['all'] || {};
 
     // Pick correct detail key based on filters
     var detailKey = 'detail';
@@ -3412,7 +3519,10 @@ function exportDispatchExcel(){
 
 // REJECTION DETAIL EXCEL EXPORT
 function exportRejDetailExcel(){
-  var orgBase = ORG_DATA[rejORG==='all'?'all':rejORG] || ORG_DATA['all'] || {};
+  // Reuse the exact org resolution getFilteredData() already computed — see the
+  // matching fix in the Detail table above for why this matters (combined groups
+  // like Cookware/Elec and Consumer DIC have no entry in raw ORG_DATA).
+  var orgBase = REJ_LAST_ORG_BASE || ORG_DATA['all'] || {};
   var detKey2 = 'detail';
   if(rejType==='food')    detKey2='food_detail';
   else if(rejType==='nonfood') detKey2='nonfood_detail';
@@ -3424,8 +3534,15 @@ function exportRejDetailExcel(){
     var di5 = ((DAY_DATA[moKey5]||{}).data||{})[rejDay] || ((DAY_DATA[moKey5]||{}).data||{})[String(rejDay)];
     if(di5) detSrc2 = di5;
   } else if(rejMonth !== 'all'){
-    var moInfo5 = DAY_DATA[rejMonth] || DAY_DATA[String(rejMonth)] || {};
-    if(moInfo5 && moInfo5.detail) detSrc2 = moInfo5;
+    // Prefer this org's own month data — falling back to the all-org month total
+    // here mixed other organizations' rejections into a single-org/group export.
+    var orgMonthDetail5 = (orgBase.byMonth && (orgBase.byMonth[rejMonth] || orgBase.byMonth[String(rejMonth)])) || null;
+    if(orgMonthDetail5 && (orgMonthDetail5.detail || orgMonthDetail5.custs)){
+      detSrc2 = orgMonthDetail5;
+    } else if(rejORG === 'all'){
+      var moInfo5 = DAY_DATA[rejMonth] || DAY_DATA[String(rejMonth)] || {};
+      if(moInfo5 && moInfo5.detail) detSrc2 = moInfo5;
+    }
   }
   var detailRows = (detSrc2[detKey2] || detSrc2['detail'] || []);
   // Fallback: use correct filtered custs if detail not available
