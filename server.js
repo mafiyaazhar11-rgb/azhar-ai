@@ -457,6 +457,7 @@ function parseDispatch(buffer) {
             address: C.address ? toStr(row[C.address]) : '',
             customer: C.customer ? toStr(row[C.customer]) : '',
             isCashOrder: custNameForCash.indexOf('CASH') !== -1,
+            isInternalHub: loc.indexOf('INTERNAL-HUB::') === 0,
             routes: {}, ownRoutes: {}, typesByRoute: {}, valueByRoute: {}, orderCountByRoute: {}, ordersByRoute: {}
           };
         }
@@ -605,6 +606,7 @@ function parseDispatch(buffer) {
         address: lv.address,
         customer: lv.customer,
         isCashOrder: lv.isCashOrder,
+        isInternalHub: lv.isInternalHub,
         routes: ownRouteList,
         route_types: routeDetails,
         total_value: totalValue,
@@ -618,7 +620,7 @@ function parseDispatch(buffer) {
               : 'Same order type visited ' + ownRouteList.length + 'x — likely avoidable')
       };
     })
-    .filter(function(l) { return l.visit_count > 1 && !l.isCashOrder; })
+    .filter(function(l) { return l.visit_count > 1 && !l.isCashOrder && !l.isInternalHub; })
     .sort(function(a, b) { return (b.total_value - a.total_value) || (b.visit_count - a.visit_count); });
 
   var repeatLocationAvoidableCount = repeatLocations.filter(function(l) { return !l.is_legitimate_split; }).length;
