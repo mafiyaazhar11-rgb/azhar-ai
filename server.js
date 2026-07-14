@@ -304,6 +304,11 @@ function detectCityFromAddress(addressText, cityColumnValue) {
 function extractDriverName(contact) {
   var s = toStr(contact);
   if (!s) return '';
+  // Transport staff sometimes already label these explicitly, e.g. "Hired Driver-Ayaz 566" —
+  // that's a complete, meaningful identifier already; keep it whole instead of running it
+  // through the phone-number-stripping logic below, which would otherwise discard the name
+  // and collapse every distinct hired driver into one generic "Hired Driver" entry.
+  if (/^hired driver/i.test(s)) return s.trim();
   if (/^[A-Za-z][A-Za-z\s]{2,}$/.test(s)) return s.trim();
   var m = s.match(/^([A-Za-z][A-Za-z\s]{2,29})(?:\s*[-+\d])/);
   if (m) return m[1].trim();
@@ -365,6 +370,7 @@ function parseDispatch(buffer) {
     address:  findCol('CUSTOMER ADDRESS', 'ADDRESS'),
     keep:     findCol('KEEP TOGETHER', 'KEEP_TOGETHER', 'KEEPTOGETHER', 'KEEP'),
     type:     findCol('TYPE'),
+    temperature: findCol('TEMPERATURE', 'TEMP'),
     orderCode: findCol('ORDER CODE', 'ORDER_CODE') || findCol('ORDER '),
     org:      findCol('ORG') || findCol('BU') || findCol('ORGANIZATION') || findCol('ORG-BU')
   };
@@ -439,7 +445,11 @@ function parseDispatch(buffer) {
       // further below (but still counted normally for the own-fleet/3PL drop-cost split).
       // Also track the order TYPE per route-visit — Food and Non-Food often can't share a
       // truck, so a "repeat visit" that's actually Food+Non-Food is a legitimate separate
-      // trip, not a duplicate/avoidable one.
+      // trip, not a duplicate/avoidable one. Frozen vs Ambient of the SAME product type also
+      // needs a separate truck for temperature control, so that's folded into the same check.
+      var tempForRow = C.temperature ? toStr(row[C.temperature]).toUpperCase() : '';
+      var isFrozenRow = tempForRow.indexOf('FROZEN') !== -1;
+      var truckType = type + (isFrozenRow ? '-frozen' : (tempForRow ? '-ambient' : ''));
       if (loc) {
         var custNameForCash = C.customer ? toStr(row[C.customer]).toUpperCase() : '';
         if (!locationVisits[loc]) {
@@ -453,13 +463,14 @@ function parseDispatch(buffer) {
         locationVisits[loc].routes[route] = 1;
         if (type !== '3pl') locationVisits[loc].ownRoutes[route] = 1;
         if (!locationVisits[loc].typesByRoute[route]) locationVisits[loc].typesByRoute[route] = {};
-        locationVisits[loc].typesByRoute[route][type || 'other'] = true;
+        locationVisits[loc].typesByRoute[route][truckType || 'other'] = true;
         locationVisits[loc].valueByRoute[route] = (locationVisits[loc].valueByRoute[route] || 0) + amt;
         locationVisits[loc].orderCountByRoute[route] = (locationVisits[loc].orderCountByRoute[route] || 0) + 1;
         if (!locationVisits[loc].ordersByRoute[route]) locationVisits[loc].ordersByRoute[route] = [];
         locationVisits[loc].ordersByRoute[route].push({
           order_code: C.orderCode ? toStr(row[C.orderCode]) : '',
           type: type || 'other',
+          temperature: isFrozenRow ? 'Frozen' : (tempForRow ? 'Ambient' : ''),
           value: Math.round(amt)
         });
       }
@@ -519,7 +530,7 @@ function parseDispatch(buffer) {
     var typeMap = driverOrders[name].types || {};
     var topCustomers = Object.keys(custMap).sort(function(a,b){ return custMap[b]-custMap[a]; }).slice(0,3);
     var topTypes = Object.keys(typeMap).sort(function(a,b){ return typeMap[b]-typeMap[a]; });
-    return { name:name, orders:driverOrders[name].orders, drops:Object.keys(driverOrders[name].drops).length, value:Math.round(driverOrders[name].value), isHired: name.indexOf('Hired Driver (ID:') === 0, customers:topCustomers, types:topTypes };
+    return { name:name, orders:driverOrders[name].orders, drops:Object.keys(driverOrders[name].drops).length, value:Math.round(driverOrders[name].value), isHired: /^hired driver/i.test(name), customers:topCustomers, types:topTypes };
   });
   var topDrivers = driverList.slice().sort(function(a,b) { return b.orders-a.orders; }).slice(0,5);
   // Order-count ranking hides drivers who carry only a few, very high-value deliveries
