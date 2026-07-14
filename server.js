@@ -1515,34 +1515,38 @@ app.post('/api/dispatch/export-excel', async function(req, res) {
     var rl = wb.addWorksheet('Repeat Location Detail');
     rl.columns = [{width:14},{width:30},{width:40},{width:12},{width:26},{width:10},{width:14},{width:14},{width:16}];
     styleHeaderRow(rl.addRow(['Location ID', 'Customer', 'Address', 'Route', 'Order Code', 'Type', 'Order Value (AED)', 'Status', 'Location Total (AED)']));
+    var rlRowCount = 1;
     repeatLocs.forEach(function(l){
       var statusText = l.is_legitimate_split ? 'Required' : (l.is_high_value_exception ? 'Exception — Review' : 'Avoidable');
       var statusColor = l.is_legitimate_split ? REQBLUE : (l.is_high_value_exception ? 'FFFFE9A8' : AVOIDRED);
       var fontColor = l.is_legitimate_split ? 'FF1B5E9E' : (l.is_high_value_exception ? 'FF8B6914' : 'FFB0201A');
       (l.route_types || []).forEach(function(rt2){
         var orders = (rt2.orders && rt2.orders.length) ? rt2.orders : [{ order_code:'', type:(rt2.types||[])[0]||'', value: rt2.value }];
-        orders.forEach(function(ord, oi){
+        orders.forEach(function(ord){
           var row = rl.addRow([
-            oi === 0 ? l.location_id : '',
-            oi === 0 ? l.customer : '',
-            oi === 0 ? l.address : '',
+            l.location_id,
+            l.customer,
+            l.address,
             rt2.route,
             ord.order_code || '—',
             ord.type || '',
             ord.value || 0,
-            oi === 0 ? statusText : '',
-            oi === 0 ? (l.total_value || 0) : ''
+            statusText,
+            l.total_value || 0
           ]);
+          rlRowCount++;
           row.getCell(7).numFmt = '#,##0';
-          if (oi === 0) {
-            row.getCell(9).numFmt = '#,##0';
-            row.getCell(8).fill = { type:'pattern', pattern:'solid', fgColor:{argb: statusColor} };
-            row.getCell(8).font = { bold:true, color:{argb: fontColor} };
-            if (!l.is_legitimate_split) row.getCell(9).font = { bold:true, color:{argb: fontColor} };
-          }
+          row.getCell(9).numFmt = '#,##0';
+          row.getCell(8).fill = { type:'pattern', pattern:'solid', fgColor:{argb: statusColor} };
+          row.getCell(8).font = { bold:true, color:{argb: fontColor} };
+          row.getCell(9).font = { bold:true, color:{argb: fontColor} };
         });
       });
     });
+    // Enable AutoFilter on the header row so the Status column (blue=Required, red=Avoidable,
+    // amber=Exception) can be filtered directly in Excel — every row now carries its own
+    // Status value, so filtering shows complete, self-contained rows, not blank gaps.
+    rl.autoFilter = { from: { row: 1, column: 1 }, to: { row: rlRowCount, column: 9 } };
 
     var buf = await wb.xlsx.writeBuffer();
     res.setHeader('Content-Disposition', 'attachment; filename="Dispatch_Drop_Analysis_'+Date.now()+'.xlsx"');
