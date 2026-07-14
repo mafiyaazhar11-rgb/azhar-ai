@@ -933,7 +933,7 @@ function polishRootCause(raw) {
   if (!s) return s;
   var u = s.toUpperCase().trim();
   if (u.indexOf('MERCHANDISER') !== -1 && u.indexOf('ROUTE') !== -1) return 'Merchandiser Unavailable on Route';
-  if (u.indexOf('FIRST GRV') !== -1 || u.indexOf('COLLECT GRV') !== -1) return 'Pending Goods Receipt Voucher Not Ready (GRV)';
+  if (u.indexOf('FIRST GRV') !== -1 || u.indexOf('COLLECT GRV') !== -1) return 'Pending Goods Return Voucher Not Ready (GRV)';
   if (u.indexOf('SYSTEM NOT WORKING') !== -1) return 'Customer System Down';
   if (u.indexOf('SAME ITEM') !== -1 && u.indexOf('LPO') !== -1) return 'Duplicate Item Received Under Separate LPO';
   if (u.indexOf('HEAVY RAIN') !== -1 || (u.indexOf('ROAD CLOSURE') !== -1 && u.indexOf('RETURN') !== -1)) return 'Returned — Weather/Road Closure';
@@ -943,7 +943,7 @@ function polishRootCause(raw) {
   if (u.indexOf('NO SPACE') !== -1) return 'Declined — Insufficient Storage Space';
   if (u.indexOf('NO SCHEDULE') !== -1) return 'Declined — No Delivery Schedule Confirmed';
   if (u.indexOf('PAYMENT') !== -1 && (u.indexOf('NOT READY') !== -1 || u.indexOf('NOT READ') !== -1)) return 'Returned — Customer Payment Not Ready (Cheque/Cash)';
-  if (u.indexOf('NOT RELEECTED') !== -1 || u.indexOf('NOT REFLECTED') !== -1 || u.indexOf('NOT RELECTED') !== -1) return 'Declined — LPO Not Reflected in Customer System';
+  if (u.indexOf('LPO') !== -1 && u.indexOf('NOT') !== -1 && /L\w{0,3}ECTED/.test(u)) return 'Declined — LPO Not Reflected in Customer System';
   if (u.indexOf('SYSTEM UPDATING') !== -1) return 'Declined — Customer System Under Maintenance';
   if (u.indexOf('UNABLE TO ACCOMMODATE') !== -1) return 'Declined — Insufficient Storage Capacity Today';
   if (u.indexOf('RECEIVING TIME OVER') !== -1) return 'Declined — Outside Receiving Hours';
