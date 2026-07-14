@@ -718,6 +718,46 @@ footer span{color:#e8c878;}
         <div class="box"><div class="box-title">📈 Order Type Split</div><div class="donut-wrap"><svg class="donut-svg" width="100" height="100" viewBox="0 0 100 100"><circle cx="50" cy="50" r="35" fill="none" stroke="#2a2a1e" stroke-width="18"/><circle cx="50" cy="50" r="35" fill="none" stroke="#4ecb8d" stroke-width="18" id="donut-food" stroke-dasharray="0 220" stroke-dashoffset="55" style="transition:stroke-dasharray 1s;"/><circle cx="50" cy="50" r="35" fill="none" stroke="#5b8dee" stroke-width="18" id="donut-nonfood" stroke-dasharray="0 220" stroke-dashoffset="55" style="transition:stroke-dasharray 1s;"/><circle cx="50" cy="50" r="35" fill="none" stroke="#c9a84c" stroke-width="18" id="donut-pl" stroke-dasharray="0 220" stroke-dashoffset="55" style="transition:stroke-dasharray 1s;"/><text x="50" y="46" text-anchor="middle" font-size="11" fill="#c9a84c" font-weight="700" id="donut-center">—</text><text x="50" y="58" text-anchor="middle" font-size="7" fill="#7a7660">ORDERS</text></svg><div class="donut-legend" id="ds-donut-legend"></div></div></div>
       </div>
       <div class="grid-2" id="ds-tables" style="display:none;"><div class="box"><div class="box-title">💰 Top Customers by Value</div><div style="overflow-x:auto;-webkit-overflow-scrolling:touch;"><table class="data-table" style="min-width:340px;width:100%;"><thead><tr><th style="width:24px;">#</th><th>Customer</th><th style="width:50px;text-align:center;">Orders</th><th style="width:90px;text-align:right;">Value (AED)</th></tr></thead><tbody id="ds-cust-body"></tbody></table></div></div><div class="box"><div class="box-title">🚚 Top 5 Drivers</div><div id="ds-drivers-list" style="overflow-x:hidden;"></div></div></div>
+      <div class="box" id="ds-truckcost-box" style="display:none;margin-bottom:16px;">
+        <div class="box-title">🚛 Estimated Transport Cost <span style="font-size:10px;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0;">— based on transport team's FY26 rate card, billed per drop</span></div>
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:14px;">
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px;">
+            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Estimated Cost Today</div>
+            <div id="truckcost-total" style="font-size:22px;font-weight:800;color:var(--gold);margin-top:4px;">—</div>
+          </div>
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px;">
+            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Total Vehicles Used</div>
+            <div id="truckcost-vehicles" style="font-size:22px;font-weight:800;color:var(--gold);margin-top:4px;">—</div>
+          </div>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="data-table" style="width:100%;min-width:500px;">
+            <thead><tr><th>Vehicle Type</th><th style="text-align:center;">Rate (AED/Drop)</th><th style="text-align:center;">Drops Billed</th><th style="text-align:center;">Vehicles Used</th><th style="text-align:right;">Estimated Cost (AED)</th></tr></thead>
+            <tbody id="ds-truckcost-body"></tbody>
+          </table>
+        </div>
+        <div id="ds-truckcost-unmatched" style="display:none;margin-top:10px;font-size:11px;color:var(--muted);"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px;">
+          <div>
+            <div style="font-size:11px;color:var(--gold);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">By Region</div>
+            <div style="overflow-x:auto;max-height:220px;overflow-y:auto;">
+              <table class="data-table" style="width:100%;min-width:280px;">
+                <thead><tr><th>City</th><th style="text-align:center;">Drops</th><th style="text-align:right;">Cost (AED)</th></tr></thead>
+                <tbody id="ds-truckcost-region-body"></tbody>
+              </table>
+            </div>
+          </div>
+          <div>
+            <div style="font-size:11px;color:var(--gold);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">By Food / Non-Food</div>
+            <div style="overflow-x:auto;max-height:220px;overflow-y:auto;">
+              <table class="data-table" style="width:100%;min-width:280px;">
+                <thead><tr><th>Category</th><th style="text-align:center;">Drops</th><th style="text-align:right;">Cost (AED)</th></tr></thead>
+                <tbody id="ds-truckcost-foodtype-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
       <div class="box" id="ds-drivers-value-box" style="display:none;margin-bottom:16px;">
         <div class="box-title">💎 Top 5 Drivers by Value <span style="font-size:10px;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0;">— a driver with just a few high-value deliveries won't show up in the count-sorted list above</span></div>
         <div id="ds-drivers-value-list" style="overflow-x:hidden;"></div>
@@ -2299,6 +2339,46 @@ function buildDashboard(d){
     document.getElementById('cost-repeat-sub').textContent = 'of '+(ca.repeat_location_count||0)+' total repeat-visit addresses ('+((ca.repeat_location_count||0)-(ca.repeat_location_avoidable_count||0))+' were required Food+Non-Food splits)';
     document.getElementById('ds-cost-box').style.display='block';
   }
+
+  // ESTIMATED TRANSPORT COST — only shows once the truck-type column is present
+  if(s.truck_cost_estimate && s.truck_cost_estimate.available){
+    var tce = s.truck_cost_estimate;
+    document.getElementById('truckcost-total').textContent = 'AED '+(tce.total_estimated_cost||0).toLocaleString();
+    document.getElementById('truckcost-vehicles').textContent = (tce.total_vehicles||0).toLocaleString();
+    document.getElementById('ds-truckcost-body').innerHTML = tce.by_type.map(function(t){
+      return '<tr><td style="color:var(--gold);font-weight:600;">'+t.label+'</td>'
+        +'<td style="text-align:center;color:var(--muted);">'+t.rate.toLocaleString()+'</td>'
+        +'<td style="text-align:center;font-weight:700;">'+t.drop_count+'</td>'
+        +'<td style="text-align:center;color:var(--muted);">'+t.vehicle_count+'</td>'
+        +'<td style="text-align:right;font-weight:700;color:var(--gold);">'+t.estimated_cost.toLocaleString()+'</td></tr>';
+    }).join('');
+    var unmatchedKeys = Object.keys(tce.unmatched_truck_types || {});
+    if(unmatchedKeys.length){
+      document.getElementById('ds-truckcost-unmatched').innerHTML = '⚠ Some rows had a truck-type value not on the rate card, so they\\'re excluded from this estimate: ' + unmatchedKeys.map(function(k){ return k+' ('+tce.unmatched_truck_types[k]+' rows)'; }).join(', ');
+      document.getElementById('ds-truckcost-unmatched').style.display = 'block';
+    } else {
+      document.getElementById('ds-truckcost-unmatched').style.display = 'none';
+    }
+    if(tce.by_region && tce.by_region.length){
+      document.getElementById('ds-truckcost-region-body').innerHTML = tce.by_region.map(function(r){
+        return '<tr><td style="color:var(--gold);font-weight:600;">'+r.city+'</td>'
+          +'<td style="text-align:center;">'+r.total_drops+'</td>'
+          +'<td style="text-align:right;font-weight:700;">'+r.total_cost.toLocaleString()+'</td></tr>';
+      }).join('');
+    }
+    if(tce.by_food_type && tce.by_food_type.length){
+      var foodTypeColors = {'Food':'var(--green)','Non-Food':'#58a6ff','Mixed (Partition)':'var(--gold)','Other (3PL/Van)':'var(--muted)'};
+      document.getElementById('ds-truckcost-foodtype-body').innerHTML = tce.by_food_type.map(function(f){
+        var col = foodTypeColors[f.category] || 'var(--text)';
+        return '<tr><td style="color:'+col+';font-weight:600;">'+f.category+'</td>'
+          +'<td style="text-align:center;">'+f.drop_count+'</td>'
+          +'<td style="text-align:right;font-weight:700;">'+f.estimated_cost.toLocaleString()+'</td></tr>';
+      }).join('');
+    }
+    document.getElementById('ds-truckcost-box').style.display='block';
+  } else {
+    document.getElementById('ds-truckcost-box').style.display='none';
+  }
   if(s.repeat_locations && s.repeat_locations.length){
     document.getElementById('ds-repeat-body').innerHTML = s.repeat_locations.map(function(l){
       var routesLabel = (l.route_types||[]).map(function(rt){ return rt.route+' ('+rt.types.join('+')+', '+(rt.order_count||0)+' orders, AED '+rt.value.toLocaleString()+')'; }).join(', ') || l.routes.join(', ');
@@ -3312,7 +3392,8 @@ function exportDispatchExcel(){
       food_orders: s.food_orders, non_food_orders: s.non_food_orders, pl_orders: s.pl_orders,
       cost_analysis: s.cost_analysis, top_routes: s.top_routes,
       repeat_locations: s.repeat_locations, city_type_cross: s.city_type_cross,
-      driver_source_split: s.driver_source_split, top_drivers: s.top_drivers, top_drivers_by_value: s.top_drivers_by_value
+      driver_source_split: s.driver_source_split, top_drivers: s.top_drivers, top_drivers_by_value: s.top_drivers_by_value,
+      truck_cost_estimate: s.truck_cost_estimate
     })
   }).then(function(r){
     if (!r.ok) throw new Error('Export failed');
