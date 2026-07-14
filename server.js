@@ -389,6 +389,8 @@ function parseDispatch(buffer) {
     var amt = parseFloat(row[C.amount]) || 0;
     totalValue += amt;
     var type = normaliseType(C.type ? row[C.type] : '');
+    var tempForRow = C.temperature ? toStr(row[C.temperature]).toUpperCase() : '';
+    var isFrozenRow = tempForRow.indexOf('FROZEN') !== -1;
     if (type === 'food')   { foodOrders++;    foodValue    += amt; }
     else if (type === 'nonfood') { nonFoodOrders++; nonFoodValue += amt; }
     else if (type === '3pl')     { plOrders++; }
@@ -415,7 +417,12 @@ function parseDispatch(buffer) {
     }
     if (C.route && row[C.route]) {
       var route = toStr(row[C.route]);
-      if (!routes[route]) routes[route] = { locs:{}, drivers:{}, orders:0, value:0 };
+      if (!routes[route]) routes[route] = { locs:{}, drivers:{}, orders:0, value:0, types:{} };
+      var routeTypeLabel = (type||'other').charAt(0).toUpperCase()+(type||'other').slice(1);
+      if (type === 'nonfood') routeTypeLabel = 'Non-Food';
+      else if (type === '3pl') routeTypeLabel = '3PL';
+      if (tempForRow) routeTypeLabel += ' (' + (isFrozenRow ? 'Frozen' : 'Ambient') + ')';
+      routes[route].types[routeTypeLabel] = (routes[route].types[routeTypeLabel] || 0) + 1;
       var rawLoc = C.location ? toStr(row[C.location]) : '';
       // Internal cash-van transfers all drop at a fixed hub per city (not a real unique customer
       // address per transaction) — collapse them to one drop per city instead of counting every
@@ -447,8 +454,6 @@ function parseDispatch(buffer) {
       // truck, so a "repeat visit" that's actually Food+Non-Food is a legitimate separate
       // trip, not a duplicate/avoidable one. Frozen vs Ambient of the SAME product type also
       // needs a separate truck for temperature control, so that's folded into the same check.
-      var tempForRow = C.temperature ? toStr(row[C.temperature]).toUpperCase() : '';
-      var isFrozenRow = tempForRow.indexOf('FROZEN') !== -1;
       var truckType = type + (isFrozenRow ? '-frozen' : (tempForRow ? '-ambient' : ''));
       if (loc) {
         var custNameForCash = C.customer ? toStr(row[C.customer]).toUpperCase() : '';
@@ -501,7 +506,17 @@ function parseDispatch(buffer) {
   }).sort(function(a,b) { return b.value-a.value; }).slice(0,6);
 
   var topRoutes = Object.keys(routes).map(function(route) {
-    return { route:route, orders:routes[route].orders, drops:Object.keys(routes[route].locs).length, driverCount:Object.keys(routes[route].drivers).length, value:Math.round(routes[route].value) };
+    var typeMap = routes[route].types || {};
+    var topTypesForRoute = Object.keys(typeMap).sort(function(a,b){ return typeMap[b]-typeMap[a]; });
+    // A route carrying both Food AND Non-Food (or Frozen AND Ambient) in the same trip means
+    // this vehicle physically has separate compartments — it's a partition truck, not a
+    // single-type vehicle. Flag this so it's obvious without reading the Type column closely.
+    var hasFood = topTypesForRoute.some(function(t){ return t.indexOf('Food') === 0; });
+    var hasNonFood = topTypesForRoute.some(function(t){ return t.indexOf('Non-Food') === 0; });
+    var hasFrozen = topTypesForRoute.some(function(t){ return t.indexOf('Frozen') !== -1; });
+    var hasAmbient = topTypesForRoute.some(function(t){ return t.indexOf('Ambient') !== -1; });
+    var isPartitionVehicle = (hasFood && hasNonFood) || (hasFrozen && hasAmbient);
+    return { route:route, orders:routes[route].orders, drops:Object.keys(routes[route].locs).length, driverCount:Object.keys(routes[route].drivers).length, value:Math.round(routes[route].value), types:topTypesForRoute, isPartitionVehicle:isPartitionVehicle };
   }).sort(function(a,b) { return b.drops-a.drops; });
 
   // Count actual orders per driver (not route drops)
