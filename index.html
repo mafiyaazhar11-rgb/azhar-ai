@@ -903,7 +903,6 @@ footer span{color:#e8c878;}
           <span style="font-size:10px;color:#4ecb8d;margin:0 4px;">──COOKWARE/ELEC──</span>
           <button class="rej-pill" id="ro-dgs" onclick="rejFilter('org','DGS')" title="Cookware &amp; Electronics">DGS</button>
           <button class="rej-pill" id="ro-dsn" onclick="rejFilter('org','DSN')" title="Cookware &amp; Electronics">DSN</button>
-          <button class="rej-pill" id="ro-cook" onclick="rejFilter('org','COOKWARE')" title="DGS + DSN combined">Cookware/Elec</button>
         </div>
         <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;align-items:center;">
           <span style="font-size:13px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;min-width:24px;">MONTH</span>
@@ -942,8 +941,6 @@ footer span{color:#e8c878;}
           <button class="rej-pill on" id="rt-all" onclick="rejFilter('type','all')">All</button>
           <button class="rej-pill" id="rt-food" onclick="rejFilter('type','food')" title="DCV + DCF">Food</button>
           <button class="rej-pill" id="rt-nf" onclick="rejFilter('type','nonfood')" title="DGC + DGS + DSN">Non-Food</button>
-
-          <button class="rej-pill" id="rt-cook" onclick="rejFilter('type','cookware')" title="DGS + DSN">Cookware/Elec</button>
           <span style="width:1px;height:16px;background:var(--border);margin:0 6px;"></span>
           <span style="font-size:13px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;min-width:40px;">SOURCE</span>
           <button class="rej-pill on" id="rs-all" onclick="rejFilter('src','all')">All</button>
@@ -2487,10 +2484,10 @@ function lockAdmin(){document.getElementById('admin-lock').style.display='flex';
 // 
 const DAY_DATA  = {};
 const ORG_DATA  = { all:{del:[0,0,0,0,0,0,0,0,0,0,0,0],rej:[0,0,0,0,0,0,0,0,0,0,0,0],tDel:0,tRej:0,val:'',reasons:[],custs:[],areas:[]} };
-// Holds the exact orgBase object (single org, combined group like Cookware/Elec or
+// Holds the exact orgBase object (single org, combined group like Consumer DIC, or
 // Consumer DIC, or 'all') that getFilteredData() resolved on its most recent call.
 // Other rendering code (e.g. the Detail table) must reuse this instead of re-deriving
-// its own org lookup from ORG_DATA directly — ORG_DATA has no 'COOKWARE'/'CONSUMER_DIC'
+// its own org lookup from ORG_DATA directly — ORG_DATA has no 'CONSUMER_DIC'
 // entry, so any code doing that silently falls back to showing all orgs mixed together.
 var REJ_LAST_ORG_BASE = null;
 const ORG_SUMMARY = [];
@@ -2504,9 +2501,9 @@ function rejFilter(dim, val){
   const prefMap={bu:'rb-',org:'ro-',month:'rm-',type:'rt-',src:'rs-'};
   const idMap={
     bu:   {all:'rb-all',consumer:'rb-con',salon:'rb-sal'},
-    org:  {all:'ro-all',DCV:'ro-dcv',DGC:'ro-dgc',DSN:'ro-dsn',DGS:'ro-dgs',DCF:'ro-dcf',COOKWARE:'ro-cook'},
+    org:  {all:'ro-all',DCV:'ro-dcv',DGC:'ro-dgc',DSN:'ro-dsn',DGS:'ro-dgs',DCF:'ro-dcf'},
     month:{all:'rm-all',1:'rm-1',2:'rm-2',3:'rm-3',4:'rm-4',5:'rm-5',6:'rm-6',7:'rm-7',8:'rm-8',9:'rm-9',10:'rm-10',11:'rm-11',12:'rm-12'},
-    type: {all:'rt-all',food:'rt-food',nonfood:'rt-nf',cookware:'rt-cook'},
+    type: {all:'rt-all',food:'rt-food',nonfood:'rt-nf'},
     src:  {all:'rs-all',external:'rs-ext',internal:'rs-int'}
   };
 
@@ -2608,27 +2605,25 @@ function getFilteredData(){
 
   // Step -1: BU filter maps to ORG
   // Salon = DGC only
-  // Consumer DIC = DCV, DCF, DGS, DSN (not DGC/Salon)
-  // BU filter: Salon=DGC, Consumer DIC = everything except DGC
+  // Consumer DIC = DCV, DGC, DCF (DGS/DSN belong to Cookware/Elec only, filtered directly)
+  // BU filter: Salon=DGC, Consumer DIC = DCV+DGC+DCF
   var effectiveORG = rejORG;
   if(rejBU === 'salon'    && rejORG === 'all') effectiveORG = 'DGC';
   if(rejBU === 'consumer' && rejORG === 'all') effectiveORG = 'CONSUMER_DIC';
-  // New type filters map to ORG groups
-  if(rejType === 'cookware') effectiveORG = 'COOKWARE';
 
   // Step 0: Check if selected ORG is compatible with type filter
   // If DCV/DCF selected + Non-Food  return zeros
   // If DGC/DGS/DSN selected + Food  return zeros
   var FOOD_ORGS2    = ['DCV','DCF'];
   var NONFOOD_ORGS2 = ['DGC','DGS','DSN'];
-  if(effectiveORG !== 'all' && effectiveORG !== 'CONSUMER_DIC' && effectiveORG !== 'COOKWARE'){
+  if(effectiveORG !== 'all' && effectiveORG !== 'CONSUMER_DIC'){
     if(rejType === 'food'    && NONFOOD_ORGS2.indexOf(effectiveORG) >= 0)
       return {tDel:0,tRej:0,val:'AED 0K',del:[0,0,0,0,0,0,0,0,0,0,0,0],rej:[0,0,0,0,0,0,0,0,0,0,0,0],reasons:[],custs:[],areas:[]};
     if(rejType === 'nonfood' && FOOD_ORGS2.indexOf(effectiveORG) >= 0)
       return {tDel:0,tRej:0,val:'AED 0K',del:[0,0,0,0,0,0,0,0,0,0,0,0],rej:[0,0,0,0,0,0,0,0,0,0,0,0],reasons:[],custs:[],areas:[]};
   }
 
-  // Helpers to merge per-month org breakdowns for combined groups (Cookware/Elec = DGS+DSN,
+  // Helpers to merge per-month org breakdowns for the Consumer DIC combined group,
   // Consumer DIC = DCV+DCF+DGS+DSN) so ORG+MONTH+SOURCE filters work for these groups too,
   // not just single named orgs.
   function mergeMonthReasonArrays(a, b){
@@ -2646,7 +2641,7 @@ function getFilteredData(){
     return Object.keys(map).map(function(k){var p=k.split('|||'); return{cust:p[0],addr:p[1],root:p[2],n:map[k]};}).sort(function(x,y){return y.n-x.n;}).slice(0,100);
   }
   // Merge the YTD (all-months) detail arrays too, not just the per-month ones — otherwise
-  // a combined group (Cookware/Elec, Consumer DIC) has no Detail table data at all when
+  // a combined group (Consumer DIC) has no Detail table data at all when
   // no month filter is active.
   function mergeYTDDetail(target, v){
     target.detail = mergeMonthDetailArrays(target.detail||[], v.detail||[]);
@@ -2697,32 +2692,7 @@ function getFilteredData(){
 
   // Step 1: Get base ORG data (using effectiveORG from BU filter)
   var orgBase;
-  if(effectiveORG === 'COOKWARE'){
-    // Cookware/Electronics = DGS + DSN combined
-    var cookOrgs = ['DGS','DSN'];
-    var cookData = {tDel:0,tRej:0,val:0,food_rej:0,food_del:0,nonfood_rej:0,nonfood_del:0,ext_rej:0,int_rej:0,del:[0,0,0,0,0,0,0,0,0,0,0,0],rej:[0,0,0,0,0,0,0,0,0,0,0,0],reasons:{},custs:{},areas:{}};
-    var cookNFVal=0;
-    cookOrgs.forEach(function(o){
-      var v=ORG_DATA[o]; if(!v)return;
-      cookData.tDel+=v.tDel||0; cookData.tRej+=v.tRej||0;
-      cookData.nonfood_rej+=(v.nonfood_rej||0); cookData.nonfood_del+=(v.nonfood_del||0);
-      cookData.ext_rej+=(v.ext_rej||0); cookData.int_rej+=(v.int_rej||0);
-      var rv=parseFloat((v.val||'0').replace(/[^0-9.]/g,''))*((v.val||'').includes('M')?1000000:1000);
-      cookData.val+=rv;
-      var nv=parseFloat((v.nonfood_val||'0').replace(/[^0-9.]/g,''))*((v.nonfood_val||'').includes('M')?1000000:1000);
-      cookNFVal+=nv;
-      (v.del||[]).forEach(function(d,i){cookData.del[i]+=d;});
-      (v.rej||[]).forEach(function(r,i){cookData.rej[i]+=r;});
-      Object.keys(v.reasons||{}).forEach(function(k){cookData.reasons[k]=(cookData.reasons[k]||0)+(v.reasons[k]||0);});
-      mergeYTDDetail(cookData, v);
-      mergeOrgByMonth(cookData, v);
-    });
-    var fmtV3=function(n){return n>=1000000?'AED '+(n/1000000).toFixed(2)+'M':'AED '+Math.round(n/1000)+'K';};
-    cookData.val=fmtV3(cookData.val); cookData.nonfood_val=fmtV3(cookNFVal);
-    cookData.food_rej=0; cookData.food_del=0; // Cookware is 100% nonfood
-    finalizeByMonthValues(cookData, fmtV3);
-    orgBase = JSON.parse(JSON.stringify(cookData));
-  } else if(effectiveORG === 'CONSUMER_DIC'){
+  if(effectiveORG === 'CONSUMER_DIC'){
     // Consumer DIC = DCV + DGC + DCF only. DGS and DSN belong exclusively to
     // Cookware/Electrical — they must never be double-counted into Consumer DIC too.
     var consOrgs = ['DCV','DCF','DGC'];
@@ -2892,7 +2862,7 @@ function getFilteredData(){
   var hasTimeFilter = (rejMonth !== 'all' || rejDay !== 'all' || rejSelectedDays.length > 0);
   var hasDayFilter  = (rejDay !== 'all' || rejSelectedDays.length > 0);
   // Month-level data (has food/nonfood/ext/int breakdown)
-  // When a specific ORG (or combined group like Cookware/Elec) is selected, prefer that
+  // When a specific ORG (or the Consumer DIC combined group) is selected, prefer that
   // ORG's own month breakdown over the all-org month total — using the all-org total here
   // was the root cause of the >100% "Contribution to Rejection Rate" bug when
   // ORG + MONTH + SOURCE (Internal/External) were combined.
@@ -2902,7 +2872,7 @@ function getFilteredData(){
     : {};
   // ORG-type alignment: if selected ORG matches type filter, ratio=1 (all their rej are that type)
   var FOOD_ORGS_LIST   = ['DCV','DCF'];
-  var NONFOOD_ORGS_LIST = ['DGC','DGS','DSN','COOKWARE'];
+  var NONFOOD_ORGS_LIST = ['DGC','DGS','DSN'];
   var orgMatchesFood   = (effectiveORG !== 'all' && FOOD_ORGS_LIST.indexOf(effectiveORG) >= 0);
   var orgMatchesNF     = (effectiveORG !== 'all' && NONFOOD_ORGS_LIST.indexOf(effectiveORG) >= 0);
 
@@ -2993,8 +2963,6 @@ function getFilteredData(){
     // tDel for nonfood
     if(orgMatchesNF){
       base.tDel = rejMonth !== 'all' ? (orgBase.del[rejMonth-1]||0) : (orgBase.tDel||0);
-    } else if(rejType === 'cookware' || effectiveORG === 'COOKWARE'){
-      base.tDel = rejMonth !== 'all' ? (orgBase.del[rejMonth-1]||0) : (orgBase.tDel||0);
     } else if(rejMonth !== 'all'){
       var miNF2 = rejMonth - 1;
       var nfMonthDel2 = 0;
@@ -3019,7 +2987,7 @@ function getFilteredData(){
     if(nc.length>0) base.custs   = nc;
     // tRej = sum of nonfood ORG (DGC+DGS+DSN) rejections for the current period
     var nfRejCount = 0;
-    if(orgMatchesNF || effectiveORG === 'COOKWARE'){
+    if(orgMatchesNF){
       nfRejCount = base.tRej;
     } else {
       var nfOrgs = (effectiveORG === 'DGC') ? ['DGC'] : ['DGC','DGS','DSN'];
@@ -3408,10 +3376,10 @@ oc.innerHTML=ORG_SUMMARY.map(function(o){
   var detailTbody = document.getElementById('rej-detail-tbody');
   if(detailTbody){
     // Reuse the exact orgBase that getFilteredData() (called as `d` above) already
-    // resolved — this correctly handles single orgs, combined groups (Cookware/Elec,
+    // resolved — this correctly handles single orgs, the Consumer DIC combined group,
     // Consumer DIC), and 'all'. Previously this re-derived its own lookup straight from
     // ORG_DATA, which has no entry for combined groups and silently showed all orgs
-    // mixed together whenever Cookware/Elec or Consumer DIC was selected.
+    // mixed together whenever Consumer DIC was selected.
     var rejOrgBase = REJ_LAST_ORG_BASE || ORG_DATA['all'] || {};
 
     // Pick correct detail key based on filters
@@ -3521,7 +3489,7 @@ function exportDispatchExcel(){
 function exportRejDetailExcel(){
   // Reuse the exact org resolution getFilteredData() already computed — see the
   // matching fix in the Detail table above for why this matters (combined groups
-  // like Cookware/Elec and Consumer DIC have no entry in raw ORG_DATA).
+  // like Consumer DIC have no entry in raw ORG_DATA).
   var orgBase = REJ_LAST_ORG_BASE || ORG_DATA['all'] || {};
   var detKey2 = 'detail';
   if(rejType==='food')    detKey2='food_detail';
@@ -7415,7 +7383,6 @@ function executeVoiceAction(action, detail) {
       ['DCV','DGC','DSN','DGS','DCF'].forEach(function(o) {
         if (detail.toUpperCase().includes(o)) rejFilter('org', o);
       });
-      if (d.includes('cookware') || d.includes('electronic')) rejFilter('org','COOKWARE');
 
       // Type
       if (d.includes('non food') || d.includes('non-food') || d.includes('nonfood')) rejFilter('type','nonfood');
