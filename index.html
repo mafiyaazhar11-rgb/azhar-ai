@@ -3311,7 +3311,8 @@ function exportDispatchExcel(){
       total_routes: s.total_routes, total_drivers: s.total_drivers, total_drops: s.total_drops,
       food_orders: s.food_orders, non_food_orders: s.non_food_orders, pl_orders: s.pl_orders,
       cost_analysis: s.cost_analysis, top_routes: s.top_routes,
-      repeat_locations: s.repeat_locations, city_type_cross: s.city_type_cross
+      repeat_locations: s.repeat_locations, city_type_cross: s.city_type_cross,
+      driver_source_split: s.driver_source_split, top_drivers: s.top_drivers, top_drivers_by_value: s.top_drivers_by_value
     })
   }).then(function(r){
     if (!r.ok) throw new Error('Export failed');
