@@ -76,6 +76,22 @@ async function initDB() {
       total_orders INT,
       summary JSONB
     )`);
+    // Tracks every order code seen per dispatch date, so the same order code appearing
+    // again on a LATER date can be detected as a re-delivery (failed first attempt,
+    // re-attempted later) — not just a same-day duplicate.
+    await pool.query(`CREATE TABLE IF NOT EXISTS order_tracking (
+      id SERIAL PRIMARY KEY,
+      order_code TEXT NOT NULL,
+      date_key DATE NOT NULL,
+      customer TEXT,
+      value NUMERIC DEFAULT 0,
+      route TEXT,
+      org TEXT,
+      drop_type TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_order_tracking_code ON order_tracking(order_code)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_order_tracking_date ON order_tracking(date_key)`);
     // AUTH TABLES
     await pool.query(`CREATE TABLE IF NOT EXISTS users (
       id SERIAL PRIMARY KEY,
@@ -782,6 +798,74 @@ function parseDispatch(buffer) {
   };
 }
 
+//  ORDER-LEVEL EXTRACTION FOR RE-DELIVERY TRACKING 
+// Extracts a lightweight per-row record (order code, customer, value, route, org, type)
+// from a dispatch file, used to detect the SAME order code appearing again on a LATER
+// dispatch date (a true re-delivery — failed first attempt, re-attempted later), as
+// opposed to a same-day duplicate.
+function extractOrderRows(buffer) {
+  var wb = XLSX.read(buffer, { type: 'buffer', dense: true, cellDates: false, cellNF: false, cellHTML: false, cellFormula: false });
+  var sheetName = findDataSheet(wb);
+  var ws = wb.Sheets[sheetName];
+  var rows = XLSX.utils.sheet_to_json(ws, { defval: '', raw: true });
+  if (!rows.length) return [];
+
+  function findCol() {
+    var names = Array.prototype.slice.call(arguments);
+    return Object.keys(rows[0]).find(function(k) {
+      return names.some(function(n) { return k.toUpperCase().includes(n.toUpperCase()); });
+    }) || null;
+  }
+  var C = {
+    orderCode: findCol('ORDER CODE', 'ORDER_CODE') || findCol('ORDER '),
+    customer: findCol('CUSTOMER NAME', 'CUSTOMER'),
+    amount: findCol('TOTAL_AMOUNT', 'AMOUNT', 'VALUE'),
+    route: findCol('ROUTE'),
+    org: findCol('ORG') || findCol('BU') || findCol('ORGANIZATION') || findCol('ORG-BU'),
+    type: findCol('TYPE')
+  };
+  if (!C.orderCode) return []; // no order code column in this file — can't track re-delivery
+
+  var out = [];
+  rows.forEach(function(row) {
+    var code = toStr(row[C.orderCode]);
+    if (!code) return;
+    out.push({
+      order_code: code,
+      customer: C.customer ? toStr(row[C.customer]) : '',
+      value: C.amount ? (parseFloat(row[C.amount]) || 0) : 0,
+      route: C.route ? toStr(row[C.route]) : '',
+      org: C.org ? toStr(row[C.org]).toUpperCase() : '',
+      drop_type: C.type ? normaliseType(row[C.type]) : ''
+    });
+  });
+  return out;
+}
+
+async function saveOrderTracking(dateKey, orderRows) {
+  try {
+    await pool.query('DELETE FROM order_tracking WHERE date_key=$1', [dateKey]);
+    if (!orderRows.length) return true;
+    var CHUNK = 500;
+    for (var i = 0; i < orderRows.length; i += CHUNK) {
+      var chunk = orderRows.slice(i, i + CHUNK);
+      var vals = [];
+      var phs = [];
+      var idx = 1;
+      chunk.forEach(function(r) {
+        phs.push('($' + idx + ',$' + (idx+1) + ',$' + (idx+2) + ',$' + (idx+3) + ',$' + (idx+4) + ',$' + (idx+5) + ',$' + (idx+6) + ')');
+        vals.push(r.order_code, dateKey, r.customer, r.value, r.route, r.org, r.drop_type);
+        idx += 7;
+      });
+      await pool.query('INSERT INTO order_tracking (order_code, date_key, customer, value, route, org, drop_type) VALUES ' + phs.join(','), vals);
+    }
+    return true;
+  } catch(e) {
+    console.error('saveOrderTracking error:', e.message);
+    return false;
+  }
+}
+
 //  DISPATCH MEMORY (+ DB) 
 var dispatchHistory = {};
 var currentDispatch = null;
@@ -836,6 +920,15 @@ app.post('/api/dispatch/upload', upload.single('file'), async function(req, res)
     while (keys.length > 180) delete dispatchHistory[keys.shift()];
     saveJSON(DISPATCH_FILE, { history:dispatchHistory });
     console.log('Dispatch saved:', dateKey, dbOk ? '(DB+file)' : '(file only)');
+    // Track order codes for this date so re-delivery (same order, later day) can be detected.
+    // Wrapped separately so any issue here never breaks the main dispatch upload response.
+    try {
+      var orderRows = extractOrderRows(req.file.buffer);
+      await saveOrderTracking(dateKey, orderRows);
+      console.log('Order tracking saved:', dateKey, orderRows.length, 'order rows');
+    } catch(trackErr) {
+      console.error('Order tracking error (non-fatal):', trackErr.message);
+    }
     res.json({ success:true, summary:summary, uploadedAt:entry.uploadedAt, date:dateKey });
   } catch(e) {
     console.error('Dispatch upload error:', e.message);
@@ -854,6 +947,64 @@ app.get('/api/dispatch/date/:dateKey', function(req, res) {
   if (!entry) return res.json({ hasData:false });
   currentDispatch = entry;
   res.json({ hasData:true, uploadedAt:entry.uploadedAt, uploadedBy:entry.uploadedBy, summary:entry.summary, date:entry.date });
+});
+
+// Re-delivery tracking: finds order codes active on the given date that ALSO appear on
+// any EARLIER dispatch date — i.e. the same order was dispatched before, presumably
+// failed, and is being re-delivered now. Same-day duplicates are not counted here.
+app.get('/api/dispatch/redelivery/:dateKey', async function(req, res) {
+  try {
+    var dateKey = req.params.dateKey;
+    var todayRes = await pool.query('SELECT DISTINCT order_code FROM order_tracking WHERE date_key=$1', [dateKey]);
+    var todayCodes = todayRes.rows.map(function(r){ return r.order_code; });
+    if (!todayCodes.length) return res.json({ hasData:true, dateKey:dateKey, total_repeated_orders:0, total_value_at_risk:0, orders:[] });
+
+    var histRes = await pool.query(
+      'SELECT order_code, date_key, customer, value, route, org, drop_type FROM order_tracking WHERE order_code = ANY($1) AND date_key <= $2 ORDER BY date_key ASC',
+      [todayCodes, dateKey]
+    );
+
+    var byCode = {};
+    histRes.rows.forEach(function(r) {
+      if (!byCode[r.order_code]) byCode[r.order_code] = [];
+      byCode[r.order_code].push(r);
+    });
+
+    var repeated = [];
+    Object.keys(byCode).forEach(function(code) {
+      var occ = byCode[code];
+      var distinctDates = Array.from(new Set(occ.map(function(o) {
+        var dk = o.date_key;
+        return (dk && dk.toISOString) ? dk.toISOString().split('T')[0] : String(dk).split('T')[0];
+      })));
+      if (distinctDates.length > 1) {
+        var latest = occ[occ.length - 1];
+        repeated.push({
+          order_code: code,
+          customer: latest.customer || '',
+          value: parseFloat(latest.value) || 0,
+          org: latest.org || '',
+          route: latest.route || '',
+          drop_type: latest.drop_type || '',
+          times_delivered: distinctDates.length,
+          dates: distinctDates
+        });
+      }
+    });
+    repeated.sort(function(a, b) { return b.value - a.value; });
+
+    var totalValue = repeated.reduce(function(s, r) { return s + r.value; }, 0);
+    res.json({
+      hasData: true,
+      dateKey: dateKey,
+      total_repeated_orders: repeated.length,
+      total_value_at_risk: Math.round(totalValue),
+      orders: repeated.slice(0, 200)
+    });
+  } catch(e) {
+    console.error('redelivery endpoint error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
 });
 
 app.post('/api/dispatch/ask', function(req, res) {
