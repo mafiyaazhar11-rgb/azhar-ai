@@ -625,6 +625,8 @@ footer span{color:#e8c878;}
   <button class="sb-item" onclick="goTab('geninfo',this)"><span class="icon">👥</span> General Info</button>
   <button class="sb-item" onclick="goTab('automation',this)"><span class="icon">⚡</span> Automation Track</button>
   <button class="sb-item" onclick="goTab('delivery',this)"><span class="icon">📦</span> Delivery Schedule</button>
+  <button class="sb-item" id="horeca-nav-btn" onclick="goTab('horeca',this)"><span class="icon">🧾</span> HoReCa Orders</button>
+  <button class="sb-item" id="salesmen-nav-btn" onclick="goTab('salesmen',this)"><span class="icon">🧑‍💼</span> Salesman Management</button>
       </aside>
 
 <div class="main" id="mainContent">
@@ -1912,6 +1914,92 @@ footer span{color:#e8c878;}
     </div>
     <!-- END DELIVERY SCHEDULE PANEL -->
 
+    <!-- ══ HORECA ORDERS (CS Queue + Master Data Admin) ══════════════════════════════════ -->
+    <div class="panel" id="horeca">
+      <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
+        <button class="hc-tab hc-tab-on" data-hc="queue" onclick="hcShowTab('queue',this)" style="padding:9px 18px;background:rgba(201,168,76,0.12);border:1px solid var(--gold);color:var(--gold);font-family:Montserrat,sans-serif;font-size:11px;letter-spacing:1px;cursor:pointer;">📥 ORDERS QUEUE</button>
+        <button class="hc-tab" data-hc="master" onclick="hcShowTab('master',this)" style="padding:9px 18px;background:transparent;border:1px solid var(--border);color:var(--muted);font-family:Montserrat,sans-serif;font-size:11px;letter-spacing:1px;cursor:pointer;">📁 MASTER DATA UPLOAD</button>
+      </div>
+
+      <!-- QUEUE TAB -->
+      <div id="hc-queue-tab">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
+          <select id="hc-status-filter" onchange="hcLoadOrders()" style="background:#0d1117;border:1px solid var(--border);color:#f5f0e8;padding:8px 12px;font-size:12px;">
+            <option value="">All statuses</option>
+            <option value="pending">Pending</option>
+            <option value="approved">Approved</option>
+            <option value="sent">Sent</option>
+          </select>
+          <button onclick="hcLoadOrders()" style="padding:8px 14px;background:transparent;border:1px solid var(--border);color:var(--muted);font-size:11px;cursor:pointer;">🔄 Refresh</button>
+        </div>
+        <div id="hc-orders-list" style="display:flex;flex-direction:column;gap:10px;"></div>
+      </div>
+
+      <!-- MASTER DATA TAB -->
+      <div id="hc-master-tab" style="display:none;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+          <div style="border:1px solid var(--border);border-radius:8px;padding:18px;">
+            <div style="color:var(--gold);font-size:13px;font-weight:700;margin-bottom:10px;">Customer Master</div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">Upload the Customer Master Excel (sheet "Customar Master"). Existing rows are updated, new rows added — nothing is deleted.</div>
+            <input type="file" id="hc-cust-file" accept=".xlsx,.xls" style="display:none;" onchange="hcUploadMaster('customers', this)">
+            <button onclick="document.getElementById('hc-cust-file').click()" style="width:100%;padding:10px;background:rgba(201,168,76,0.1);border:1px solid var(--gold);color:var(--gold);font-size:12px;cursor:pointer;">⬆ Upload Customer Master</button>
+            <div id="hc-cust-result" style="font-size:11px;color:var(--muted);margin-top:8px;"></div>
+          </div>
+          <div style="border:1px solid var(--border);border-radius:8px;padding:18px;">
+            <div style="color:var(--gold);font-size:13px;font-weight:700;margin-bottom:10px;">Item Master</div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">Upload the Item Master Excel (Item Code, Description, Brand, Category). Existing rows are updated, new rows added — nothing is deleted.</div>
+            <input type="file" id="hc-item-file" accept=".xlsx,.xls" style="display:none;" onchange="hcUploadMaster('items', this)">
+            <button onclick="document.getElementById('hc-item-file').click()" style="width:100%;padding:10px;background:rgba(201,168,76,0.1);border:1px solid var(--gold);color:var(--gold);font-size:12px;cursor:pointer;">⬆ Upload Item Master</button>
+            <div id="hc-item-result" style="font-size:11px;color:var(--muted);margin-top:8px;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- END HORECA ORDERS PANEL -->
+
+    <!-- ══ SALESMAN MANAGEMENT ══════════════════════════════════ -->
+    <div class="panel" id="salesmen">
+      <div style="border:1px solid var(--border);border-radius:8px;padding:18px;margin-bottom:18px;">
+        <div style="color:var(--gold);font-size:13px;font-weight:700;margin-bottom:12px;">➕ Add Salesman Login</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+          <div>
+            <div style="font-size:10px;color:var(--muted);margin-bottom:4px;">Full Name</div>
+            <input type="text" id="sm-fullname" placeholder="e.g. Unaise Kadambodan Yousaf" style="width:100%;background:#0d1117;border:1px solid var(--border);color:#f5f0e8;padding:8px 10px;font-size:13px;box-sizing:border-box;">
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--muted);margin-bottom:4px;">Username (for login)</div>
+            <input type="text" id="sm-username" placeholder="e.g. unaise.k" style="width:100%;background:#0d1117;border:1px solid var(--border);color:#f5f0e8;padding:8px 10px;font-size:13px;box-sizing:border-box;">
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--muted);margin-bottom:4px;">Temporary Password</div>
+            <input type="text" id="sm-password" placeholder="min 6 characters" style="width:100%;background:#0d1117;border:1px solid var(--border);color:#f5f0e8;padding:8px 10px;font-size:13px;box-sizing:border-box;">
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--muted);margin-bottom:4px;">Link to Salesperson Code (from Customer Master)</div>
+            <select id="sm-code-select" style="width:100%;background:#0d1117;border:1px solid var(--border);color:#f5f0e8;padding:8px 10px;font-size:13px;box-sizing:border-box;">
+              <option value="">Loading codes...</option>
+            </select>
+          </div>
+        </div>
+        <button onclick="hcCreateSalesman()" style="padding:9px 20px;background:rgba(201,168,76,0.12);border:1px solid var(--gold);color:var(--gold);font-size:12px;cursor:pointer;">Create Login</button>
+        <div id="sm-create-result" style="font-size:11px;margin-top:8px;"></div>
+      </div>
+
+      <div style="color:var(--gold);font-size:13px;font-weight:700;margin-bottom:10px;">📋 Existing Salesmen</div>
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:12px;">
+          <thead>
+            <tr style="border-bottom:1px solid var(--border);text-align:left;color:var(--muted);">
+              <th style="padding:8px;">Name</th><th style="padding:8px;">Username</th><th style="padding:8px;">Linked Code</th>
+              <th style="padding:8px;">Customers</th><th style="padding:8px;">Orders</th><th style="padding:8px;">Status</th><th style="padding:8px;">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="sm-table-body"></tbody>
+        </table>
+      </div>
+    </div>
+    <!-- END SALESMAN MANAGEMENT PANEL -->
+
   </div>
   <footer>✦ &nbsp; Operations &amp; Customer Service Intelligence Platform &nbsp;·&nbsp; Control Tower &nbsp;·&nbsp; Powered by Azhar &nbsp;·&nbsp; V 4.0</footer>
 </div>
@@ -1951,7 +2039,9 @@ const TITLES={
   automation:['Automation Tracking YTD','DoxtrE Auto vs Manual Booking · Organisation Breakdown · Jan–Jun 2026'],
   delivery:  ['Delivery Schedule Compliance','Scheduled · Out of Schedule · No Schedule · Ambient & Frozen'],
   backlog:   ['WH Backlog Risk Command Center','Pure Risk · Advance Orders · Credit Hold · Frozen Pool · BU Ownership'],
-  returns:   ['Daily Returns Dashboard','Invoice Cancellations - GRV Returns - BU-wise Analysis']
+  returns:   ['Daily Returns Dashboard','Invoice Cancellations - GRV Returns - BU-wise Analysis'],
+  horeca:    ['HoReCa Orders','Salesman Order Queue · Auto-Booking Export · Master Data'],
+  salesmen:  ['Salesman Management','Create Logins · Assign Salesperson Codes · Track Activity']
 };
 function goTab(id,btn){
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
@@ -1967,6 +2057,8 @@ function goTab(id,btn){
   if(id==='sales') loadSalesFromServer();
   if(id==='summary') initMerchLookup();
   if(id==='geninfo') { loadGIFromServer(); setTimeout(voipCheckStatus, 500); }
+  if(id==='horeca') hcLoadOrders();
+  if(id==='salesmen') { hcLoadSalespersonCodes(); hcLoadSalesmen(); }
     var giStarW=document.getElementById('gi-star-wrap');if(giStarW){var cuGI=AUTH_USER&&(AUTH_USER.role==='superadmin'||AUTH_USER.role==='subadmin');giStarW.style.display=(id==='geninfo'&&cuGI)?'block':'none';}
   var dsStar=document.getElementById('ds-star-wrap');if(dsStar){var cuDS=AUTH_USER&&(AUTH_USER.role==='superadmin'||AUTH_USER.role==='subadmin');dsStar.style.display=(id==='dispatch'&&cuDS)?'block':'none';}
   // Update JARVIS current tab
@@ -7631,6 +7723,16 @@ function showApp() {
   if(main) main.style.display = '';
   applyDashboardAccess();
   applyUploadAccess();
+  var horecaBtn = document.getElementById('horeca-nav-btn');
+  if (horecaBtn) {
+    var canSeeHoreca = AUTH_USER && ['superadmin','subadmin','cs'].includes(AUTH_USER.role);
+    horecaBtn.style.display = canSeeHoreca ? '' : 'none';
+  }
+  var salesmenBtn = document.getElementById('salesmen-nav-btn');
+  if (salesmenBtn) {
+    var canSeeSalesmen = AUTH_USER && ['superadmin','subadmin'].includes(AUTH_USER.role);
+    salesmenBtn.style.display = canSeeSalesmen ? '' : 'none';
+  }
   addUserInfoTopbar();
   showDemoBanner();
   loadSalesFromServer();
@@ -9509,6 +9611,206 @@ function exportDSExcel() {
     html += '</tbody></table>';
   }
   downloadHTML(html, 'Delivery_Schedule_Compliance_' + new Date().toISOString().slice(0,10) + '.xls');
+}
+
+// ══ HORECA ORDERS MODULE ══════════════════════════════════
+function hcShowTab(name, btn) {
+  document.querySelectorAll('.hc-tab').forEach(function(b){ b.classList.remove('hc-tab-on'); b.style.background='transparent'; b.style.borderColor='var(--border)'; b.style.color='var(--muted)'; });
+  btn.classList.add('hc-tab-on'); btn.style.background='rgba(201,168,76,0.12)'; btn.style.borderColor='var(--gold)'; btn.style.color='var(--gold)';
+  document.getElementById('hc-queue-tab').style.display = name==='queue' ? 'block' : 'none';
+  document.getElementById('hc-master-tab').style.display = name==='master' ? 'block' : 'none';
+  if (name==='queue') hcLoadOrders();
+}
+
+async function hcLoadOrders() {
+  var list = document.getElementById('hc-orders-list');
+  if (!list) return;
+  list.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:20px;text-align:center;">Loading...</div>';
+  try {
+    var status = document.getElementById('hc-status-filter').value;
+    var url = '/api/horeca/orders' + (status ? ('?status='+status) : '');
+    var r = await fetch(url, { headers: { 'x-auth-token': AUTH_TOKEN } });
+    var data = await r.json();
+    if (!r.ok) throw new Error(data.error || 'Failed to load orders');
+    if (!data.orders.length) { list.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:20px;text-align:center;">No orders found.</div>'; return; }
+    var bySalesman = {};
+    data.orders.forEach(function(o){
+      var key = o.salesperson_name || 'Unassigned';
+      if (!bySalesman[key]) bySalesman[key] = [];
+      bySalesman[key].push(o);
+    });
+    var html = '';
+    Object.keys(bySalesman).forEach(function(sp){
+      html += '<div style="color:var(--gold);font-size:12px;font-weight:700;letter-spacing:1px;margin-top:8px;">👤 '+sp+'</div>';
+      bySalesman[sp].forEach(function(o){
+        var statusColor = o.status==='pending' ? '#e0b73f' : (o.status==='approved' ? '#37c98a' : '#4db8e5');
+        var lines = (o.lines||[]).map(function(l){ return l.item_code+' — '+l.qty+' '+l.uom; }).join('<br>');
+        html += '<div style="border:1px solid var(--border);border-radius:8px;padding:12px 14px;">'+
+          '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">'+
+            '<span style="color:var(--gold);font-weight:700;font-size:13px;">'+o.order_ref+'</span>'+
+            '<span style="font-size:10px;padding:3px 10px;border-radius:12px;background:rgba(255,255,255,0.06);color:'+statusColor+';font-weight:700;">'+o.status.toUpperCase()+'</span>'+
+          '</div>'+
+          '<div style="font-size:12px;color:#c9c3b0;margin-bottom:6px;">'+o.customer_name+(o.location?(' · '+o.location):'')+' · '+new Date(o.created_at).toLocaleString()+'</div>'+
+          '<div style="font-size:11px;color:var(--muted);margin-bottom:10px;">'+lines+'</div>'+
+          '<div style="display:flex;gap:8px;">'+
+            (o.status==='pending' ? '<button onclick="hcApprove('+o.id+')" style="padding:6px 12px;background:rgba(55,201,138,0.12);border:1px solid #37c98a;color:#37c98a;font-size:11px;cursor:pointer;">✓ Approve</button>' : '')+
+            (o.status==='approved' ? '<button onclick="hcExport('+o.id+')" style="padding:6px 12px;background:rgba(201,168,76,0.12);border:1px solid var(--gold);color:var(--gold);font-size:11px;cursor:pointer;">⬇ Download &amp; Send</button>' : '')+
+            (o.status==='sent' ? '<span style="font-size:11px;color:var(--muted);">Sent by '+(o.actioned_by||'')+'</span>' : '')+
+          '</div>'+
+        '</div>';
+      });
+    });
+    list.innerHTML = html;
+  } catch(e) {
+    list.innerHTML = '<div style="color:#e84b4b;font-size:12px;padding:20px;text-align:center;">'+e.message+'</div>';
+  }
+}
+
+async function hcApprove(id) {
+  try {
+    var r = await fetch('/api/horeca/orders/'+id+'/approve', { method:'POST', headers: { 'x-auth-token': AUTH_TOKEN } });
+    var data = await r.json();
+    if (!r.ok) throw new Error(data.error || 'Approve failed');
+    hcLoadOrders();
+  } catch(e) { alert(e.message); }
+}
+
+function hcExport(id) {
+  // Direct download via anchor with token — server responds with an .xlsx attachment
+  fetch('/api/horeca/orders/'+id+'/export-excel', { headers: { 'x-auth-token': AUTH_TOKEN } })
+    .then(function(r){
+      if (!r.ok) return r.json().then(function(d){ throw new Error(d.error||'Export failed'); });
+      return r.blob();
+    })
+    .then(function(blob){
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url; a.download = 'HoReCa_Order_'+id+'.xlsx';
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+      hcLoadOrders();
+    })
+    .catch(function(e){ alert(e.message); });
+}
+
+async function hcUploadMaster(kind, input) {
+  var file = input.files[0];
+  if (!file) return;
+  var resultEl = document.getElementById(kind==='customers' ? 'hc-cust-result' : 'hc-item-result');
+  resultEl.textContent = 'Uploading...';
+  var fd = new FormData();
+  fd.append('file', file);
+  try {
+    var r = await fetch('/api/horeca/master/'+kind+'/upload', { method:'POST', headers: { 'x-auth-token': AUTH_TOKEN }, body: fd });
+    var data = await r.json();
+    if (!r.ok) throw new Error(data.error || 'Upload failed');
+    resultEl.style.color = '#37c98a';
+    resultEl.textContent = 'Done: '+data.inserted+' added, '+data.updated+' updated, '+data.skipped+' skipped (of '+data.total_rows+' rows).';
+  } catch(e) {
+    resultEl.style.color = '#e84b4b';
+    resultEl.textContent = e.message;
+  } finally {
+    input.value = '';
+  }
+}
+
+// ══ SALESMAN MANAGEMENT ══════════════════════════════════
+async function hcLoadSalespersonCodes() {
+  var sel = document.getElementById('sm-code-select');
+  if (!sel) return;
+  try {
+    var r = await fetch('/api/horeca/salesperson-codes', { headers: { 'x-auth-token': AUTH_TOKEN } });
+    var data = await r.json();
+    if (!r.ok) throw new Error(data.error);
+    if (!data.codes.length) { sel.innerHTML = '<option value="">No codes found — upload Customer Master first</option>'; return; }
+    sel.innerHTML = '<option value="">Select code...</option>' + data.codes.map(function(c){
+      return '<option value="'+c.salesperson_code+'" data-name="'+(c.salesperson_name||'')+'">'+(c.salesperson_name||'')+' ('+c.salesperson_code+')</option>';
+    }).join('');
+  } catch(e) {
+    sel.innerHTML = '<option value="">Error loading codes</option>';
+  }
+}
+
+async function hcLoadSalesmen() {
+  var body = document.getElementById('sm-table-body');
+  if (!body) return;
+  body.innerHTML = '<tr><td colspan="7" style="padding:16px;text-align:center;color:var(--muted);">Loading...</td></tr>';
+  try {
+    var r = await fetch('/api/horeca/salesmen', { headers: { 'x-auth-token': AUTH_TOKEN } });
+    var data = await r.json();
+    if (!r.ok) throw new Error(data.error);
+    if (!data.salesmen.length) { body.innerHTML = '<tr><td colspan="7" style="padding:16px;text-align:center;color:var(--muted);">No salesman accounts yet.</td></tr>'; return; }
+    body.innerHTML = data.salesmen.map(function(s){
+      var statusBadge = s.active ? '<span style="color:#37c98a;">Active</span>' : '<span style="color:#e84b4b;">Disabled</span>';
+      return '<tr style="border-bottom:1px solid var(--border);">'+
+        '<td style="padding:8px;">'+s.full_name+'</td>'+
+        '<td style="padding:8px;color:var(--muted);">'+s.username+'</td>'+
+        '<td style="padding:8px;">'+(s.horeca_salesperson_code||'—')+'</td>'+
+        '<td style="padding:8px;">'+s.assigned_sites+'</td>'+
+        '<td style="padding:8px;">'+s.total_orders+'</td>'+
+        '<td style="padding:8px;">'+statusBadge+'</td>'+
+        '<td style="padding:8px;">'+
+          '<button onclick="hcToggleSalesman('+s.id+','+(!s.active)+')" style="padding:4px 10px;background:transparent;border:1px solid var(--border);color:var(--muted);font-size:11px;cursor:pointer;margin-right:6px;">'+(s.active?'Disable':'Enable')+'</button>'+
+          '<button onclick="hcResetSalesmanPw('+s.id+')" style="padding:4px 10px;background:transparent;border:1px solid var(--border);color:var(--muted);font-size:11px;cursor:pointer;">Reset PW</button>'+
+        '</td>'+
+      '</tr>';
+    }).join('');
+  } catch(e) {
+    body.innerHTML = '<tr><td colspan="7" style="padding:16px;text-align:center;color:#e84b4b;">'+e.message+'</td></tr>';
+  }
+}
+
+async function hcCreateSalesman() {
+  var resultEl = document.getElementById('sm-create-result');
+  var fullName = document.getElementById('sm-fullname').value.trim();
+  var username = document.getElementById('sm-username').value.trim();
+  var password = document.getElementById('sm-password').value;
+  var codeSel = document.getElementById('sm-code-select');
+  var code = codeSel.value;
+  var codeName = code ? codeSel.selectedOptions[0].getAttribute('data-name') : null;
+
+  if (!fullName || !username || !password) { resultEl.style.color='#e84b4b'; resultEl.textContent = 'Full name, username and password are required.'; return; }
+
+  try {
+    var r = await fetch('/api/horeca/salesmen', {
+      method: 'POST', headers: { 'Content-Type':'application/json', 'x-auth-token': AUTH_TOKEN },
+      body: JSON.stringify({ username: username, password: password, full_name: fullName, salesperson_code: code || null, salesperson_name: codeName })
+    });
+    var data = await r.json();
+    if (!r.ok) throw new Error(data.error || 'Create failed');
+    resultEl.style.color = '#37c98a';
+    resultEl.textContent = 'Created — ask them to log in at /orders.html and change their password.';
+    document.getElementById('sm-fullname').value=''; document.getElementById('sm-username').value=''; document.getElementById('sm-password').value=''; codeSel.value='';
+    hcLoadSalesmen();
+  } catch(e) {
+    resultEl.style.color = '#e84b4b';
+    resultEl.textContent = e.message;
+  }
+}
+
+async function hcToggleSalesman(id, newActive) {
+  try {
+    var r = await fetch('/api/horeca/salesmen/'+id, {
+      method:'PUT', headers: { 'Content-Type':'application/json', 'x-auth-token': AUTH_TOKEN },
+      body: JSON.stringify({ active: newActive })
+    });
+    if (!r.ok) { var d = await r.json(); throw new Error(d.error); }
+    hcLoadSalesmen();
+  } catch(e) { alert(e.message); }
+}
+
+async function hcResetSalesmanPw(id) {
+  var pw = prompt('Enter a new temporary password (min 6 characters):');
+  if (!pw) return;
+  try {
+    var r = await fetch('/api/horeca/salesmen/'+id+'/reset-password', {
+      method:'POST', headers: { 'Content-Type':'application/json', 'x-auth-token': AUTH_TOKEN },
+      body: JSON.stringify({ new_password: pw })
+    });
+    var data = await r.json();
+    if (!r.ok) throw new Error(data.error);
+    alert('Password reset. They must change it on next login.');
+  } catch(e) { alert(e.message); }
 }
 
 </script>
