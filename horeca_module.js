@@ -459,7 +459,7 @@ module.exports = function (app, pool, requireAuth, requireRole, upload, auditLog
       }
 
       ws.getCell('D1').value = 'ALPHAMED';
-      ws.getCell('D2').value = 'MATRIX ORDER FROM';
+      ws.getCell('D2').value = 'HORECA ORDER FORM';
       ws.getCell('A3').value = 'Customer name :';
       ws.getCell('B3').value = 'Customer Nmae : '; ws.getCell('B3').fill = FILL_LABEL;
       ws.getCell('C3').value = order.customer_name;
@@ -467,12 +467,14 @@ module.exports = function (app, pool, requireAuth, requireRole, upload, auditLog
       ws.getCell('G3').value = order.po_number || '';
       ws.getCell('A4').value = 'Customer Number  :';
       ws.getCell('B4').value = 'Cutomer code: '; ws.getCell('B4').fill = FILL_LABEL;
-      ws.getCell('C4').value = order.account_number; ws.getCell('C4').fill = FILL_WHITE; ws.getCell('C4').font = { bold: false };
+      const accountNumVal = order.account_number && !isNaN(order.account_number) ? Number(order.account_number) : order.account_number;
+      ws.getCell('C4').value = accountNumVal; ws.getCell('C4').fill = FILL_WHITE; ws.getCell('C4').font = { bold: false };
       ws.getCell('F4').value = 'Sales person name : ' + (order.salesperson_name || '');
       ws.getCell('B5').value = 'W/H :'; ws.getCell('B5').fill = FILL_YELLOW;
       ws.getCell('C5').value = 'DCF';
       ws.getCell('B6').value = 'Location Site ID :'; ws.getCell('B6').fill = FILL_LABEL;
-      ws.getCell('C6').value = order.site_use_id || '';
+      const siteIdVal = order.site_use_id && !isNaN(order.site_use_id) ? Number(order.site_use_id) : (order.site_use_id || '');
+      ws.getCell('C6').value = siteIdVal;
       ws.getCell('D6').value = 'Drp Down List';
       ws.getCell('F6').value = 'DATE: ' + new Date(order.created_at).toLocaleDateString('en-GB');
 
