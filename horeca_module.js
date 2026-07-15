@@ -272,7 +272,7 @@ module.exports = function (app, pool, requireAuth, requireRole, upload, auditLog
       if (lines.length > MAX_LINES_PER_ORDER) return res.status(400).json({ error: `Maximum ${MAX_LINES_PER_ORDER} lines per order` });
       for (const l of lines) {
         if (!l.item_code || !l.qty || !l.uom) return res.status(400).json({ error: 'Each line needs item code, qty and UOM' });
-        if (!['EA', 'CS'].includes(String(l.uom).toUpperCase())) return res.status(400).json({ error: 'UOM must be EA or CS' });
+        if (!['EA', 'CS', 'BNS'].includes(String(l.uom).toUpperCase())) return res.status(400).json({ error: 'UOM must be EA, CS or BNS' });
       }
 
       // soft daily-volume check (warning only, does not block)
@@ -381,28 +381,37 @@ module.exports = function (app, pool, requireAuth, requireRole, upload, auditLog
       const linesRes = await pool.query(`SELECT * FROM horeca_order_lines WHERE order_id=$1 ORDER BY id`, [req.params.id]);
 
       const wb = new ExcelJS.Workbook();
-      const ws = wb.addWorksheet('Order form');
+      const ws = wb.addWorksheet('Sheet1');
 
-      ws.mergeCells('B1:J1'); ws.getCell('B1').value = 'ALPHAMED'; ws.getCell('B1').alignment = { horizontal: 'center' };
-      ws.mergeCells('B2:J2'); ws.getCell('B2').value = 'MATRIX ORDER FORM'; ws.getCell('B2').alignment = { horizontal: 'center' };
-      ws.getCell('B3').value = 'Customer Name'; ws.getCell('C3').value = order.customer_name;
-      ws.getCell('H3').value = 'PO:'; ws.getCell('I3').value = order.po_number || '';
-      ws.getCell('B4').value = 'Customer code:'; ws.getCell('C4').value = order.account_number;
-      ws.getCell('H4').value = 'Sales person name :'; ws.getCell('I4').value = order.salesperson_name;
-      ws.getCell('B5').value = 'W/H :'; ws.getCell('C5').value = order.warehouse || 'DCF';
-      ws.getCell('B6').value = 'Location Site ID :'; ws.getCell('C6').value = order.site_use_id || '';
-      ws.getCell('H6').value = 'DATE:'; ws.getCell('I6').value = new Date(order.created_at).toLocaleDateString('en-GB');
+      ws.getCell('D1').value = 'ALPHAMED';
+      ws.getCell('D2').value = 'MATRIX ORDER FROM';
+      ws.getCell('A3').value = 'Customer name :';
+      ws.getCell('B3').value = 'Customer Nmae : ';
+      ws.getCell('C3').value = order.customer_name;
+      ws.getCell('F3').value = 'PO:';
+      ws.getCell('G3').value = order.po_number || '';
+      ws.getCell('A4').value = 'Customer Number  :';
+      ws.getCell('B4').value = 'Cutomer code: ';
+      ws.getCell('C4').value = order.account_number;
+      ws.getCell('F4').value = 'Sales person name : ' + (order.salesperson_name || '');
+      ws.getCell('B5').value = 'W/H :';
+      ws.getCell('C5').value = 'DCF';
+      ws.getCell('B6').value = 'Location Site ID :';
+      ws.getCell('C6').value = order.site_use_id || '';
+      ws.getCell('D6').value = 'Drp Down List';
+      ws.getCell('F6').value = 'DATE: ' + new Date(order.created_at).toLocaleDateString('en-GB');
 
       const headerRow = 7;
-      const headers = ['EA Barcode', 'AKI Code', 'Item Description', 'SUB CATEGORY', 'Price per pc/outer', 'Order in PC', 'FOC', 'UOM', 'TOTAL'];
-      headers.forEach((h, i) => { ws.getCell(headerRow, 2 + i).value = h; ws.getCell(headerRow, 2 + i).font = { bold: true }; });
+      const headers = ['Outer Barcode', 'EA Barcode', 'AKI Code', 'Item Description', 'SUB CATEGORY', 'Price per pc/outer', 'Order in PC', 'FOC', 'UOM', 'TOTAL'];
+      headers.forEach((h, i) => { ws.getCell(headerRow, 1 + i).value = h; ws.getCell(headerRow, 1 + i).font = { bold: true }; });
 
       linesRes.rows.forEach((l, idx) => {
         const r = headerRow + 1 + idx;
-        ws.getCell(r, 3).value = l.item_code;       // AKI Code
-        ws.getCell(r, 4).value = l.description || '';
-        ws.getCell(r, 7).value = l.qty;              // Order in PC
-        ws.getCell(r, 9).value = l.uom;              // UOM
+        ws.getCell(r, 3).value = l.item_code;        // C = AKI Code
+        ws.getCell(r, 4).value = l.description || ''; // D = Item Description
+        ws.getCell(r, 7).value = l.qty;               // G = Order in PC
+        ws.getCell(r, 9).value = l.uom;               // I = UOM
+        ws.getCell(r, 10).value = '-';                // J = TOTAL (Oracle-calculated, placeholder)
       });
 
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');

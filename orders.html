@@ -32,8 +32,8 @@
   .line-item{display:flex; flex-direction:column; gap:8px; background:var(--card2); border-radius:10px; padding:10px; margin-bottom:8px;}
   .line-row{display:flex; gap:8px; align-items:flex-end;}
   .line-field{flex:1; position:relative; min-width:0;}
-  .line-field.qty{flex:0 0 72px;}
-  .line-field.uom{flex:0 0 76px;}
+  .line-field.field-qty{flex:0 0 72px;}
+  .line-field.field-uom{flex:0 0 76px;}
   .mini-label{font-size:10px; color:var(--muted); margin-bottom:4px; display:block;}
   .item-result{padding:10px; border-bottom:1px solid #2a2a2c; font-size:13px;}
   .item-result b{color:var(--gold);}
@@ -85,7 +85,7 @@
   <div class="screen active" id="screen-new">
     <div class="card">
       <label style="margin-top:0;">W/H</label>
-      <input id="whCode" value="DCF">
+      <input id="whCode" value="DCF" disabled>
 
       <label>Customer</label>
       <select id="custSelect" onchange="onCustomerChange()"><option value="">Select customer...</option></select>
@@ -267,13 +267,13 @@ function addLine() {
       <div class="item-results descResults" style="position:absolute; background:#1a1a1c; border:1px solid #333; width:100%; z-index:20; max-height:160px; overflow:auto; border-radius:8px; display:none;"></div>
     </div>
     <div class="line-row">
-      <div class="line-field qty">
+      <div class="line-field field-qty">
         <span class="mini-label">Qty</span>
         <input class="qty" type="number" min="1" placeholder="Qty">
       </div>
-      <div class="line-field uom">
+      <div class="line-field field-uom">
         <span class="mini-label">UOM</span>
-        <select class="uom"><option value="EA">EA</option><option value="CS">CS</option></select>
+        <select class="uom"><option value="EA">EA</option><option value="CS">CS</option><option value="BNS">BNS</option></select>
       </div>
     </div>
   `;
