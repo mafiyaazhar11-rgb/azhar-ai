@@ -367,6 +367,15 @@ function vehicleTonnageBucket(vehTypeRaw) {
 function matchRateViaVehicleMaster(vehicleId, dropCountForVehicle) {
   var norm = normalizeVehicleNoForLookup(vehicleId);
   var v = VEHICLE_MASTER_MAP[norm];
+  if (!v) {
+    // Dispatch report may only carry the bare number (e.g. "18297") without the
+    // city/prefix code the Vehicle Master uses (e.g. "AUH 18 18297") — try matching on
+    // just the last digit group instead, which the Vehicle Master module also indexes.
+    var digitGroups = toStr(vehicleId).match(/\d+/g);
+    if (digitGroups && digitGroups.length) {
+      v = VEHICLE_MASTER_MAP['DIGITS:' + digitGroups[digitGroups.length - 1]];
+    }
+  }
   if (!v) return null;
   var tempBucket = vehicleTempBucket(v.vehicle_type_raw);
   if (!tempBucket) return null;
