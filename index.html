@@ -1975,7 +1975,7 @@ footer span{color:#e8c878;}
             <input type="text" id="sm-password" placeholder="min 6 characters" style="width:100%;background:#0d1117;border:1px solid var(--border);color:#f5f0e8;padding:8px 10px;font-size:13px;box-sizing:border-box;">
           </div>
           <div>
-            <div style="font-size:10px;color:var(--muted);margin-bottom:4px;">Link to Salesperson Code (from Customer Master)</div>
+            <div style="font-size:10px;color:var(--muted);margin-bottom:4px;">Link to Salesperson Name (from Customer Master)</div>
             <select id="sm-code-select" style="width:100%;background:#0d1117;border:1px solid var(--border);color:#f5f0e8;padding:8px 10px;font-size:13px;box-sizing:border-box;">
               <option value="">Loading codes...</option>
             </select>
@@ -1990,7 +1990,7 @@ footer span{color:#e8c878;}
         <table style="width:100%;border-collapse:collapse;font-size:12px;">
           <thead>
             <tr style="border-bottom:1px solid var(--border);text-align:left;color:var(--muted);">
-              <th style="padding:8px;">Name</th><th style="padding:8px;">Username</th><th style="padding:8px;">Linked Code</th>
+              <th style="padding:8px;">Name</th><th style="padding:8px;">Username</th><th style="padding:8px;">Linked Salesperson</th>
               <th style="padding:8px;">Customers</th><th style="padding:8px;">Orders</th><th style="padding:8px;">Status</th><th style="padding:8px;">Actions</th>
             </tr>
           </thead>
@@ -2041,7 +2041,7 @@ const TITLES={
   backlog:   ['WH Backlog Risk Command Center','Pure Risk · Advance Orders · Credit Hold · Frozen Pool · BU Ownership'],
   returns:   ['Daily Returns Dashboard','Invoice Cancellations - GRV Returns - BU-wise Analysis'],
   horeca:    ['HoReCa Orders','Salesman Order Queue · Auto-Booking Export · Master Data'],
-  salesmen:  ['Salesman Management','Create Logins · Assign Salesperson Codes · Track Activity']
+  salesmen:  ['Salesman Management','Create Logins · Link Salesperson Name · Track Activity']
 };
 function goTab(id,btn){
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
@@ -7696,6 +7696,7 @@ async function authBoot() {
     var r = await fetch('/api/auth/me', { headers: { 'x-auth-token': AUTH_TOKEN } });
     if (!r.ok) { AUTH_TOKEN=null; localStorage.removeItem('azhar_token'); showLogin(); return; }
     AUTH_USER = await r.json();
+    if (AUTH_USER.role === 'salesman') { window.location.href = '/orders.html'; return; }
     showApp();
   } catch(e) {
     // Network error (Render cold start) — retry once after 3 seconds
@@ -7828,6 +7829,7 @@ async function doLogin() {
     if(!r.ok){errEl.textContent=data.error||'Login failed';errEl.style.display='block';btn.textContent='SIGN IN →';btn.disabled=false;document.getElementById('login-pass').value='';return;}
     AUTH_TOKEN=data.token; AUTH_USER=data.user;
     localStorage.setItem('azhar_token', AUTH_TOKEN);
+    if (AUTH_USER.role === 'salesman') { window.location.href = '/orders.html'; return; }
     btn.textContent='SIGN IN →'; btn.disabled=false;
     showApp();
   } catch(e){errEl.textContent='Connection error';errEl.style.display='block';btn.textContent='SIGN IN →';btn.disabled=false;}
@@ -9722,12 +9724,12 @@ async function hcLoadSalespersonCodes() {
     var r = await fetch('/api/horeca/salesperson-codes', { headers: { 'x-auth-token': AUTH_TOKEN } });
     var data = await r.json();
     if (!r.ok) throw new Error(data.error);
-    if (!data.codes.length) { sel.innerHTML = '<option value="">No codes found — upload Customer Master first</option>'; return; }
-    sel.innerHTML = '<option value="">Select code...</option>' + data.codes.map(function(c){
-      return '<option value="'+c.salesperson_code+'" data-name="'+(c.salesperson_name||'')+'">'+(c.salesperson_name||'')+' ('+c.salesperson_code+')</option>';
+    if (!data.codes.length) { sel.innerHTML = '<option value="">No names found — upload Customer Master first</option>'; return; }
+    sel.innerHTML = '<option value="">Select salesperson name...</option>' + data.codes.map(function(c){
+      return '<option value="'+c.salesperson_name+'">'+c.salesperson_name+'</option>';
     }).join('');
   } catch(e) {
-    sel.innerHTML = '<option value="">Error loading codes</option>';
+    sel.innerHTML = '<option value="">Error loading names</option>';
   }
 }
 
@@ -9745,13 +9747,14 @@ async function hcLoadSalesmen() {
       return '<tr style="border-bottom:1px solid var(--border);">'+
         '<td style="padding:8px;">'+s.full_name+'</td>'+
         '<td style="padding:8px;color:var(--muted);">'+s.username+'</td>'+
-        '<td style="padding:8px;">'+(s.horeca_salesperson_code||'—')+'</td>'+
+        '<td style="padding:8px;">'+(s.horeca_salesperson_name||'—')+'</td>'+
         '<td style="padding:8px;">'+s.assigned_sites+'</td>'+
         '<td style="padding:8px;">'+s.total_orders+'</td>'+
         '<td style="padding:8px;">'+statusBadge+'</td>'+
         '<td style="padding:8px;">'+
           '<button onclick="hcToggleSalesman('+s.id+','+(!s.active)+')" style="padding:4px 10px;background:transparent;border:1px solid var(--border);color:var(--muted);font-size:11px;cursor:pointer;margin-right:6px;">'+(s.active?'Disable':'Enable')+'</button>'+
-          '<button onclick="hcResetSalesmanPw('+s.id+')" style="padding:4px 10px;background:transparent;border:1px solid var(--border);color:var(--muted);font-size:11px;cursor:pointer;">Reset PW</button>'+
+          '<button onclick="hcResetSalesmanPw('+s.id+')" style="padding:4px 10px;background:transparent;border:1px solid var(--border);color:var(--muted);font-size:11px;cursor:pointer;margin-right:6px;">Reset PW</button>'+
+          '<button onclick="hcDeleteSalesman('+s.id+',\'' + s.username + '\')" style="padding:4px 10px;background:transparent;border:1px solid #e84b4b;color:#e84b4b;font-size:11px;cursor:pointer;">Delete</button>'+
         '</td>'+
       '</tr>';
     }).join('');
@@ -9766,15 +9769,15 @@ async function hcCreateSalesman() {
   var username = document.getElementById('sm-username').value.trim();
   var password = document.getElementById('sm-password').value;
   var codeSel = document.getElementById('sm-code-select');
-  var code = codeSel.value;
-  var codeName = code ? codeSel.selectedOptions[0].getAttribute('data-name') : null;
+  var spName = codeSel.value;
 
   if (!fullName || !username || !password) { resultEl.style.color='#e84b4b'; resultEl.textContent = 'Full name, username and password are required.'; return; }
+  if (!spName) { resultEl.style.color='#e84b4b'; resultEl.textContent = 'Please select the matching Salesperson Name.'; return; }
 
   try {
     var r = await fetch('/api/horeca/salesmen', {
       method: 'POST', headers: { 'Content-Type':'application/json', 'x-auth-token': AUTH_TOKEN },
-      body: JSON.stringify({ username: username, password: password, full_name: fullName, salesperson_code: code || null, salesperson_name: codeName })
+      body: JSON.stringify({ username: username, password: password, full_name: fullName, salesperson_name: spName })
     });
     var data = await r.json();
     if (!r.ok) throw new Error(data.error || 'Create failed');
@@ -9810,6 +9813,16 @@ async function hcResetSalesmanPw(id) {
     var data = await r.json();
     if (!r.ok) throw new Error(data.error);
     alert('Password reset. They must change it on next login.');
+  } catch(e) { alert(e.message); }
+}
+
+async function hcDeleteSalesman(id, username) {
+  if (!confirm('Delete login for "'+username+'"? This cannot be undone. Their past orders stay on record.')) return;
+  try {
+    var r = await fetch('/api/horeca/salesmen/'+id, { method:'DELETE', headers: { 'x-auth-token': AUTH_TOKEN } });
+    var data = await r.json();
+    if (!r.ok) throw new Error(data.error);
+    hcLoadSalesmen();
   } catch(e) { alert(e.message); }
 }
 
