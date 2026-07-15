@@ -57,6 +57,7 @@ module.exports = function (app, pool, requireAuth, requireRole, upload, auditLog
         site_use_id TEXT,
         location TEXT,
         po_number TEXT,
+        warehouse TEXT DEFAULT 'DCF',
         status TEXT DEFAULT 'pending',
         created_at TIMESTAMPTZ DEFAULT NOW(),
         actioned_at TIMESTAMPTZ,
@@ -265,7 +266,7 @@ module.exports = function (app, pool, requireAuth, requireRole, upload, auditLog
   app.post('/api/horeca/orders', requireAuth, requireHorecaRole('salesman'), async function (req, res) {
     const client = await pool.connect();
     try {
-      const { account_number, customer_name, site_use_id, location, po_number, lines } = req.body;
+      const { account_number, customer_name, site_use_id, location, po_number, warehouse, lines } = req.body;
       if (!account_number || !customer_name) return res.status(400).json({ error: 'Customer is required' });
       if (!Array.isArray(lines) || lines.length === 0) return res.status(400).json({ error: 'At least one order line is required' });
       if (lines.length > MAX_LINES_PER_ORDER) return res.status(400).json({ error: `Maximum ${MAX_LINES_PER_ORDER} lines per order` });
@@ -283,9 +284,9 @@ module.exports = function (app, pool, requireAuth, requireRole, upload, auditLog
       await client.query('BEGIN');
       const orderRef = await nextOrderRef();
       const orderRes = await client.query(
-        `INSERT INTO horeca_orders (order_ref, salesman_user_id, salesperson_name, account_number, customer_name, site_use_id, location, po_number, status)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'pending') RETURNING id, order_ref, created_at`,
-        [orderRef, req.user.uid, req.user.full_name || req.user.username, account_number, customer_name, site_use_id || null, location || null, po_number || null]
+        `INSERT INTO horeca_orders (order_ref, salesman_user_id, salesperson_name, account_number, customer_name, site_use_id, location, po_number, warehouse, status)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'pending') RETURNING id, order_ref, created_at`,
+        [orderRef, req.user.uid, req.user.full_name || req.user.username, account_number, customer_name, site_use_id || null, location || null, po_number || null, warehouse || 'DCF']
       );
       const orderId = orderRes.rows[0].id;
       for (const l of lines) {
@@ -388,7 +389,7 @@ module.exports = function (app, pool, requireAuth, requireRole, upload, auditLog
       ws.getCell('H3').value = 'PO:'; ws.getCell('I3').value = order.po_number || '';
       ws.getCell('B4').value = 'Customer code:'; ws.getCell('C4').value = order.account_number;
       ws.getCell('H4').value = 'Sales person name :'; ws.getCell('I4').value = order.salesperson_name;
-      ws.getCell('B5').value = 'W/H :';
+      ws.getCell('B5').value = 'W/H :'; ws.getCell('C5').value = order.warehouse || 'DCF';
       ws.getCell('B6').value = 'Location Site ID :'; ws.getCell('C6').value = order.site_use_id || '';
       ws.getCell('H6').value = 'DATE:'; ws.getCell('I6').value = new Date(order.created_at).toLocaleDateString('en-GB');
 

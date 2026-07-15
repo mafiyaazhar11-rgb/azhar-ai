@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>HoReCa Orders</title>
+<title>AKI HoReCa Orders</title>
 <style>
   :root{
     --gold:#d4af37; --gold-dark:#b8942e; --bg:#0f0f10; --card:#1a1a1c;
@@ -29,10 +29,12 @@
   .btn-primary:disabled{opacity:.4;}
   .btn-secondary{background:var(--card2); color:var(--gold); border:1px solid var(--gold-dark); padding:10px 14px;}
   .btn-danger{background:transparent; color:var(--danger); border:1px solid var(--danger); padding:6px 10px; font-size:12px;}
-  .line-item{display:flex; gap:8px; align-items:flex-end; background:var(--card2); border-radius:8px; padding:10px; margin-bottom:8px;}
-  .line-item .grow{flex:1;}
-  .line-item .qty{width:60px;}
-  .line-item .uom{width:70px;}
+  .line-item{display:flex; flex-direction:column; gap:8px; background:var(--card2); border-radius:10px; padding:10px; margin-bottom:8px;}
+  .line-row{display:flex; gap:8px; align-items:flex-end;}
+  .line-field{flex:1; position:relative; min-width:0;}
+  .line-field.qty{flex:0 0 72px;}
+  .line-field.uom{flex:0 0 76px;}
+  .mini-label{font-size:10px; color:var(--muted); margin-bottom:4px; display:block;}
   .item-result{padding:10px; border-bottom:1px solid #2a2a2c; font-size:13px;}
   .item-result b{color:var(--gold);}
   .badge{display:inline-block; padding:3px 9px; border-radius:20px; font-size:11px; font-weight:600;}
@@ -54,8 +56,8 @@
 
 <div id="loginScreen" class="login-wrap">
   <div class="card" style="width:100%; max-width:360px;">
-    <h1 style="color:var(--gold); text-align:center; margin-bottom:4px;">HoReCa Orders</h1>
-    <div style="text-align:center; color:var(--muted); font-size:12px; margin-bottom:20px;">AZHAR-AI · Sales Order Entry</div>
+    <h1 style="color:var(--gold); text-align:center; margin-bottom:4px;">AKI HoReCa</h1>
+    <div style="text-align:center; color:var(--muted); font-size:12px; margin-bottom:20px;">Sales Order Entry</div>
     <label>Username</label>
     <input id="loginUser" autocomplete="username">
     <label>Password</label>
@@ -67,7 +69,7 @@
 
 <div id="appShell" style="display:none;">
   <header>
-    <h1>HoReCa Orders</h1>
+    <h1>AKI HoReCa</h1>
     <div style="text-align:right;">
       <div class="user" id="userLabel"></div>
       <button class="btn-secondary" style="margin-top:4px; padding:4px 10px; font-size:11px;" onclick="doLogout()">Log out</button>
@@ -82,12 +84,19 @@
   <!-- NEW ORDER -->
   <div class="screen active" id="screen-new">
     <div class="card">
+      <label style="margin-top:0;">W/H</label>
+      <input id="whCode" value="DCF">
+
       <label>Customer</label>
       <select id="custSelect" onchange="onCustomerChange()"><option value="">Select customer...</option></select>
 
       <div id="siteWrap" style="display:none;">
         <label>Location</label>
-        <select id="siteSelect"></select>
+        <div style="position:relative;">
+          <input id="siteSearch" placeholder="Search location..." autocomplete="off" oninput="filterSites(this.value)" onfocus="filterSites(this.value)">
+          <input type="hidden" id="siteSelectedIdx">
+          <div id="siteResults" style="position:absolute; background:#1a1a1c; border:1px solid #333; width:100%; z-index:20; max-height:180px; overflow:auto; border-radius:8px; display:none;"></div>
+        </div>
       </div>
 
       <label>Salesperson</label>
@@ -102,6 +111,7 @@
       <div id="lineList"></div>
       <button class="btn-secondary" style="width:100%; margin-top:8px;" onclick="addLine()">+ Add Line</button>
     </div>
+
 
     <div id="orderMsg" style="color:var(--danger); font-size:13px; margin-bottom:6px;"></div>
     <button class="btn-primary" id="submitBtn" onclick="submitOrder()">Submit Order</button>
@@ -192,17 +202,46 @@ async function loadCustomers() {
     CUSTOMERS.map((c,i)=>`<option value="${i}">${c.customer_name} (${c.account_number})</option>`).join('');
 }
 
+let SELECTED_SITE = null;
+
 function onCustomerChange() {
   const idx = document.getElementById('custSelect').value;
   const siteWrap = document.getElementById('siteWrap');
+  const siteSearch = document.getElementById('siteSearch');
+  SELECTED_SITE = null;
+  siteSearch.value = '';
+  document.getElementById('siteSelectedIdx').value = '';
   if (idx === '') { siteWrap.style.display='none'; return; }
   const cust = CUSTOMERS[idx];
-  if (cust.sites.length > 1) {
-    siteWrap.style.display = 'block';
-    document.getElementById('siteSelect').innerHTML = cust.sites.map((s,i)=>`<option value="${i}">${s.location||'Site'} ${s.site_use_id?('- '+s.site_use_id):''}</option>`).join('');
-  } else {
-    siteWrap.style.display = 'none';
+  if (cust.sites.length === 0) { siteWrap.style.display='none'; return; }
+  siteWrap.style.display = 'block';
+  if (cust.sites.length === 1) {
+    SELECTED_SITE = cust.sites[0];
+    siteSearch.value = (cust.sites[0].location || 'Site') + (cust.sites[0].site_use_id ? (' - ' + cust.sites[0].site_use_id) : '');
   }
+}
+
+function filterSites(q) {
+  const idx = document.getElementById('custSelect').value;
+  const box = document.getElementById('siteResults');
+  if (idx === '') { box.style.display='none'; return; }
+  const cust = CUSTOMERS[idx];
+  const query = (q||'').toLowerCase();
+  const matches = cust.sites.filter(s => !query || (s.location||'').toLowerCase().includes(query) || (s.site_use_id||'').toLowerCase().includes(query));
+  if (!matches.length) { box.style.display='none'; return; }
+  box.innerHTML = matches.map((s,i)=>{
+    const realIdx = cust.sites.indexOf(s);
+    return `<div class="item-result" onclick='selectSite(${realIdx})'><b>${s.location||'Site'}</b>${s.site_use_id?(' — '+s.site_use_id):''}</div>`;
+  }).join('');
+  box.style.display = 'block';
+}
+function selectSite(siteIdx) {
+  const idx = document.getElementById('custSelect').value;
+  const cust = CUSTOMERS[idx];
+  const site = cust.sites[siteIdx];
+  SELECTED_SITE = site;
+  document.getElementById('siteSearch').value = (site.location||'Site') + (site.site_use_id?(' - '+site.site_use_id):'');
+  document.getElementById('siteResults').style.display = 'none';
 }
 
 let itemSearchTimers = {};
@@ -214,22 +253,38 @@ function addLine() {
   wrap.className = 'line-item';
   wrap.id = id;
   wrap.innerHTML = `
-    <div class="grow" style="position:relative;">
-      <input placeholder="Search item code / description" oninput="searchItem('${id}', this.value)" autocomplete="off">
-      <input type="hidden" class="itemCode">
-      <div class="item-results" style="position:absolute; background:#1a1a1c; border:1px solid #333; width:100%; z-index:20; max-height:160px; overflow:auto; border-radius:8px; display:none;"></div>
+    <div class="line-row">
+      <div class="line-field">
+        <span class="mini-label">Item Code</span>
+        <input class="codeInput" placeholder="Search or type code" oninput="searchItem('${id}','code',this.value)" autocomplete="off">
+        <div class="item-results codeResults" style="position:absolute; background:#1a1a1c; border:1px solid #333; width:100%; z-index:20; max-height:160px; overflow:auto; border-radius:8px; display:none;"></div>
+      </div>
+      <button class="btn-danger" onclick="document.getElementById('${id}').remove()">✕</button>
     </div>
-    <input class="qty" type="number" min="1" placeholder="Qty">
-    <select class="uom"><option value="EA">EA</option><option value="CS">CS</option></select>
-    <button class="btn-danger" onclick="document.getElementById('${id}').remove()">✕</button>
+    <div class="line-field">
+      <span class="mini-label">Description</span>
+      <input class="descInput" placeholder="Search or type description" oninput="searchItem('${id}','desc',this.value)" autocomplete="off">
+      <div class="item-results descResults" style="position:absolute; background:#1a1a1c; border:1px solid #333; width:100%; z-index:20; max-height:160px; overflow:auto; border-radius:8px; display:none;"></div>
+    </div>
+    <div class="line-row">
+      <div class="line-field qty">
+        <span class="mini-label">Qty</span>
+        <input class="qty" type="number" min="1" placeholder="Qty">
+      </div>
+      <div class="line-field uom">
+        <span class="mini-label">UOM</span>
+        <select class="uom"><option value="EA">EA</option><option value="CS">CS</option></select>
+      </div>
+    </div>
   `;
   document.getElementById('lineList').appendChild(wrap);
 }
 
-function searchItem(lineId, q) {
-  clearTimeout(itemSearchTimers[lineId]);
-  itemSearchTimers[lineId] = setTimeout(async () => {
-    const box = document.querySelector('#'+lineId+' .item-results');
+function searchItem(lineId, field, q) {
+  const timerKey = lineId+'_'+field;
+  clearTimeout(itemSearchTimers[timerKey]);
+  itemSearchTimers[timerKey] = setTimeout(async () => {
+    const box = document.querySelector('#'+lineId+' .'+field+'Results');
     if (!q || q.length < 2) { box.style.display='none'; return; }
     try {
       const data = await api('/api/horeca/items?q='+encodeURIComponent(q));
@@ -242,9 +297,10 @@ function searchItem(lineId, q) {
 function selectItem(lineId, itemJson) {
   const it = JSON.parse(itemJson);
   const row = document.getElementById(lineId);
-  row.querySelector('input[type=text], input:not(.qty):not(.itemCode)') && (row.querySelectorAll('input')[0].value = it.item_code + ' — ' + (it.description||''));
-  row.querySelector('.itemCode').value = it.item_code;
-  row.querySelector('.item-results').style.display = 'none';
+  row.querySelector('.codeInput').value = it.item_code;
+  row.querySelector('.descInput').value = it.description || '';
+  row.querySelector('.codeResults').style.display = 'none';
+  row.querySelector('.descResults').style.display = 'none';
 }
 
 async function submitOrder() {
@@ -253,17 +309,12 @@ async function submitOrder() {
   const custIdx = document.getElementById('custSelect').value;
   if (custIdx === '') { msgEl.textContent = 'Please select a customer.'; return; }
   const cust = CUSTOMERS[custIdx];
-  let site = { location:null, site_use_id:null };
-  if (cust.sites.length > 1) {
-    const sIdx = document.getElementById('siteSelect').value;
-    site = cust.sites[sIdx];
-  } else if (cust.sites.length === 1) {
-    site = cust.sites[0];
-  }
+  let site = SELECTED_SITE || { location:null, site_use_id:null };
+  if (cust.sites.length > 0 && !SELECTED_SITE) { msgEl.textContent = 'Please select the customer location.'; return; }
 
   const lines = [];
   document.querySelectorAll('.line-item').forEach(row => {
-    const itemCode = row.querySelector('.itemCode').value;
+    const itemCode = row.querySelector('.codeInput').value.trim();
     const qty = row.querySelector('.qty').value;
     const uom = row.querySelector('.uom').value;
     if (itemCode && qty) lines.push({ item_code: itemCode, qty: Number(qty), uom });
@@ -279,12 +330,13 @@ async function submitOrder() {
       site_use_id: site.site_use_id,
       location: site.location,
       po_number: document.getElementById('poNumber').value.trim() || null,
+      warehouse: document.getElementById('whCode').value.trim() || 'DCF',
       lines
     })});
     showToast('Order ' + data.order_ref + ' submitted' + (data.warning ? ' — ' + data.warning : ''));
     document.getElementById('lineList').innerHTML = ''; lineCount = 0; addLine();
     document.getElementById('custSelect').value=''; document.getElementById('siteWrap').style.display='none';
-    document.getElementById('poNumber').value='';
+    document.getElementById('poNumber').value=''; SELECTED_SITE = null;
   } catch(e) {
     msgEl.textContent = e.message;
   } finally {
