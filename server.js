@@ -2189,6 +2189,9 @@ function requireRole(...roles) {
   };
 }
 
+// ── HoReCa Order Module (new tables, shares this pool/auth, isolated from other dashboards) ──
+require('./horeca_module')(app, pool, requireAuth, requireRole, upload, auditLog, bcrypt);
+
 // ── LOGIN ──
 app.post('/api/auth/login', async function(req, res) {
   try {
