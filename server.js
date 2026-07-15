@@ -344,6 +344,37 @@ function matchTruckRate(rawTruckType) {
   return null;
 }
 
+// ── Vehicle Master fallback: when a drop has no truck-type text but does have a vehicle
+// plate number, look up that vehicle's tonnage + Chiller/Frozen/Ambient from the uploaded
+// Vehicle Master, combine with that vehicle's drop-count today (1 drop = Bulk, 2+ = Multi,
+// per transport team's rule), and reuse the same rate card via a synthetic keyword string.
+function normalizeVehicleNoForLookup(raw) {
+  return String(raw || '').toUpperCase().replace(/\s+/g, '');
+}
+function vehicleTempBucket(vehicleTypeRaw) {
+  var u = toStr(vehicleTypeRaw).toUpperCase();
+  if (!u) return null;
+  if (u.indexOf('FROZEN') !== -1 || u.indexOf('FREEZER') !== -1) return 'FROZEN';
+  if (u.indexOf('CHILL') !== -1 || u.indexOf('AMBIENT') !== -1) return 'AMBIENT'; // Chiller priced as Ambient per transport team
+  return null; // Dry / Open Pick-up / Car / Bus / Other — no rate applies
+}
+function vehicleTonnageBucket(vehTypeRaw) {
+  var u = toStr(vehTypeRaw).toUpperCase().replace(/\s+/g, '');
+  if (u.indexOf('4.2T') !== -1 || u === '4T') return '4 TON';
+  if (u.indexOf('10T') !== -1) return '10 TON';
+  return null; // 1T / 3T / 12T — no matching Bulk tier on the rate card yet
+}
+function matchRateViaVehicleMaster(vehicleId, dropCountForVehicle) {
+  var norm = normalizeVehicleNoForLookup(vehicleId);
+  var v = VEHICLE_MASTER_MAP[norm];
+  if (!v) return null;
+  var tempBucket = vehicleTempBucket(v.vehicle_type_raw);
+  if (!tempBucket) return null;
+  var tier = dropCountForVehicle >= 2 ? 'MULTI' : vehicleTonnageBucket(v.veh_type);
+  if (!tier) return null;
+  return matchTruckRate(tempBucket + ' ' + tier);
+}
+
 function extractDriverName(contact) {
   var s = toStr(contact);
   if (!s) return '';
@@ -742,11 +773,26 @@ function parseDispatch(buffer) {
       var byRegion = {};     // city -> { label -> { rate, drop_count } }
       var byFoodType = {};   // 'Food' | 'Non-Food' | 'Mixed (Partition)' | 'Other' -> { drop_count, estimated_cost }
 
+      // Pre-pass: how many drops does each vehicle make today? Needed to decide Multi vs Bulk
+      // for the Vehicle Master fallback (transport team's rule: 1 drop = Bulk, 2+ = Multi).
+      var dropCountByVehicle = {};
+      Object.keys(dropRecords).forEach(function(key){
+        var vid = dropRecords[key].vehicleId;
+        if (vid) dropCountByVehicle[vid] = (dropCountByVehicle[vid] || 0) + 1;
+      });
+
       Object.keys(dropRecords).forEach(function(key){
         var d = dropRecords[key];
-        if (!d.truckType) return; // no truck-type column for this drop — excluded from cost, not guessed
-        var rateEntry = matchTruckRate(d.truckType);
-        if (!rateEntry) { unmatchedTruckTypes[d.truckType] = (unmatchedTruckTypes[d.truckType] || 0) + 1; return; }
+        var rateEntry = null;
+        if (d.truckType) {
+          rateEntry = matchTruckRate(d.truckType);
+        } else if (d.vehicleId) {
+          // No truck-type text on this row — fall back to the Vehicle Master lookup by plate number.
+          rateEntry = matchRateViaVehicleMaster(d.vehicleId, dropCountByVehicle[d.vehicleId] || 1);
+        } else {
+          return; // neither truck-type nor vehicle plate available — genuinely no info, not guessed
+        }
+        if (!rateEntry) { var uk = d.truckType || ('Vehicle ' + d.vehicleId); unmatchedTruckTypes[uk] = (unmatchedTruckTypes[uk] || 0) + 1; return; }
 
         if (!byType[rateEntry.label]) byType[rateEntry.label] = { rate: rateEntry.rate, drop_count: 0, vehicles: {} };
         byType[rateEntry.label].drop_count++;
@@ -2191,6 +2237,10 @@ function requireRole(...roles) {
 
 // ── HoReCa Order Module (new tables, shares this pool/auth, isolated from other dashboards) ──
 require('./horeca_module')(app, pool, requireAuth, requireRole, upload, auditLog, bcrypt);
+
+// ── Vehicle Master Module (fleet registry, used as fallback for transport cost estimate) ──
+var VEHICLE_MASTER_MAP = {};
+require('./vehicle_master_module')(app, pool, requireAuth, requireRole, upload, auditLog, VEHICLE_MASTER_MAP);
 
 // ── LOGIN ──
 app.post('/api/auth/login', async function(req, res) {
