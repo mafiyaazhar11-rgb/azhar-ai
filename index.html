@@ -874,6 +874,8 @@ footer span{color:#e8c878;}
           <button onclick="checkPwd()" class="inv-btn" style="flex:0;white-space:nowrap;padding:10px 18px;margin:0;border:1px solid var(--gold);color:var(--gold);background:transparent;font-family:Montserrat,sans-serif;font-size:9px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;">Unlock</button>
         </div>
         <div id="admin-upload" style="display:none;margin-top:12px;">
+          <label style="font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">Report Date <span style="color:var(--gold);">— defaults to today, change this when backfilling an older day's file</span></label>
+          <input type="date" id="ds-upload-date" style="width:100%;height:38px;padding:8px 12px;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:Montserrat,sans-serif;font-size:13px;outline:none;margin-bottom:10px;box-sizing:border-box;"/>
           <div class="upload" onclick="document.getElementById('ds-file').click()"><div style="font-size:22px;margin-bottom:6px;">📊</div><div style="font-size:11px;color:var(--muted);letter-spacing:1px;">Click to Upload Dispatch Report (.xlsx or .csv)</div><div style="font-size:10px;color:var(--muted);margin-top:3px;" id="ds-file-name">Admin uploads once — team sees live data automatically</div></div>
           <input type="file" id="ds-file" accept=".xlsx,.xls,.csv,.txt" style="display:none" onchange="doUpload(this)"/>
           <div class="loader" id="ds-loader"><div class="ring"></div><div class="ring-txt">Processing your Excel file...</div></div>
@@ -2523,15 +2525,24 @@ async function loadRedeliveryData(dateKey){
 async function doUpload(input){
   const file=input.files[0]; if(!file)return;
   const nameEl=document.getElementById('ds-file-name');
+  const dateInput=document.getElementById('ds-upload-date');
+  const selectedDate=dateInput?dateInput.value:'';
+  const todayStr=new Date().toISOString().split('T')[0];
+  if(!selectedDate){ alert('Please pick the report date before uploading.'); input.value=''; return; }
+  if(selectedDate!==todayStr){
+    if(!confirm('This will save the file under '+selectedDate+' (NOT today). Existing data for '+selectedDate+' will be replaced. Continue?')){
+      input.value=''; return;
+    }
+  }
   nameEl.textContent=' Uploading '+file.name+'...'; nameEl.style.color='var(--muted)';
   setLoad('ds-loader',null,true);
   try{
-    const fd=new FormData(); fd.append('file',file); fd.append('uploadedBy','Azhar');
+    const fd=new FormData(); fd.append('file',file); fd.append('uploadedBy','Azhar'); fd.append('dateKey',selectedDate);
     const r=await fetch('/api/dispatch/upload',{method:'POST',body:fd});
     const d=await r.json();
     setLoad('ds-loader',null,false);
     if(d.success){
-      nameEl.textContent=' '+file.name+'  '+(d.summary?.total_orders||0).toLocaleString()+' orders loaded';
+      nameEl.textContent=' '+file.name+'  '+(d.summary?.total_orders||0).toLocaleString()+' orders loaded for '+selectedDate;
       nameEl.style.color='var(--green)';
       buildDashboard(d); loadStatus();
     }else{
@@ -2565,6 +2576,8 @@ function checkPwd(){
     document.getElementById('admin-lock').style.display='none';
     document.getElementById('admin-upload').style.display='block';
     document.getElementById('admin-pwd').value='';
+    const dateInput=document.getElementById('ds-upload-date');
+    if(dateInput && !dateInput.value) dateInput.value=new Date().toISOString().split('T')[0];
   }else{
     const inp=document.getElementById('admin-pwd');
     inp.style.borderColor='var(--red)'; inp.value='';
