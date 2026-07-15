@@ -459,7 +459,7 @@ module.exports = function (app, pool, requireAuth, requireRole, upload, auditLog
       }
 
       ws.getCell('D1').value = 'ALPHAMED';
-      ws.getCell('D2').value = 'MATRIX ORDER FROM';
+      ws.getCell('D2').value = 'HoRca ORDER FROM';
       ws.getCell('A3').value = 'Customer name :';
       ws.getCell('B3').value = 'Customer Nmae : '; ws.getCell('B3').fill = FILL_LABEL;
       ws.getCell('C3').value = order.customer_name;
