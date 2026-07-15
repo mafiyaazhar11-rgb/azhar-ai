@@ -402,6 +402,16 @@ function parseDispatch(buffer) {
       return names.some(function(n) { return k.toUpperCase().includes(n.toUpperCase()); });
     }) || null;
   }
+  // Exact (not fuzzy-substring) header match. Some files have BOTH an "ORDER CODE" column
+  // (which can embed route/day info that changes each time an order is re-dispatched) and
+  // a plain "ORDER" column (the stable underlying order number). For anything used to detect
+  // repeats/re-deliveries across days, the stable exact-match column must be preferred.
+  function findExactCol() {
+    var names = Array.prototype.slice.call(arguments);
+    return Object.keys(rows[0]).find(function(k) {
+      return names.some(function(n) { return k.trim().toUpperCase() === n.toUpperCase(); });
+    }) || null;
+  }
 
   var C = {
     route:    findCol('ROUTE'),
@@ -416,7 +426,7 @@ function parseDispatch(buffer) {
     temperature: findCol('TEMPERATURE', 'TEMP'),
     vehicleId: findCol('VEHICLE_ID', 'VEHICLE ID', 'VEHICLE'),
     truckType: findCol('TRUCK TYPE', 'TRUCK_TYPE', 'VEHICLE TYPE', 'VEHICLE_TYPE', 'DROP TYPE', 'DROP_TYPE'),
-    orderCode: findCol('ORDER CODE', 'ORDER_CODE') || findCol('ORDER '),
+    orderCode: findExactCol('ORDER', 'ORDER NUMBER', 'ORDER_NUMBER') || findCol('ORDER CODE', 'ORDER_CODE') || findCol('ORDER '),
     org:      findCol('ORG') || findCol('BU') || findCol('ORGANIZATION') || findCol('ORG-BU')
   };
   console.log('Dispatch cols:', JSON.stringify(C));
@@ -816,14 +826,23 @@ function extractOrderRows(buffer) {
       return names.some(function(n) { return k.toUpperCase().includes(n.toUpperCase()); });
     }) || null;
   }
+  // Exact header match, same reasoning as parseDispatch: prefer the stable "ORDER" number
+  // column over "ORDER CODE" (which can embed route/day info that changes on re-dispatch).
+  function findExactCol() {
+    var names = Array.prototype.slice.call(arguments);
+    return Object.keys(rows[0]).find(function(k) {
+      return names.some(function(n) { return k.trim().toUpperCase() === n.toUpperCase(); });
+    }) || null;
+  }
   var C = {
-    orderCode: findCol('ORDER CODE', 'ORDER_CODE') || findCol('ORDER '),
+    orderCode: findExactCol('ORDER', 'ORDER NUMBER', 'ORDER_NUMBER') || findCol('ORDER CODE', 'ORDER_CODE') || findCol('ORDER '),
     customer: findCol('CUSTOMER NAME', 'CUSTOMER'),
     amount: findCol('TOTAL_AMOUNT', 'AMOUNT', 'VALUE'),
     route: findCol('ROUTE'),
     org: findCol('ORG') || findCol('BU') || findCol('ORGANIZATION') || findCol('ORG-BU'),
     type: findCol('TYPE')
   };
+  console.log('Re-delivery tracking cols:', JSON.stringify(C));
   if (!C.orderCode) return []; // no order code column in this file — can't track re-delivery
 
   var out = [];
