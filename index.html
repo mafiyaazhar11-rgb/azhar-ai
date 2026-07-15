@@ -721,8 +721,15 @@ footer span{color:#e8c878;}
       </div>
       <div class="grid-2" id="ds-tables" style="display:none;"><div class="box"><div class="box-title">💰 Top Customers by Value</div><div style="overflow-x:auto;-webkit-overflow-scrolling:touch;"><table class="data-table" style="min-width:340px;width:100%;"><thead><tr><th style="width:24px;">#</th><th>Customer</th><th style="width:50px;text-align:center;">Orders</th><th style="width:90px;text-align:right;">Value (AED)</th></tr></thead><tbody id="ds-cust-body"></tbody></table></div></div><div class="box"><div class="box-title">🚚 Top 5 Drivers</div><div id="ds-drivers-list" style="overflow-x:hidden;"></div></div></div>
       <div class="box" id="ds-truckcost-box" style="display:none;margin-bottom:16px;">
-        <div class="box-title">🚛 Estimated Transport Cost <span style="font-size:10px;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0;">— based on transport team's FY26 rate card, billed per drop</span></div>
-        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:14px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+          <div class="box-title">🚛 Estimated Transport Cost <span style="font-size:10px;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0;">— based on transport team's FY26 rate card, billed per drop</span></div>
+          <div id="veh-master-admin-wrap" style="display:none;">
+            <input type="file" id="veh-master-file" accept=".xlsx,.xls" style="display:none;" onchange="uploadVehicleMaster(this)">
+            <button onclick="document.getElementById('veh-master-file').click()" style="padding:6px 12px;background:rgba(201,168,76,0.1);border:1px solid var(--gold);color:var(--gold);font-size:10px;cursor:pointer;">⬆ Upload Vehicle Master</button>
+            <span id="veh-master-result" style="font-size:10px;color:var(--muted);margin-left:8px;"></span>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:14px;margin-top:12px;">
           <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px;">
             <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Estimated Cost Today</div>
             <div id="truckcost-total" style="font-size:22px;font-weight:800;color:var(--gold);margin-top:4px;">—</div>
@@ -7737,6 +7744,10 @@ function showApp() {
     var canSeeSalesmen = AUTH_USER && ['superadmin','subadmin'].includes(AUTH_USER.role);
     salesmenBtn.style.display = canSeeSalesmen ? '' : 'none';
   }
+  var vehMasterWrap = document.getElementById('veh-master-admin-wrap');
+  if (vehMasterWrap) {
+    vehMasterWrap.style.display = (AUTH_USER && ['superadmin','subadmin'].includes(AUTH_USER.role)) ? 'block' : 'none';
+  }
   // The "dispatch" panel is the default active view for everyone — if this user isn't
   // permitted to see it, jump them straight to the first tab they ARE allowed to see.
   if (AUTH_USER && AUTH_USER.role !== 'superadmin') {
@@ -9712,6 +9723,27 @@ function hcExport(id) {
       hcLoadOrders();
     })
     .catch(function(e){ alert(e.message); });
+}
+
+async function uploadVehicleMaster(input) {
+  var file = input.files[0];
+  if (!file) return;
+  var resultEl = document.getElementById('veh-master-result');
+  resultEl.textContent = 'Uploading...';
+  var fd = new FormData();
+  fd.append('file', file);
+  try {
+    var r = await fetch('/api/vehicle-master/upload', { method:'POST', headers: { 'x-auth-token': AUTH_TOKEN }, body: fd });
+    var data = await r.json();
+    if (!r.ok) throw new Error(data.error || 'Upload failed');
+    resultEl.style.color = '#37c98a';
+    resultEl.textContent = 'Done: '+data.inserted+' added, '+data.updated+' updated, '+data.skipped+' skipped.';
+  } catch(e) {
+    resultEl.style.color = '#e84b4b';
+    resultEl.textContent = e.message;
+  } finally {
+    input.value = '';
+  }
 }
 
 async function hcUploadMaster(kind, input) {
