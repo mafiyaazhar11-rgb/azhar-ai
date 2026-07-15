@@ -1918,7 +1918,7 @@ footer span{color:#e8c878;}
     <div class="panel" id="horeca">
       <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
         <button class="hc-tab hc-tab-on" data-hc="queue" onclick="hcShowTab('queue',this)" style="padding:9px 18px;background:rgba(201,168,76,0.12);border:1px solid var(--gold);color:var(--gold);font-family:Montserrat,sans-serif;font-size:11px;letter-spacing:1px;cursor:pointer;">📥 ORDERS QUEUE</button>
-        <button class="hc-tab" data-hc="master" onclick="hcShowTab('master',this)" style="padding:9px 18px;background:transparent;border:1px solid var(--border);color:var(--muted);font-family:Montserrat,sans-serif;font-size:11px;letter-spacing:1px;cursor:pointer;">📁 MASTER DATA UPLOAD</button>
+        <button class="hc-tab" id="hc-master-tab-btn" data-hc="master" onclick="hcShowTab('master',this)" style="padding:9px 18px;background:transparent;border:1px solid var(--border);color:var(--muted);font-family:Montserrat,sans-serif;font-size:11px;letter-spacing:1px;cursor:pointer;">📁 MASTER DATA UPLOAD</button>
       </div>
 
       <!-- QUEUE TAB -->
@@ -1943,6 +1943,7 @@ footer span{color:#e8c878;}
             <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">Upload the Customer Master Excel (sheet "Customar Master"). Existing rows are updated, new rows added — nothing is deleted.</div>
             <input type="file" id="hc-cust-file" accept=".xlsx,.xls" style="display:none;" onchange="hcUploadMaster('customers', this)">
             <button onclick="document.getElementById('hc-cust-file').click()" style="width:100%;padding:10px;background:rgba(201,168,76,0.1);border:1px solid var(--gold);color:var(--gold);font-size:12px;cursor:pointer;">⬆ Upload Customer Master</button>
+            <button onclick="hcDownloadMaster('customers')" style="width:100%;padding:10px;background:transparent;border:1px solid var(--border);color:var(--muted);font-size:12px;cursor:pointer;margin-top:8px;">⬇ Download Current Customer List</button>
             <div id="hc-cust-result" style="font-size:11px;color:var(--muted);margin-top:8px;"></div>
           </div>
           <div style="border:1px solid var(--border);border-radius:8px;padding:18px;">
@@ -1950,6 +1951,7 @@ footer span{color:#e8c878;}
             <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">Upload the Item Master Excel (Item Code, Description, Brand, Category). Existing rows are updated, new rows added — nothing is deleted.</div>
             <input type="file" id="hc-item-file" accept=".xlsx,.xls" style="display:none;" onchange="hcUploadMaster('items', this)">
             <button onclick="document.getElementById('hc-item-file').click()" style="width:100%;padding:10px;background:rgba(201,168,76,0.1);border:1px solid var(--gold);color:var(--gold);font-size:12px;cursor:pointer;">⬆ Upload Item Master</button>
+            <button onclick="hcDownloadMaster('items')" style="width:100%;padding:10px;background:transparent;border:1px solid var(--border);color:var(--muted);font-size:12px;cursor:pointer;margin-top:8px;">⬇ Download Current Item List</button>
             <div id="hc-item-result" style="font-size:11px;color:var(--muted);margin-top:8px;"></div>
           </div>
         </div>
@@ -2057,7 +2059,11 @@ function goTab(id,btn){
   if(id==='sales') loadSalesFromServer();
   if(id==='summary') initMerchLookup();
   if(id==='geninfo') { loadGIFromServer(); setTimeout(voipCheckStatus, 500); }
-  if(id==='horeca') hcLoadOrders();
+  if(id==='horeca') {
+    hcLoadOrders();
+    var masterBtn = document.getElementById('hc-master-tab-btn');
+    if (masterBtn) masterBtn.style.display = (AUTH_USER && ['superadmin','subadmin'].includes(AUTH_USER.role)) ? '' : 'none';
+  }
   if(id==='salesmen') { hcLoadSalespersonCodes(); hcLoadSalesmen(); }
     var giStarW=document.getElementById('gi-star-wrap');if(giStarW){var cuGI=AUTH_USER&&(AUTH_USER.role==='superadmin'||AUTH_USER.role==='subadmin');giStarW.style.display=(id==='geninfo'&&cuGI)?'block':'none';}
   var dsStar=document.getElementById('ds-star-wrap');if(dsStar){var cuDS=AUTH_USER&&(AUTH_USER.role==='superadmin'||AUTH_USER.role==='subadmin');dsStar.style.display=(id==='dispatch'&&cuDS)?'block':'none';}
@@ -7731,6 +7737,21 @@ function showApp() {
     var canSeeSalesmen = AUTH_USER && ['superadmin','subadmin'].includes(AUTH_USER.role);
     salesmenBtn.style.display = canSeeSalesmen ? '' : 'none';
   }
+  // The "dispatch" panel is the default active view for everyone — if this user isn't
+  // permitted to see it, jump them straight to the first tab they ARE allowed to see.
+  if (AUTH_USER && AUTH_USER.role !== 'superadmin') {
+    var allowedDash = AUTH_USER.dashboards || [];
+    if (allowedDash.indexOf('dispatch') === -1) {
+      var firstAllowedBtn = null;
+      document.querySelectorAll('.sb-item').forEach(function(btn) {
+        if (firstAllowedBtn) return;
+        if (btn.style.display === 'none') return;
+        var m = (btn.getAttribute('onclick') || '').match(/goTab\('([^']+)'/);
+        if (m) firstAllowedBtn = btn;
+      });
+      if (firstAllowedBtn) firstAllowedBtn.click();
+    }
+  }
   addUserInfoTopbar();
   showDemoBanner();
   loadSalesFromServer();
@@ -9655,7 +9676,7 @@ async function hcLoadOrders() {
           '<div style="display:flex;gap:8px;">'+
             (o.status==='pending' ? '<button onclick="hcApprove('+o.id+')" style="padding:6px 12px;background:rgba(55,201,138,0.12);border:1px solid #37c98a;color:#37c98a;font-size:11px;cursor:pointer;">✓ Approve</button>' : '')+
             (o.status==='approved' ? '<button onclick="hcExport('+o.id+')" style="padding:6px 12px;background:rgba(201,168,76,0.12);border:1px solid var(--gold);color:var(--gold);font-size:11px;cursor:pointer;">⬇ Download &amp; Send</button>' : '')+
-            (o.status==='sent' ? '<span style="font-size:11px;color:var(--muted);">Sent by '+(o.actioned_by||'')+'</span>' : '')+
+            (o.status==='sent' ? '<span style="font-size:11px;color:var(--muted);margin-right:10px;">Sent by '+(o.actioned_by||'')+'</span><button onclick="hcExport('+o.id+')" style="padding:6px 12px;background:transparent;border:1px solid var(--border);color:var(--muted);font-size:11px;cursor:pointer;">⬇ Re-download</button>' : '')+
           '</div>'+
         '</div>';
       });
@@ -9712,6 +9733,23 @@ async function hcUploadMaster(kind, input) {
   } finally {
     input.value = '';
   }
+}
+
+function hcDownloadMaster(kind) {
+  var resultEl = document.getElementById(kind==='customers' ? 'hc-cust-result' : 'hc-item-result');
+  fetch('/api/horeca/master/'+kind+'/export', { headers: { 'x-auth-token': AUTH_TOKEN } })
+    .then(function(r){
+      if (!r.ok) return r.json().then(function(d){ throw new Error(d.error||'Download failed'); });
+      return r.blob();
+    })
+    .then(function(blob){
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url; a.download = (kind==='customers' ? 'HoReCa_Customer_Master_Current.xlsx' : 'HoReCa_Item_Master_Current.xlsx');
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+    })
+    .catch(function(e){ if(resultEl){ resultEl.style.color='#e84b4b'; resultEl.textContent = e.message; } });
 }
 
 // ══ SALESMAN MANAGEMENT ══════════════════════════════════
