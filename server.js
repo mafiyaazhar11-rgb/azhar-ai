@@ -88,8 +88,10 @@ async function initDB() {
       route TEXT,
       org TEXT,
       drop_type TEXT,
+      temperature TEXT,
       created_at TIMESTAMPTZ DEFAULT NOW()
     )`);
+    await pool.query(`ALTER TABLE order_tracking ADD COLUMN IF NOT EXISTS temperature TEXT`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_order_tracking_code ON order_tracking(order_code)`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_order_tracking_date ON order_tracking(date_key)`);
     // AUTH TABLES
@@ -362,7 +364,7 @@ function vehicleTonnageBucket(vehTypeRaw) {
   var u = toStr(vehTypeRaw).toUpperCase().replace(/\s+/g, '');
   if (u.indexOf('4.2T') !== -1 || u === '4T') return '4 TON';
   if (u.indexOf('10T') !== -1) return '10 TON';
-  return null; // 1T / 3T / 12T — no matching Bulk tier on the rate card yet
+  return null; // 3T / 12T — genuinely no Bulk tier for these on the FY26 rate card
 }
 function matchRateViaVehicleMaster(vehicleId, dropCountForVehicle) {
   var norm = normalizeVehicleNoForLookup(vehicleId);
@@ -379,6 +381,11 @@ function matchRateViaVehicleMaster(vehicleId, dropCountForVehicle) {
   if (!v) return null;
   var tempBucket = vehicleTempBucket(v.vehicle_type_raw);
   if (!tempBucket) return null;
+  var isOneTon = toStr(v.veh_type).toUpperCase().replace(/\s+/g, '') === '1T';
+  // 1 Ton has no dedicated Multi/Bulk-4-Ton style tier on the FY26 rate card — "Exclusive 1 Ton"
+  // (550 AED) is the only rate that exists for this tonnage at all, so it's used regardless of
+  // drop count for 1-ton vehicles specifically.
+  if (isOneTon) return matchTruckRate('EXCLUSIVE 1 TON');
   var tier = dropCountForVehicle >= 2 ? 'MULTI' : vehicleTonnageBucket(v.veh_type);
   if (!tier) return null;
   return matchTruckRate(tempBucket + ' ' + tier);
@@ -897,7 +904,8 @@ function extractOrderRows(buffer) {
     amount: findCol('TOTAL_AMOUNT', 'AMOUNT', 'VALUE'),
     route: findCol('ROUTE'),
     org: findCol('ORG') || findCol('BU') || findCol('ORGANIZATION') || findCol('ORG-BU'),
-    type: findCol('TYPE')
+    type: findCol('TYPE'),
+    temperature: findCol('TEMPERATURE')
   };
   console.log('Re-delivery tracking cols:', JSON.stringify(C));
   if (!C.orderCode) return []; // no order code column in this file — can't track re-delivery
@@ -912,7 +920,8 @@ function extractOrderRows(buffer) {
       value: C.amount ? (parseFloat(row[C.amount]) || 0) : 0,
       route: C.route ? toStr(row[C.route]) : '',
       org: C.org ? toStr(row[C.org]).toUpperCase() : '',
-      drop_type: C.type ? normaliseType(row[C.type]) : ''
+      drop_type: C.type ? normaliseType(row[C.type]) : '',
+      temperature: C.temperature ? toStr(row[C.temperature]).trim() : ''
     });
   });
   return out;
@@ -929,11 +938,11 @@ async function saveOrderTracking(dateKey, orderRows) {
       var phs = [];
       var idx = 1;
       chunk.forEach(function(r) {
-        phs.push('($' + idx + ',$' + (idx+1) + ',$' + (idx+2) + ',$' + (idx+3) + ',$' + (idx+4) + ',$' + (idx+5) + ',$' + (idx+6) + ')');
-        vals.push(r.order_code, dateKey, r.customer, r.value, r.route, r.org, r.drop_type);
-        idx += 7;
+        phs.push('($' + idx + ',$' + (idx+1) + ',$' + (idx+2) + ',$' + (idx+3) + ',$' + (idx+4) + ',$' + (idx+5) + ',$' + (idx+6) + ',$' + (idx+7) + ')');
+        vals.push(r.order_code, dateKey, r.customer, r.value, r.route, r.org, r.drop_type, r.temperature);
+        idx += 8;
       });
-      await pool.query('INSERT INTO order_tracking (order_code, date_key, customer, value, route, org, drop_type) VALUES ' + phs.join(','), vals);
+      await pool.query('INSERT INTO order_tracking (order_code, date_key, customer, value, route, org, drop_type, temperature) VALUES ' + phs.join(','), vals);
     }
     return true;
   } catch(e) {
@@ -1036,7 +1045,7 @@ app.get('/api/dispatch/redelivery/:dateKey', async function(req, res) {
     if (!todayCodes.length) return res.json({ hasData:true, dateKey:dateKey, total_repeated_orders:0, total_value_at_risk:0, orders:[] });
 
     var histRes = await pool.query(
-      'SELECT order_code, date_key, customer, value, route, org, drop_type FROM order_tracking WHERE order_code = ANY($1) AND date_key <= $2 ORDER BY date_key ASC',
+      'SELECT order_code, date_key, customer, value, route, org, drop_type, temperature FROM order_tracking WHERE order_code = ANY($1) AND date_key <= $2 ORDER BY date_key ASC',
       [todayCodes, dateKey]
     );
 
@@ -1062,6 +1071,7 @@ app.get('/api/dispatch/redelivery/:dateKey', async function(req, res) {
           org: latest.org || '',
           route: latest.route || '',
           drop_type: latest.drop_type || '',
+          temperature: latest.temperature || '',
           times_delivered: distinctDates.length,
           dates: distinctDates
         });
