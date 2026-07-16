@@ -721,14 +721,7 @@ footer span{color:#e8c878;}
       </div>
       <div class="grid-2" id="ds-tables" style="display:none;"><div class="box"><div class="box-title">💰 Top Customers by Value</div><div style="overflow-x:auto;-webkit-overflow-scrolling:touch;"><table class="data-table" style="min-width:340px;width:100%;"><thead><tr><th style="width:24px;">#</th><th>Customer</th><th style="width:50px;text-align:center;">Orders</th><th style="width:90px;text-align:right;">Value (AED)</th></tr></thead><tbody id="ds-cust-body"></tbody></table></div></div><div class="box"><div class="box-title">🚚 Top 5 Drivers</div><div id="ds-drivers-list" style="overflow-x:hidden;"></div></div></div>
       <div class="box" id="ds-truckcost-box" style="display:none;margin-bottom:16px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
-          <div class="box-title">🚛 Estimated Transport Cost <span style="font-size:10px;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0;">— based on transport team's FY26 rate card, billed per drop</span></div>
-          <div id="veh-master-admin-wrap" style="display:none;">
-            <input type="file" id="veh-master-file" accept=".xlsx,.xls" style="display:none;" onchange="uploadVehicleMaster(this)">
-            <button onclick="document.getElementById('veh-master-file').click()" style="padding:6px 12px;background:rgba(201,168,76,0.1);border:1px solid var(--gold);color:var(--gold);font-size:10px;cursor:pointer;">⬆ Upload Vehicle Master</button>
-            <span id="veh-master-result" style="font-size:10px;color:var(--muted);margin-left:8px;"></span>
-          </div>
-        </div>
+        <div class="box-title">🚛 Estimated Transport Cost <span style="font-size:10px;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0;">— based on transport team's FY26 rate card, billed per drop</span></div>
         <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:14px;margin-top:12px;">
           <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px;">
             <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Estimated Cost Today</div>
@@ -888,7 +881,15 @@ footer span{color:#e8c878;}
           <div class="upload" onclick="document.getElementById('ds-file').click()"><div style="font-size:22px;margin-bottom:6px;">📊</div><div style="font-size:11px;color:var(--muted);letter-spacing:1px;">Click to Upload Dispatch Report (.xlsx or .csv)</div><div style="font-size:10px;color:var(--muted);margin-top:3px;" id="ds-file-name">Admin uploads once — team sees live data automatically</div></div>
           <input type="file" id="ds-file" accept=".xlsx,.xls,.csv,.txt" style="display:none" onchange="doUpload(this)"/>
           <div class="loader" id="ds-loader"><div class="ring"></div><div class="ring-txt">Processing your Excel file...</div></div>
-          <button onclick="lockAdmin()" style="margin-top:8px;padding:6px 14px;background:transparent;border:1px solid var(--border);color:var(--muted);font-family:Montserrat,sans-serif;font-size:9px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;">🔒 Lock Admin</button>
+
+          <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border);">
+            <label style="font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">Vehicle Master <span style="color:var(--gold);">— fleet registry used to estimate transport cost when truck-type is missing</span></label>
+            <input type="file" id="veh-master-file" accept=".xlsx,.xls" style="display:none;" onchange="uploadVehicleMaster(this)">
+            <button onclick="document.getElementById('veh-master-file').click()" style="width:100%;padding:10px;background:rgba(201,168,76,0.1);border:1px solid var(--gold);color:var(--gold);font-size:11px;cursor:pointer;">⬆ Upload Vehicle Master</button>
+            <div id="veh-master-result" style="font-size:10px;color:var(--muted);margin-top:6px;"></div>
+          </div>
+
+          <button onclick="lockAdmin()" style="margin-top:12px;padding:6px 14px;background:transparent;border:1px solid var(--border);color:var(--muted);font-family:Montserrat,sans-serif;font-size:9px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;">🔒 Lock Admin</button>
         </div>
       </div>
     </div>
@@ -2607,13 +2608,15 @@ async function loadRedeliveryData(dateKey){
       document.getElementById('ds-redelivery-body').innerHTML = d.orders.map(function(o){
         var typeLabel = o.drop_type==='nonfood'?'Non-Food':(o.drop_type==='3pl'?'3PL':(o.drop_type?o.drop_type.charAt(0).toUpperCase()+o.drop_type.slice(1):'—'));
         var typeCol = typeColors[o.drop_type]||'var(--text)';
+        var isFrozen = String(o.temperature||'').toUpperCase() === 'FROZEN';
+        var frozenBadge = isFrozen ? ' <span style="color:#58a6ff;font-size:10px;">❄ Frozen</span>' : '';
         var datesLabel = (o.dates||[]).map(function(dt){
           var parts=dt.split('-'); return parts[2]+'/'+parts[1];
         }).join(', ');
         var costCell = o._extraCost!=null ? o._extraCost.toLocaleString() : '—';
         return '<tr><td style="color:var(--gold);font-weight:600;">'+o.order_code+'</td>'
           +'<td>'+(o.customer||'—')+'</td>'
-          +'<td><span style="color:'+typeCol+';">'+typeLabel+'</span></td>'
+          +'<td><span style="color:'+typeCol+';">'+typeLabel+'</span>'+frozenBadge+'</td>'
           +'<td style="text-align:center;font-weight:700;color:#f85149;">'+o.times_delivered+'x</td>'
           +'<td style="font-size:12px;color:var(--muted);">'+datesLabel+'</td>'
           +'<td style="text-align:right;color:var(--gold);font-weight:600;">'+(o.value||0).toLocaleString()+'</td>'
@@ -7709,7 +7712,7 @@ async function authBoot() {
     var r = await fetch('/api/auth/me', { headers: { 'x-auth-token': AUTH_TOKEN } });
     if (!r.ok) { AUTH_TOKEN=null; localStorage.removeItem('azhar_token'); showLogin(); return; }
     AUTH_USER = await r.json();
-    if (AUTH_USER.role === 'salesman') { window.location.href = '/orders.html'; return; }
+    if (AUTH_USER.role === 'salesman') { window.location.href = '/orders'; return; }
     showApp();
   } catch(e) {
     // Network error (Render cold start) — retry once after 3 seconds
@@ -7743,10 +7746,6 @@ function showApp() {
   if (salesmenBtn) {
     var canSeeSalesmen = AUTH_USER && ['superadmin','subadmin'].includes(AUTH_USER.role);
     salesmenBtn.style.display = canSeeSalesmen ? '' : 'none';
-  }
-  var vehMasterWrap = document.getElementById('veh-master-admin-wrap');
-  if (vehMasterWrap) {
-    vehMasterWrap.style.display = (AUTH_USER && ['superadmin','subadmin'].includes(AUTH_USER.role)) ? 'block' : 'none';
   }
   // The "dispatch" panel is the default active view for everyone — if this user isn't
   // permitted to see it, jump them straight to the first tab they ARE allowed to see.
@@ -7858,7 +7857,7 @@ async function doLogin() {
     if(!r.ok){errEl.textContent=data.error||'Login failed';errEl.style.display='block';btn.textContent='SIGN IN →';btn.disabled=false;document.getElementById('login-pass').value='';return;}
     AUTH_TOKEN=data.token; AUTH_USER=data.user;
     localStorage.setItem('azhar_token', AUTH_TOKEN);
-    if (AUTH_USER.role === 'salesman') { window.location.href = '/orders.html'; return; }
+    if (AUTH_USER.role === 'salesman') { window.location.href = '/orders'; return; }
     btn.textContent='SIGN IN →'; btn.disabled=false;
     showApp();
   } catch(e){errEl.textContent='Connection error';errEl.style.display='block';btn.textContent='SIGN IN →';btn.disabled=false;}
@@ -9850,7 +9849,7 @@ async function hcCreateSalesman() {
     var data = await r.json();
     if (!r.ok) throw new Error(data.error || 'Create failed');
     resultEl.style.color = '#37c98a';
-    resultEl.textContent = 'Created — ask them to log in at /orders.html and change their password.';
+    resultEl.textContent = 'Created — ask them to log in at /orders and change their password.';
     document.getElementById('sm-fullname').value=''; document.getElementById('sm-username').value=''; document.getElementById('sm-password').value=''; codeSel.value='';
     hcLoadSalesmen();
   } catch(e) {
