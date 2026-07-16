@@ -703,10 +703,11 @@ footer span{color:#e8c878;}
         <div class="kpi-card"><div class="kpi-icon" style="background:rgba(201,168,76,0.1);">📦</div><div class="kpi-label">Total Orders</div><div class="kpi-value" id="k-orders">—</div><div class="kpi-sub" id="k-routes-sub">— routes · — drivers</div><div class="kpi-sub" style="color:var(--green);" id="k-drops">— total drops</div></div>
         <div class="kpi-card"><div class="kpi-icon" style="background:rgba(201,168,76,0.1);">💰</div><div class="kpi-label">Total Value (AED)</div><div class="kpi-value" id="k-value">—</div><div class="kpi-sub" style="color:var(--green);">Today's dispatch</div></div>
         <div class="kpi-card">
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;">
             <div style="background:rgba(78,203,141,0.05);border:1px solid rgba(78,203,141,0.2);padding:12px;"><div style="font-size:9px;color:var(--green);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;font-weight:700;">✦ FOOD</div><div style="font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:700;color:var(--gold);" id="k-food">—</div><div style="font-size:10px;color:var(--muted);margin-bottom:8px;" id="k-food-val">AED —</div><div style="border-top:1px solid rgba(78,203,141,0.15);padding-top:8px;"><div style="display:flex;justify-content:space-between;font-size:10px;padding:2px 0;"><span style="color:var(--muted);">DCV</span><span id="k-dcv-orders">—</span></div><div style="display:flex;justify-content:space-between;font-size:10px;padding:2px 0;"><span style="color:var(--muted);">DCF (FoodSvc)</span><span id="k-dcf-orders">—</span></div></div></div>
             <div style="background:rgba(91,141,238,0.05);border:1px solid rgba(91,141,238,0.2);padding:12px;"><div style="font-size:9px;color:var(--blue);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;font-weight:700;">🟠 NON FOOD</div><div style="font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:700;color:var(--blue);" id="k-nonfood">—</div><div style="font-size:10px;color:var(--muted);margin-bottom:8px;" id="k-nonfood-val">AED —</div><div style="border-top:1px solid rgba(91,141,238,0.15);padding-top:8px;"><div style="padding:4px 0;border-bottom:1px solid rgba(91,141,238,0.08);"><div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:10px;color:var(--muted);font-weight:600;">DGC</span><span id="k-dgc-orders" style="font-size:10px;color:var(--text);">—</span></div><div style="font-size:11px;color:var(--blue);font-weight:600;text-align:right;margin-top:1px;" id="k-dgc-val">AED —</div></div><div style="padding:4px 0;border-bottom:1px solid rgba(91,141,238,0.08);"><div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:10px;color:var(--muted);font-weight:600;">DGS</span><span id="k-dgs-orders" style="font-size:10px;color:var(--text);">—</span></div><div style="font-size:11px;color:var(--blue);font-weight:600;text-align:right;margin-top:1px;" id="k-dgs-val">AED —</div></div><div style="padding:4px 0;"><div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:10px;color:var(--muted);font-weight:600;">DSN</span><span id="k-dsn-orders" style="font-size:10px;color:var(--text);">—</span></div><div style="font-size:11px;color:var(--blue);font-weight:600;text-align:right;margin-top:1px;" id="k-dsn-val">AED —</div></div></div></div>
             <div style="background:rgba(91,141,238,0.05);border:1px solid rgba(91,141,238,0.2);padding:12px;"><div style="font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;font-weight:700;">✦ 3PL</div><div style="font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:700;color:var(--gold);" id="k-pl">—</div><div style="font-size:10px;color:var(--muted);margin-bottom:8px;">AED 0</div><div style="border-top:1px solid rgba(91,141,238,0.15);padding-top:8px;"><div style="display:flex;justify-content:space-between;font-size:10px;padding:2px 0;"><span style="color:var(--muted);">HCP</span><span id="k-hcp">—</span></div><div style="font-size:10px;color:var(--muted);margin-top:6px;line-height:1.4;">Physical delivery only — no invoice value</div></div></div>
+            <div style="background:rgba(88,166,255,0.05);border:1px solid rgba(88,166,255,0.2);padding:12px;"><div style="font-size:9px;color:#58a6ff;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;font-weight:700;">❄ FROZEN</div><div style="font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:700;color:#58a6ff;" id="k-frozen">—</div><div style="font-size:10px;color:var(--muted);margin-bottom:8px;" id="k-frozen-val">AED —</div><div style="border-top:1px solid rgba(88,166,255,0.15);padding-top:8px;"><div style="display:flex;justify-content:space-between;font-size:10px;padding:2px 0;"><span style="color:var(--muted);">Ambient</span><span id="k-ambient-orders">—</span></div><div style="font-size:10px;color:var(--muted);margin-top:6px;line-height:1.4;">By Temperature column, separate from Food/Non-Food type</div></div></div>
           </div>
         </div>
       </div>
@@ -739,7 +740,7 @@ footer span{color:#e8c878;}
           </table>
         </div>
         <div id="ds-truckcost-unmatched" style="display:none;margin-top:10px;font-size:11px;color:var(--muted);"></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:16px;">
           <div>
             <div style="font-size:11px;color:var(--gold);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">By Region</div>
             <div style="overflow-x:auto;max-height:220px;overflow-y:auto;">
@@ -755,6 +756,15 @@ footer span{color:#e8c878;}
               <table class="data-table" style="width:100%;min-width:280px;">
                 <thead><tr><th>Category</th><th style="text-align:center;">Drops</th><th style="text-align:right;">Cost (AED)</th></tr></thead>
                 <tbody id="ds-truckcost-foodtype-body"></tbody>
+              </table>
+            </div>
+          </div>
+          <div>
+            <div style="font-size:11px;color:var(--gold);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">By Frozen/Ambient × Type</div>
+            <div style="overflow-x:auto;max-height:220px;overflow-y:auto;">
+              <table class="data-table" style="width:100%;min-width:280px;">
+                <thead><tr><th>Category</th><th style="text-align:center;">Drops</th><th style="text-align:right;">Cost (AED)</th></tr></thead>
+                <tbody id="ds-truckcost-tempfood-body"></tbody>
               </table>
             </div>
           </div>
@@ -2305,6 +2315,14 @@ function buildDashboard(d){
   document.getElementById('k-nonfood').textContent=(s.non_food_orders||0).toLocaleString();
   document.getElementById('k-nonfood-val').textContent='AED '+(s.non_food_value?Math.round(s.non_food_value).toLocaleString():'0');
 
+  // FROZEN (from the separate Temperature column, independent of Food/Non-Food type)
+  var frozenEl = document.getElementById('k-frozen');
+  if (frozenEl) {
+    frozenEl.textContent=(s.frozen_orders||0).toLocaleString();
+    document.getElementById('k-frozen-val').textContent='AED '+(s.frozen_value?Math.round(s.frozen_value).toLocaleString():'0');
+    document.getElementById('k-ambient-orders').textContent=(s.ambient_orders||0).toLocaleString();
+  }
+
   // 3PL
   document.getElementById('k-pl').textContent=(s.pl_orders||0).toLocaleString();
 
@@ -2503,6 +2521,14 @@ function buildDashboard(d){
       var foodTypeColors = {'Food':'var(--green)','Non-Food':'#58a6ff','Mixed (Partition)':'var(--gold)','Other (3PL/Van)':'var(--muted)'};
       document.getElementById('ds-truckcost-foodtype-body').innerHTML = tce.by_food_type.map(function(f){
         var col = foodTypeColors[f.category] || 'var(--text)';
+        return '<tr><td style="color:'+col+';font-weight:600;">'+f.category+'</td>'
+          +'<td style="text-align:center;">'+f.drop_count+'</td>'
+          +'<td style="text-align:right;font-weight:700;">'+f.estimated_cost.toLocaleString()+'</td></tr>';
+      }).join('');
+    }
+    if(tce.by_temp_food_type && tce.by_temp_food_type.length){
+      document.getElementById('ds-truckcost-tempfood-body').innerHTML = tce.by_temp_food_type.map(function(f){
+        var col = f.category.indexOf('Frozen')===0 ? '#58a6ff' : (f.category.indexOf('Ambient')===0 ? 'var(--gold)' : 'var(--muted)');
         return '<tr><td style="color:'+col+';font-weight:600;">'+f.category+'</td>'
           +'<td style="text-align:center;">'+f.drop_count+'</td>'
           +'<td style="text-align:right;font-weight:700;">'+f.estimated_cost.toLocaleString()+'</td></tr>';
