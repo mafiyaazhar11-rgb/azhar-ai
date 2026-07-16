@@ -2476,7 +2476,10 @@ function buildDashboard(d){
       var vehicleBadge = r.isPartitionVehicle
         ? '<span style="color:var(--gold);font-weight:700;font-size:11px;">⬛⬜ Partition</span>'
         : '<span style="color:var(--muted);font-size:11px;">Single-Type</span>';
-      return '<tr>'+'<td style="padding:8px 10px;color:var(--gold);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+r.route+'</td>'+'<td style="padding:8px 10px;font-size:12px;overflow:hidden;text-overflow:ellipsis;">'+typesLabel+'</td>'+'<td style="padding:8px 6px;text-align:center;">'+vehicleBadge+'</td>'+'<td style="padding:8px 6px;text-align:center;">'+r.orders+'</td>'+'<td style="padding:8px 6px;text-align:center;color:var(--muted);">'+r.driverCount+'</td>'+'<td style="padding:8px 6px;text-align:center;font-weight:700;color:var(--gold);">'+r.drops+'</td>'+'<td style="padding:8px 10px;text-align:right;">'+(r.route==='TPW'||r.route==='HCP'?'<span style="color:var(--muted);font-size:10px;">Physical Delivery</span>':'AED '+(r.value||0).toLocaleString())+'</td>'+'</tr>';
+      var sourceTag = r.partitionSource==='vehicle_master'
+        ? '<span style="color:#37c98a;font-size:9px;display:block;">✓ Vehicle Master</span>'
+        : '<span style="color:var(--muted);font-size:9px;display:block;">~ estimated</span>';
+      return '<tr>'+'<td style="padding:8px 10px;color:var(--gold);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+r.route+'</td>'+'<td style="padding:8px 10px;font-size:12px;overflow:hidden;text-overflow:ellipsis;">'+typesLabel+'</td>'+'<td style="padding:8px 6px;text-align:center;">'+vehicleBadge+sourceTag+'</td>'+'<td style="padding:8px 6px;text-align:center;">'+r.orders+'</td>'+'<td style="padding:8px 6px;text-align:center;color:var(--muted);">'+r.driverCount+'</td>'+'<td style="padding:8px 6px;text-align:center;font-weight:700;color:var(--gold);">'+r.drops+'</td>'+'<td style="padding:8px 10px;text-align:right;">'+(r.route==='TPW'||r.route==='HCP'?'<span style="color:var(--muted);font-size:10px;">Physical Delivery</span>':'AED '+(r.value||0).toLocaleString())+'</td>'+'</tr>';
     }).join('');
     document.getElementById('ds-routes-box').style.display='block';
   }
