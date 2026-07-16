@@ -480,6 +480,7 @@ function parseDispatch(buffer) {
   console.log('Dispatch cols:', JSON.stringify(C));
 
   var totalOrders=0, totalValue=0, foodOrders=0, foodValue=0, nonFoodOrders=0, nonFoodValue=0, plOrders=0, vanOrders=0;
+  var frozenOrders=0, frozenValue=0, ambientOrders=0, ambientValue=0;
   var cities={}, customers={}, routes={}, driverSet={};
   var dropsByCity = {}; // one increment per unique (route, location) drop — cannot exceed total_drops by construction
   var dropRecords = {}; // route::loc -> { city, truckType, types:{}, vehicleId } — accumulated across ALL rows for that drop, so region/food-type breakdowns are based on complete data, not just whichever row happened to create the drop first
@@ -495,6 +496,10 @@ function parseDispatch(buffer) {
     var type = normaliseType(C.type ? row[C.type] : '');
     var tempForRow = C.temperature ? toStr(row[C.temperature]).toUpperCase() : '';
     var isFrozenRow = tempForRow.indexOf('FROZEN') !== -1;
+    if (tempForRow) {
+      if (isFrozenRow) { frozenOrders++; frozenValue += amt; }
+      else { ambientOrders++; ambientValue += amt; }
+    }
     var rawTruckTypeForRow = C.truckType ? toStr(row[C.truckType]) : '';
     if (type === 'food')   { foodOrders++;    foodValue    += amt; }
     else if (type === 'nonfood') { nonFoodOrders++; nonFoodValue += amt; }
@@ -769,6 +774,8 @@ function parseDispatch(buffer) {
     food_orders: foodOrders, food_value: Math.round(foodValue),
     non_food_orders: nonFoodOrders, non_food_value: Math.round(nonFoodValue),
     pl_orders: plOrders, van_orders: vanOrders,
+    frozen_orders: frozenOrders, frozen_value: Math.round(frozenValue),
+    ambient_orders: ambientOrders, ambient_value: Math.round(ambientValue),
     type_breakdown: {
       DCV: { orders:orgStats.DCV.o, value:Math.round(orgStats.DCV.v) },
       DCF: { orders:orgStats.DCF.o, value:Math.round(orgStats.DCF.v) },
@@ -788,6 +795,7 @@ function parseDispatch(buffer) {
       var byType = {};       // label -> { rate, drop_count, vehicles:{} }
       var byRegion = {};     // city -> { label -> { rate, drop_count } }
       var byFoodType = {};   // 'Food' | 'Non-Food' | 'Mixed (Partition)' | 'Other' -> { drop_count, estimated_cost }
+      var byTempFood = {};   // 'Frozen · Food' | 'Ambient · Non-Food' etc -> { drop_count, estimated_cost }
 
       // Pre-pass: how many drops does each vehicle make today? Needed to decide Multi vs Bulk
       // for the Vehicle Master fallback (transport team's rule: 1 drop = Bulk, 2+ = Multi).
@@ -825,6 +833,12 @@ function parseDispatch(buffer) {
         if (!byFoodType[foodCategory]) byFoodType[foodCategory] = { drop_count: 0, estimated_cost: 0 };
         byFoodType[foodCategory].drop_count++;
         byFoodType[foodCategory].estimated_cost += rateEntry.rate;
+
+        var tempCategory = rateEntry.label.indexOf('Frozen') === 0 ? 'Frozen' : (rateEntry.label.indexOf('Ambient') === 0 ? 'Ambient' : 'Other');
+        var tempFoodKey = tempCategory + ' · ' + foodCategory;
+        if (!byTempFood[tempFoodKey]) byTempFood[tempFoodKey] = { drop_count: 0, estimated_cost: 0 };
+        byTempFood[tempFoodKey].drop_count++;
+        byTempFood[tempFoodKey].estimated_cost += rateEntry.rate;
       });
 
       var byTypeArr = Object.keys(byType).map(function(label){
@@ -846,6 +860,10 @@ function parseDispatch(buffer) {
         return { category: cat, drop_count: byFoodType[cat].drop_count, estimated_cost: byFoodType[cat].estimated_cost };
       }).sort(function(a,b){ return b.estimated_cost - a.estimated_cost; });
 
+      var byTempFoodArr = Object.keys(byTempFood).map(function(cat){
+        return { category: cat, drop_count: byTempFood[cat].drop_count, estimated_cost: byTempFood[cat].estimated_cost };
+      }).sort(function(a,b){ return b.estimated_cost - a.estimated_cost; });
+
       var totalCost = byTypeArr.reduce(function(s,t){ return s + t.estimated_cost; }, 0);
       var totalVehicles = byTypeArr.reduce(function(s,t){ return s + t.vehicle_count; }, 0);
       var totalDropsBilled = byTypeArr.reduce(function(s,t){ return s + t.drop_count; }, 0);
@@ -855,6 +873,7 @@ function parseDispatch(buffer) {
         by_type: byTypeArr,
         by_region: byRegionArr,
         by_food_type: byFoodTypeArr,
+        by_temp_food_type: byTempFoodArr,
         total_estimated_cost: totalCost,
         total_vehicles: totalVehicles,
         total_drops_billed: totalDropsBilled,
