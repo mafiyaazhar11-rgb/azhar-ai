@@ -366,18 +366,19 @@ function vehicleTonnageBucket(vehTypeRaw) {
   if (u.indexOf('10T') !== -1) return '10 TON';
   return null; // 3T / 12T — genuinely no Bulk tier for these on the FY26 rate card
 }
-function matchRateViaVehicleMaster(vehicleId, dropCountForVehicle) {
+function lookupVehicleMasterByAnyId(vehicleId) {
   var norm = normalizeVehicleNoForLookup(vehicleId);
   var v = VEHICLE_MASTER_MAP[norm];
   if (!v) {
-    // Dispatch report may only carry the bare number (e.g. "18297") without the
-    // city/prefix code the Vehicle Master uses (e.g. "AUH 18 18297") — try matching on
-    // just the last digit group instead, which the Vehicle Master module also indexes.
     var digitGroups = toStr(vehicleId).match(/\d+/g);
     if (digitGroups && digitGroups.length) {
       v = VEHICLE_MASTER_MAP['DIGITS:' + digitGroups[digitGroups.length - 1]];
     }
   }
+  return v || null;
+}
+function matchRateViaVehicleMaster(vehicleId, dropCountForVehicle) {
+  var v = lookupVehicleMasterByAnyId(vehicleId);
   if (!v) return null;
   var tempBucket = vehicleTempBucket(v.vehicle_type_raw);
   if (!tempBucket) return null;
@@ -527,7 +528,9 @@ function parseDispatch(buffer) {
     }
     if (C.route && row[C.route]) {
       var route = toStr(row[C.route]);
-      if (!routes[route]) routes[route] = { locs:{}, drivers:{}, orders:0, value:0, types:{} };
+      if (!routes[route]) routes[route] = { locs:{}, drivers:{}, orders:0, value:0, types:{}, vehicleIds:{} };
+      var vehicleIdForRoute = C.vehicleId ? toStr(row[C.vehicleId]) : '';
+      if (vehicleIdForRoute) routes[route].vehicleIds[vehicleIdForRoute] = (routes[route].vehicleIds[vehicleIdForRoute] || 0) + 1;
       var routeTypeLabel = (type||'other').charAt(0).toUpperCase()+(type||'other').slice(1);
       if (type === 'nonfood') routeTypeLabel = 'Non-Food';
       else if (type === '3pl') routeTypeLabel = '3PL';
@@ -629,15 +632,27 @@ function parseDispatch(buffer) {
   var topRoutes = Object.keys(routes).map(function(route) {
     var typeMap = routes[route].types || {};
     var topTypesForRoute = Object.keys(typeMap).sort(function(a,b){ return typeMap[b]-typeMap[a]; });
-    // A route carrying both Food AND Non-Food (or Frozen AND Ambient) in the same trip means
-    // this vehicle physically has separate compartments — it's a partition truck, not a
-    // single-type vehicle. Flag this so it's obvious without reading the Type column closely.
     var hasFood = topTypesForRoute.some(function(t){ return t.indexOf('Food') === 0; });
     var hasNonFood = topTypesForRoute.some(function(t){ return t.indexOf('Non-Food') === 0; });
     var hasFrozen = topTypesForRoute.some(function(t){ return t.indexOf('Frozen') !== -1; });
     var hasAmbient = topTypesForRoute.some(function(t){ return t.indexOf('Ambient') !== -1; });
-    var isPartitionVehicle = (hasFood && hasNonFood) || (hasFrozen && hasAmbient);
-    return { route:route, orders:routes[route].orders, drops:Object.keys(routes[route].locs).length, driverCount:Object.keys(routes[route].drivers).length, value:Math.round(routes[route].value), types:topTypesForRoute, isPartitionVehicle:isPartitionVehicle };
+    var guessedPartition = (hasFood && hasNonFood) || (hasFrozen && hasAmbient);
+
+    // Prefer the actual Vehicle Master partition flag over the route-content guess, whenever
+    // we can identify which vehicle ran this route (majority vehicle ID seen on it).
+    var isPartitionVehicle = guessedPartition;
+    var partitionSource = 'guessed';
+    var vids = Object.keys(routes[route].vehicleIds || {});
+    if (vids.length) {
+      var majorityVid = vids.sort(function(a,b){ return routes[route].vehicleIds[b] - routes[route].vehicleIds[a]; })[0];
+      var vm = lookupVehicleMasterByAnyId(majorityVid);
+      if (vm && vm.partition_flag) {
+        var pf = toStr(vm.partition_flag).trim().toUpperCase();
+        if (pf === 'YES' || pf === 'Y') { isPartitionVehicle = true; partitionSource = 'vehicle_master'; }
+        else if (pf === 'NO' || pf === 'N') { isPartitionVehicle = false; partitionSource = 'vehicle_master'; }
+      }
+    }
+    return { route:route, orders:routes[route].orders, drops:Object.keys(routes[route].locs).length, driverCount:Object.keys(routes[route].drivers).length, value:Math.round(routes[route].value), types:topTypesForRoute, isPartitionVehicle:isPartitionVehicle, partitionSource:partitionSource };
   }).sort(function(a,b) { return b.drops-a.drops; });
 
   // Count actual orders per driver (not route drops)
