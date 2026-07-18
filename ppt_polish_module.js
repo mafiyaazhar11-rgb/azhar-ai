@@ -240,12 +240,14 @@ Respond with ONLY valid JSON, no markdown fences, no commentary, in this exact s
       const TITLE_FONT = 'Georgia', BODY_FONT = 'Calibri';
       const GREEN = '3CB6AE', RED = 'D9705F'; // chart up/down colors — neutral, not tied to any specific brand palette
 
+      let currentSection = null;
       improved.slides.forEach((sl, i) => {
         const s = pres.addSlide();
         const hasImage = slides[i].images.length > 0;
         const chartSafe = isChartSafe(sl.chart);
 
         if (sl.type === 'divider') {
+          currentSection = sl.title || `Section ${i + 1}`;
           s.background = { color: INK };
           s.addShape(pres.ShapeType.rect, { x: 0.9, y: 4.55, w: 0.8, h: 0.06, fill: { color: ACCENT } });
           s.addText(sl.title || `Section ${i + 1}`, { x: 0.9, y: 3.6, w: 10.5, h: 0.9, fontFace: TITLE_FONT, fontSize: 34, color: 'FFFFFF' });
@@ -253,8 +255,28 @@ Respond with ONLY valid JSON, no markdown fences, no commentary, in this exact s
           return;
         }
 
+        // The very first slide is almost always a title/cover slide in a
+        // real deck — give it the branded treatment (colored background +
+        // the deck's own logo, already extracted for color detection).
+        // Pure styling, no fabricated content, so no accuracy risk.
+        if (i === 0) {
+          s.background = { color: ACCENT };
+          const coverImg = slides[0].images[0];
+          if (coverImg) {
+            const mime = coverImg.ext === 'jpg' || coverImg.ext === 'jpeg' || coverImg.ext === 'jfif' ? 'image/jpeg' : coverImg.ext === 'gif' ? 'image/gif' : 'image/png';
+            try { s.addImage({ data: `${mime};base64,${coverImg.buffer.toString('base64')}`, x: 0.9, y: 0.8, w: 1.9, h: 1.9, sizing: { type: 'contain', w: 1.9, h: 1.9 } }); } catch (e) {}
+          }
+          s.addText(sl.title || 'Untitled', { x: 0.85, y: 3.0, w: 11, h: 1.4, fontFace: TITLE_FONT, fontSize: 40, color: 'FFFFFF' });
+          if (sl.bullets && sl.bullets[0]) s.addText(sl.bullets[0], { x: 0.9, y: 4.05, w: 10, h: 0.5, fontFace: BODY_FONT, fontSize: 14, color: 'FFFFFF' });
+          return;
+        }
+
         s.background = { color: 'FFFFFF' };
-        s.addText(sl.title || `Slide ${i + 1}`, { x: 0.6, y: 0.5, w: 11.8, h: 0.9, fontFace: TITLE_FONT, fontSize: 26, color: INK });
+        // Colored section kicker above the title — this is the brand color
+        // showing up on every slide, not just dividers, without resorting
+        // to the accent-line-under-title cliche.
+        if (currentSection) s.addText(currentSection.toUpperCase(), { x: 0.6, y: 0.42, w: 11, h: 0.3, fontFace: BODY_FONT, fontSize: 10.5, color: ACCENT, bold: true, charSpacing: 1.2 });
+        s.addText(sl.title || `Slide ${i + 1}`, { x: 0.6, y: currentSection ? 0.72 : 0.5, w: 11.8, h: 0.9, fontFace: TITLE_FONT, fontSize: 26, color: INK });
 
         if (chartSafe) {
           const colors = sl.chart.values.map(v => v >= 0 ? GREEN : RED);
@@ -268,13 +290,13 @@ Respond with ONLY valid JSON, no markdown fences, no commentary, in this exact s
         } else {
           const bulletItems = (sl.bullets || []).map((b, bi) => ({ text: b, options: { bullet: { code: '2022', color: ACCENT }, breakLine: bi < sl.bullets.length - 1, color: MUTED, paraSpaceAfter: 10 } }));
           const textW = hasImage ? 6.3 : 11.8;
-          if (bulletItems.length) s.addText(bulletItems, { x: 0.6, y: 1.7, w: textW, h: 5.0, fontFace: BODY_FONT, fontSize: 15, valign: 'top' });
+          if (bulletItems.length) s.addText(bulletItems, { x: 0.6, y: 1.9, w: textW, h: 5.0, fontFace: BODY_FONT, fontSize: 15, valign: 'top' });
 
           if (hasImage) {
             const img = slides[i].images[0];
             const mime = img.ext === 'jpg' || img.ext === 'jpeg' || img.ext === 'jfif' ? 'image/jpeg' : img.ext === 'gif' ? 'image/gif' : 'image/png';
             try {
-              s.addImage({ data: `${mime};base64,${img.buffer.toString('base64')}`, x: 7.2, y: 1.7, w: 5.5, h: 4.5, sizing: { type: 'contain', w: 5.5, h: 4.5 } });
+              s.addImage({ data: `${mime};base64,${img.buffer.toString('base64')}`, x: 7.2, y: 1.9, w: 5.5, h: 4.4, sizing: { type: 'contain', w: 5.5, h: 4.4 } });
             } catch (e) { /* skip a malformed image rather than fail the whole deck */ }
           }
         }
