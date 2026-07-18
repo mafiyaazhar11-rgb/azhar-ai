@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Brand Presentations — AZHAR-AI</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@300;400;500;600;700&family=Montserrat:wght@600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* AKI shell tokens — used for the hub, topbar, modals */
+    --void:#070e1a; --surface:#0d1b2e; --card:#0f2040; --border:#1e3a5f;
+    --gold:#c9a84c; --gold2:#e8c878; --text:#f0f6ff; --muted:#a9b4c9; --faint:#5c6a85;
+    /* Per-brand accent — overridden by JS when a brand deck opens */
+    --accent:#c9a84c; --accent-bright:#e8c878; --accent-glow:rgba(201,168,76,0.4); --accent-soft:rgba(201,168,76,0.14);
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{height:100%;}
+  body{
+    background:radial-gradient(ellipse 1200px 800px at 15% 0%, rgba(139,105,20,0.16), transparent 60%),
+               radial-gradient(ellipse 1000px 700px at 100% 100%, rgba(201,168,76,0.10), transparent 55%), var(--void);
+    color:var(--text); font-family:'Inter',sans-serif; min-height:100vh; overflow-x:hidden;
+  }
+  .mono{font-family:'JetBrains Mono',monospace;}
+  a{color:inherit;}
+
+  /* ---------- loading / auth gate ---------- */
+  #gate{position:fixed; inset:0; display:flex; align-items:center; justify-content:center; z-index:999; background:var(--void); flex-direction:column; gap:14px;}
+  #gate .spin{width:28px; height:28px; border-radius:50%; border:2px solid var(--border); border-top-color:var(--gold); animation:spin 0.9s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  #gate p{color:var(--muted); font-size:13px;}
+
+  /* ---------- hub shell ---------- */
+  .hub-topbar{display:flex; align-items:center; justify-content:space-between; padding:18px 32px; border-bottom:1px solid var(--border); position:sticky; top:0; background:rgba(7,14,26,0.9); backdrop-filter:blur(10px); z-index:40;}
+  .back-link{display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--muted); cursor:pointer; text-decoration:none;}
+  .back-link:hover{color:var(--gold2);}
+  .hub-title{font-family:'Montserrat',sans-serif; font-weight:700; font-size:15px; letter-spacing:0.5px;}
+  .hub-user{display:flex; align-items:center; gap:10px; font-size:12px; color:var(--muted);}
+  .hub-avatar{width:30px; height:30px; border-radius:50%; background:linear-gradient(135deg,#8b6914,#c9a84c); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:12px; color:#fff;}
+
+  #hub{max-width:1180px; margin:0 auto; padding:52px 32px 90px;}
+  .hub-head{margin-bottom:40px; display:flex; align-items:flex-end; justify-content:space-between; flex-wrap:wrap; gap:16px;}
+  .eyebrow{font-size:11px; letter-spacing:0.16em; text-transform:uppercase; color:var(--gold); margin-bottom:12px; display:block;}
+  .hub-head h1{font-family:'Fraunces',serif; font-size:34px; font-weight:600;}
+  .hub-head p{color:var(--muted); font-size:13.5px; margin-top:8px; max-width:520px; line-height:1.6;}
+  .btn{font-size:12.5px; padding:10px 18px; border-radius:22px; border:1px solid var(--border); color:var(--muted); cursor:pointer; background:transparent; display:inline-flex; align-items:center; gap:7px;}
+  .btn:hover{color:#fff; border-color:var(--gold);}
+  .btn.primary{background:linear-gradient(135deg,#8b6914,#c9a84c); border-color:transparent; color:#fff; font-weight:600;}
+  .btn.primary:hover{filter:brightness(1.1);}
+
+  .grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:18px;}
+  .card{border:1px solid var(--border); border-radius:14px; padding:24px; background:linear-gradient(160deg, var(--card), rgba(15,32,64,0.4)); position:relative; cursor:pointer; transition:all .3s ease; min-height:180px; display:flex; flex-direction:column; justify-content:space-between; overflow:hidden;}
+  .card:hover{transform:translateY(-3px); box-shadow:0 20px 40px -20px rgba(0,0,0,0.6);}
+  .card .glyph{width:44px; height:44px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-family:'Fraunces',serif; font-weight:600; font-size:17px; margin-bottom:20px; overflow:hidden;}
+  .card .glyph img{width:100%; height:100%; object-fit:cover;}
+  .card h3{font-size:17px; font-weight:600; margin-bottom:5px;}
+  .card .meta{font-size:11.5px; color:var(--faint);}
+  .card .arrow{position:absolute; right:20px; bottom:20px; width:28px; height:28px; border-radius:50%; border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:13px; color:var(--muted);}
+  .badge{position:absolute; top:20px; right:20px; font-size:9.5px; letter-spacing:0.08em; text-transform:uppercase; padding:4px 9px; border-radius:20px; border:1px solid var(--border); color:var(--faint);}
+  .badge.live{color:#3cd6bc; border-color:rgba(60,214,188,0.35); background:rgba(60,214,188,0.08);}
+  .card-gear{position:absolute; top:20px; right:56px; width:26px; height:26px; border-radius:50%; border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:12px; color:var(--faint); cursor:pointer; z-index:2;}
+  .card-gear:hover{color:var(--gold); border-color:var(--gold);}
+  .card.new-brand{border-style:dashed; align-items:center; justify-content:center; text-align:center;}
+  .empty-state{grid-column:1/-1; text-align:center; padding:60px 20px; color:var(--faint); font-size:13px; border:1px dashed var(--border); border-radius:14px;}
+
+  /* ---------- modal (shared) ---------- */
+  .modal-overlay{position:fixed; inset:0; background:rgba(4,6,10,0.72); backdrop-filter:blur(4px); z-index:500; display:none; align-items:center; justify-content:center; padding:20px;}
+  .modal-overlay.active{display:flex;}
+  .modal-box{width:420px; max-width:100%; background:#0e1a2e; border:1px solid var(--border); border-radius:14px; padding:26px; max-height:85vh; overflow-y:auto;}
+  .modal-box h3{font-size:17px; font-weight:600; margin-bottom:4px;}
+  .modal-box .m-hint{font-size:11.5px; color:var(--faint); margin-bottom:18px; line-height:1.5;}
+  .m-field{margin-bottom:13px;}
+  .m-field label{font-size:11px; color:var(--muted); display:block; margin-bottom:5px;}
+  .m-field input, .m-field select, .m-field textarea{width:100%; background:rgba(255,255,255,0.04); border:1px solid var(--border); border-radius:8px; padding:9px 11px; color:var(--text); font-size:13px; font-family:'Inter',sans-serif;}
+  .m-field textarea{resize:vertical; min-height:50px;}
+  .m-row{display:flex; gap:10px;}
+  .m-row .m-field{flex:1;}
+  .modal-actions{display:flex; gap:10px; margin-top:18px;}
+  .m-btn{flex:1; padding:10px; border-radius:8px; text-align:center; font-size:12.5px; cursor:pointer; border:1px solid var(--border);}
+  .m-btn.primary{background:var(--gold); color:#1a1204; font-weight:600; border-color:var(--gold);}
+  .m-btn.ghost{color:var(--muted);}
+  .access-row{display:flex; align-items:center; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border); font-size:12.5px;}
+  .access-row .rtag{font-size:10px; padding:2px 8px; border-radius:10px; background:var(--accent-soft); color:var(--gold2);}
+  .x-btn{color:var(--faint); cursor:pointer; font-size:12px;}
+  .x-btn:hover{color:#ff6b6b;}
+
+  .toast{position:fixed; bottom:26px; left:50%; transform:translateX(-50%) translateY(20px); background:#0e1a2e; border:1px solid var(--gold); color:var(--text); padding:12px 20px; border-radius:10px; font-size:12.5px; opacity:0; transition:all .35s ease; z-index:600;}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+
+  /* ================= DECK (fullscreen brand presentation) ================= */
+  #deck{position:fixed; inset:0; background:var(--void); z-index:100; display:none;}
+  #deck.active{display:block;}
+
+  .deck-topbar{position:fixed; top:0; left:0; right:0; z-index:50; display:flex; align-items:center; justify-content:space-between; padding:16px 28px; background:linear-gradient(rgba(7,10,14,0.85), transparent); flex-wrap:wrap; gap:10px;}
+  .deck-brandmark{display:flex; align-items:center; gap:12px;}
+  .deck-logo{width:32px; height:32px; border-radius:9px; background:var(--accent); display:flex; align-items:center; justify-content:center; font-family:'Fraunces',serif; font-weight:700; font-size:13px; color:#0a0a0a; overflow:hidden;}
+  .deck-logo img{width:100%; height:100%; object-fit:cover;}
+  .deck-bname{font-size:13px; font-weight:600;}
+  .deck-bsub{font-size:10.5px; color:var(--faint);}
+  .deck-bsub b{color:var(--accent-bright);}
+  .deck-toolbar{display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
+  .dbtn{font-size:11.5px; padding:8px 14px; border-radius:20px; border:1px solid rgba(255,255,255,0.12); color:#cfcfcf; cursor:pointer; display:flex; align-items:center; gap:6px; background:rgba(10,10,10,0.4); backdrop-filter:blur(6px);}
+  .dbtn:hover{color:#fff; border-color:var(--accent-bright);}
+  .dbtn.primary{background:var(--accent); border-color:var(--accent); color:#0a0a0a; font-weight:600;}
+  .fs-btn{width:32px; height:32px; border-radius:50%; border:1px solid rgba(255,255,255,0.12); background:rgba(10,10,10,0.4); color:#cfcfcf; display:flex; align-items:center; justify-content:center; cursor:pointer;}
+  .fs-btn:hover{color:var(--accent-bright); border-color:var(--accent-bright);}
+  #fileInput{display:none;}
+  .modeToggle{display:flex; align-items:center; gap:7px; font-size:11px; color:#cfcfcf;}
+  .switch{width:34px; height:18px; border-radius:20px; background:rgba(10,10,10,0.4); border:1px solid rgba(255,255,255,0.12); position:relative; cursor:pointer;}
+  .switch .knob{position:absolute; top:2px; left:2px; width:12px; height:12px; border-radius:50%; background:#cfcfcf; transition:all .25s ease;}
+  .switch.on{background:var(--accent-soft); border-color:var(--accent-bright);}
+  .switch.on .knob{left:18px; background:var(--accent-bright);}
+
+  .rail{position:fixed; left:28px; top:50%; transform:translateY(-50%); z-index:40; display:flex; flex-direction:column; gap:16px;}
+  .rail-item{display:flex; align-items:center; gap:10px; cursor:pointer; opacity:0.35; transition:all .3s ease;}
+  .rail-item.active{opacity:1;}
+  .rail-num{font-family:'JetBrains Mono',monospace; font-size:10px; color:#8a8a8a; width:16px;}
+  .rail-item.active .rail-num{color:var(--accent-bright);}
+  .rail-bar{width:16px; height:2px; background:rgba(255,255,255,0.15); border-radius:2px; transition:all .3s ease;}
+  .rail-item.active .rail-bar{width:30px; background:var(--accent-bright); box-shadow:0 0 8px var(--accent-glow);}
+  .rail-label{font-size:10.5px; color:#cfcfcf; display:none; white-space:nowrap; max-width:140px; overflow:hidden; text-overflow:ellipsis;}
+  .rail-item.active .rail-label{display:block; color:#fff;}
+
+  #slides{position:relative; width:100%; height:100%;}
+  .slide{position:absolute; inset:0; display:flex; align-items:center; padding:0 110px 0 100px; opacity:0; transform:translateX(24px); transition:all .55s cubic-bezier(.2,.8,.2,1); pointer-events:none; overflow-y:auto;}
+  .slide.active{opacity:1; transform:translateX(0); pointer-events:auto;}
+  .slide-inner{max-width:920px; margin:80px auto; width:100%; position:relative;}
+  .chapter-tag{font-size:11px; letter-spacing:0.18em; text-transform:uppercase; color:var(--accent-bright); margin-bottom:12px; display:block;}
+  .slide h2{font-family:'Fraunces',serif; font-size:clamp(26px,3.4vw,40px); font-weight:600; margin-bottom:22px; letter-spacing:-0.01em;}
+
+  .edit-pin{position:absolute; top:0; right:-40px; width:28px; height:28px; border-radius:50%; background:var(--accent-soft); border:1px solid var(--accent-bright); color:var(--accent-bright); font-size:12px; display:none; align-items:center; justify-content:center; cursor:pointer;}
+  body.manager-mode .edit-pin{display:flex;}
+  .add-tile{display:none; align-items:center; justify-content:center; gap:8px; padding:14px; border:1px dashed var(--accent-glow); border-radius:12px; color:var(--accent-bright); font-size:12px; cursor:pointer;}
+  body.manager-mode .add-tile{display:flex;}
+
+  /* kpi hero */
+  .hero-row{display:flex; gap:40px; flex-wrap:wrap;}
+  .hero-kpi .lbl{font-size:11px; color:#9a9a9a; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:6px;}
+  .hero-kpi .val{font-family:'Fraunces',serif; font-size:clamp(32px,4.4vw,50px); font-weight:600; line-height:1;}
+  .hero-kpi .delta{font-size:12px; margin-top:8px; font-weight:600;}
+  .delta.up{color:var(--accent-bright);} .delta.down{color:#e2a63f;}
+
+  /* rings */
+  .ring-row{display:flex; gap:26px; flex-wrap:wrap; margin-top:6px;}
+  .ring-item{display:flex; flex-direction:column; align-items:center; width:112px;}
+  .ring-item svg{transform:rotate(-90deg);}
+  .ring-pct{font-family:'Fraunces',serif; font-size:17px; font-weight:600;}
+  .ring-label{font-size:10.5px; color:#b8b8b8; text-align:center; margin-top:9px; line-height:1.4;}
+
+  /* stock cards */
+  .stock-grid{display:flex; flex-direction:column; gap:10px; margin-top:6px;}
+  .stock-row{display:grid; grid-template-columns:1.4fr 1fr 1fr auto auto; align-items:center; gap:14px; padding:14px 16px; border:1px solid rgba(255,255,255,0.09); border-radius:12px; background:rgba(255,255,255,0.03);}
+  .stock-row .sku{font-size:12.5px; font-weight:600;}
+  .stock-row .figure{font-size:11.5px; color:#b8b8b8;}
+  .figure .flbl{font-size:9px; color:#7a7a7a; text-transform:uppercase; display:block; margin-bottom:2px;}
+  .pill{display:inline-block; padding:3px 10px; border-radius:20px; font-size:9.5px; font-weight:600; white-space:nowrap;}
+  .pill.ok{background:rgba(60,214,188,0.14); color:#3cd6bc;}
+  .pill.warn{background:rgba(240,180,41,0.14); color:#f0b429;}
+  .pill.risk{background:rgba(255,92,92,0.14); color:#ff5c5c;}
+
+  /* ranked table */
+  table.ranked{width:100%; border-collapse:collapse; margin-top:6px; font-size:12px;}
+  table.ranked th{text-align:left; font-size:9.5px; text-transform:uppercase; letter-spacing:0.05em; color:#7a7a7a; padding:0 12px 10px; border-bottom:1px solid rgba(255,255,255,0.1);}
+  table.ranked td{padding:10px 12px; border-bottom:1px solid rgba(255,255,255,0.05); color:#c8c8c8;}
+  table.ranked td.strong{color:#fff; font-weight:600;}
+
+  /* initiatives */
+  .init-grid{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:6px;}
+  .init{border:1px solid rgba(255,255,255,0.09); border-radius:12px; padding:14px 16px; background:rgba(255,255,255,0.03); display:flex; gap:10px;}
+  .init .n{font-family:'JetBrains Mono',monospace; font-size:10.5px; color:var(--accent-bright); padding-top:2px;}
+  .init h5{font-size:13px; font-weight:600; margin-bottom:3px;}
+  .init p{font-size:11px; color:#a8a8a8; line-height:1.5;}
+  .init .status{font-size:9.5px; text-transform:uppercase; margin-top:6px; display:inline-block; color:var(--accent-bright);}
+
+  /* documents */
+  .doc-list{display:flex; flex-direction:column; gap:10px; margin-top:6px; max-width:560px;}
+  .doc-row{display:flex; align-items:center; justify-content:space-between; padding:13px 16px; border:1px solid rgba(255,255,255,0.09); border-radius:10px; background:rgba(255,255,255,0.03);}
+  .doc-left{display:flex; align-items:center; gap:12px;}
+  .doc-ico{width:30px; height:30px; border-radius:7px; background:var(--accent); opacity:0.3; flex-shrink:0;}
+  .doc-name{font-size:13px; font-weight:600;}
+  .doc-meta{font-size:10.5px; color:#8a8a8a; margin-top:2px;}
+  .doc-dl{font-size:10.5px; color:var(--accent-bright); border:1px solid var(--accent-glow); padding:6px 12px; border-radius:20px; cursor:pointer;}
+  .doc-dl:hover{background:var(--accent-soft);}
+  .doc-actions{display:flex; align-items:center; gap:8px;}
+
+  /* swot radar (embedded in slide) */
+  .radar-wrap{position:relative; width:420px; height:420px; margin-top:10px;}
+  .grid-ring{fill:none; stroke:rgba(255,255,255,0.06); stroke-width:1;}
+  .axis-line{stroke:rgba(255,255,255,0.10); stroke-width:1;}
+  .radar-fill{opacity:0; transition:opacity 1s ease;}
+  .radar-fill.show{opacity:0.5;}
+  .radar-outline{fill:none; stroke-width:2.5; stroke-linejoin:round;}
+  .swot-vertex{cursor:pointer;}
+  .swot-vlabel{font-family:'Inter',sans-serif; font-size:11px; font-weight:600; cursor:pointer;}
+  .swot-panel{position:absolute; z-index:10; width:280px; background:rgba(14,12,11,0.92); backdrop-filter:blur(14px); border:1px solid rgba(255,255,255,0.12); border-radius:14px; padding:18px 20px; opacity:0; transform:scale(0.92); transition:all .3s ease; pointer-events:none;}
+  .swot-panel.show{opacity:1; transform:scale(1); pointer-events:auto;}
+  .swot-panel h4{font-size:14px; font-weight:600; margin-bottom:10px;}
+  .swot-panel ul{list-style:none;}
+  .swot-panel li{font-size:11.5px; color:#b8b8b8; line-height:1.55; padding-left:12px; position:relative; margin-bottom:6px;}
+  .swot-panel li::before{content:'—'; position:absolute; left:0; color:#7a7a7a;}
+  .swot-dots{display:flex; gap:6px; margin-top:14px;}
+  .swot-dot{width:6px; height:6px; border-radius:50%; background:rgba(255,255,255,0.15); cursor:pointer;}
+  .swot-dot.active{background:var(--accent-bright); width:16px; border-radius:4px;}
+
+  .swipe-hint{position:fixed; bottom:20px; left:50%; transform:translateX(-50%); z-index:40; font-size:10px; color:#7a7a7a;}
+
+  .history-banner{position:fixed; top:64px; left:0; right:0; z-index:45; background:rgba(226,166,63,0.14); border-top:1px solid rgba(226,166,63,0.35); border-bottom:1px solid rgba(226,166,63,0.35); padding:9px 28px; display:none; align-items:center; justify-content:center; gap:14px; font-size:12px; color:#f0b429;}
+  .history-banner.show{display:flex;}
+  .history-banner .back-to-live{border:1px solid #f0b429; padding:4px 12px; border-radius:14px; cursor:pointer; font-size:11px;}
+  .history-banner .back-to-live:hover{background:rgba(226,166,63,0.2);}
+
+  .hist-year{font-size:11px; letter-spacing:0.1em; text-transform:uppercase; color:var(--gold); margin:16px 0 8px;}
+  .hist-year:first-child{margin-top:0;}
+  .hist-row{display:flex; align-items:center; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--border); font-size:12.5px;}
+  .hist-row .hd-left{display:flex; flex-direction:column;}
+  .hist-row .hd-date{font-weight:600;}
+  .hist-row .hd-meta{font-size:10.5px; color:var(--faint); margin-top:2px;}
+  .hist-view-btn{font-size:11px; color:var(--gold2); border:1px solid var(--border); padding:5px 12px; border-radius:14px; cursor:pointer;}
+  .hist-view-btn:hover{border-color:var(--gold);}
+
+  @media(max-width:820px){
+    .slide{padding:80px 22px 40px;}
+    .rail{display:none;}
+    .init-grid{grid-template-columns:1fr;}
+    .stock-row{grid-template-columns:1fr 1fr; row-gap:6px;}
+    .radar-wrap{width:88vw; height:88vw; max-width:380px; max-height:380px;}
+  }
+</style>
+</head>
+<body>
+
+<div id="gate"><div class="spin"></div><p>Loading brand presentations…</p></div>
+
+<!-- ================= HUB ================= -->
+<div id="hubShell" style="display:none;">
+  <div class="hub-topbar">
+    <a class="back-link" href="/">← Back to Control Tower</a>
+    <div class="hub-title">🎯 Brand Presentations</div>
+    <div class="hub-user"><div class="hub-avatar" id="hubAvatar"></div><span id="hubUserName"></span></div>
+  </div>
+  <div id="hub">
+    <div class="hub-head">
+      <div>
+        <span class="eyebrow" id="hubCount">Brand Vault</span>
+        <h1>Select a brand to present</h1>
+        <p>Create your own brand and it's yours to manage — no assignment needed. Admins see every brand for oversight.</p>
+      </div>
+      <div class="btn primary" id="newBrandBtn" style="display:none;" onclick="openNewBrandModal()">+ New Brand</div>
+    </div>
+    <div class="grid" id="hubGrid"></div>
+  </div>
+</div>
+
+<!-- ================= DECK ================= -->
+<div id="deck">
+  <div class="deck-topbar">
+    <div class="deck-brandmark">
+      <div class="deck-logo" id="deckLogo"></div>
+      <div><div class="deck-bname" id="deckBname"></div><div class="deck-bsub">Last refreshed: <b id="deckRefreshTime">—</b></div></div>
+    </div>
+    <div class="deck-toolbar" id="deckToolbar">
+      <div class="modeToggle" id="modeToggleWrap" style="display:none;"><span id="modeLabel">Viewer</span><div class="switch" id="modeSwitch" onclick="toggleManagerMode()"><div class="knob"></div></div></div>
+      <div class="dbtn" id="historyBtn" onclick="openHistoryModal()">🕐 History</div>
+      <div class="dbtn" id="accessBtn" style="display:none;" onclick="openAccessModal()">👥 Access</div>
+      <div class="dbtn primary" id="uploadExcelBtn" style="display:none;" onclick="document.getElementById('fileInput').click()">⤒ Upload &amp; refresh</div>
+      <input type="file" id="fileInput" accept=".xlsx" onchange="handleExcelUpload(event)">
+      <div class="fs-btn" onclick="toggleFullscreen()">⛶</div>
+      <div class="dbtn" onclick="closeDeck()">✕ Close</div>
+    </div>
+  </div>
+  <div class="rail" id="rail"></div>
+  <div class="history-banner" id="historyBanner">📁 Viewing archived version — <b id="historyBannerLabel"></b><div class="back-to-live" onclick="backToLive()">← Back to live</div></div>
+  <div id="slides"></div>
+  <div class="swipe-hint">← → to navigate · click rail to jump</div>
+</div>
+
+<div class="modal-overlay" id="modalOverlay"><div class="modal-box" id="modalBox"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================
+// AUTH — same pattern as index.html
+// ============================================================
+var AUTH_TOKEN = localStorage.getItem('azhar_token') || null;
+var AUTH_USER = null;
+
+function authHeaders(json){
+  var h = { 'x-auth-token': AUTH_TOKEN };
+  if (json) h['Content-Type'] = 'application/json';
+  return h;
+}
+
+async function boot(){
+  if (!AUTH_TOKEN) { window.location.href = '/'; return; }
+  try {
+    var r = await fetch('/api/auth/me', { headers: authHeaders() });
+    if (!r.ok) { window.location.href = '/'; return; }
+    AUTH_USER = await r.json();
+  } catch(e) { window.location.href = '/'; return; }
+
+  document.getElementById('gate').style.display = 'none';
+  document.getElementById('hubShell').style.display = 'block';
+  document.getElementById('hubUserName').textContent = AUTH_USER.full_name || AUTH_USER.username;
+  document.getElementById('hubAvatar').textContent = (AUTH_USER.full_name || AUTH_USER.username || '?').charAt(0).toUpperCase();
+  document.getElementById('newBrandBtn').style.display = (AUTH_USER.role === 'salesman') ? 'none' : 'inline-flex';
+  loadHub();
+}
+
+// ============================================================
+// TOAST
+// ============================================================
+var toastTimer;
+function showToast(msg){
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function(){ t.classList.remove('show'); }, 3200);
+}
+
+// ============================================================
+// HUB
+// ============================================================
+var allBrands = [];
+async function loadHub(){
+  try {
+    var r = await fetch('/api/brands', { headers: authHeaders() });
+    var data = await r.json();
+    allBrands = data.brands || [];
+  } catch(e) { showToast('Could not load brands: ' + e.message); return; }
+
+  document.getElementById('hubCount').textContent = 'Brand Vault · ' + allBrands.length + ' brand' + (allBrands.length === 1 ? '' : 's');
+  var grid = document.getElementById('hubGrid');
+  if (allBrands.length === 0) {
+    grid.innerHTML = '<div class="empty-state">No brands yet. ' + ((AUTH_USER.role === 'superadmin' || AUTH_USER.role === 'subadmin') ? 'Click "+ New Brand" to create the first one.' : 'Ask an admin to grant you access to a brand.') + '</div>';
+    return;
+  }
+  grid.innerHTML = allBrands.map(function(b){
+    var initials = b.name.split(' ').map(function(w){return w[0];}).join('').slice(0,2).toUpperCase();
+    var logoInner = b.logo_url ? '<img src="' + b.logo_url + '">' : initials;
+    var isAdmin = (AUTH_USER.role === 'superadmin' || AUTH_USER.role === 'subadmin');
+    var metaLine = b.tagline || '';
+    if (isAdmin) {
+      var bits = [];
+      if (b.managers) bits.push('Manager: ' + b.managers);
+      if (b.content_updated_at) bits.push('Updated ' + new Date(b.content_updated_at).toLocaleDateString());
+      metaLine = bits.length ? bits.join(' · ') : 'No manager assigned yet';
+    }
+    return '<div class="card">' +
+      '<span class="badge ' + (b.status === 'live' ? 'live' : '') + '">' + b.status + '</span>' +
+      (isAdmin ? '<span class="card-gear" onclick="event.stopPropagation(); quickAssign(' + b.id + ',\'' + escapeHtml(b.name).replace(/'/g,"\\'") + '\')" title="Assign a brand manager">⚙</span>' : '') +
+      '<div onclick="openDeck(' + b.id + ')" style="cursor:pointer;">' +
+      '<div class="glyph" style="background:' + b.accent_color + '22; color:' + b.accent_color + ';">' + logoInner + '</div>' +
+      '<div><h3>' + escapeHtml(b.name) + '</h3><div class="meta">' + escapeHtml(metaLine) + '</div></div>' +
+      '<div class="arrow">→</div></div></div>';
+  }).join('');
+}
+
+function quickAssign(brandId, brandName){
+  var box = document.getElementById('modalBox');
+  box.innerHTML = '<h3>Assign to ' + escapeHtml(brandName) + '</h3><p class="m-hint">Grant a user manager (can edit + upload) or viewer (read-only) access to this brand. They\'ll see it on their own Brand Hub next time they log in.</p>' +
+    '<div id="quickAccessList" style="margin-bottom:14px; font-size:12px; color:var(--faint);">Loading current access…</div>' +
+    '<div class="m-row"><div class="m-field"><label>Username</label><input id="qaUsername" placeholder="exact username"></div>' +
+    '<div class="m-field"><label>Role</label><select id="qaRole"><option value="manager">Manager (can edit)</option><option value="viewer">Viewer (read-only)</option></select></div></div>' +
+    '<div class="modal-actions"><div class="m-btn ghost" onclick="closeModal()">Close</div><div class="m-btn primary" onclick="quickAssignSubmit(' + brandId + ')">Assign</div></div>';
+  document.getElementById('modalOverlay').classList.add('active');
+  loadQuickAccessList(brandId);
+}
+async function loadQuickAccessList(brandId){
+  try {
+    var r = await fetch('/api/brands/' + brandId + '/access', { headers: authHeaders() });
+    var data = await r.json();
+    var el = document.getElementById('quickAccessList');
+    if (!el) return;
+    el.innerHTML = data.access.length ? data.access.map(function(a){
+      return '<div class="access-row"><span>' + escapeHtml(a.full_name || a.username) + '</span><span class="rtag">' + a.role + '</span></div>';
+    }).join('') : 'No one assigned yet — only admins can see this brand right now.';
+  } catch(e) {}
+}
+async function quickAssignSubmit(brandId){
+  var username = document.getElementById('qaUsername').value.trim();
+  var role = document.getElementById('qaRole').value;
+  if (!username) { showToast('Enter a username'); return; }
+  try {
+    var ur = await fetch('/api/users', { headers: authHeaders() });
+    if (!ur.ok) { showToast('Only superadmin can look up users to assign'); return; }
+    var users = (await ur.json()).users || [];
+    var user = users.find(function(u){ return u.username.toLowerCase() === username.toLowerCase(); });
+    if (!user) { showToast('No user found with that username — check spelling'); return; }
+    var r = await fetch('/api/brands/' + brandId + '/access', { method:'POST', headers: authHeaders(true), body: JSON.stringify({ user_id: user.id, role: role }) });
+    var data = await r.json();
+    if (!r.ok) { showToast(data.error || 'Failed to assign'); return; }
+    showToast('✓ ' + username + ' assigned as ' + role);
+    document.getElementById('qaUsername').value = '';
+    loadQuickAccessList(brandId);
+  } catch(e) { showToast('Error: ' + e.message); }
+}
+
+function escapeHtml(s){ var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+
+// ============================================================
+// NEW BRAND (admin)
+// ============================================================
+function openNewBrandModal(){
+  var box = document.getElementById('modalBox');
+  box.innerHTML =
+    '<h3>Create a brand</h3><p class="m-hint">Sets up an empty presentation — add sections and grant access after.</p>' +
+    '<div class="m-field"><label>Brand name</label><input id="nbName" placeholder="e.g. Arctic Bloom"></div>' +
+    '<div class="m-row"><div class="m-field"><label>Accent color (hex)</label><input id="nbColor" value="#c9a84c"></div>' +
+    '<div class="m-field"><label>Status</label><select id="nbStatus"><option value="draft">Draft</option><option value="live">Live</option></select></div></div>' +
+    '<div class="m-field"><label>Tagline</label><input id="nbTagline" placeholder="e.g. HoReCa & Retail Distribution · UAE"></div>' +
+    '<div class="modal-actions"><div class="m-btn ghost" onclick="closeModal()">Cancel</div><div class="m-btn primary" onclick="submitNewBrand()">Create</div></div>';
+  document.getElementById('modalOverlay').classList.add('active');
+}
+async function submitNewBrand(){
+  var name = document.getElementById('nbName').value.trim();
+  if (!name) { showToast('Brand name is required'); return; }
+  try {
+    var r = await fetch('/api/brands', { method:'POST', headers: authHeaders(true), body: JSON.stringify({
+      name: name, accent_color: document.getElementById('nbColor').value, tagline: document.getElementById('nbTagline').value
+    })});
+    var data = await r.json();
+    if (!r.ok) { showToast(data.error || 'Failed to create brand'); return; }
+    closeModal(); showToast('✓ Brand created'); loadHub();
+  } catch(e) { showToast('Error: ' + e.message); }
+}
+
+function closeModal(){ document.getElementById('modalOverlay').classList.remove('active'); }
+
+// ============================================================
+// DECK — open / close / render
+// ============================================================
+var currentBrand = null, currentSections = [], currentDocs = [], currentIdx = 0, accessLevel = null, managerMode = false, viewingSnapshot = null;
+
+async function openDeck(brandId){
+  try {
+    var r = await fetch('/api/brands/' + brandId, { headers: authHeaders() });
+    var data = await r.json();
+    if (!r.ok) { showToast(data.error || 'Could not open brand'); return; }
+    currentBrand = data.brand; currentSections = data.sections; currentDocs = data.documents; accessLevel = data.access_level;
+  } catch(e) { showToast('Error: ' + e.message); return; }
+
+  document.documentElement.style.setProperty('--accent', currentBrand.accent_color);
+  document.documentElement.style.setProperty('--accent-bright', currentBrand.accent_color);
+  document.documentElement.style.setProperty('--accent-glow', hexToRgba(currentBrand.accent_color, 0.4));
+  document.documentElement.style.setProperty('--accent-soft', hexToRgba(currentBrand.accent_color, 0.14));
+
+  document.getElementById('deckBname').textContent = currentBrand.name;
+  document.getElementById('deckLogo').innerHTML = currentBrand.logo_url ? '<img src="' + currentBrand.logo_url + '">' : currentBrand.name.slice(0,2).toUpperCase();
+  document.getElementById('deckRefreshTime').textContent = latestRefresh() || 'no data yet';
+
+  var canManage = (accessLevel === 'manager' || accessLevel === 'admin');
+  document.getElementById('modeToggleWrap').style.display = canManage ? 'flex' : 'none';
+  document.getElementById('uploadExcelBtn').style.display = canManage ? 'flex' : 'none';
+  document.getElementById('accessBtn').style.display = (AUTH_USER.role === 'superadmin') ? 'flex' : 'none';
+  managerMode = false; document.body.classList.remove('manager-mode');
+  document.getElementById('modeSwitch').classList.remove('on'); document.getElementById('modeLabel').textContent = 'Viewer';
+
+  currentIdx = 0;
+  viewingSnapshot = null;
+  document.getElementById('historyBanner').classList.remove('show');
+  buildSlides();
+  document.getElementById('deck').classList.add('active');
+}
+function closeDeck(){
+  document.getElementById('deck').classList.remove('active');
+  if (document.fullscreenElement) document.exitFullscreen();
+}
+function hexToRgba(hex, a){
+  var h = hex.replace('#','');
+  var r = parseInt(h.substring(0,2),16), g = parseInt(h.substring(2,4),16), b = parseInt(h.substring(4,6),16);
+  return 'rgba(' + r + ',' + g + ',' + b + ',' + a + ')';
+}
+function latestRefresh(){
+  var refreshed = currentSections.filter(function(s){return s.last_refreshed_at;}).map(function(s){return s.last_refreshed_at;});
+  if (!refreshed.length) return null;
+  refreshed.sort(); return new Date(refreshed[refreshed.length-1]).toLocaleString();
+}
+function toggleManagerMode(){
+  managerMode = !managerMode;
+  document.body.classList.toggle('manager-mode', managerMode);
+  document.getElementById('modeSwitch').classList.toggle('on', managerMode);
+  document.getElementById('modeLabel').textContent = managerMode ? 'Brand manager' : 'Viewer';
+}
+function toggleFullscreen(){
+  if (!document.fullscreenElement) { document.documentElement.requestFullscreen && document.documentElement.requestFullscreen(); }
+  else { document.exitFullscreen(); }
+}
+
+// ============================================================
+// SLIDE RENDERING
+// ============================================================
+function pill(status, kind){
+  var cls = 'ok';
+  if (kind === 'ageing') cls = status === '0-30' ? 'ok' : (status === '31-60' ? 'warn' : 'risk');
+  if (kind === 'shelf') cls = status === 'Healthy' ? 'ok' : (status === 'Monitor' ? 'warn' : 'risk');
+  return '<span class="pill ' + cls + '">' + escapeHtml(status) + '</span>';
+}
+
+function renderSectionBody(sec){
+  var d = sec.data || {};
+  switch (sec.template_type) {
+
+    case 'cover':
+      return '<div class="chapter-tag">' + escapeHtml(currentBrand.tagline || '') + '</div>' +
+        '<h2 style="font-size:clamp(40px,6vw,64px);">' + escapeHtml(currentBrand.name) + '</h2>' +
+        '<p style="color:#b8b8b8; max-width:480px; margin-top:14px; font-size:14px; line-height:1.7;">' + escapeHtml(d.tagline || '') + '</p>';
+
+    case 'kpi_hero':
+      return '<span class="chapter-tag">' + escapeHtml(sec.chapter_tag||'') + '</span><h2>' + escapeHtml(sec.title||'') + '</h2>' +
+        '<div class="hero-row">' + (d.kpis||[]).map(function(k){
+          var pct = k.compare_value ? Math.round(100*k.value/k.compare_value) : null;
+          return '<div class="hero-kpi"><div class="lbl">' + escapeHtml(k.label) + '</div><div class="val" data-count="' + k.value + '">0</div>' +
+            (pct !== null ? '<div class="delta ' + (pct>=90?'up':'down') + '">' + pct + '% of ' + Number(k.compare_value).toLocaleString() + '</div>' : (k.unit ? '<div class="delta up">' + escapeHtml(k.unit) + '</div>' : '')) + '</div>';
+        }).join('') + '</div>';
+
+    case 'sku_rings':
+      return '<span class="chapter-tag">' + escapeHtml(sec.chapter_tag||'') + '</span><h2>' + escapeHtml(sec.title||'') + '</h2>' +
+        '<div class="ring-row">' + (d.items||[]).map(function(it){
+          var pct = it.target ? Math.round(100*it.achieved/it.target) : 0;
+          var color = pct >= 85 ? currentBrand.accent_color : '#e2a63f';
+          return '<div class="ring-item"><div style="position:relative;">' + ringSvg(0, color) +
+            '<div class="ring-pct" style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center;" data-ring-final="' + pct + '" data-ring-color="' + color + '">0%</div></div>' +
+            '<div class="ring-label">' + escapeHtml(it.sku) + '</div></div>';
+        }).join('') + '</div>';
+
+    case 'stock_table':
+      return '<span class="chapter-tag">' + escapeHtml(sec.chapter_tag||'') + '</span><h2>' + escapeHtml(sec.title||'') + '</h2>' +
+        '<div class="stock-grid">' + (d.rows||[]).map(function(row){
+          return '<div class="stock-row"><div class="sku">' + escapeHtml(row.sku) + '</div>' +
+            '<div class="figure"><span class="flbl">Value</span>AED ' + Number(row.value).toLocaleString() + '</div>' +
+            '<div class="figure"><span class="flbl">Volume</span>' + Number(row.volume).toLocaleString() + ' units</div>' +
+            pill(row.ageing, 'ageing') + pill(row.shelf_status, 'shelf') + '</div>';
+        }).join('') + '</div>';
+
+    case 'ranked_table':
+      var cols = d.columns || ['Label','Prior','Current','Growth %','Contribution %'];
+      return '<span class="chapter-tag">' + escapeHtml(sec.chapter_tag||'') + '</span><h2>' + escapeHtml(sec.title||'') + '</h2>' +
+        '<table class="ranked"><tr>' + cols.map(function(c){return '<th>'+escapeHtml(c)+'</th>';}).join('') + '</tr>' +
+        (d.rows||[]).map(function(row){
+          return '<tr><td class="strong">' + escapeHtml(row.label) + '</td><td>' + Number(row.year_prior||0).toLocaleString() + '</td>' +
+            '<td>' + Number(row.year_current||0).toLocaleString() + '</td><td>' + (row.growth_pct>=0?'+':'') + row.growth_pct + '%</td>' +
+            '<td>' + row.contribution_pct + '%</td></tr>';
+        }).join('') + '</table>';
+
+    case 'initiative_grid':
+      return '<span class="edit-pin" onclick="openInitiativeModal(' + sec.id + ')">✎</span>' +
+        '<span class="chapter-tag">' + escapeHtml(sec.chapter_tag||'') + '</span><h2>' + escapeHtml(sec.title||'') + '</h2>' +
+        '<div class="init-grid">' + (d.items||[]).map(function(it,idx){
+          return '<div class="init"><div class="n">0' + (idx+1) + '</div><div><h5>' + escapeHtml(it.title) + '</h5><p>' + escapeHtml(it.note) + '</p><span class="status">' + escapeHtml(it.status) + '</span></div></div>';
+        }).join('') + '<div class="add-tile" onclick="openInitiativeModal(' + sec.id + ')">+ Add initiative</div></div>';
+
+    case 'swot_radar':
+      return '<span class="edit-pin" onclick="openSwotModal(' + sec.id + ')">✎</span>' +
+        '<span class="chapter-tag">' + escapeHtml(sec.chapter_tag||'') + '</span><h2>' + escapeHtml(sec.title||'') + '</h2>' +
+        '<div class="radar-wrap" id="radarWrap-' + sec.id + '"></div>';
+
+    case 'document_list':
+      return '<span class="chapter-tag">' + escapeHtml(sec.chapter_tag||'Documents') + '</span><h2>' + escapeHtml(sec.title||'Documents') + '</h2>' +
+        '<div class="doc-list" id="docList">' + renderDocRows() + '</div>' +
+        '<div class="add-tile" style="margin-top:12px; max-width:560px;" onclick="openDocUploadModal()">+ Upload a document</div>';
+
+    default:
+      return '<h2>' + escapeHtml(sec.title || sec.template_type) + '</h2><p style="color:#888;">Unknown template type.</p>';
+  }
+}
+
+function renderDocRows(){
+  if (!currentDocs.length) return '<div style="color:#7a7a7a; font-size:12.5px;">No documents uploaded yet.</div>';
+  var canManage = (accessLevel === 'manager' || accessLevel === 'admin');
+  return currentDocs.map(function(doc){
+    var sizeKb = doc.file_size_bytes ? Math.round(doc.file_size_bytes/1024) + ' KB' : '';
+    return '<div class="doc-row"><div class="doc-left"><div class="doc-ico"></div><div><div class="doc-name">' + escapeHtml(doc.title) + '</div>' +
+      '<div class="doc-meta">' + sizeKb + (doc.note ? ' · ' + escapeHtml(doc.note) : '') + '</div></div></div>' +
+      '<div class="doc-actions"><div class="doc-dl" onclick="downloadDoc(' + doc.id + ')">Download</div>' +
+      (canManage ? '<div class="x-btn" onclick="deleteDoc(' + doc.id + ')" title="Delete">✕</div>' : '') + '</div></div>';
+  }).join('');
+}
+async function downloadDoc(id){
+  try {
+    var r = await fetch('/api/brands/' + currentBrand.id + '/documents/' + id + '/download', { headers: authHeaders() });
+    if (!r.ok) { showToast('Download failed'); return; }
+    var disposition = r.headers.get('Content-Disposition') || '';
+    var match = disposition.match(/filename="([^"]+)"/);
+    var filename = match ? match[1] : 'document';
+    var blob = await r.blob();
+    var url = window.URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = filename; document.body.appendChild(a); a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  } catch(e) { showToast('Download error: ' + e.message); }
+}
+async function deleteDoc(id){
+  if (!confirm('Delete this document?')) return;
+  await fetch('/api/brands/' + currentBrand.id + '/documents/' + id, { method:'DELETE', headers: authHeaders() });
+  currentDocs = currentDocs.filter(function(d){return d.id !== id;});
+  document.getElementById('docList').innerHTML = renderDocRows();
+  showToast('Document deleted');
+}
+
+function buildSlides(){
+  var slidesEl = document.getElementById('slides');
+  var railEl = document.getElementById('rail');
+  slidesEl.innerHTML = currentSections.map(function(sec, i){
+    return '<div class="slide' + (i===currentIdx?' active':'') + '" data-i="' + i + '"><div class="slide-inner">' + renderSectionBody(sec) + '</div></div>';
+  }).join('');
+  railEl.innerHTML = currentSections.map(function(sec, i){
+    var label = sec.title || sec.template_type;
+    return '<div class="rail-item' + (i===currentIdx?' active':'') + '" onclick="goToSlide(' + i + ')"><span class="rail-num mono">0' + i + '</span><span class="rail-bar"></span><span class="rail-label">' + escapeHtml(label) + '</span></div>';
+  }).join('');
+  activateSlideEffects();
+}
+function goToSlide(i){
+  if (i<0 || i>=currentSections.length) return;
+  currentIdx = i;
+  document.querySelectorAll('.slide').forEach(function(s){s.classList.remove('active');});
+  document.querySelectorAll('.rail-item').forEach(function(r){r.classList.remove('active');});
+  document.querySelector('.slide[data-i="'+i+'"]').classList.add('active');
+  document.querySelectorAll('.rail-item')[i].classList.add('active');
+  activateSlideEffects();
+}
+document.addEventListener('keydown', function(e){
+  if (!document.getElementById('deck').classList.contains('active')) return;
+  if (document.getElementById('modalOverlay').classList.contains('active')) return;
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown') goToSlide(currentIdx+1);
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') goToSlide(currentIdx-1);
+});
+
+function activateSlideEffects(){
+  var activeSlide = document.querySelector('.slide.active');
+  if (!activeSlide) return;
+  activeSlide.querySelectorAll('[data-count]').forEach(function(el){
+    var target = parseFloat(el.getAttribute('data-count'));
+    var start = 0, dur = 850, t0 = performance.now();
+    function step(t){
+      var p = Math.min((t-t0)/dur, 1); var eased = 1-Math.pow(1-p,3);
+      el.textContent = Math.round(start+(target-start)*eased).toLocaleString();
+      if (p<1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  });
+  activeSlide.querySelectorAll('[data-ring-final]').forEach(function(el){
+    var pct = parseFloat(el.getAttribute('data-ring-final'));
+    var svg = el.previousElementSibling;
+    var circle = svg.querySelectorAll('circle')[1];
+    var r = circle.getAttribute('r'), c = 2*Math.PI*r;
+    setTimeout(function(){ circle.setAttribute('stroke-dashoffset', c - (pct/100)*c); }, 60);
+    var t0 = performance.now();
+    function step(t){ var p = Math.min((t-t0)/900,1); el.textContent = Math.round(pct*p)+'%'; if(p<1) requestAnimationFrame(step); }
+    requestAnimationFrame(step);
+  });
+  var radarWrap = activeSlide.querySelector('[id^="radarWrap-"]');
+  if (radarWrap) {
+    var sectionId = parseInt(radarWrap.id.replace('radarWrap-',''));
+    var sec = currentSections.find(function(s){return s.id === sectionId;});
+    if (sec) buildRadar(radarWrap, sec.data || {});
+  }
+}
+
+function ringSvg(pct, color, size, stroke){
+  size = size || 96; stroke = stroke || 7;
+  var r = (size-stroke)/2, c = 2*Math.PI*r, off = c - (Math.min(pct,100)/100)*c;
+  return '<svg width="'+size+'" height="'+size+'"><circle cx="'+size/2+'" cy="'+size/2+'" r="'+r+'" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="'+stroke+'"/>' +
+    '<circle cx="'+size/2+'" cy="'+size/2+'" r="'+r+'" fill="none" stroke="'+color+'" stroke-width="'+stroke+'" stroke-linecap="round" stroke-dasharray="'+c+'" stroke-dashoffset="'+off+'" style="transition:stroke-dashoffset 1s cubic-bezier(.2,.8,.2,1);"/></svg>';
+}
+
+// ---- SWOT radar (embedded) ----
+function buildRadar(container, data){
+  var accent = currentBrand.accent_color;
+  var cats = [
+    { key:'S', name:'Strengths', angle:-90, color: accent, items: data.strengths||[] },
+    { key:'O', name:'Opportunities', angle:0, color:'#3cd6bc', items: data.opportunities||[] },
+    { key:'T', name:'Threats', angle:90, color:'#ff5c5c', items: data.threats||[] },
+    { key:'W', name:'Weaknesses', angle:180, color:'#f0b429', items: data.weaknesses||[] },
+  ];
+  var size = container.offsetWidth || 420; var cx = size/2, cy = size/2, R = size*0.36;
+  function pt(angleDeg, r){ var rad = angleDeg*Math.PI/180; return [cx+r*Math.cos(rad), cy+r*Math.sin(rad)]; }
+
+  var values = cats.map(function(c){ return Math.min(30 + c.items.length*15, 95); });
+  var svgParts = [];
+  svgParts.push('<svg width="'+size+'" height="'+size+'" viewBox="0 0 '+size+' '+size+'">');
+  [0.25,0.5,0.75,1].forEach(function(f){
+    var pts = cats.map(function(c){ return pt(c.angle, R*f).join(','); }).join(' ');
+    svgParts.push('<polygon class="grid-ring" points="'+pts+'"/>');
+  });
+  cats.forEach(function(c){ var p = pt(c.angle, R); svgParts.push('<line class="axis-line" x1="'+cx+'" y1="'+cy+'" x2="'+p[0]+'" y2="'+p[1]+'"/>'); });
+  var dataPts = cats.map(function(c,i){ return pt(c.angle, R*(values[i]/100)); });
+  var ptsStr = dataPts.map(function(p){return p.join(',');}).join(' ');
+  svgParts.push('<polygon class="radar-fill" id="radarFill" points="'+ptsStr+'" style="fill:'+accent+';"/>');
+  svgParts.push('<polygon class="radar-outline" id="radarOutline" points="'+ptsStr+'" style="stroke:'+accent+';"/>');
+  cats.forEach(function(c,i){
+    var p = dataPts[i]; var lp = pt(c.angle, R+38);
+    svgParts.push('<g class="swot-vertex" onclick="showSwotPanel('+i+')" data-idx="'+i+'">' +
+      '<circle cx="'+p[0]+'" cy="'+p[1]+'" r="12" fill="'+c.color+'" opacity="0.18"/>' +
+      '<circle cx="'+p[0]+'" cy="'+p[1]+'" r="5" fill="'+c.color+'"/>' +
+      '<text x="'+lp[0]+'" y="'+lp[1]+'" text-anchor="middle" class="swot-vlabel" fill="'+c.color+'">'+c.name+'</text></g>');
+  });
+  svgParts.push('</svg>');
+  container.innerHTML = svgParts.join('') + '<div class="swot-panel" id="swotPanel"></div><div class="swot-dots" id="swotDots" style="position:absolute; bottom:0; left:50%; transform:translateX(-50%);"></div>';
+
+  window._swotCats = cats; window._swotPts = dataPts.map(function(p,i){ var lp = pt(cats[i].angle, R+38); return lp; });
+
+  var outline = document.getElementById('radarOutline');
+  var len = outline.getTotalLength ? outline.getTotalLength() : 700;
+  outline.style.strokeDasharray = len; outline.style.strokeDashoffset = len;
+  setTimeout(function(){ outline.style.transition = 'stroke-dashoffset 1.1s cubic-bezier(.2,.8,.2,1)'; outline.style.strokeDashoffset = 0; }, 200);
+  setTimeout(function(){ document.getElementById('radarFill').classList.add('show'); }, 900);
+
+  var dotsWrap = document.getElementById('swotDots');
+  cats.forEach(function(c,i){
+    var d = document.createElement('div'); d.className = 'swot-dot'; d.onclick = function(){ showSwotPanel(i); };
+    dotsWrap.appendChild(d);
+  });
+
+  setTimeout(function(){ showSwotPanel(0); }, 1400);
+}
+function showSwotPanel(i){
+  var cats = window._swotCats, pts = window._swotPts;
+  var c = cats[i];
+  var panel = document.getElementById('swotPanel');
+  if (!panel) return;
+  panel.innerHTML = '<h4 style="color:'+c.color+';">'+c.name+'</h4><ul>' + (c.items.length ? c.items.map(function(t){return '<li>'+escapeHtml(t)+'</li>';}).join('') : '<li>No items yet</li>') + '</ul>';
+  var container = panel.parentElement;
+  var left = pts[i][0] - 140, top = pts[i][1] + 20;
+  left = Math.max(0, Math.min(left, container.offsetWidth - 280));
+  top = Math.max(0, Math.min(top, container.offsetHeight - 40));
+  panel.style.left = left + 'px'; panel.style.top = top + 'px';
+  panel.classList.add('show');
+  document.querySelectorAll('.swot-dot').forEach(function(d,idx){ d.classList.toggle('active', idx===i); });
+}
+
+// ============================================================
+// MANUAL SECTION EDITING (initiatives, SWOT)
+// ============================================================
+async function saveSectionData(sectionId, newData){
+  var sec = currentSections.find(function(s){return s.id === sectionId;});
+  try {
+    var r = await fetch('/api/brands/' + currentBrand.id + '/sections', { method:'POST', headers: authHeaders(true), body: JSON.stringify({
+      template_type: sec.template_type, section_order: currentIdx, chapter_tag: sec.chapter_tag, title: sec.title, data: newData
+    })});
+    var out = await r.json();
+    if (!r.ok) { showToast(out.error || 'Save failed'); return; }
+    sec.data = newData; sec.last_refreshed_at = null;
+    document.querySelector('.slide[data-i="'+currentIdx+'"] .slide-inner').innerHTML = renderSectionBody(sec);
+    activateSlideEffects();
+    showToast('✓ Saved');
+  } catch(e) { showToast('Error: ' + e.message); }
+}
+
+function openInitiativeModal(sectionId){
+  var box = document.getElementById('modalBox');
+  box.innerHTML = '<h3>Add an initiative</h3><p class="m-hint">Structured fields only — renders into the same card style automatically.</p>' +
+    '<div class="m-field"><label>Title</label><input id="miTitle" placeholder="e.g. Ramadan Gift Set Launch"></div>' +
+    '<div class="m-field"><label>Note</label><input id="miNote" placeholder="One line describing it"></div>' +
+    '<div class="m-field"><label>Status</label><select id="miStatus"><option>Planning</option><option>In progress</option><option>Sourcing</option><option>Confirmed</option><option>Done</option></select></div>' +
+    '<div class="modal-actions"><div class="m-btn ghost" onclick="closeModal()">Cancel</div><div class="m-btn primary" onclick="submitInitiative(' + sectionId + ')">Add to slide</div></div>';
+  document.getElementById('modalOverlay').classList.add('active');
+}
+async function submitInitiative(sectionId){
+  var sec = currentSections.find(function(s){return s.id === sectionId;});
+  var newData = JSON.parse(JSON.stringify(sec.data || {items:[]}));
+  newData.items = newData.items || [];
+  newData.items.push({ title: document.getElementById('miTitle').value || 'New initiative', note: document.getElementById('miNote').value || '', status: document.getElementById('miStatus').value });
+  closeModal();
+  await saveSectionData(sectionId, newData);
+}
+
+function openSwotModal(sectionId){
+  var sec = currentSections.find(function(s){return s.id === sectionId;});
+  var d = sec.data || {};
+  var box = document.getElementById('modalBox');
+  box.innerHTML = '<h3>Edit SWOT</h3><p class="m-hint">One point per line for each quadrant.</p>' +
+    '<div class="m-field"><label>Strengths</label><textarea id="swS" rows="3">' + (d.strengths||[]).join('\n') + '</textarea></div>' +
+    '<div class="m-field"><label>Weaknesses</label><textarea id="swW" rows="3">' + (d.weaknesses||[]).join('\n') + '</textarea></div>' +
+    '<div class="m-field"><label>Opportunities</label><textarea id="swO" rows="3">' + (d.opportunities||[]).join('\n') + '</textarea></div>' +
+    '<div class="m-field"><label>Threats</label><textarea id="swT" rows="3">' + (d.threats||[]).join('\n') + '</textarea></div>' +
+    '<div class="modal-actions"><div class="m-btn ghost" onclick="closeModal()">Cancel</div><div class="m-btn primary" onclick="submitSwot(' + sectionId + ')">Save</div></div>';
+  document.getElementById('modalOverlay').classList.add('active');
+}
+async function submitSwot(sectionId){
+  function lines(id){ return document.getElementById(id).value.split('\n').map(function(s){return s.trim();}).filter(Boolean); }
+  var newData = { strengths: lines('swS'), weaknesses: lines('swW'), opportunities: lines('swO'), threats: lines('swT') };
+  closeModal();
+  await saveSectionData(sectionId, newData);
+}
+
+// ============================================================
+// DOCUMENT UPLOAD
+// ============================================================
+function openDocUploadModal(){
+  var box = document.getElementById('modalBox');
+  box.innerHTML = '<h3>Upload a document</h3><p class="m-hint">Catalogs, price lists, videos — appears as a downloadable row.</p>' +
+    '<div class="m-field"><label>Title</label><input id="docTitle" placeholder="e.g. Full Catalog.pdf"></div>' +
+    '<div class="m-field"><label>Note (optional)</label><input id="docNote" placeholder="e.g. updated Jul 2026"></div>' +
+    '<div class="m-field"><label>File</label><input type="file" id="docFile"></div>' +
+    '<div class="modal-actions"><div class="m-btn ghost" onclick="closeModal()">Cancel</div><div class="m-btn primary" onclick="submitDocUpload()">Upload</div></div>';
+  document.getElementById('modalOverlay').classList.add('active');
+}
+async function submitDocUpload(){
+  var fileInput = document.getElementById('docFile');
+  if (!fileInput.files[0]) { showToast('Choose a file first'); return; }
+  var fd = new FormData();
+  fd.append('file', fileInput.files[0]);
+  fd.append('title', document.getElementById('docTitle').value || fileInput.files[0].name);
+  fd.append('note', document.getElementById('docNote').value || '');
+  try {
+    var r = await fetch('/api/brands/' + currentBrand.id + '/documents', { method:'POST', headers: { 'x-auth-token': AUTH_TOKEN }, body: fd });
+    var data = await r.json();
+    if (!r.ok) { showToast(data.error || 'Upload failed'); return; }
+    currentDocs.unshift(data.document);
+    closeModal(); showToast('✓ Document uploaded');
+    var docListEl = document.getElementById('docList');
+    if (docListEl) docListEl.innerHTML = renderDocRows();
+  } catch(e) { showToast('Error: ' + e.message); }
+}
+
+// ============================================================
+// EXCEL UPLOAD
+// ============================================================
+async function handleExcelUpload(e){
+  var file = e.target.files[0]; if (!file) return;
+  var fd = new FormData(); fd.append('file', file);
+  try {
+    var r = await fetch('/api/brands/' + currentBrand.id + '/upload-excel', { method:'POST', headers: { 'x-auth-token': AUTH_TOKEN }, body: fd });
+    var data = await r.json();
+    if (!r.ok) { showToast(data.error || 'Upload failed'); e.target.value=''; return; }
+    showToast('✓ Refreshed: ' + data.sections_updated.join(', '));
+    await openDeck(currentBrand.id); // reload fresh data
+  } catch(err) { showToast('Error: ' + err.message); }
+  e.target.value = '';
+}
+
+// ============================================================
+// HISTORY — dated archive, grouped by year, opens read-only
+// ============================================================
+async function openHistoryModal(){
+  var box = document.getElementById('modalBox');
+  box.innerHTML = '<h3>Presentation history — ' + escapeHtml(currentBrand.name) + '</h3><p class="m-hint">Every Excel refresh (and any saved version) is kept here. Open one to view it as it was.</p><div id="histList">Loading…</div>' +
+    '<div class="modal-actions"><div class="m-btn ghost" onclick="closeModal()">Close</div></div>';
+  document.getElementById('modalOverlay').classList.add('active');
+
+  try {
+    var r = await fetch('/api/brands/' + currentBrand.id + '/snapshots', { headers: authHeaders() });
+    var data = await r.json();
+    var snaps = data.snapshots || [];
+    var list = document.getElementById('histList');
+    if (!snaps.length) { list.innerHTML = '<div style="color:var(--faint); font-size:12px;">No saved versions yet — one is created automatically every time data is refreshed via Excel.</div>'; return; }
+
+    var byYear = {};
+    snaps.forEach(function(s){
+      var year = new Date(s.created_at).getFullYear();
+      byYear[year] = byYear[year] || [];
+      byYear[year].push(s);
+    });
+    var years = Object.keys(byYear).sort(function(a,b){return b-a;});
+    list.innerHTML = years.map(function(y){
+      return '<div class="hist-year">' + y + '</div>' + byYear[y].map(function(s){
+        var d = new Date(s.created_at);
+        return '<div class="hist-row"><div class="hd-left"><span class="hd-date">' + d.toLocaleDateString('en-GB',{day:'numeric',month:'short'}) + ' · ' + d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) + '</span>' +
+          '<span class="hd-meta">' + (s.source === 'excel_upload' ? 'Excel refresh' : 'Saved version') + (s.created_by_name ? ' by ' + escapeHtml(s.created_by_name) : '') + '</span></div>' +
+          '<div class="hist-view-btn" onclick="viewSnapshotById(' + s.id + ',\'' + escapeHtml(s.label||'').replace(/'/g,"\\'") + '\')">View</div></div>';
+      }).join('');
+    }).join('');
+  } catch(e) { document.getElementById('histList').innerHTML = 'Could not load history.'; }
+}
+async function viewSnapshotById(snapshotId, label){
+  try {
+    var r = await fetch('/api/brands/' + currentBrand.id + '/snapshots/' + snapshotId, { headers: authHeaders() });
+    var data = await r.json();
+    if (!r.ok) { showToast(data.error || 'Could not load that version'); return; }
+    currentSections = data.snapshot.sections_data;
+    viewingSnapshot = data.snapshot;
+    currentIdx = 0;
+    closeModal();
+    document.getElementById('historyBannerLabel').textContent = label || new Date(data.snapshot.created_at).toLocaleDateString();
+    document.getElementById('historyBanner').classList.add('show');
+    document.getElementById('modeToggleWrap').style.display = 'none';
+    document.getElementById('uploadExcelBtn').style.display = 'none';
+    document.body.classList.remove('manager-mode');
+    buildSlides();
+    showToast('Viewing archived version — read only');
+  } catch(e) { showToast('Error: ' + e.message); }
+}
+function backToLive(){ openDeck(currentBrand.id); }
+
+
+async function openAccessModal(){
+  var box = document.getElementById('modalBox');
+  box.innerHTML = '<h3>Manage access — ' + escapeHtml(currentBrand.name) + '</h3><p class="m-hint">Grant manager (edit) or viewer (read-only) access per user.</p><div id="accessList">Loading…</div>' +
+    '<div class="m-row" style="margin-top:14px;"><div class="m-field"><label>Username</label><input id="grantUsername" placeholder="exact username"></div>' +
+    '<div class="m-field"><label>Role</label><select id="grantRole"><option value="viewer">Viewer</option><option value="manager">Manager</option></select></div></div>' +
+    '<div class="modal-actions"><div class="m-btn ghost" onclick="closeModal()">Close</div><div class="m-btn primary" onclick="grantAccess()">Grant</div></div>';
+  document.getElementById('modalOverlay').classList.add('active');
+
+  try {
+    var r = await fetch('/api/brands/' + currentBrand.id + '/access', { headers: authHeaders() });
+    var data = await r.json();
+    document.getElementById('accessList').innerHTML = data.access.length ? data.access.map(function(a){
+      return '<div class="access-row"><span>' + escapeHtml(a.full_name || a.username) + '</span><span class="rtag">' + a.role + '</span>' +
+        '<span class="x-btn" onclick="revokeAccess(' + a.user_id + ')">✕</span></div>';
+    }).join('') : '<div style="color:#7a7a7a; font-size:12px;">No one granted yet — admins always have access.</div>';
+  } catch(e) { document.getElementById('accessList').innerHTML = 'Could not load.'; }
+}
+async function grantAccess(){
+  var username = document.getElementById('grantUsername').value.trim();
+  var role = document.getElementById('grantRole').value;
+  if (!username) { showToast('Enter a username'); return; }
+  try {
+    var ur = await fetch('/api/users', { headers: authHeaders() });
+    var users = (await ur.json()).users || [];
+    var user = users.find(function(u){ return u.username.toLowerCase() === username.toLowerCase(); });
+    if (!user) { showToast('No user found with that username'); return; }
+    var r = await fetch('/api/brands/' + currentBrand.id + '/access', { method:'POST', headers: authHeaders(true), body: JSON.stringify({ user_id: user.id, role: role }) });
+    var data = await r.json();
+    if (!r.ok) { showToast(data.error || 'Failed to grant access'); return; }
+    showToast('✓ Access granted'); openAccessModal();
+  } catch(e) { showToast('Error: ' + e.message); }
+}
+async function revokeAccess(userId){
+  await fetch('/api/brands/' + currentBrand.id + '/access/' + userId, { method:'DELETE', headers: authHeaders() });
+  showToast('Access revoked'); openAccessModal();
+}
+
+boot();
+</script>
+</body>
+</html>
