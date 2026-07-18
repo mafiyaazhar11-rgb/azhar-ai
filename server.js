@@ -1,6 +1,8 @@
 const express = require('express');
 const multer = require('multer');
 const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const Anthropic = require('@anthropic-ai/sdk');
 const XLSX = require('xlsx');
 const path = require('path');
@@ -12,7 +14,32 @@ const crypto = require('crypto');
 const app = express();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 150 * 1024 * 1024 } });
 
-app.use(cors());
+// Security headers (HSTS, X-Frame-Options, X-Content-Type-Options, etc.)
+app.use(helmet({ contentSecurityPolicy: false })); // CSP off since inline scripts are used across the existing dashboards
+
+// Restrict cross-origin API access to known app domains only
+const ALLOWED_ORIGINS = [
+  'https://azr-operations.com',
+  'https://azhar-ai-la1l.onrender.com',
+  'http://localhost:3000'
+];
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin || ALLOWED_ORIGINS.includes(origin)) return callback(null, true);
+    return callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true
+}));
+
+// Brute-force protection on login: 10 attempts per 15 minutes per IP
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { error: 'Too many login attempts. Please try again in 15 minutes.' },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
 app.use(express.json({ limit: '150mb' }));
 app.use(express.urlencoded({ extended: true, limit: '150mb' }));
 
@@ -2296,7 +2323,7 @@ var VEHICLE_MASTER_MAP = {};
 require('./vehicle_master_module')(app, pool, requireAuth, requireRole, upload, auditLog, VEHICLE_MASTER_MAP);
 
 // ── LOGIN ──
-app.post('/api/auth/login', async function(req, res) {
+app.post('/api/auth/login', loginLimiter, async function(req, res) {
   try {
     var { username, password } = req.body;
     if (!username || !password) return res.status(400).json({ error: 'Username and password required' });
