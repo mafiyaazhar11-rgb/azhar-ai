@@ -138,11 +138,21 @@ For EACH slide, produce an improved, professional title and 2-5 clean bullet poi
 Respond with ONLY valid JSON, no markdown fences, no commentary, in this exact shape:
 {"slides":[{"title":"...","bullets":["...","..."]}]}`;
 
-      const msg = await anthropic.messages.create({
-        model: 'claude-sonnet-5',
-        max_tokens: 16000,
-        messages: [{ role: 'user', content: prompt }],
-      });
+      let msg;
+      try {
+        msg = await anthropic.messages.create({
+          model: 'claude-haiku-4-5-20251001',
+          max_tokens: 16000,
+          messages: [{ role: 'user', content: prompt }],
+        });
+      } catch (apiErr) {
+        // Log everything the SDK gives us — status code, error type, message —
+        // so if this happens again the log line names the real cause instead
+        // of us guessing a second time.
+        console.error('PPT polish: the writing-assistant call itself failed.');
+        console.error('  status:', apiErr.status, '| type:', apiErr.error && apiErr.error.type, '| message:', apiErr.message);
+        return res.status(500).json({ error: 'Could not reach the writing assistant right now. Please try again in a moment.' });
+      }
 
       let raw = msg.content[0].text.trim();
       raw = raw.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '');
