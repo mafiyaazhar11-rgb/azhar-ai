@@ -2512,6 +2512,12 @@ app.get('/orders', function(req, res) {
   if(fs.existsSync(p2))return res.sendFile(p2);
   res.status(404).json({error:'orders.html not found'});
 });
+app.get('/brands', function(req, res) {
+  var p1=path.join(__dirname,'public','brand_frontend.html'), p2=path.join(__dirname,'brand_frontend.html');
+  if(fs.existsSync(p1))return res.sendFile(p1);
+  if(fs.existsSync(p2))return res.sendFile(p2);
+  res.status(404).json({error:'brand_frontend.html not found'});
+});
 app.use(express.static(path.join(__dirname,'public')));
 app.use(express.static(__dirname));
 
