@@ -2318,6 +2318,9 @@ function requireRole(...roles) {
 // ── HoReCa Order Module (new tables, shares this pool/auth, isolated from other dashboards) ──
 require('./horeca_module')(app, pool, requireAuth, requireRole, upload, auditLog, bcrypt);
 
+// ── Brand Presentations Module (CEO-level brand decks) ──
+require('./brand_module')(app, pool, requireAuth, requireRole, upload, auditLog, bcrypt);
+
 // ── Vehicle Master Module (fleet registry, used as fallback for transport cost estimate) ──
 var VEHICLE_MASTER_MAP = {};
 require('./vehicle_master_module')(app, pool, requireAuth, requireRole, upload, auditLog, VEHICLE_MASTER_MAP);
