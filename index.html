@@ -29,7 +29,12 @@
   --sidebar:220px;
 }
 body{font-family:'Inter','Montserrat',sans-serif;background:radial-gradient(ellipse 1200px 800px at 15% 0%,rgba(139,105,20,0.16),transparent 60%),radial-gradient(ellipse 1000px 700px at 100% 100%,rgba(201,168,76,0.10),transparent 55%),var(--black);color:var(--text);min-height:100vh;display:flex;overflow:hidden;height:100vh;scrollbar-width:thin;scrollbar-color:var(--border) transparent;}
-.sidebar{width:var(--sidebar);min-height:100vh;background:#0a1628;border-right:1px solid rgba(201,168,76,0.2);display:flex;flex-direction:column;flex-shrink:0;position:fixed;left:0;top:0;bottom:0;z-index:100;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+.sidebar{width:var(--sidebar);min-height:100vh;background:#0a1628;border-right:1px solid rgba(201,168,76,0.2);display:flex;flex-direction:column;flex-shrink:0;position:fixed;left:0;top:0;bottom:0;z-index:100;overflow-y:auto;-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:rgba(201,168,76,0.45) transparent;}
+.sidebar::-webkit-scrollbar{width:6px;}
+.sidebar::-webkit-scrollbar-track{background:transparent;}
+.sidebar::-webkit-scrollbar-thumb{background:rgba(201,168,76,0.4);border-radius:3px;}
+.sidebar::-webkit-scrollbar-thumb:hover{background:rgba(201,168,76,0.65);}
+.sidebar-scroll-hint{position:fixed;left:0;width:var(--sidebar);height:26px;bottom:0;background:linear-gradient(transparent,rgba(10,22,40,0.95));pointer-events:none;z-index:101;display:flex;align-items:flex-end;justify-content:center;padding-bottom:4px;font-size:10px;color:rgba(201,168,76,0.7);}
 .sb-logo{padding:20px 16px;border-bottom:1px solid rgba(201,168,76,0.2);display:flex;align-items:center;gap:12px;}
 .sb-logo-box{width:38px;height:38px;border:1px solid var(--gold);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .sb-logo-box svg{width:18px;height:18px;}
@@ -626,8 +631,10 @@ footer span{color:#e8c878;}
   <button class="sb-item" onclick="goTab('automation',this)"><span class="icon">⚡</span> Automation Track</button>
   <button class="sb-item" onclick="goTab('delivery',this)"><span class="icon">📦</span> Delivery Schedule</button>
   <button class="sb-item" id="horeca-nav-btn" onclick="goTab('horeca',this)"><span class="icon">🧾</span> HoReCa Orders</button>
+  <button class="sb-item" id="brands-nav-btn" onclick="window.location.href='/brands'"><span class="icon">🎯</span> Brand Presentations</button>
   <button class="sb-item" id="salesmen-nav-btn" onclick="goTab('salesmen',this)"><span class="icon">🧑‍💼</span> Salesman Management</button>
       </aside>
+<div class="sidebar-scroll-hint" id="sidebarScrollHint">▼ more</div>
 
 <div class="main" id="mainContent">
     <div class="topbar">
@@ -9922,6 +9929,19 @@ async function hcDeleteSalesman(id, username) {
   } catch(e) { alert(e.message); }
 }
 
+(function(){
+  var sb = document.getElementById('sidebar');
+  var hint = document.getElementById('sidebarScrollHint');
+  if (!sb || !hint) return;
+  function updateHint(){
+    var hasMore = (sb.scrollTop + sb.clientHeight) < (sb.scrollHeight - 4);
+    hint.style.display = hasMore ? 'flex' : 'none';
+  }
+  sb.addEventListener('scroll', updateHint);
+  window.addEventListener('resize', updateHint);
+  updateHint();
+  setTimeout(updateHint, 300);
+})();
 </script>
 
 </body>
