@@ -56,9 +56,14 @@ module.exports = function (app, pool, requireAuth, requireRole, upload, auditLog
       var keys = Object.keys(raw[0]);
       var C = {
         date: fc(keys, ['date']),
-        order: fc(keys, ['ordernumber', 'order']),
-        customer: fc(keys, ['customer']),
-        resolution: fc(keys, ['resolution', 'reason', 'type']),
+        // Prefer an exact "order number" match before falling back to anything
+        // that merely contains "order" (avoids grabbing unrelated order-type columns).
+        order: fc(keys, ['ordernumber']) || fc(keys, ['order']),
+        // Prefer "customer name" specifically before falling back to any column
+        // that merely contains "customer" (avoids grabbing an LPO/reference column
+        // that happens to have "customer" in its header too).
+        customer: fc(keys, ['customername']) || fc(keys, ['customer']),
+        resolution: fc(keys, ['resolution', 'reason']),
         grv: fc(keys, ['grvreference', 'grv'])
       };
       if (!C.order) return res.status(400).json({ error: 'Could not find an Order Number column in that file.' });
