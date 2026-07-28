@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Price Discrepancy Tracker — AZHAR-AI</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@300;400;500;600;700&family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --void:#070e1a; --surface:#0d1b2e; --card:#0f2040; --border:#1e3a5f;
+    --gold:#c9a84c; --gold2:#e8c878; --text:#f0f6ff; --muted:#a9b4c9; --faint:#5c6a85;
+    --red:#e57373; --amber:#e8b84c; --green:#6fcf97;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{background:radial-gradient(ellipse 1200px 800px at 15% 0%, rgba(139,105,20,0.16), transparent 60%), var(--void); color:var(--text); font-family:'Inter',sans-serif; min-height:100vh;}
+  a{color:inherit; text-decoration:none;}
+  #gate{position:fixed; inset:0; background:var(--void); display:flex; align-items:center; justify-content:center; z-index:999;}
+  #gate .spin{width:28px; height:28px; border-radius:50%; border:2px solid var(--border); border-top-color:var(--gold); animation:spin .9s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .topbar{position:sticky; top:0; z-index:50; display:flex; align-items:center; justify-content:space-between; padding:14px 28px; background:rgba(7,14,26,0.9); backdrop-filter:blur(10px); border-bottom:1px solid var(--border);}
+  .back-link{font-size:12px; color:var(--muted); display:flex; align-items:center; gap:6px;}
+  .hub-title{font-family:'Montserrat',sans-serif; font-weight:700; font-size:15px; letter-spacing:.5px;}
+  .btn{font-size:12.5px; padding:8px 16px; border-radius:8px; border:1px solid var(--border); background:rgba(255,255,255,0.03); color:var(--text); cursor:pointer;}
+  .btn:hover{border-color:var(--gold); color:#fff;}
+  .btn.primary{background:var(--gold); color:#1a1204; font-weight:600; border-color:var(--gold);}
+  .btn.small{padding:5px 11px; font-size:11px;}
+  .wrap{max-width:1400px; margin:0 auto; padding:28px;}
+  .head h1{font-family:'Fraunces',serif; font-size:28px; font-weight:600; margin-bottom:4px;}
+  .head p{color:var(--muted); font-size:13px;}
+  .head-row{display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:22px; flex-wrap:wrap; gap:14px;}
+  .section{background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:20px; margin-bottom:18px;}
+  .section-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;}
+  .section-head h2{font-size:15px; font-weight:600;}
+  table{width:100%; border-collapse:collapse; font-size:12.5px;}
+  th{text-align:left; padding:8px 10px; color:var(--faint); text-transform:uppercase; font-size:10px; letter-spacing:.05em; border-bottom:1px solid var(--border);}
+  td{padding:8px 10px; border-bottom:1px solid rgba(255,255,255,0.04);}
+  .empty-state{padding:24px; text-align:center; color:var(--muted); font-size:12.5px;}
+  .pill{font-size:10px; padding:2px 8px; border-radius:10px; white-space:nowrap;}
+  .pill.green{background:rgba(111,207,151,0.15); color:var(--green);}
+  .pill.red{background:rgba(229,115,115,0.15); color:var(--red);}
+  .pill.amber{background:rgba(232,184,76,0.15); color:var(--amber);}
+  .row-repeated td{background:rgba(229,115,115,0.08);}
+  .modal-overlay{display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); align-items:center; justify-content:center; z-index:200;}
+  .modal-overlay.show{display:flex;}
+  .modal{background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:24px; max-width:460px; width:90%;}
+  .modal h3{margin-bottom:14px; font-size:16px;}
+  .modal select, .modal input{width:100%; background:#0d1b2e; border:1px solid var(--border); border-radius:7px; padding:8px 10px; color:var(--text); font-size:13px; margin-bottom:12px;}
+  .modal label{font-size:11px; color:var(--faint); text-transform:uppercase; display:block; margin-bottom:4px;}
+  .toast{position:fixed; bottom:20px; right:20px; background:var(--card); border:1px solid var(--gold); padding:12px 18px; border-radius:8px; font-size:13px; z-index:300;}
+  .toast.error{border-color:var(--red);}
+  .kpi-row{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-bottom:16px;}
+  .kpi-card{background:var(--card); border:1px solid var(--border); border-radius:10px; padding:14px;}
+  .kpi-card .lbl{font-size:9px; color:var(--faint); text-transform:uppercase; letter-spacing:.05em; margin-bottom:6px;}
+  .kpi-card .val{font-size:24px; font-weight:700; color:var(--gold);}
+  .kpi-card.warn .val{color:var(--red);}
+</style>
+</head>
+<body>
+
+<div id="gate"><div class="spin"></div></div>
+
+<div class="topbar">
+  <a href="/" class="back-link">&larr; Dashboard Hub</a>
+  <div class="hub-title">💷 PRICE DISCREPANCY TRACKER</div>
+  <div style="display:flex; gap:10px;">
+    <button class="btn" id="uploadMyFileBtn" onclick="openUploadModal()">📤 Upload My Weekly File</button>
+    <button class="btn" id="addRowBtn" onclick="openAddModal()">➕ Add One Row</button>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="head-row">
+    <div class="head">
+      <h1>Price Discrepancy Tracker</h1>
+      <p>Every team member logs System Price vs LPO Price mismatches weekly, under their own login. Anything reported again while still open is auto-flagged as Repeated, with days-unresolved tracked for escalation.</p>
+    </div>
+  </div>
+
+  <!-- MANAGEMENT VIEW — superadmin/subadmin only -->
+  <div id="managementSection" style="display:none;">
+
+    <div class="section">
+      <div class="section-head">
+        <h2>⚠ Executive Escalation <span style="color:var(--muted); font-weight:400; font-size:11px;">Repeated &amp; still unresolved</span></h2>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <label style="font-size:11px; color:var(--muted);">Days unresolved &ge;</label>
+          <input type="number" id="escalationThreshold" value="7" min="0" style="width:60px; background:#0d1b2e; border:1px solid var(--border); border-radius:7px; padding:6px 8px; color:var(--text); font-size:11px;" onchange="loadEscalations()">
+        </div>
+      </div>
+      <div class="kpi-row" id="escalationKpiRow"></div>
+      <div id="escalationBody"><div class="empty-state">Loading…</div></div>
+    </div>
+
+    <div class="section">
+      <div class="section-head">
+        <h2>User-Wise Summary</h2>
+        <span style="font-size:11px; color:var(--muted);">Who's actually reporting, and who has open/repeated issues</span>
+      </div>
+      <div id="userSummaryBody"><div class="empty-state">Loading…</div></div>
+    </div>
+
+    <div class="section">
+      <div class="section-head">
+        <h2>Same SKU — Repeated Across Customers</h2>
+        <span style="font-size:11px; color:var(--muted);">Likely a master-price issue, not one customer's problem</span>
+      </div>
+      <div id="skuAcrossBody"><div class="empty-state">Loading…</div></div>
+    </div>
+
+    <div class="section">
+      <div class="section-head">
+        <h2>Consolidated Log (All Team Members)</h2>
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <select id="repFilter" onchange="loadConsolidated()" style="background:#0d1b2e; border:1px solid var(--border); border-radius:7px; padding:6px 8px; color:var(--text); font-size:11px;">
+            <option value="">All Team Members</option>
+          </select>
+          <select id="statusFilter" onchange="loadConsolidated()" style="background:#0d1b2e; border:1px solid var(--border); border-radius:7px; padding:6px 8px; color:var(--text); font-size:11px;">
+            <option value="">All Status</option>
+            <option value="Open">Open</option>
+            <option value="Resolved">Resolved</option>
+          </select>
+          <button class="btn small" onclick="exportConsolidated()">⬇ Download Consolidated (by name)</button>
+          <button class="btn small" onclick="openManageUploads()" style="border-color:var(--red); color:var(--red);">🗑 Manage Uploads</button>
+        </div>
+      </div>
+      <div id="consolidatedBody"><div class="empty-state">Loading…</div></div>
+    </div>
+  </div>
+
+  <!-- MY SUBMISSIONS — every user sees their own -->
+  <div class="section" id="myEntriesSection">
+    <div class="section-head">
+      <h2>My Submissions — <span id="myRepName" style="color:var(--gold);">…</span></h2>
+      <button class="btn small" onclick="exportMyEntries()">⬇ Download My Log</button>
+    </div>
+    <div class="kpi-row" id="myKpiRow"></div>
+    <div id="myEntriesBody"><div class="empty-state">Loading…</div></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="uploadModal">
+  <div class="modal">
+    <h3>Upload Your Weekly File</h3>
+    <p style="font-size:11px; color:var(--muted); margin:-6px 0 12px;">Columns expected: Week Ending Date, Customer Name, SKU Code, SKU Description, System Price, LPO Price, Remarks. Use the weekly template if you have it.</p>
+    <input type="file" id="fileInput" accept=".xlsx,.xls,.csv">
+    <div style="display:flex; gap:8px; margin-top:8px;">
+      <button class="btn primary" onclick="doUpload()">Upload</button>
+      <button class="btn" onclick="closeUploadModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="addModal">
+  <div class="modal">
+    <h3>Add One Discrepancy</h3>
+    <label>Week Ending</label>
+    <input type="date" id="addWeek">
+    <label>Customer Name</label>
+    <input type="text" id="addCustomer" placeholder="e.g. Carrefour Mall of Emirates">
+    <label>SKU Code</label>
+    <input type="text" id="addSku" placeholder="e.g. LAH-006-0">
+    <label>SKU Description (optional)</label>
+    <input type="text" id="addDesc">
+    <label>System Price</label>
+    <input type="number" id="addSystemPrice" step="0.01">
+    <label>LPO Price</label>
+    <input type="number" id="addLpoPrice" step="0.01">
+    <label>Remarks (optional)</label>
+    <input type="text" id="addRemarks">
+    <div style="display:flex; gap:8px; margin-top:8px;">
+      <button class="btn primary" onclick="doAdd()">Save</button>
+      <button class="btn" onclick="closeAddModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="manageUploadsModal">
+  <div class="modal" style="max-width:720px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+      <h3 style="margin:0;">Manage Uploads</h3>
+      <button class="btn small" onclick="closeManageUploads()">Close</button>
+    </div>
+    <p style="font-size:11px; color:var(--muted); margin:-8px 0 12px;">Each row is one upload. Deleting a row removes only that upload's rows — nothing else is touched.</p>
+    <div id="manageUploadsBody" style="max-height:60vh; overflow-y:auto;"><div class="empty-state">Loading…</div></div>
+  </div>
+</div>
+
+<script>
+var AUTH_TOKEN = localStorage.getItem('azhar_token') || null;
+var AUTH_USER = null;
+var CAN_MANAGE = false;
+
+function authHeaders(json){
+  var h = { 'x-auth-token': AUTH_TOKEN };
+  if (json) h['Content-Type'] = 'application/json';
+  return h;
+}
+function showToast(msg, isError){
+  var t = document.createElement('div');
+  t.className = 'toast' + (isError ? ' error' : '');
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(function(){ t.remove(); }, 3500);
+}
+function money(n){ return (n == null || n === '') ? '—' : Number(n).toFixed(2); }
+
+async function boot(){
+  if (!AUTH_TOKEN) { window.location.href = '/'; return; }
+  try {
+    var r = await fetch('/api/auth/me', { headers: authHeaders() });
+    if (!r.ok) { localStorage.removeItem('azhar_token'); window.location.href = '/'; return; }
+    AUTH_USER = await r.json();
+    CAN_MANAGE = (AUTH_USER.role === 'superadmin' || AUTH_USER.role === 'subadmin');
+    var hasAccess = AUTH_USER.role === 'superadmin' || (AUTH_USER.dashboards||[]).indexOf('price_discrepancy') !== -1;
+    if (!hasAccess) { alert('You don\'t have access to Price Discrepancy Tracker. Ask your admin to enable it for your account.'); window.location.href = '/'; return; }
+    document.getElementById('gate').style.display = 'none';
+    document.getElementById('myRepName').textContent = AUTH_USER.full_name || AUTH_USER.username;
+    if (CAN_MANAGE) document.getElementById('managementSection').style.display = 'block';
+    await refreshAll();
+  } catch(e) { console.error(e); }
+}
+async function refreshAll(){
+  await loadMyEntries();
+  if (CAN_MANAGE) { await loadEscalations(); await loadUserSummary(); await loadSkuAcross(); await loadConsolidated(); }
+}
+
+// ── User-Wise Summary (management) ──
+async function loadUserSummary(){
+  var r = await fetch('/api/price-discrepancy/user-summary', { headers: authHeaders() });
+  var d = await r.json();
+  var rows = d.rows || [];
+  var body = document.getElementById('userSummaryBody');
+  if (!rows.length) { body.innerHTML = '<div class="empty-state">No submissions yet.</div>'; return; }
+  var html = '<table><tr><th>Team Member</th><th>Total Logged</th><th>Open</th><th>Resolved</th><th>Repeated (Open)</th><th>Last Submission</th></tr>';
+  rows.forEach(function(row){
+    html += '<tr class="' + (row.repeated_count > 0 ? 'row-repeated' : '') + '"><td>' + (row.reported_by_full_name || row.reported_by_username) + '</td>' +
+      '<td>' + row.total_logged + '</td><td>' + row.open_count + '</td><td>' + row.resolved_count + '</td>' +
+      '<td>' + (row.repeated_count > 0 ? ('<span class="pill red">' + row.repeated_count + '</span>') : '0') + '</td>' +
+      '<td>' + (row.last_submission ? new Date(row.last_submission).toLocaleString('en-AE') : '—') + '</td></tr>';
+  });
+  html += '</table>';
+  body.innerHTML = html;
+}
+
+// ── SKU Repeated Across Customers (management) ──
+async function loadSkuAcross(){
+  var r = await fetch('/api/price-discrepancy/sku-across-customers', { headers: authHeaders() });
+  var d = await r.json();
+  var rows = d.rows || [];
+  var body = document.getElementById('skuAcrossBody');
+  if (!rows.length) { body.innerHTML = '<div class="empty-state">No SKU currently flagged by more than one customer.</div>'; return; }
+  var html = '<table><tr><th>SKU Code</th><th>Description</th><th>Distinct Customers</th><th>Times Reported</th><th>Still Open</th><th>Latest System</th><th>Latest LPO</th></tr>';
+  rows.forEach(function(row){
+    html += '<tr class="' + (row.distinct_customers >= 3 ? 'row-repeated' : '') + '"><td>' + row.sku_code + '</td>' +
+      '<td>' + (row.sku_description || '—') + '</td>' +
+      '<td><span class="pill ' + (row.distinct_customers >= 3 ? 'red' : 'amber') + '">' + row.distinct_customers + '</span></td>' +
+      '<td>' + row.times_reported + '</td><td>' + row.still_open_count + '</td>' +
+      '<td>' + money(row.latest_system_price) + '</td><td>' + money(row.latest_lpo_price) + '</td></tr>';
+  });
+  html += '</table>';
+  body.innerHTML = html;
+}
+
+// ── Upload ──
+function openUploadModal(){ document.getElementById('uploadModal').classList.add('show'); }
+function closeUploadModal(){ document.getElementById('uploadModal').classList.remove('show'); }
+async function doUpload(){
+  var f = document.getElementById('fileInput').files[0];
+  if (!f) { showToast('Choose a file first', true); return; }
+  var fd = new FormData(); fd.append('file', f);
+  try {
+    var r = await fetch('/api/price-discrepancy/upload', { method:'POST', headers:{ 'x-auth-token': AUTH_TOKEN }, body: fd });
+    var d = await r.json();
+    if (!r.ok) { showToast(d.error || 'Upload failed', true); return; }
+    showToast('Uploaded ' + d.inserted + ' row(s)' + (d.skipped ? (', skipped ' + d.skipped) : ''));
+    closeUploadModal();
+    document.getElementById('fileInput').value = '';
+    await refreshAll();
+  } catch(e) { showToast('Upload failed', true); }
+}
+
+// ── Manual add ──
+function openAddModal(){ document.getElementById('addModal').classList.add('show'); }
+function closeAddModal(){ document.getElementById('addModal').classList.remove('show'); }
+async function doAdd(){
+  var body = {
+    weekEnding: document.getElementById('addWeek').value || null,
+    customerName: document.getElementById('addCustomer').value,
+    skuCode: document.getElementById('addSku').value,
+    skuDescription: document.getElementById('addDesc').value,
+    systemPrice: document.getElementById('addSystemPrice').value,
+    lpoPrice: document.getElementById('addLpoPrice').value,
+    remarks: document.getElementById('addRemarks').value
+  };
+  try {
+    var r = await fetch('/api/price-discrepancy/add', { method:'POST', headers: authHeaders(true), body: JSON.stringify(body) });
+    var d = await r.json();
+    if (!r.ok) { showToast(d.error || 'Save failed', true); return; }
+    showToast('Saved');
+    closeAddModal();
+    ['addCustomer','addSku','addDesc','addSystemPrice','addLpoPrice','addRemarks'].forEach(function(id){ document.getElementById(id).value = ''; });
+    await refreshAll();
+  } catch(e) { showToast('Save failed', true); }
+}
+
+function rowBadges(row){
+  var badges = '<span class="pill ' + (row.status === 'Open' ? 'red' : 'green') + '">' + row.status + '</span>';
+  if (row.is_repeated && row.still_open) {
+    badges += ' <span class="pill amber">Repeated \u00d7' + row.times_reported + '</span>';
+    badges += ' <span class="pill red">' + row.days_unresolved + 'd open</span>';
+  }
+  return badges;
+}
+
+// ── My Submissions ──
+async function loadMyEntries(){
+  var r = await fetch('/api/price-discrepancy/my-entries', { headers: authHeaders() });
+  var d = await r.json();
+  var rows = d.rows || [];
+  var openCount = rows.filter(function(x){ return x.status === 'Open'; }).length;
+  var repeatedCount = rows.filter(function(x){ return x.is_repeated && x.still_open; }).length;
+  document.getElementById('myKpiRow').innerHTML =
+    '<div class="kpi-card"><div class="lbl">Total Logged</div><div class="val">' + rows.length + '</div></div>' +
+    '<div class="kpi-card warn"><div class="lbl">Still Open</div><div class="val">' + openCount + '</div></div>' +
+    '<div class="kpi-card warn"><div class="lbl">Repeated</div><div class="val">' + repeatedCount + '</div></div>';
+  var body = document.getElementById('myEntriesBody');
+  if (!rows.length) { body.innerHTML = '<div class="empty-state">No submissions yet — upload your weekly file or add a row.</div>'; return; }
+  var html = '<table><tr><th>Week Ending</th><th>Customer</th><th>SKU</th><th>System</th><th>LPO</th><th>Discrepancy</th><th>Status</th></tr>';
+  rows.forEach(function(row){
+    html += '<tr class="' + ((row.is_repeated && row.still_open) ? 'row-repeated' : '') + '">' +
+      '<td>' + (row.week_ending ? new Date(row.week_ending).toLocaleDateString('en-AE') : '—') + '</td>' +
+      '<td>' + row.customer_name + '</td><td>' + row.sku_code + '</td>' +
+      '<td>' + money(row.system_price) + '</td><td>' + money(row.lpo_price) + '</td>' +
+      '<td>' + money(row.discrepancy) + '</td><td>' + rowBadges(row) + '</td></tr>';
+  });
+  html += '</table>';
+  body.innerHTML = html;
+}
+async function exportMyEntries(){
+  var r = await fetch('/api/price-discrepancy/my-entries/export', { headers: authHeaders() });
+  if (!r.ok) { showToast('Export failed', true); return; }
+  var blob = await r.blob();
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a'); a.href = url; a.download = 'My_Price_Discrepancies.xlsx'; a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ── Escalation (management) ──
+async function loadEscalations(){
+  var threshold = document.getElementById('escalationThreshold').value || 7;
+  var r = await fetch('/api/price-discrepancy/escalations?days_threshold=' + threshold, { headers: authHeaders() });
+  var d = await r.json();
+  var rows = d.rows || [];
+  document.getElementById('escalationKpiRow').innerHTML =
+    '<div class="kpi-card warn"><div class="lbl">Needs Executive Review</div><div class="val">' + rows.length + '</div></div>';
+  var body = document.getElementById('escalationBody');
+  if (!rows.length) { body.innerHTML = '<div class="empty-state">No repeated, unresolved discrepancies past the threshold. 🎉</div>'; return; }
+  var html = '<table><tr><th>Customer</th><th>SKU</th><th>Last Reported By</th><th>System</th><th>LPO</th><th>Times Reported</th><th>Days Unresolved</th><th></th></tr>';
+  rows.forEach(function(row){
+    html += '<tr class="row-repeated"><td>' + row.customer_name + '</td><td>' + row.sku_code + '</td>' +
+      '<td>' + (row.reported_by_full_name || row.reported_by_username) + '</td>' +
+      '<td>' + money(row.system_price) + '</td><td>' + money(row.lpo_price) + '</td>' +
+      '<td>' + row.times_reported + '</td><td><span class="pill red">' + row.days_unresolved + 'd</span></td>' +
+      '<td><button class="btn small" onclick="resolveRow(' + row.id + ')">Mark Resolved</button></td></tr>';
+  });
+  html += '</table>';
+  body.innerHTML = html;
+}
+
+// ── Consolidated (management) ──
+async function loadConsolidated(){
+  var rep = document.getElementById('repFilter').value;
+  var status = document.getElementById('statusFilter').value;
+  var qs = [];
+  if (rep) qs.push('rep_username=' + encodeURIComponent(rep));
+  if (status) qs.push('status=' + encodeURIComponent(status));
+  var r = await fetch('/api/price-discrepancy/consolidated' + (qs.length ? ('?' + qs.join('&')) : ''), { headers: authHeaders() });
+  var d = await r.json();
+  var sel = document.getElementById('repFilter');
+  if (sel.options.length <= 1) {
+    (d.reps || []).forEach(function(rp){
+      var o = document.createElement('option'); o.value = rp.reported_by_username; o.textContent = rp.reported_by_full_name || rp.reported_by_username;
+      sel.appendChild(o);
+    });
+    sel.value = rep;
+  }
+  var rows = d.rows || [];
+  var body = document.getElementById('consolidatedBody');
+  if (!rows.length) { body.innerHTML = '<div class="empty-state">No discrepancies logged yet.</div>'; return; }
+  var html = '<table><tr><th>Week</th><th>Reported By</th><th>Customer</th><th>SKU</th><th>System</th><th>LPO</th><th>Discrepancy</th><th>Status</th><th></th></tr>';
+  rows.forEach(function(row){
+    html += '<tr class="' + ((row.is_repeated && row.still_open) ? 'row-repeated' : '') + '">' +
+      '<td>' + (row.week_ending ? new Date(row.week_ending).toLocaleDateString('en-AE') : '—') + '</td>' +
+      '<td>' + (row.reported_by_full_name || row.reported_by_username) + '</td>' +
+      '<td>' + row.customer_name + '</td><td>' + row.sku_code + '</td>' +
+      '<td>' + money(row.system_price) + '</td><td>' + money(row.lpo_price) + '</td>' +
+      '<td>' + money(row.discrepancy) + '</td><td>' + rowBadges(row) + '</td>' +
+      '<td>' + (row.status === 'Open' ? ('<button class="btn small" onclick="resolveRow(' + row.id + ')">Resolve</button>') : '') + '</td></tr>';
+  });
+  html += '</table>';
+  body.innerHTML = html;
+}
+async function resolveRow(id){
+  try {
+    var r = await fetch('/api/price-discrepancy/' + id + '/resolve', { method:'PATCH', headers: authHeaders() });
+    var d = await r.json();
+    if (!r.ok) { showToast(d.error || 'Failed', true); return; }
+    showToast('Resolved ' + d.resolved + ' row(s)');
+    await refreshAll();
+  } catch(e) { showToast('Failed', true); }
+}
+async function exportConsolidated(){
+  var rep = document.getElementById('repFilter').value;
+  var qs = rep ? ('?rep_username=' + encodeURIComponent(rep)) : '';
+  var r = await fetch('/api/price-discrepancy/consolidated/export' + qs, { headers: authHeaders() });
+  if (!r.ok) { showToast('Export failed', true); return; }
+  var blob = await r.blob();
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a'); a.href = url; a.download = 'Price_Discrepancy_Consolidated.xlsx'; a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ── Manage Uploads ──
+async function openManageUploads(){
+  document.getElementById('manageUploadsModal').classList.add('show');
+  var r = await fetch('/api/price-discrepancy/batches', { headers: authHeaders() });
+  var d = await r.json();
+  var body = document.getElementById('manageUploadsBody');
+  var batches = d.batches || [];
+  if (!batches.length) { body.innerHTML = '<div class="empty-state">No uploads yet.</div>'; return; }
+  var html = '<table><tr><th>Uploaded</th><th>By</th><th>File</th><th>Rows</th><th></th></tr>';
+  batches.forEach(function(b){
+    html += '<tr><td>' + new Date(b.uploaded_at).toLocaleString('en-AE') + '</td>' +
+      '<td>' + (b.reported_by_full_name || b.reported_by_username) + '</td>' +
+      '<td>' + (b.file_name || '—') + '</td><td>' + b.row_count + '</td>' +
+      '<td><button class="btn small" style="border-color:var(--red); color:var(--red);" onclick="deleteBatch(\'' + b.batch_id + '\')">Delete</button></td></tr>';
+  });
+  html += '</table>';
+  body.innerHTML = html;
+}
+function closeManageUploads(){ document.getElementById('manageUploadsModal').classList.remove('show'); }
+async function deleteBatch(batchId){
+  if (!confirm('Delete this entire upload?')) return;
+  try {
+    var r = await fetch('/api/price-discrepancy/batches/' + batchId, { method:'DELETE', headers: authHeaders() });
+    var d = await r.json();
+    if (!r.ok) { showToast(d.error || 'Failed', true); return; }
+    showToast('Deleted ' + d.deleted + ' row(s)');
+    await openManageUploads();
+    await refreshAll();
+  } catch(e) { showToast('Failed', true); }
+}
+
+boot();
+</script>
+</body>
+</html>
