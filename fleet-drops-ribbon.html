@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Fleet & Drops Tracking Ribbon</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  :root{
+    --bg-page:#0a1628;
+    --bg-card:#0f1f38;
+    --bg-card-2:#122544;
+    --border:#1c3555;
+    --amber:#f0a020;
+    --teal:#2fd9a8;
+    --blue:#3d8ef0;
+    --red:#e0524f;
+    --text-primary:#eef2f8;
+    --text-secondary:#8fa3c0;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg-page);
+    font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+    color:var(--text-primary);
+    padding:24px;
+  }
+
+  /* ===== RIBBON ===== */
+  #fleet-ribbon{
+    background:var(--bg-card);
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:16px 20px;
+    margin-bottom:24px;
+  }
+  .fr-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    gap:12px;
+    margin-bottom:16px;
+  }
+  .fr-title{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-size:13px;
+    font-weight:700;
+    letter-spacing:.04em;
+    color:var(--amber);
+    text-transform:uppercase;
+  }
+  .fr-title svg{width:16px;height:16px;stroke:var(--amber);}
+
+  .fr-filters{display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+  .fr-btn{
+    background:var(--bg-card-2);
+    border:1px solid var(--border);
+    color:var(--text-secondary);
+    font-size:12px;
+    padding:6px 12px;
+    border-radius:6px;
+    cursor:pointer;
+  }
+  .fr-btn.active{
+    background:var(--amber);
+    color:#1a1204;
+    border-color:var(--amber);
+    font-weight:600;
+  }
+  .fr-date{
+    background:var(--bg-card-2);
+    border:1px solid var(--border);
+    color:var(--text-primary);
+    font-size:12px;
+    padding:5px 8px;
+    border-radius:6px;
+  }
+
+  .fr-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(120px,1fr));
+    gap:12px;
+    margin-bottom:16px;
+  }
+  .fr-metric{
+    background:var(--bg-card-2);
+    border:1px solid var(--border);
+    border-radius:6px;
+    padding:12px 14px;
+  }
+  .fr-metric .lbl{font-size:11px;color:var(--text-secondary);margin:0 0 6px;text-transform:uppercase;letter-spacing:.03em;}
+  .fr-metric .val{font-size:22px;font-weight:700;margin:0;}
+  .fr-metric.teal .val{color:var(--teal);}
+  .fr-metric.blue .val{color:var(--blue);}
+  .fr-metric.red .val{color:var(--red);}
+  .fr-metric.amber .val{color:var(--amber);}
+
+  .fr-alert{
+    font-size:12px;
+    color:var(--text-secondary);
+    background:var(--bg-card-2);
+    border-left:3px solid var(--red);
+    padding:8px 12px;
+    border-radius:0 6px 6px 0;
+    margin-bottom:16px;
+  }
+  .fr-alert.ok{border-left-color:var(--teal);}
+
+  .fr-legend{display:flex;gap:16px;font-size:11px;color:var(--text-secondary);margin-bottom:6px;}
+  .fr-legend span{display:flex;align-items:center;gap:5px;}
+  .fr-dot{width:9px;height:9px;border-radius:2px;display:inline-block;}
+
+  .fr-chart-wrap{position:relative;height:160px;width:100%;}
+
+  .fr-status{font-size:10px;color:var(--text-secondary);text-align:right;margin-top:10px;}
+  .fr-status .dot{
+    width:6px;height:6px;border-radius:50%;
+    background:var(--teal);display:inline-block;margin-right:5px;
+  }
+</style>
+</head>
+<body>
+
+<div id="fleet-ribbon">
+  <div class="fr-head">
+    <div class="fr-title">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M3 17h13V6H3v11zM16 10h4l3 3v4h-7v-7z"/><circle cx="7" cy="19" r="2"/><circle cx="18" cy="19" r="2"/></svg>
+      Fleet &amp; Drops Tracking
+    </div>
+    <div class="fr-filters">
+      <button class="fr-btn" data-range="today">Today</button>
+      <button class="fr-btn" data-range="3aug">3 Aug</button>
+      <button class="fr-btn active" data-range="1aug">1 Aug</button>
+      <input type="date" class="fr-date" id="frCustomDate" value="2026-08-01">
+    </div>
+  </div>
+
+  <div class="fr-grid">
+    <div class="fr-metric amber"><p class="lbl">Total orders</p><p class="val" id="frOrders">939</p></div>
+    <div class="fr-metric amber"><p class="lbl">Dispatch value (AED)</p><p class="val" id="frValue">6.20M</p></div>
+    <div class="fr-metric"><p class="lbl">Total drops</p><p class="val" id="frDrops">374</p></div>
+    <div class="fr-metric"><p class="lbl">Total drivers</p><p class="val" id="frDriversTotal">81</p></div>
+    <div class="fr-metric teal"><p class="lbl">In-house drivers</p><p class="val" id="frDriversInhouse">62</p></div>
+    <div class="fr-metric red"><p class="lbl">Hired drivers</p><p class="val" id="frDriversHired">19</p></div>
+    <div class="fr-metric teal"><p class="lbl">In-house vehicles</p><p class="val" id="frVehInhouse">60</p></div>
+    <div class="fr-metric red"><p class="lbl">Hired vehicles</p><p class="val" id="frVehHired">21</p></div>
+  </div>
+
+  <div class="fr-grid" style="grid-template-columns:repeat(auto-fit,minmax(90px,1fr)); margin-bottom:16px;">
+    <div class="fr-metric"><p class="lbl">Food orders</p><p class="val" id="frFood" style="font-size:16px;">467</p></div>
+    <div class="fr-metric"><p class="lbl">Non-food orders</p><p class="val" id="frNonFood" style="font-size:16px;">444</p></div>
+    <div class="fr-metric"><p class="lbl">3PL orders</p><p class="val" id="frThreePl" style="font-size:16px;">0</p></div>
+    <div class="fr-metric"><p class="lbl">AED / order</p><p class="val" id="frAedPerOrder" style="font-size:16px;">6,603</p></div>
+    <div class="fr-metric"><p class="lbl">AED / drop</p><p class="val" id="frAedPerDrop" style="font-size:16px;">16,578</p></div>
+  </div>
+
+  <div class="fr-alert" id="frAlert">
+    Hired share: <strong>23%</strong> of drivers on 1 Aug — above the 4-day average of 14%. Flag to transport team.
+  </div>
+
+  <div class="fr-legend">
+    <span><span class="fr-dot" style="background:var(--blue)"></span>In-house</span>
+    <span><span class="fr-dot" style="background:var(--red)"></span>Hired</span>
+  </div>
+  <div class="fr-chart-wrap">
+    <canvas id="frChart" role="img" aria-label="Stacked bar chart of in-house versus hired drivers for the last four dispatch days">29 Jul: 58 in-house, 6 hired. 30 Jul: 60 in-house, 8 hired. 31 Jul: 64 in-house, 7 hired. 1 Aug: 62 in-house, 19 hired.</canvas>
+  </div>
+
+  <div class="fr-status"><span class="dot"></span><span id="frSyncStatus">Synced with dispatch feed · 1 Aug 09:24</span></div>
+</div>
+
+<script>
+/* =========================================================================
+   FLEET & DROPS TRACKING RIBBON
+   -------------------------------------------------------------------------
+   AUTO-LINK TO DISPATCH
+   This ribbon does NOT fetch its own data. It exposes a single global
+   entry point, window.FleetRibbon.update(), that your existing dispatch
+   loader should call every time it refreshes the main dashboard's data
+   (the same place that currently sets "939 orders / AED 6.20M / 81 routes
+   81 drivers"). That keeps this ribbon perfectly in sync with the rest
+   of the dashboard with zero duplicate API calls.
+
+   Wire it in wherever your dispatch payload lands, e.g.:
+
+     async function loadDispatch(date) {
+       const data = await fetch(`/api/dispatch?date=${date}`).then(r => r.json());
+       renderMainDashboard(data);        // your existing code
+       window.FleetRibbon.update(data);  // <-- one line, added
+     }
+
+   EXPECTED SHAPE of the object you pass to update():
+   {
+     date: "2026-08-01",
+     orders: 939,                          // total order count
+     valueAed: 6200000,                    // total dispatch value, raw number (not "6.20M")
+     orderSplit: { food: 467, nonFood: 444, threePl: 0 },
+     drops: 374,
+     drivers: { inhouse: 62, hired: 19 },
+     vehicles: { inhouse: 60, hired: 21 },
+     trend: [                              // last N days for the chart
+       { label: "29 Jul", inhouse: 58, hired: 6 },
+       { label: "30 Jul", inhouse: 60, hired: 8 },
+       { label: "31 Jul", inhouse: 64, hired: 7 },
+       { label: "1 Aug",  inhouse: 62, hired: 19 }
+     ]
+   }
+
+   orders / valueAed / orderSplit are the same figures already shown in your
+   "Total Orders", "Total Value (AED)" and "Order Type Split" cards higher up
+   the page — this ribbon does not recompute them, it just mirrors whatever
+   your dispatch loader already has for the selected date, so the two never
+   disagree.
+
+   If your fields are named differently (e.g. driversInhouse instead of
+   drivers.inhouse), edit only the `update()` function below — everything
+   else (chart, DOM refs, alert threshold) stays the same.
+   ========================================================================= */
+
+let frChart;
+
+function frInitChart(trend) {
+  const ctx = document.getElementById('frChart');
+  const data = {
+    labels: trend.map(d => d.label),
+    datasets: [
+      { label: 'In-house', data: trend.map(d => d.inhouse), backgroundColor: '#3d8ef0', borderRadius: 4 },
+      { label: 'Hired',    data: trend.map(d => d.hired),   backgroundColor: '#e0524f', borderRadius: 4 }
+    ]
+  };
+  if (frChart) { frChart.data = data; frChart.update(); return; }
+  frChart = new Chart(ctx, {
+    type: 'bar',
+    data,
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { stacked: true, grid: { display: false }, ticks: { color: '#8fa3c0', font: { size: 11 } } },
+        y: { stacked: true, grid: { color: '#1c3555' }, ticks: { color: '#8fa3c0', font: { size: 11 } } }
+      }
+    }
+  });
+}
+
+// Alert threshold: flag if hired % of drivers exceeds trailing average by this many points
+const HIRED_ALERT_MARGIN_PTS = 5;
+
+function frFormatAed(n) {
+  if (n >= 1000000) return (n / 1000000).toFixed(2) + 'M';
+  if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
+  return Math.round(n).toLocaleString();
+}
+
+function frUpdate(payload) {
+  const { date, orders, valueAed, orderSplit, drops, drivers, vehicles, trend } = payload;
+  const totalDrivers = drivers.inhouse + drivers.hired;
+
+  document.getElementById('frOrders').textContent = orders.toLocaleString();
+  document.getElementById('frValue').textContent = frFormatAed(valueAed);
+  document.getElementById('frFood').textContent = orderSplit.food.toLocaleString();
+  document.getElementById('frNonFood').textContent = orderSplit.nonFood.toLocaleString();
+  document.getElementById('frThreePl').textContent = orderSplit.threePl.toLocaleString();
+  document.getElementById('frAedPerOrder').textContent = orders ? Math.round(valueAed / orders).toLocaleString() : '0';
+  document.getElementById('frAedPerDrop').textContent = drops ? Math.round(valueAed / drops).toLocaleString() : '0';
+
+  document.getElementById('frDrops').textContent = drops;
+  document.getElementById('frDriversTotal').textContent = totalDrivers;
+  document.getElementById('frDriversInhouse').textContent = drivers.inhouse;
+  document.getElementById('frDriversHired').textContent = drivers.hired;
+  document.getElementById('frVehInhouse').textContent = vehicles.inhouse;
+  document.getElementById('frVehHired').textContent = vehicles.hired;
+
+  // hired % today vs trailing average (excludes today, uses trend array)
+  const hiredPctToday = totalDrivers ? (drivers.hired / totalDrivers) * 100 : 0;
+  const priorDays = trend.slice(0, -1);
+  const avgHiredPct = priorDays.length
+    ? priorDays.reduce((sum, d) => sum + (d.hired / (d.inhouse + d.hired)) * 100, 0) / priorDays.length
+    : hiredPctToday;
+
+  const alertEl = document.getElementById('frAlert');
+  const isSpike = hiredPctToday - avgHiredPct >= HIRED_ALERT_MARGIN_PTS;
+  alertEl.classList.toggle('ok', !isSpike);
+  alertEl.innerHTML = isSpike
+    ? `Hired share: <strong>${hiredPctToday.toFixed(0)}%</strong> of drivers on ${date} — above the ${priorDays.length}-day average of ${avgHiredPct.toFixed(0)}%. Flag to transport team.`
+    : `Hired share: <strong>${hiredPctToday.toFixed(0)}%</strong> of drivers on ${date} — in line with the ${priorDays.length}-day average of ${avgHiredPct.toFixed(0)}%.`;
+
+  frInitChart(trend);
+
+  const now = new Date();
+  document.getElementById('frSyncStatus').textContent =
+    `Synced with dispatch feed · ${date} ${now.toTimeString().slice(0,5)}`;
+}
+
+window.FleetRibbon = { update: frUpdate };
+
+// ---- Filter button wiring (replace the console.log with your own date-fetch call) ----
+document.querySelectorAll('.fr-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.fr-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    console.log('Fetch dispatch for range:', btn.dataset.range);
+    // e.g. loadDispatch(rangeToDate(btn.dataset.range));
+  });
+});
+document.getElementById('frCustomDate').addEventListener('change', e => {
+  document.querySelectorAll('.fr-btn').forEach(b => b.classList.remove('active'));
+  console.log('Fetch dispatch for date:', e.target.value);
+  // e.g. loadDispatch(e.target.value);
+});
+
+// ---- Demo data so the ribbon renders standalone; delete once wired to real feed ----
+frUpdate({
+  date: "1 Aug",
+  orders: 939,
+  valueAed: 6200000,
+  orderSplit: { food: 467, nonFood: 444, threePl: 0 },
+  drops: 374,
+  drivers: { inhouse: 62, hired: 19 },
+  vehicles: { inhouse: 60, hired: 21 },
+  trend: [
+    { label: "29 Jul", inhouse: 58, hired: 6 },
+    { label: "30 Jul", inhouse: 60, hired: 8 },
+    { label: "31 Jul", inhouse: 64, hired: 7 },
+    { label: "1 Aug",  inhouse: 62, hired: 19 }
+  ]
+});
+</script>
+
+</body>
+</html>
