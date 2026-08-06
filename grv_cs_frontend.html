@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AKI GRV Return Requests — CS Rep</title>
+<style>
+  :root{
+    --gold:#d4af37; --gold-dark:#b8942e; --gold-light:#f0c75e;
+    --bg:#181310; --card:#241d15; --card2:#2d251a;
+    --border:rgba(212,175,55,0.22); --border-soft:rgba(212,175,55,0.14);
+    --text:#f6ecd9; --muted:#b9a98d; --danger:#e5484d; --ok:#2ecc71;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:radial-gradient(ellipse at top, #201810, var(--bg) 55%); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; min-height:100vh;}
+  header{position:sticky; top:0; background:linear-gradient(135deg,#241d15,#181310); border-bottom:1px solid var(--border); padding:14px 20px; display:flex; justify-content:space-between; align-items:center; z-index:10; flex-wrap:wrap; gap:8px;}
+  header h1{font-size:18px; margin:0; color:var(--gold-light);}
+  header .user{font-size:12px; color:var(--muted);}
+  .screen{padding:20px; max-width:1200px; margin:0 auto;}
+  .card{background:linear-gradient(160deg, var(--card), #1d1710); border:1px solid var(--border); border-radius:14px; padding:18px; margin-bottom:16px;}
+  .toolbar{display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:14px;}
+  select, input{padding:10px; border-radius:8px; border:1px solid var(--border-soft); background:var(--card2); color:var(--text); font-size:14px;}
+  button{cursor:pointer; border:none; border-radius:8px; font-weight:600; font-size:13px; padding:10px 16px;}
+  .btn-primary{background:linear-gradient(135deg,var(--gold-light),var(--gold-dark)); color:#1d1710;}
+  .btn-secondary{background:var(--card2); color:var(--gold-light); border:1px solid var(--border);}
+  .badge{display:inline-block; padding:4px 12px; border-radius:20px; font-size:12px; font-weight:700; background:var(--card2); color:var(--gold-light); border:1px solid var(--border);}
+  table{width:100%; border-collapse:collapse; font-size:13px;}
+  th{text-align:left; color:var(--muted); font-weight:600; padding:8px; border-bottom:1px solid var(--border); white-space:nowrap;}
+  td{padding:8px; border-bottom:1px solid var(--border-soft); vertical-align:middle;}
+  td input{width:100px; font-size:12px; padding:6px;}
+  .ref{color:var(--gold); font-weight:700;}
+  .status{padding:3px 9px; border-radius:20px; font-size:11px; font-weight:600; background:#3a2f10; color:#e0b73f;}
+  .empty{text-align:center; color:var(--muted); padding:40px 0;}
+  .login-wrap{display:flex; align-items:center; justify-content:center; min-height:100vh; padding:20px;}
+  .err{color:var(--danger); font-size:13px; margin-top:10px; min-height:16px;}
+  .toast{position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:var(--gold); color:#1a1a1a; padding:12px 20px; border-radius:10px; font-size:14px; font-weight:600; z-index:100;}
+  .toast.error{background:var(--danger); color:#fff;}
+  .table-wrap{overflow-x:auto;}
+  .ref-link{cursor:pointer; text-decoration:underline;}
+  .lines-row td{background:#1d1710; padding:10px 8px;}
+  .lines-table{width:100%; border-collapse:collapse; font-size:12px;}
+  .lines-table th{color:var(--muted); font-weight:600; padding:5px; border-bottom:1px solid var(--border-soft);}
+  .lines-table td{padding:5px; border-bottom:1px solid var(--border-soft);}
+  .reason-tag{font-size:11px; color:var(--gold-light);}
+</style>
+</head>
+<body>
+
+<div id="loginScreen" class="login-wrap">
+  <div class="card" style="width:100%; max-width:360px;">
+    <h1 style="color:var(--gold-light); text-align:center;">🔄 GRV Requests</h1>
+    <div style="text-align:center; color:var(--muted); font-size:12px; margin-bottom:20px;">CS Rep View</div>
+    <label style="font-size:12px; color:var(--muted);">Username</label>
+    <input id="loginUser" style="width:100%; margin-bottom:12px;" autocomplete="username">
+    <label style="font-size:12px; color:var(--muted);">Password</label>
+    <input id="loginPass" type="password" style="width:100%; margin-bottom:16px;" autocomplete="current-password">
+    <button class="btn-primary" style="width:100%;" onclick="doLogin()">Log In</button>
+    <div id="loginError" class="err"></div>
+  </div>
+</div>
+
+<div id="appShell" style="display:none;">
+  <header>
+    <h1>🔄 GRV Return Requests</h1>
+    <div class="user"><span id="userLabel"></span> · <span onclick="doLogout()" style="text-decoration:underline; cursor:pointer;">Log out</span></div>
+  </header>
+  <div class="screen">
+    <div class="card" id="masterCard" style="display:none;">
+      <div style="font-size:14px; font-weight:700; color:var(--gold-light); margin-bottom:10px;">GRV Customer Master (separate from HoReCa)</div>
+      <div style="font-size:12px; color:var(--muted); margin-bottom:12px;">
+        Excel columns: Account Number, Site Use Id, Customer Name, Customer Category, Salesmen Number, New Salespersons, Location, Address2, Address3, City.
+      </div>
+      <div class="toolbar">
+        <input type="file" id="masterFile" accept=".xlsx,.xls">
+        <button class="btn-primary" onclick="uploadMaster()">⬆ Upload / Update Master</button>
+        <button class="btn-secondary" onclick="downloadMaster()">⬇ Download Current Master</button>
+      </div>
+      <div id="masterResult" style="font-size:12px; color:var(--muted);"></div>
+    </div>
+    <div class="card" id="itemMasterCard" style="display:none;">
+      <div style="font-size:14px; font-weight:700; color:var(--gold-light); margin-bottom:10px;">GRV Item Master</div>
+      <div style="font-size:12px; color:var(--muted); margin-bottom:12px;">
+        Excel columns: Item Code (or AKI Code), Description, Brand, Category, UOM, Price, and Barcode (a single "Barcode" column works — or separate EA Barcode / Outer Barcode columns if you have both).
+      </div>
+      <div class="toolbar">
+        <input type="file" id="itemMasterFile" accept=".xlsx,.xls">
+        <button class="btn-primary" onclick="uploadItemMaster()">⬆ Upload / Update Items</button>
+        <button class="btn-secondary" onclick="downloadItemMaster()">⬇ Download Current Items</button>
+      </div>
+      <div id="itemMasterResult" style="font-size:12px; color:var(--muted);"></div>
+    </div>
+    <div class="card">
+      <div class="toolbar">
+        <span class="badge" id="todayBadge">Today: —</span>
+        <select id="dateFilter" onchange="loadRequests()">
+          <option value="">Today</option>
+          <option value="yesterday">Yesterday</option>
+          <option value="all">All</option>
+        </select>
+        <button class="btn-secondary" onclick="loadRequests()">↻ Refresh</button>
+        <label style="display:flex; align-items:center; gap:6px; font-size:13px; color:var(--muted); cursor:pointer;">
+          <input type="checkbox" id="onlyMineToggle" style="width:auto;" onchange="renderTable()"> Assigned to me
+        </label>
+        <button class="btn-primary" onclick="downloadAll()">⬇ Download All (ZIP)</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Ref</th><th>GRV Ref#</th><th>Customer</th><th>Account #</th><th>Location</th><th>Salesman</th>
+              <th>W/H</th><th>Order Type</th><th>PO</th><th>Email</th><th>Assigned To</th><th>Status</th><th>Created</th><th></th>
+            </tr>
+          </thead>
+          <tbody id="reqBody"></tbody>
+        </table>
+        <div id="emptyState" class="empty" style="display:none;">No requests for this range.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast" style="display:none;"></div>
+
+<script>
+let TOKEN = localStorage.getItem('grvcs_token') || null;
+let USER = JSON.parse(localStorage.getItem('grvcs_user') || 'null');
+let REQUESTS = [];
+let CS_USERS = [];
+
+function api(path, opts) {
+  opts = opts || {};
+  opts.headers = Object.assign({'Content-Type':'application/json'}, opts.headers||{});
+  if (TOKEN) opts.headers['x-auth-token'] = TOKEN;
+  return fetch(path, opts).then(async r => {
+    const data = await r.json().catch(()=>({}));
+    if (!r.ok) throw new Error(data.error || 'Request failed');
+    return data;
+  });
+}
+function showToast(msg, isError) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast' + (isError ? ' error' : '');
+  t.style.display = 'block';
+  setTimeout(()=>{ t.style.display='none'; }, 3000);
+}
+
+async function doLogin() {
+  const username = document.getElementById('loginUser').value.trim();
+  const password = document.getElementById('loginPass').value;
+  const errEl = document.getElementById('loginError');
+  errEl.textContent = '';
+  try {
+    const data = await api('/api/auth/login', { method:'POST', body: JSON.stringify({username,password}) });
+    if (!['grv_cs','superadmin','subadmin'].includes(data.user.role)) {
+      errEl.textContent = 'This page is for CS Rep / admin accounts.';
+      return;
+    }
+    TOKEN = data.token; USER = data.user;
+    localStorage.setItem('grvcs_token', TOKEN);
+    localStorage.setItem('grvcs_user', JSON.stringify(USER));
+    initApp();
+  } catch(e) { errEl.textContent = e.message; }
+}
+function doLogout() {
+  api('/api/auth/logout', {method:'POST'}).catch(()=>{});
+  localStorage.removeItem('grvcs_token'); localStorage.removeItem('grvcs_user');
+  location.reload();
+}
+
+function initApp() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('appShell').style.display = 'block';
+  document.getElementById('userLabel').textContent = USER.full_name || USER.username;
+  if (USER.role === 'superadmin' || USER.role === 'subadmin') {
+    document.getElementById('masterCard').style.display = 'block';
+    document.getElementById('itemMasterCard').style.display = 'block';
+  }
+  loadCsUsers().then(loadRequests);
+}
+
+async function loadCsUsers() {
+  try {
+    const data = await api('/api/grv/cs-users');
+    CS_USERS = data.users || [];
+  } catch(e) { showToast(e.message, true); }
+}
+
+async function uploadItemMaster() {
+  const fileInput = document.getElementById('itemMasterFile');
+  const resultEl = document.getElementById('itemMasterResult');
+  if (!fileInput.files.length) { resultEl.textContent = 'Choose a file first.'; return; }
+  const fd = new FormData();
+  fd.append('file', fileInput.files[0]);
+  resultEl.textContent = 'Uploading...';
+  try {
+    const r = await fetch('/api/grv/master/items/upload', { method:'POST', headers: { 'x-auth-token': TOKEN }, body: fd });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || 'Upload failed');
+    resultEl.textContent = `Done — inserted ${data.inserted}, updated ${data.updated}, skipped ${data.skipped} (of ${data.total_rows} rows).`;
+    showToast('Item master updated');
+  } catch(e) { resultEl.textContent = e.message; showToast(e.message, true); }
+}
+
+function downloadItemMaster() {
+  fetch('/api/grv/master/items/export', { headers: { 'x-auth-token': TOKEN } })
+    .then(r => { if (!r.ok) throw new Error('Download failed'); return r.blob(); })
+    .then(blob => {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'GRV_Item_Master_Current.xlsx';
+      a.click();
+    }).catch(e => showToast(e.message, true));
+}
+
+async function uploadMaster() {
+  const fileInput = document.getElementById('masterFile');
+  const resultEl = document.getElementById('masterResult');
+  if (!fileInput.files.length) { resultEl.textContent = 'Choose a file first.'; return; }
+  const fd = new FormData();
+  fd.append('file', fileInput.files[0]);
+  resultEl.textContent = 'Uploading...';
+  try {
+    const r = await fetch('/api/grv/master/customers/upload', { method:'POST', headers: { 'x-auth-token': TOKEN }, body: fd });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || 'Upload failed');
+    resultEl.textContent = `Done — inserted ${data.inserted}, updated ${data.updated}, skipped ${data.skipped} (of ${data.total_rows} rows).`;
+    showToast('Master updated');
+  } catch(e) { resultEl.textContent = e.message; showToast(e.message, true); }
+}
+
+function downloadMaster() {
+  fetch('/api/grv/master/customers/export', { headers: { 'x-auth-token': TOKEN } })
+    .then(r => { if (!r.ok) throw new Error('Download failed'); return r.blob(); })
+    .then(blob => {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'GRV_Customer_Master_Current.xlsx';
+      a.click();
+    }).catch(e => showToast(e.message, true));
+}
+
+function currentDateParam() {
+  const v = document.getElementById('dateFilter').value;
+  if (v === 'all') return 'all';
+  if (v === 'yesterday') {
+    const d = new Date(); d.setDate(d.getDate()-1);
+    return d.toISOString().slice(0,10);
+  }
+  return new Date().toISOString().slice(0,10);
+}
+
+async function loadRequests() {
+  try {
+    const dateParam = currentDateParam();
+    const data = await api('/api/grv/requests?date=' + encodeURIComponent(dateParam));
+    REQUESTS = data.requests || [];
+    document.getElementById('todayBadge').textContent = 'Today: ' + data.today_count;
+    renderTable();
+  } catch(e) { showToast(e.message, true); }
+}
+
+function renderTable() {
+  const body = document.getElementById('reqBody');
+  const empty = document.getElementById('emptyState');
+  const onlyMine = document.getElementById('onlyMineToggle').checked;
+  const visible = onlyMine ? REQUESTS.filter(r => r.assigned_to === USER.id) : REQUESTS;
+  if (!visible.length) { body.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display = 'none';
+  body.innerHTML = visible.map((r) => {
+    const idx = REQUESTS.indexOf(r);
+    const assignOptions = `<option value="">Unassigned</option>` + CS_USERS.map(u => `<option value="${u.id}" ${r.assigned_to===u.id?'selected':''}>${u.full_name||u.username}</option>`).join('');
+    return `
+    <tr>
+      <td class="ref ref-link" onclick="toggleLines(${idx})">${r.request_ref} (${(r.lines||[]).length})</td>
+      <td><input value="${r.paper_return_number||''}" style="width:90px;" onchange="fieldChange(${r.id},'paper_return_number',this.value)"></td>
+      <td>${r.customer_name||''}</td>
+      <td>${r.account_number||''}</td>
+      <td>${r.location||''}${r.site_use_id?(' ('+r.site_use_id+')'):''}</td>
+      <td>${r.salesperson_name||''}</td>
+      <td><input value="${r.warehouse||''}" placeholder="DCV or DGS" onchange="fieldChange(${r.id},'warehouse',this.value)"></td>
+      <td><input value="${r.order_type||''}" placeholder="e.g. CN DXB VCT RN" onchange="fieldChange(${r.id},'order_type',this.value)"></td>
+      <td><input value="${r.po_number||''}" onchange="fieldChange(${r.id},'po_number',this.value)"></td>
+      <td style="font-size:11px;">${r.requester_email||''}</td>
+      <td><select onchange="assignChange(${r.id},this.value)">${assignOptions}</select></td>
+      <td><span class="status">${r.status}</span></td>
+      <td style="font-size:11px; white-space:nowrap;">${new Date(r.created_at).toLocaleString('en-GB')}</td>
+      <td><button class="btn-secondary" onclick="downloadOne(${r.id})">⬇</button></td>
+    </tr>
+    <tr class="lines-row" id="linesRow-${idx}" style="display:none;">
+      <td colspan="14">
+        <table class="lines-table">
+          <thead><tr><th>Item Code</th><th>Description</th><th>Qty</th><th>UOM</th><th>FOC</th><th>Reason</th></tr></thead>
+          <tbody>
+            ${(r.lines||[]).map(l => `<tr><td>${l.item_code||''}</td><td>${l.description||''}</td><td>${l.qty||''}</td><td>${l.uom||''}</td><td>${l.foc_qty||0}</td><td class="reason-tag">${l.reason_code?(l.reason_code+' - '+(l.reason_label||'')):''}</td></tr>`).join('') || '<tr><td colspan="6">No line items</td></tr>'}
+          </tbody>
+        </table>
+      </td>
+    </tr>
+  `;
+  }).join('');
+}
+
+function toggleLines(idx) {
+  const row = document.getElementById('linesRow-'+idx);
+  row.style.display = row.style.display === 'none' ? 'table-row' : 'none';
+}
+
+async function assignChange(id, userId) {
+  try {
+    await api('/api/grv/requests/'+id, { method:'PUT', body: JSON.stringify({ assigned_to: userId || null }) });
+    const r = REQUESTS.find(x => x.id === id);
+    if (r) {
+      r.assigned_to = userId ? Number(userId) : null;
+      const u = CS_USERS.find(x => x.id === r.assigned_to);
+      r.assigned_to_name = u ? (u.full_name || u.username) : null;
+    }
+    showToast('Assigned');
+  } catch(e) { showToast(e.message, true); }
+}
+
+async function fieldChange(id, field, value) {
+  try {
+    await api('/api/grv/requests/'+id, { method:'PUT', body: JSON.stringify({[field]: value}) });
+    showToast('Saved');
+  } catch(e) { showToast(e.message, true); }
+}
+
+function downloadOne(id) {
+  const url = '/api/grv/requests/'+id+'/export-excel';
+  fetch(url, { headers: { 'x-auth-token': TOKEN } })
+    .then(r => { if (!r.ok) throw new Error('Download failed'); return r.blob(); })
+    .then(blob => {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'grv_request.xlsx';
+      a.click();
+    }).catch(e => showToast(e.message, true));
+}
+
+function downloadAll() {
+  const dateParam = currentDateParam();
+  const url = '/api/grv/requests/export-all?date=' + encodeURIComponent(dateParam);
+  fetch(url, { headers: { 'x-auth-token': TOKEN } })
+    .then(r => { if (!r.ok) throw new Error('No requests found for this range'); return r.blob(); })
+    .then(blob => {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'GRV_Returns.zip';
+      a.click();
+    }).catch(e => showToast(e.message, true));
+}
+
+if (TOKEN && USER) { initApp(); }
+</script>
+</body>
+</html>
