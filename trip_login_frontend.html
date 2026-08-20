@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trip Login</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@300;400;500;600;700&family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --void:#070e1a; --surface:#0d1b2e; --card:#0f2040; --border:#1e3a5f;
+    --gold:#c9a84c; --gold2:#e8c878; --text:#f0f6ff; --muted:#a9b4c9; --faint:#5c6a85; --red:#e57373;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{background:radial-gradient(ellipse 1200px 800px at 15% 0%, rgba(139,105,20,0.16), transparent 60%), var(--void); color:var(--text); font-family:'Inter',sans-serif; min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px;}
+  .box{width:100%; max-width:380px; background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:30px 26px;}
+  .logo{font-size:34px; text-align:center; margin-bottom:6px;}
+  h1{font-family:'Fraunces',serif; font-size:22px; font-weight:600; text-align:center; margin-bottom:4px;}
+  .sub{color:var(--muted); font-size:12.5px; text-align:center; margin-bottom:24px;}
+  label{font-size:10px; color:var(--faint); text-transform:uppercase; letter-spacing:.05em; display:block; margin-bottom:5px;}
+  .field{margin-bottom:14px;}
+  input{width:100%; background:#0d1b2e; border:1px solid var(--border); border-radius:8px; padding:11px 12px; color:var(--text); font-size:14px; font-family:'Inter',sans-serif; outline:none;}
+  input:focus{border-color:var(--gold);}
+  .btn{width:100%; background:var(--gold); color:#1a1204; font-weight:700; font-size:14px; padding:12px; border:none; border-radius:8px; cursor:pointer; margin-top:6px;}
+  .btn:hover{background:var(--gold2);}
+  .err{color:var(--red); font-size:12.5px; margin-top:12px; text-align:center; display:none;}
+  .foot{text-align:center; margin-top:20px; font-size:11px; color:var(--faint);}
+</style>
+</head>
+<body>
+  <div class="box">
+    <div class="logo">🧳</div>
+    <h1>Trip Login</h1>
+    <div class="sub">Log in to view and add your trip spending</div>
+    <div class="field"><label>Username</label><input id="username" autocapitalize="off" autocorrect="off" onkeydown="if(event.key==='Enter')document.getElementById('password').focus();"></div>
+    <div class="field"><label>Password</label><input id="password" type="password" onkeydown="if(event.key==='Enter')doLogin();"></div>
+    <button class="btn" onclick="doLogin()">Log In</button>
+    <div class="err" id="err"></div>
+    <div class="foot">Ask your trip organiser if you don't have a login yet.</div>
+  </div>
+<script>
+async function doLogin(){
+  var username = document.getElementById('username').value.trim();
+  var password = document.getElementById('password').value;
+  var err = document.getElementById('err');
+  err.style.display = 'none';
+  if (!username || !password) { err.textContent = 'Enter your username and password.'; err.style.display='block'; return; }
+  try {
+    var r = await fetch('/api/trip-guest-auth/login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ username: username, password: password }) });
+    var d = await r.json();
+    if (!r.ok) { err.textContent = d.error || 'Login failed'; err.style.display='block'; return; }
+    localStorage.setItem('trip_member_token', d.token);
+    window.location.href = '/trip-portal';
+  } catch(e) { err.textContent = 'Could not reach the server. Try again.'; err.style.display='block'; }
+}
+// If already logged in, skip straight to the portal.
+(function(){
+  if (localStorage.getItem('trip_member_token')) window.location.href = '/trip-portal';
+})();
+</script>
+</body>
+</html>
