@@ -1161,19 +1161,21 @@ footer span{color:var(--gold);}
           <table style="width:100%;border-collapse:collapse;" id="rej-monthwise-table">
             <thead>
               <tr style="border-bottom:1px solid var(--gold);">
-                <th style="text-align:left;padding:8px 10px;font-size:12px;color:var(--gold);letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">Month</th>
-                <th style="text-align:right;padding:8px 10px;font-size:12px;color:var(--gold);letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">Delivered</th>
-                <th style="text-align:right;padding:8px 10px;font-size:12px;color:var(--gold);letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">Rejection</th>
-                <th style="text-align:right;padding:8px 10px;font-size:12px;color:var(--gold);letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">Delivered %</th>
-                <th style="text-align:right;padding:8px 10px;font-size:12px;color:var(--gold);letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">Rejection %</th>
-                <th style="text-align:right;padding:8px 10px;font-size:12px;color:var(--gold);letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">Food (of Rej.)</th>
-                <th style="text-align:right;padding:8px 10px;font-size:12px;color:var(--gold);letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">Non-Food (of Rej.)</th>
+                <th style="text-align:left;padding:9px 10px;font-size:14px;color:var(--gold);letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">Month</th>
+                <th style="text-align:right;padding:9px 10px;font-size:14px;color:var(--gold);letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">Delivered</th>
+                <th style="text-align:right;padding:9px 10px;font-size:14px;color:var(--gold);letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">Rejection</th>
+                <th style="text-align:right;padding:9px 10px;font-size:14px;color:var(--gold);letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">Delivered %</th>
+                <th style="text-align:right;padding:9px 10px;font-size:14px;color:var(--gold);letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">Rejection %</th>
+                <th style="text-align:right;padding:9px 10px;font-size:14px;color:var(--gold);letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">Food (of Rej.)</th>
+                <th style="text-align:right;padding:9px 10px;font-size:14px;color:var(--gold);letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">Non-Food (of Rej.)</th>
               </tr>
             </thead>
             <tbody id="rej-monthwise-tbody"></tbody>
+            <tfoot id="rej-monthwise-tfoot"></tfoot>
           </table>
         </div>
         <div style="font-size:10px;color:var(--muted);margin-top:8px;">Food/Non-Food % are each category's share of that month's REJECTIONS specifically (not of total orders) — same basis as the Food/Non-Food filter above. "Frozen" isn't tracked as a separate category yet — let me know if that needs adding.</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:4px;" id="rej-monthwise-avg-hint">💡 Click 2+ months above (shift-click for a range) to see an AVERAGE row for that range.</div>
       </div>
 
       <!-- DETAIL TABLE: Customer + Location + Root Cause -->
@@ -4407,15 +4409,51 @@ function renderMonthWiseTable(){
     var hasData = (r.delivered + r.rejection) > 0;
     var rowStyle = hasData ? '' : 'color:var(--faint);';
     return '<tr style="border-bottom:1px solid var(--border);'+rowStyle+'">'+
-      '<td style="padding:7px 10px;font-weight:600;">'+r.month+'</td>'+
-      '<td style="padding:7px 10px;text-align:right;">'+r.delivered.toLocaleString()+'</td>'+
-      '<td style="padding:7px 10px;text-align:right;color:var(--red);">'+r.rejection.toLocaleString()+'</td>'+
-      '<td style="padding:7px 10px;text-align:right;color:var(--green);">'+(hasData?r.deliveredPct.toFixed(1):'0.0')+'%</td>'+
-      '<td style="padding:7px 10px;text-align:right;color:var(--red);">'+(hasData?r.rejectionPct.toFixed(1):'0.0')+'%</td>'+
-      '<td style="padding:7px 10px;text-align:right;">'+r.foodRej.toLocaleString()+' ('+(r.rejection?r.foodPct.toFixed(1):'0.0')+'%)</td>'+
-      '<td style="padding:7px 10px;text-align:right;">'+r.nonfoodRej.toLocaleString()+' ('+(r.rejection?r.nonfoodPct.toFixed(1):'0.0')+'%)</td>'+
+      '<td style="padding:9px 10px;font-size:15px;font-weight:600;">'+r.month+'</td>'+
+      '<td style="padding:9px 10px;font-size:15px;text-align:right;">'+r.delivered.toLocaleString()+'</td>'+
+      '<td style="padding:9px 10px;font-size:15px;text-align:right;color:var(--red);">'+r.rejection.toLocaleString()+'</td>'+
+      '<td style="padding:9px 10px;font-size:15px;text-align:right;color:var(--green);">'+(hasData?r.deliveredPct.toFixed(1):'0.0')+'%</td>'+
+      '<td style="padding:9px 10px;font-size:15px;text-align:right;color:var(--red);">'+(hasData?r.rejectionPct.toFixed(1):'0.0')+'%</td>'+
+      '<td style="padding:9px 10px;font-size:15px;text-align:right;">'+r.foodRej.toLocaleString()+' ('+(r.rejection?r.foodPct.toFixed(1):'0.0')+'%)</td>'+
+      '<td style="padding:9px 10px;font-size:15px;text-align:right;">'+r.nonfoodRej.toLocaleString()+' ('+(r.rejection?r.nonfoodPct.toFixed(1):'0.0')+'%)</td>'+
       '</tr>';
   }).join('');
+
+  // ── AVERAGE row: when 2+ months are selected via the multi-select month
+  // pills (rejMonth==='multi'), show the simple average (mean of the monthly
+  // figures — NOT a re-weighted sum) across just those selected months, so
+  // e.g. picking Jun+Jul+Aug shows the average rejection count and average
+  // rejection % for that 3-month window, next to the full Jan-Dec table above. ──
+  var tfoot = document.getElementById('rej-monthwise-tfoot');
+  var hint = document.getElementById('rej-monthwise-avg-hint');
+  if(!tfoot) return;
+  var isMulti = (typeof rejMonth !== 'undefined' && rejMonth === 'multi' && typeof rejSelectedMonths !== 'undefined' && rejSelectedMonths.length > 1);
+  if(!isMulti){
+    tfoot.innerHTML = '';
+    if(hint) hint.style.display = '';
+    return;
+  }
+  if(hint) hint.style.display = 'none';
+  var selMonths = rejSelectedMonths.slice().sort(function(a,b){return a-b;});
+  var selRows = rows.filter(function(r){ return selMonths.indexOf(r.monthNum) !== -1; });
+  var n = selRows.length || 1;
+  var avg = selRows.reduce(function(acc,r){
+    acc.delivered += r.delivered; acc.rejection += r.rejection;
+    acc.deliveredPct += r.deliveredPct; acc.rejectionPct += r.rejectionPct;
+    acc.foodRej += r.foodRej; acc.foodPct += r.foodPct;
+    acc.nonfoodRej += r.nonfoodRej; acc.nonfoodPct += r.nonfoodPct;
+    return acc;
+  }, {delivered:0,rejection:0,deliveredPct:0,rejectionPct:0,foodRej:0,foodPct:0,nonfoodRej:0,nonfoodPct:0});
+  var monthLabel = selMonths.map(function(m){return MONTH_NAMES_SHORT[m-1];}).join('+');
+  tfoot.innerHTML = '<tr style="border-top:2px solid var(--gold);background:rgba(201,168,76,0.08);">'+
+    '<td style="padding:10px 10px;font-size:15px;font-weight:700;color:var(--gold);">AVG ('+monthLabel+')</td>'+
+    '<td style="padding:10px 10px;font-size:15px;text-align:right;font-weight:700;">'+Math.round(avg.delivered/n).toLocaleString()+'</td>'+
+    '<td style="padding:10px 10px;font-size:15px;text-align:right;font-weight:700;color:var(--red);">'+Math.round(avg.rejection/n).toLocaleString()+'</td>'+
+    '<td style="padding:10px 10px;font-size:15px;text-align:right;font-weight:700;color:var(--green);">'+(avg.deliveredPct/n).toFixed(1)+'%</td>'+
+    '<td style="padding:10px 10px;font-size:15px;text-align:right;font-weight:700;color:var(--red);">'+(avg.rejectionPct/n).toFixed(1)+'%</td>'+
+    '<td style="padding:10px 10px;font-size:15px;text-align:right;font-weight:700;">'+Math.round(avg.foodRej/n).toLocaleString()+' ('+(avg.foodPct/n).toFixed(1)+'%)</td>'+
+    '<td style="padding:10px 10px;font-size:15px;text-align:right;font-weight:700;">'+Math.round(avg.nonfoodRej/n).toLocaleString()+' ('+(avg.nonfoodPct/n).toFixed(1)+'%)</td>'+
+    '</tr>';
 }
 
 function exportRejDetailExcel(){
