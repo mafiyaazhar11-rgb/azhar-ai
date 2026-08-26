@@ -45,7 +45,7 @@
   --muted:#b3b3b3;
   --white:#ffffff;
   --green:#f2f2f2;
-  --red:#ffffff;
+  --red:#ff3b3b;
   --blue:#d9d9d9;
   --orange:#cccccc;
   --purple:#e0e0e0;
@@ -4160,7 +4160,7 @@ oc.innerHTML=ORG_SUMMARY.map(function(o){
       +'<span style="font-size:15px;font-weight:700;color:'+o.color+';">'+o.org+'</span>'
       +'<span style="font-size:15px;color:var(--red);background:rgba(255,255,255,0.16);padding:2px 6px;border-radius:10px;">'+dynamicRate+'</span>'
       +'</div>'
-      +'<div style="font-family:Cormorant Garamond,serif;font-size:20px;font-weight:700;color:var(--text);">'+filtRej.toLocaleString()+'</div>'
+      +'<div style="font-family:Cormorant Garamond,serif;font-size:20px;font-weight:700;color:var(--red);">'+filtRej.toLocaleString()+'</div>'
       +'<div style="font-size:15px;color:var(--gold);margin-top:2px;">'+getOrgFilteredVal(o)+'</div>'
       +'<div style="font-size:15px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+o.bu+'</div>'
       +'</div>';
@@ -4189,7 +4189,7 @@ oc.innerHTML=ORG_SUMMARY.map(function(o){
   else if(rejSrc==='internal') rateSub='Internal share of overall '+overallRate;
 
   if(kEl)kEl.innerHTML=''
-    +'<div style="background:var(--card);border:1px solid var(--border);padding:16px;position:relative;"><div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:0.4;"></div><div style="font-size:15px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">Total Rejections</div><div style="font-family:Cormorant Garamond,serif;font-size:28px;font-weight:700;color:var(--gold);">'+d.tRej.toLocaleString()+'</div></div>'
+    +'<div style="background:var(--card);border:1px solid var(--border);padding:16px;position:relative;"><div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:0.4;"></div><div style="font-size:15px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">Total Rejections</div><div style="font-family:Cormorant Garamond,serif;font-size:28px;font-weight:700;color:var(--red);">'+d.tRej.toLocaleString()+'</div></div>'
     +'<div style="background:rgba(255,255,255,0.16);border:1px solid rgba(255,255,255,0.48);padding:16px;">'+
      '<div style="font-size:15px;letter-spacing:2px;color:var(--red);text-transform:uppercase;margin-bottom:4px;">'+rateLabel+'</div>'+
      '<div style="font-family:Cormorant Garamond,serif;font-size:28px;font-weight:700;color:var(--red);">'+rejRate+'</div>'+
@@ -4232,8 +4232,8 @@ oc.innerHTML=ORG_SUMMARY.map(function(o){
           +'<span style="font-size:15px;color:var(--text);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+r.l+'</span>'
           +'</div>'
           +'<div class="rej-reason-num" style="display:flex;gap:10px;align-items:center;flex-shrink:0;">'
-          +'<span style="font-size:15px;color:var(--gold);font-weight:700;">'+(r.n||0).toLocaleString()+'</span>'
-          +'<span style="font-size:15px;color:var(--muted);min-width:38px;text-align:right;">'+pct+'</span>'
+          +'<span style="font-size:15px;color:var(--red);font-weight:700;">'+(r.n||0).toLocaleString()+'</span>'
+          +'<span style="font-size:15px;color:var(--red);min-width:38px;text-align:right;">'+pct+'</span>'
           +'</div>'
           +'</div>'
           +'<div style="height:6px;background:var(--border);border-radius:3px;">'
@@ -4263,7 +4263,7 @@ oc.innerHTML=ORG_SUMMARY.map(function(o){
           +'<span style="font-size:15px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500;">'+c.n+'</span>'
           +'</div>'
           +'<div class="rej-cust-num" style="display:flex;align-items:center;gap:10px;flex-shrink:0;margin-left:8px;">'
-          +'<span style="font-size:16px;font-weight:700;color:var(--text);">'+c.c.toLocaleString()+'</span>'
+          +'<span style="font-size:16px;font-weight:700;color:var(--red);">'+c.c.toLocaleString()+'</span>'
           +'<span style="font-size:15px;font-weight:700;color:var(--red);min-width:42px;text-align:right;">'+pct+'</span>'
           +'</div>'
           +'</div>'
@@ -4350,7 +4350,7 @@ oc.innerHTML=ORG_SUMMARY.map(function(o){
           +'<td style="padding:8px 10px;font-size:15px;color:var(--text);font-weight:500;">'+r.cust+'</td>'
           +'<td style="padding:8px 10px;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'+addrStyle+'" title="'+addrTxt+'">'+addrTxt+'</td>'
           +'<td style="padding:8px 10px;'+rootStyle+'">'+rootTxt+'</td>'
-          +'<td style="padding:8px 10px;font-size:15px;font-weight:700;color:var(--text);text-align:right;">'+r.n+'</td>'
+          +'<td style="padding:8px 10px;font-size:15px;font-weight:700;color:var(--red);text-align:right;">'+r.n+'</td>'
           +'<td style="padding:8px 10px;font-size:14px;font-weight:700;color:var(--red);text-align:right;">'+rowPct+'</td>'
           +'</tr>';
       }).join('')
