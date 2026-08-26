@@ -1248,16 +1248,16 @@ footer span{color:var(--gold);}
         <div id="rej-blocked-approval-form" style="display:none;">
           <textarea id="rej-blocked-reason" placeholder="Reason for the super admin (required) — e.g. why this date needs to be corrected..." style="width:100%;box-sizing:border-box;background:#1a0d0d;border:1px solid #ef4444;color:#f5b8b8;font-size:15px;padding:8px;border-radius:4px;min-height:60px;margin-bottom:10px;font-family:Montserrat,sans-serif;"></textarea>
           <div style="display:flex;gap:8px;">
-            <button onclick="rejSubmitForApproval()" style="padding:7px 14px;background:transparent;border:1px solid #ef4444;color:#ef4444;font-size:10px;letter-spacing:1px;cursor:pointer;font-weight:700;">SEND TO SUPER ADMIN FOR APPROVAL</button>
-            <button onclick="rejCancelBlockedUpload()" style="padding:7px 14px;background:#ef4444;border:1px solid #ef4444;color:#fff;font-size:10px;letter-spacing:1px;cursor:pointer;font-weight:700;">CANCEL</button>
+            <button onclick="rejSubmitForApproval()" style="padding:7px 14px;background:transparent;border:1px solid #ef4444;color:#ef4444;font-size:15px;letter-spacing:1px;cursor:pointer;font-weight:700;">SEND TO SUPER ADMIN FOR APPROVAL</button>
+            <button onclick="rejCancelBlockedUpload()" style="padding:7px 14px;background:#ef4444;border:1px solid #ef4444;color:#fff;font-size:15px;letter-spacing:1px;cursor:pointer;font-weight:700;">CANCEL</button>
           </div>
         </div>
         <div id="rej-blocked-noform" style="display:none;">
-          <button onclick="rejCancelBlockedUpload()" style="padding:7px 14px;background:#ef4444;border:1px solid #ef4444;color:#fff;font-size:10px;letter-spacing:1px;cursor:pointer;font-weight:700;">OK</button>
+          <button onclick="rejCancelBlockedUpload()" style="padding:7px 14px;background:#ef4444;border:1px solid #ef4444;color:#fff;font-size:15px;letter-spacing:1px;cursor:pointer;font-weight:700;">OK</button>
         </div>
       </div>
 
-      <div style="padding:10px 14px;background:var(--surface);border:1px solid var(--border);font-size:10px;color:var(--muted);letter-spacing:1px;" id="rej-source-note">
+      <div style="padding:10px 14px;background:var(--surface);border:1px solid var(--border);font-size:15px;color:var(--muted);letter-spacing:1px;" id="rej-source-note">
         ⏳ Upload your rejection Excel file to load live data
       </div>
 
@@ -1267,11 +1267,11 @@ footer span{color:var(--gold);}
       </style>
       <div id="rej-discrepancy-box" style="display:none;margin-top:10px;border:1px solid var(--gold);background:rgba(201,168,76,0.06);border-radius:6px;padding:14px;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-          <div style="font-size:11px;letter-spacing:1px;color:var(--gold);font-weight:600;">📋 AUTO-CLASSIFICATION NOTES — LAST UPLOAD</div>
-          <button onclick="rejDownloadDiscrepancyReport()" style="background:transparent;border:1px solid var(--gold);color:var(--gold);font-size:10px;padding:4px 10px;border-radius:4px;cursor:pointer;">⬇ Download Report</button>
+          <div style="font-size:15px;letter-spacing:1px;color:var(--gold);font-weight:600;">📋 AUTO-CLASSIFICATION NOTES — LAST UPLOAD</div>
+          <button onclick="rejDownloadDiscrepancyReport()" style="background:transparent;border:1px solid var(--gold);color:var(--gold);font-size:15px;padding:4px 10px;border-radius:4px;cursor:pointer;">⬇ Download Report</button>
         </div>
-        <div id="rej-discrepancy-summary" style="font-size:11px;color:var(--muted);margin-bottom:8px;line-height:1.6;"></div>
-        <div id="rej-discrepancy-list" style="max-height:260px;overflow-y:auto;font-size:10.5px;"></div>
+        <div id="rej-discrepancy-summary" style="font-size:15px;color:var(--muted);margin-bottom:8px;line-height:1.6;"></div>
+        <div id="rej-discrepancy-list" style="max-height:260px;overflow-y:auto;font-size:15px;"></div>
       </div>
     </div>
 
@@ -4158,9 +4158,9 @@ oc.innerHTML=ORG_SUMMARY.map(function(o){
     return '<div class="org-card '+onCls+'" onclick="rejFilter(\'org\',\''+o.org+'\')">'
       +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">'
       +'<span style="font-size:15px;font-weight:700;color:'+o.color+';">'+o.org+'</span>'
-      +'<span style="font-size:15px;color:var(--red);background:rgba(255,255,255,0.16);padding:2px 6px;border-radius:10px;">'+dynamicRate+'</span>'
+      +'<span style="font-size:15px;color:var(--red);text-shadow:0 0 6px rgba(255,59,59,0.85),0 0 14px rgba(255,59,59,0.5);background:rgba(255,255,255,0.16);padding:2px 6px;border-radius:10px;">'+dynamicRate+'</span>'
       +'</div>'
-      +'<div style="font-family:Cormorant Garamond,serif;font-size:20px;font-weight:700;color:var(--red);">'+filtRej.toLocaleString()+'</div>'
+      +'<div style="font-family:Cormorant Garamond,serif;font-size:20px;font-weight:700;color:var(--red);text-shadow:0 0 6px rgba(255,59,59,0.85),0 0 14px rgba(255,59,59,0.5);">'+filtRej.toLocaleString()+'</div>'
       +'<div style="font-size:15px;color:var(--gold);margin-top:2px;">'+getOrgFilteredVal(o)+'</div>'
       +'<div style="font-size:15px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+o.bu+'</div>'
       +'</div>';
@@ -4189,10 +4189,10 @@ oc.innerHTML=ORG_SUMMARY.map(function(o){
   else if(rejSrc==='internal') rateSub='Internal share of overall '+overallRate;
 
   if(kEl)kEl.innerHTML=''
-    +'<div style="background:var(--card);border:1px solid var(--border);padding:16px;position:relative;"><div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:0.4;"></div><div style="font-size:15px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">Total Rejections</div><div style="font-family:Cormorant Garamond,serif;font-size:28px;font-weight:700;color:var(--red);">'+d.tRej.toLocaleString()+'</div></div>'
+    +'<div style="background:var(--card);border:1px solid var(--border);padding:16px;position:relative;"><div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:0.4;"></div><div style="font-size:15px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">Total Rejections</div><div style="font-family:Cormorant Garamond,serif;font-size:28px;font-weight:700;color:var(--red);text-shadow:0 0 6px rgba(255,59,59,0.85),0 0 14px rgba(255,59,59,0.5);">'+d.tRej.toLocaleString()+'</div></div>'
     +'<div style="background:rgba(255,255,255,0.16);border:1px solid rgba(255,255,255,0.48);padding:16px;">'+
-     '<div style="font-size:15px;letter-spacing:2px;color:var(--red);text-transform:uppercase;margin-bottom:4px;">'+rateLabel+'</div>'+
-     '<div style="font-family:Cormorant Garamond,serif;font-size:28px;font-weight:700;color:var(--red);">'+rejRate+'</div>'+
+     '<div style="font-size:15px;letter-spacing:2px;color:var(--red);text-shadow:0 0 6px rgba(255,59,59,0.85),0 0 14px rgba(255,59,59,0.5);text-transform:uppercase;margin-bottom:4px;">'+rateLabel+'</div>'+
+     '<div style="font-family:Cormorant Garamond,serif;font-size:28px;font-weight:700;color:var(--red);text-shadow:0 0 6px rgba(255,59,59,0.85),0 0 14px rgba(255,59,59,0.5);">'+rejRate+'</div>'+
      (rateSub?'<div style="font-size:15px;color:var(--muted);margin-top:3px;">'+rateSub+'</div>':'')+
      '</div>'
     +'<div style="background:var(--card);border:1px solid var(--border);padding:16px;position:relative;"><div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:0.4;"></div><div style="font-size:15px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">Delivered</div><div style="font-family:Cormorant Garamond,serif;font-size:28px;font-weight:700;color:var(--green);">'+d.tDel.toLocaleString()+'</div></div>'
@@ -4232,8 +4232,8 @@ oc.innerHTML=ORG_SUMMARY.map(function(o){
           +'<span style="font-size:15px;color:var(--text);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+r.l+'</span>'
           +'</div>'
           +'<div class="rej-reason-num" style="display:flex;gap:10px;align-items:center;flex-shrink:0;">'
-          +'<span style="font-size:15px;color:var(--red);font-weight:700;">'+(r.n||0).toLocaleString()+'</span>'
-          +'<span style="font-size:15px;color:var(--red);min-width:38px;text-align:right;">'+pct+'</span>'
+          +'<span style="font-size:15px;color:var(--red);text-shadow:0 0 6px rgba(255,59,59,0.85),0 0 14px rgba(255,59,59,0.5);font-weight:700;">'+(r.n||0).toLocaleString()+'</span>'
+          +'<span style="font-size:15px;color:var(--red);text-shadow:0 0 6px rgba(255,59,59,0.85),0 0 14px rgba(255,59,59,0.5);min-width:38px;text-align:right;">'+pct+'</span>'
           +'</div>'
           +'</div>'
           +'<div style="height:6px;background:var(--border);border-radius:3px;">'
@@ -4263,8 +4263,8 @@ oc.innerHTML=ORG_SUMMARY.map(function(o){
           +'<span style="font-size:15px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500;">'+c.n+'</span>'
           +'</div>'
           +'<div class="rej-cust-num" style="display:flex;align-items:center;gap:10px;flex-shrink:0;margin-left:8px;">'
-          +'<span style="font-size:16px;font-weight:700;color:var(--red);">'+c.c.toLocaleString()+'</span>'
-          +'<span style="font-size:15px;font-weight:700;color:var(--red);min-width:42px;text-align:right;">'+pct+'</span>'
+          +'<span style="font-size:16px;font-weight:700;color:var(--red);text-shadow:0 0 6px rgba(255,59,59,0.85),0 0 14px rgba(255,59,59,0.5);">'+c.c.toLocaleString()+'</span>'
+          +'<span style="font-size:15px;font-weight:700;color:var(--red);text-shadow:0 0 6px rgba(255,59,59,0.85),0 0 14px rgba(255,59,59,0.5);min-width:42px;text-align:right;">'+pct+'</span>'
           +'</div>'
           +'</div>'
           +'<div style="height:4px;background:var(--border);border-radius:2px;">'
@@ -4343,18 +4343,18 @@ oc.innerHTML=ORG_SUMMARY.map(function(o){
         var rowCol = i<3?'#ffffff':i<10?'#cccccc':'var(--text)';
         var addrTxt = r.addr || '';
         var rootTxt = r.root || '';
-        var addrStyle = addrTxt.startsWith('Re-upload') ? 'color:rgba(201,168,76,0.4);font-style:italic;font-size:12px;' : 'color:var(--muted);font-size:13px;';
+        var addrStyle = addrTxt.startsWith('Re-upload') ? 'color:rgba(201,168,76,0.4);font-style:italic;font-size:15px;' : 'color:var(--muted);font-size:15px;';
         var rootStyle = rootTxt.startsWith('Re-upload') ? 'color:rgba(201,168,76,0.4);font-style:italic;' : 'color:var(--muted);';
         return '<tr style="border-bottom:1px solid rgba(60,60,40,0.4);">'
           +'<td style="padding:8px 10px;font-size:15px;font-weight:700;color:'+rowCol+';">'+(i+1)+'</td>'
           +'<td style="padding:8px 10px;font-size:15px;color:var(--text);font-weight:500;">'+r.cust+'</td>'
           +'<td style="padding:8px 10px;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'+addrStyle+'" title="'+addrTxt+'">'+addrTxt+'</td>'
           +'<td style="padding:8px 10px;'+rootStyle+'">'+rootTxt+'</td>'
-          +'<td style="padding:8px 10px;font-size:15px;font-weight:700;color:var(--red);text-align:right;">'+r.n+'</td>'
-          +'<td style="padding:8px 10px;font-size:14px;font-weight:700;color:var(--red);text-align:right;">'+rowPct+'</td>'
+          +'<td style="padding:8px 10px;font-size:15px;font-weight:700;color:var(--red);text-shadow:0 0 6px rgba(255,59,59,0.85),0 0 14px rgba(255,59,59,0.5);text-align:right;">'+r.n+'</td>'
+          +'<td style="padding:8px 10px;font-size:15px;font-weight:700;color:var(--red);text-shadow:0 0 6px rgba(255,59,59,0.85),0 0 14px rgba(255,59,59,0.5);text-align:right;">'+rowPct+'</td>'
           +'</tr>';
       }).join('')
-      +(!hasFullData?'<tr><td colspan="6" style="padding:8px;text-align:center;font-size:12px;color:rgba(201,168,76,0.5);background:rgba(201,168,76,0.03);">📌 Deploy new server.js + re-upload file to see Full Address and Root Cause</td></tr>':'');
+      +(!hasFullData?'<tr><td colspan="6" style="padding:8px;text-align:center;font-size:15px;color:rgba(201,168,76,0.5);background:rgba(201,168,76,0.03);">📌 Deploy new server.js + re-upload file to see Full Address and Root Cause</td></tr>':'');
     }
     } // close the d.tRej zero-guard else block
   }
@@ -4438,9 +4438,9 @@ function renderMonthWiseTable(){
     return '<tr style="border-bottom:1px solid var(--border);'+rowStyle+'">'+
       '<td style="padding:9px 10px;font-size:15px;font-weight:600;">'+r.month+'</td>'+
       '<td style="padding:9px 10px;font-size:15px;text-align:right;">'+r.delivered.toLocaleString()+'</td>'+
-      '<td style="padding:9px 10px;font-size:15px;text-align:right;color:var(--red);">'+r.rejection.toLocaleString()+'</td>'+
+      '<td style="padding:9px 10px;font-size:15px;text-align:right;color:var(--red);text-shadow:0 0 6px rgba(255,59,59,0.85),0 0 14px rgba(255,59,59,0.5);">'+r.rejection.toLocaleString()+'</td>'+
       '<td style="padding:9px 10px;font-size:15px;text-align:right;color:var(--green);">'+(hasData?r.deliveredPct.toFixed(1):'0.0')+'%</td>'+
-      '<td style="padding:9px 10px;font-size:15px;text-align:right;color:var(--red);">'+(hasData?r.rejectionPct.toFixed(1):'0.0')+'%</td>'+
+      '<td style="padding:9px 10px;font-size:15px;text-align:right;color:var(--red);text-shadow:0 0 6px rgba(255,59,59,0.85),0 0 14px rgba(255,59,59,0.5);">'+(hasData?r.rejectionPct.toFixed(1):'0.0')+'%</td>'+
       '<td style="padding:9px 10px;font-size:15px;text-align:right;">'+r.foodRej.toLocaleString()+' ('+(r.rejection?r.foodPct.toFixed(1):'0.0')+'%)</td>'+
       '<td style="padding:9px 10px;font-size:15px;text-align:right;">'+r.nonfoodRej.toLocaleString()+' ('+(r.rejection?r.nonfoodPct.toFixed(1):'0.0')+'%)</td>'+
       '</tr>';
@@ -4475,9 +4475,9 @@ function renderMonthWiseTable(){
   tfoot.innerHTML = '<tr style="border-top:2px solid var(--gold);background:rgba(201,168,76,0.08);">'+
     '<td style="padding:10px 10px;font-size:15px;font-weight:700;color:var(--gold);">AVG ('+monthLabel+')</td>'+
     '<td style="padding:10px 10px;font-size:15px;text-align:right;font-weight:700;">'+Math.round(avg.delivered/n).toLocaleString()+'</td>'+
-    '<td style="padding:10px 10px;font-size:15px;text-align:right;font-weight:700;color:var(--red);">'+Math.round(avg.rejection/n).toLocaleString()+'</td>'+
+    '<td style="padding:10px 10px;font-size:15px;text-align:right;font-weight:700;color:var(--red);text-shadow:0 0 6px rgba(255,59,59,0.85),0 0 14px rgba(255,59,59,0.5);">'+Math.round(avg.rejection/n).toLocaleString()+'</td>'+
     '<td style="padding:10px 10px;font-size:15px;text-align:right;font-weight:700;color:var(--green);">'+(avg.deliveredPct/n).toFixed(1)+'%</td>'+
-    '<td style="padding:10px 10px;font-size:15px;text-align:right;font-weight:700;color:var(--red);">'+(avg.rejectionPct/n).toFixed(1)+'%</td>'+
+    '<td style="padding:10px 10px;font-size:15px;text-align:right;font-weight:700;color:var(--red);text-shadow:0 0 6px rgba(255,59,59,0.85),0 0 14px rgba(255,59,59,0.5);">'+(avg.rejectionPct/n).toFixed(1)+'%</td>'+
     '<td style="padding:10px 10px;font-size:15px;text-align:right;font-weight:700;">'+Math.round(avg.foodRej/n).toLocaleString()+' ('+(avg.foodPct/n).toFixed(1)+'%)</td>'+
     '<td style="padding:10px 10px;font-size:15px;text-align:right;font-weight:700;">'+Math.round(avg.nonfoodRej/n).toLocaleString()+' ('+(avg.nonfoodPct/n).toFixed(1)+'%)</td>'+
     '</tr>';
@@ -4846,22 +4846,22 @@ async function rejRenderDiscrepancyBox(stats, needsReview, fileName){
     const otherId = 'rej-bulk-other-'+gi;
     const safeReason = (g.rawReason||'').replace(/'/g,"\\'").replace(/"/g,'&quot;');
     html += '<div id="rej-group-row-'+gi+'" style="padding:8px 0;border-bottom:1px solid var(--border);">'+
-      '<span style="color:var(--red);">❗ '+g.rows.length+' row'+(g.rows.length>1?'s':'')+'</span> — '+
-      '<span style="color:var(--faint);font-size:10px;">"'+(g.rawReason||'')+'"</span>'+
+      '<span style="color:var(--red);text-shadow:0 0 6px rgba(255,59,59,0.85),0 0 14px rgba(255,59,59,0.5);">❗ '+g.rows.length+' row'+(g.rows.length>1?'s':'')+'</span> — '+
+      '<span style="color:var(--faint);font-size:15px;">"'+(g.rawReason||'')+'"</span>'+
       '<div style="display:flex;gap:6px;margin-top:5px;">'+
-        '<select id="'+selectId+'" class="rej-cat-select" onchange="rejToggleBulkOther(\''+selectId+'\',\''+otherId+'\')" style="flex:1;font-size:10.5px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;">'+
+        '<select id="'+selectId+'" class="rej-cat-select" onchange="rejToggleBulkOther(\''+selectId+'\',\''+otherId+'\')" style="flex:1;font-size:15px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;">'+
           '<option value="">Select a category…</option>'+
           optionsHtml+
           '<option value="__other__">+ Other (type a new category)</option>'+
         '</select>'+
-        '<button onclick="rejSaveBulkCorrection(\''+safeReason+'\', \''+selectId+'\', \''+otherId+'\', '+gi+', '+g.rows.length+')" style="background:transparent;border:1px solid var(--green);color:var(--green);font-size:10px;padding:3px 10px;border-radius:4px;cursor:pointer;white-space:nowrap;">✓ Apply to all '+g.rows.length+'</button>'+
+        '<button onclick="rejSaveBulkCorrection(\''+safeReason+'\', \''+selectId+'\', \''+otherId+'\', '+gi+', '+g.rows.length+')" style="background:transparent;border:1px solid var(--green);color:var(--green);font-size:15px;padding:3px 10px;border-radius:4px;cursor:pointer;white-space:nowrap;">✓ Apply to all '+g.rows.length+'</button>'+
       '</div>'+
-      '<input type="text" id="'+otherId+'" placeholder="Type the new category…" style="display:none;width:100%;margin-top:5px;font-size:10.5px;padding:4px 6px;background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:4px;box-sizing:border-box;">'+
-      '<div id="'+selectId+'-status" style="font-size:10px;margin-top:3px;"></div>'+
+      '<input type="text" id="'+otherId+'" placeholder="Type the new category…" style="display:none;width:100%;margin-top:5px;font-size:15px;padding:4px 6px;background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:4px;box-sizing:border-box;">'+
+      '<div id="'+selectId+'-status" style="font-size:15px;margin-top:3px;"></div>'+
     '</div>';
   });
   if (zeroValue.length) {
-    html += '<div style="padding:8px 0;color:var(--muted);font-size:10.5px;">ℹ '+zeroValue.length+' AED-0 rows auto-tagged as Internal Transfer (informational only, no action needed).</div>';
+    html += '<div style="padding:8px 0;color:var(--muted);font-size:15px;">ℹ '+zeroValue.length+' AED-0 rows auto-tagged as Internal Transfer (informational only, no action needed).</div>';
   }
   listEl.innerHTML = html;
   window.REJ_PENDING_ROWS_LEFT = unmatched.length;
