@@ -30,6 +30,33 @@
   --dark-card:#0a1220;
   --sidebar:220px;
 }
+/* Rejection YTD dashboard — pure black & white theme, scoped to this tab only */
+#rejection{
+  --black:#000000;
+  --surface:#0b0b0b;
+  --card:#000000;
+  --card2:#111111;
+  --border:rgba(255,255,255,0.22);
+  --gold:#ffffff;
+  --gold2:#e6e6e6;
+  --gold3:#bfbfbf;
+  --glow:rgba(255,255,255,0.08);
+  --text:#ffffff;
+  --muted:#b3b3b3;
+  --white:#ffffff;
+  --green:#f2f2f2;
+  --red:#ffffff;
+  --blue:#d9d9d9;
+  --orange:#cccccc;
+  --purple:#e0e0e0;
+  --accent:#ffffff;
+  --dark-card:#000000;
+  background:#000000;
+}
+#rejection .box{background:#000000;border-color:rgba(255,255,255,0.22);}
+#rejection .org-card{background:#0b0b0b;border-color:rgba(255,255,255,0.22);}
+#rejection .rej-pill{background:#000;border:1px solid rgba(255,255,255,0.3);color:#e6e6e6;}
+#rejection .rej-pill.on{background:#ffffff;color:#000000;border-color:#ffffff;}
 body{font-family:'Inter','Montserrat',sans-serif;font-size:14.5px;background:radial-gradient(ellipse 1200px 800px at 15% 0%,rgba(91,141,238,0.10),transparent 60%),radial-gradient(ellipse 1000px 700px at 100% 100%,rgba(201,168,76,0.08),transparent 55%),var(--black);color:var(--text);min-height:100vh;display:flex;overflow:hidden;height:100vh;scrollbar-width:thin;scrollbar-color:var(--border) transparent;}
 .sidebar{width:var(--sidebar);min-height:100vh;background:#0e1a30;border-right:1px solid rgba(184,134,60,0.25);display:flex;flex-direction:column;flex-shrink:0;position:fixed;left:0;top:0;bottom:0;z-index:100;overflow-y:auto;-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:rgba(184,134,60,0.45) transparent;}
 .sidebar::-webkit-scrollbar{width:6px;}
@@ -1013,26 +1040,26 @@ footer span{color:var(--gold);}
           <button onclick="checkPwd()" class="inv-btn" style="flex:0;white-space:nowrap;padding:10px 18px;margin:0;border:1px solid var(--gold);color:var(--gold);background:transparent;font-family:Montserrat,sans-serif;font-size:9px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;">Unlock</button>
         </div>
         <div id="admin-upload" style="display:none;margin-top:12px;">
-          <label style="font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">Dispatch Source <span style="color:var(--gold);">— upload Main and Salon separately, they merge automatically</span></label>
-          <select id="ds-upload-source" style="width:100%;height:38px;padding:8px 12px;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:Montserrat,sans-serif;font-size:13px;outline:none;margin-bottom:10px;box-sizing:border-box;">
+          <label style="font-size:15px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">Dispatch Source <span style="color:var(--gold);">— upload Main and Salon separately, they merge automatically</span></label>
+          <select id="ds-upload-source" style="width:100%;height:38px;padding:8px 12px;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:Montserrat,sans-serif;font-size:15px;outline:none;margin-bottom:10px;box-sizing:border-box;">
             <option value="Main">Main Dispatch Report</option>
             <option value="Salon">Salon Dispatch Report (DIP W/H)</option>
           </select>
-          <label style="font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">Report Date <span style="color:var(--gold);">— defaults to today, change this when backfilling an older day's file</span></label>
-          <input type="date" id="ds-upload-date" style="width:100%;height:38px;padding:8px 12px;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:Montserrat,sans-serif;font-size:13px;outline:none;margin-bottom:10px;box-sizing:border-box;" onchange="loadSourcesForDate(this.value)"/>
-          <div id="ds-sources-status" style="font-size:10px;color:var(--muted);margin-bottom:10px;"></div>
-          <div class="upload" onclick="document.getElementById('ds-file').click()"><div style="font-size:22px;margin-bottom:6px;">📊</div><div style="font-size:11px;color:var(--muted);letter-spacing:1px;">Click to Upload Dispatch Report (.xlsx or .csv)</div><div style="font-size:10px;color:var(--muted);margin-top:3px;" id="ds-file-name">Admin uploads once — team sees live data automatically</div></div>
+          <label style="font-size:15px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">Report Date <span style="color:var(--gold);">— defaults to today, change this when backfilling an older day's file</span></label>
+          <input type="date" id="ds-upload-date" style="width:100%;height:38px;padding:8px 12px;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:Montserrat,sans-serif;font-size:15px;outline:none;margin-bottom:10px;box-sizing:border-box;" onchange="loadSourcesForDate(this.value)"/>
+          <div id="ds-sources-status" style="font-size:15px;color:var(--muted);margin-bottom:10px;"></div>
+          <div class="upload" onclick="document.getElementById('ds-file').click()"><div style="font-size:22px;margin-bottom:6px;">📊</div><div style="font-size:15px;color:var(--muted);letter-spacing:1px;">Click to Upload Dispatch Report (.xlsx or .csv)</div><div style="font-size:15px;color:var(--muted);margin-top:3px;" id="ds-file-name">Admin uploads once — team sees live data automatically</div></div>
           <input type="file" id="ds-file" accept=".xlsx,.xls,.csv,.txt" style="display:none" onchange="doUpload(this)"/>
           <div class="loader" id="ds-loader"><div class="ring"></div><div class="ring-txt">Processing your Excel file...</div></div>
 
           <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border);">
-            <label style="font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">Vehicle Master <span style="color:var(--gold);">— fleet registry used to estimate transport cost when truck-type is missing</span></label>
+            <label style="font-size:15px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;">Vehicle Master <span style="color:var(--gold);">— fleet registry used to estimate transport cost when truck-type is missing</span></label>
             <input type="file" id="veh-master-file" accept=".xlsx,.xls" style="display:none;" onchange="uploadVehicleMaster(this)">
-            <button onclick="document.getElementById('veh-master-file').click()" style="width:100%;padding:10px;background:rgba(201,168,76,0.1);border:1px solid var(--gold);color:var(--gold);font-size:11px;cursor:pointer;">⬆ Upload Vehicle Master</button>
-            <div id="veh-master-result" style="font-size:10px;color:var(--muted);margin-top:6px;"></div>
+            <button onclick="document.getElementById('veh-master-file').click()" style="width:100%;padding:10px;background:rgba(255,255,255,0.1);border:1px solid var(--gold);color:var(--gold);font-size:15px;cursor:pointer;">⬆ Upload Vehicle Master</button>
+            <div id="veh-master-result" style="font-size:15px;color:var(--muted);margin-top:6px;"></div>
           </div>
 
-          <button onclick="lockAdmin()" style="margin-top:12px;padding:6px 14px;background:transparent;border:1px solid var(--border);color:var(--muted);font-family:Montserrat,sans-serif;font-size:9px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;">🔒 Lock Admin</button>
+          <button onclick="lockAdmin()" style="margin-top:12px;padding:6px 14px;background:transparent;border:1px solid var(--border);color:var(--muted);font-family:Montserrat,sans-serif;font-size:15px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;">🔒 Lock Admin</button>
         </div>
       </div>
     </div>
@@ -1043,51 +1070,51 @@ footer span{color:var(--gold);}
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
           <div>
             <div style="font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;color:var(--white);">Rejection Dashboard</div>
-            <div style="font-size:10px;color:var(--muted);margin-top:2px;letter-spacing:1px;">YTD JAN – MAY 2026 &nbsp;·&nbsp; <span id="rej-scope-label" style="color:var(--gold);">⏳ Loading data from server...</span></div>
+            <div style="font-size:15px;color:var(--muted);margin-top:2px;letter-spacing:1px;">YTD JAN – MAY 2026 &nbsp;·&nbsp; <span id="rej-scope-label" style="color:var(--gold);">⏳ Loading data from server...</span></div>
           </div>
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-            <div style="font-size:10px;color:var(--muted);background:var(--surface);padding:4px 12px;border:1px solid var(--border);" id="rej-total-badge">— total orders</div>
+            <div style="font-size:15px;color:var(--muted);background:var(--surface);padding:4px 12px;border:1px solid var(--border);" id="rej-total-badge">— total orders</div>
 
             <!-- Lock state -->
             <div id="rej-lock-wrap" style="display:none;gap:6px;align-items:center;">
-              <button onclick="rejCheckPwd()" style="padding:6px 14px;background:transparent;border:1px solid var(--gold);color:var(--gold);font-family:Montserrat,sans-serif;font-size:9px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;white-space:nowrap;" onmouseover="this.style.background='var(--glow)'" onmouseout="this.style.background='transparent'">🔒 Upload File</button>
+              <button onclick="rejCheckPwd()" style="padding:6px 14px;background:transparent;border:1px solid var(--gold);color:var(--gold);font-family:Montserrat,sans-serif;font-size:15px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;white-space:nowrap;" onmouseover="this.style.background='var(--glow)'" onmouseout="this.style.background='transparent'">🔒 Upload File</button>
             </div>
             <!-- Password input state -->
             <div id="rej-pwd-wrap" style="display:none;gap:6px;align-items:center;">
-              <input type="password" id="rej-pwd" placeholder="Enter password..." style="height:34px;padding:6px 12px;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:Montserrat,sans-serif;font-size:12px;outline:none;width:160px;" onkeydown="if(event.key==='Enter')rejUnlock()"/>
-              <button onclick="rejUnlock()" style="padding:6px 12px;background:transparent;border:1px solid var(--gold);color:var(--gold);font-family:Montserrat,sans-serif;font-size:9px;cursor:pointer;">Unlock</button>
-              <button onclick="rejClosePwd()" style="padding:6px 10px;background:transparent;border:1px solid var(--border);color:var(--muted);font-family:Montserrat,sans-serif;font-size:9px;cursor:pointer;">✕</button>
+              <input type="password" id="rej-pwd" placeholder="Enter password..." style="height:34px;padding:6px 12px;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:Montserrat,sans-serif;font-size:15px;outline:none;width:160px;" onkeydown="if(event.key==='Enter')rejUnlock()"/>
+              <button onclick="rejUnlock()" style="padding:6px 12px;background:transparent;border:1px solid var(--gold);color:var(--gold);font-family:Montserrat,sans-serif;font-size:15px;cursor:pointer;">Unlock</button>
+              <button onclick="rejClosePwd()" style="padding:6px 10px;background:transparent;border:1px solid var(--border);color:var(--muted);font-family:Montserrat,sans-serif;font-size:15px;cursor:pointer;">✕</button>
             </div>
             <!-- Unlocked state -->
             <div id="rej-unlocked-wrap" style="display:none;gap:6px;align-items:center;">
-              <button onclick="document.getElementById('rej-upload-input').click()" style="padding:6px 14px;background:var(--glow);border:1px solid var(--green);color:var(--green);font-family:Montserrat,sans-serif;font-size:9px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;white-space:nowrap;">📂 Choose File</button>
-              <button onclick="rejLock()" style="padding:6px 10px;background:transparent;border:1px solid var(--border);color:var(--muted);font-family:Montserrat,sans-serif;font-size:9px;cursor:pointer;">🔒 Lock</button>
+              <button onclick="document.getElementById('rej-upload-input').click()" style="padding:6px 14px;background:var(--glow);border:1px solid var(--green);color:var(--green);font-family:Montserrat,sans-serif;font-size:15px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;white-space:nowrap;">📂 Choose File</button>
+              <button onclick="rejLock()" style="padding:6px 10px;background:transparent;border:1px solid var(--border);color:var(--muted);font-family:Montserrat,sans-serif;font-size:15px;cursor:pointer;">🔒 Lock</button>
             </div>
             <input type="file" id="rej-upload-input" accept=".xlsx,.xls" style="display:none" onchange="rejUploadFile(this)"/>
-            <button onclick="rejToggleUpload()" id="rej-star-btn" title="" style="background:transparent;border:none;cursor:pointer;font-size:16px;color:var(--gold);opacity:0.25;transition:opacity 0.3s;padding:2px 6px;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.25'">✦</button><span id="rej-upload-status" style="font-size:10px;color:var(--muted);max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
+            <button onclick="rejToggleUpload()" id="rej-star-btn" title="" style="background:transparent;border:none;cursor:pointer;font-size:16px;color:var(--gold);opacity:0.25;transition:opacity 0.3s;padding:2px 6px;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.25'">✦</button><span id="rej-upload-status" style="font-size:15px;color:var(--muted);max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
           </div>
         </div>
 
         <!-- FILTER ROWS -->
         <div style="display:none;">
-          <span style="font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;min-width:24px;">BU</span>
+          <span style="font-size:15px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;min-width:24px;">BU</span>
           <button class="rej-pill on" id="rb-all" onclick="rejFilter('bu','all')">All</button>
 
 
         </div>
         <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;align-items:center;">
-          <span style="font-size:13px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;min-width:24px;">ORG</span>
+          <span style="font-size:15px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;min-width:24px;">ORG</span>
           <button class="rej-pill on" id="ro-all" onclick="rejFilter('org','all')">All</button>
-          <span style="font-size:10px;color:var(--gold);margin:0 4px;">──FOOD──</span>
+          <span style="font-size:15px;color:var(--gold);margin:0 4px;">──FOOD──</span>
           <button class="rej-pill" id="ro-dcv" onclick="rejFilter('org','DCV')" title="Food ORG">DCV</button>
           <button class="rej-pill" id="ro-dcf" onclick="rejFilter('org','DCF')" title="Food ORG">DCF</button>
           <button class="rej-pill" id="ro-dgc" onclick="rejFilter('org','DGC')" title="Non-Food">DGC</button>
-          <span style="font-size:10px;color:#4ecb8d;margin:0 4px;">──COOKWARE/ELEC──</span>
+          <span style="font-size:15px;color:#4ecb8d;margin:0 4px;">──COOKWARE/ELEC──</span>
           <button class="rej-pill" id="ro-dgs" onclick="rejFilter('org','DGS')" title="Cookware &amp; Electronics">DGS</button>
           <button class="rej-pill" id="ro-dsn" onclick="rejFilter('org','DSN')" title="Cookware &amp; Electronics">DSN</button>
         </div>
         <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;align-items:center;">
-          <span style="font-size:13px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;min-width:24px;">MONTH</span>
+          <span style="font-size:15px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;min-width:24px;">MONTH</span>
           <button class="rej-pill on" id="rm-all" onclick="rejFilter('month','all')">All</button>
           <button class="rej-pill" id="rm-1" onclick="rejFilter('month',1,event)">Jan</button>
           <button class="rej-pill" id="rm-2" onclick="rejFilter('month',2,event)">Feb</button>
@@ -1102,33 +1129,33 @@ footer span{color:var(--gold);}
           <button class="rej-pill" id="rm-11" onclick="rejFilter('month',11,event)">Nov</button>
           <button class="rej-pill" id="rm-12" onclick="rejFilter('month',12,event)">Dec</button>
         </div>
-        <div id="rej-month-banner" style="display:none;margin-top:-2px;margin-bottom:10px;padding:8px 14px;background:rgba(201,168,76,0.12);border:1px solid var(--gold);align-items:center;justify-content:space-between;">
+        <div id="rej-month-banner" style="display:none;margin-top:-2px;margin-bottom:10px;padding:8px 14px;background:rgba(255,255,255,0.12);border:1px solid var(--gold);align-items:center;justify-content:space-between;">
           <span style="font-size:15px;color:var(--gold);font-weight:600;" id="rej-month-banner-txt">—</span>
-          <button onclick="rejFilter('month','all')" style="background:transparent;border:1px solid var(--border);color:var(--muted);font-size:13px;padding:3px 10px;cursor:pointer;font-family:Montserrat,sans-serif;letter-spacing:1px;text-transform:uppercase;">✕ Clear Months</button>
+          <button onclick="rejFilter('month','all')" style="background:transparent;border:1px solid var(--border);color:var(--muted);font-size:15px;padding:3px 10px;cursor:pointer;font-family:Montserrat,sans-serif;letter-spacing:1px;text-transform:uppercase;">✕ Clear Months</button>
         </div>
         <!-- Day row — shown when a month is selected -->
         <div id="rej-day-row" style="display:none;margin-bottom:10px;">
           <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:8px;">
-            <span style="font-size:13px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;min-width:24px;">DAY</span>
+            <span style="font-size:15px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;min-width:24px;">DAY</span>
             <button class="rej-pill on" id="rd-all" onclick="rejFilter('day','all')">All Days</button>
-            <span style="font-size:13px;color:var(--muted);margin-left:4px;" id="rej-day-hint">← click a day to drill down to that date</span>
+            <span style="font-size:15px;color:var(--muted);margin-left:4px;" id="rej-day-hint">← click a day to drill down to that date</span>
           </div>
           <div id="rej-day-grid" style="display:flex;flex-wrap:wrap;gap:4px;padding:10px 12px;background:var(--surface);border:1px solid var(--border);"></div>
-          <div id="rej-day-banner" style="display:none;margin-top:8px;padding:8px 14px;background:rgba(201,168,76,0.12);border:1px solid var(--gold);align-items:center;justify-content:space-between;">
+          <div id="rej-day-banner" style="display:none;margin-top:8px;padding:8px 14px;background:rgba(255,255,255,0.12);border:1px solid var(--gold);align-items:center;justify-content:space-between;">
             <span style="font-size:15px;color:var(--gold);font-weight:600;" id="rej-day-banner-txt">—</span>
-            <button onclick="rejFilter('day','all')" style="background:transparent;border:1px solid var(--border);color:var(--muted);font-size:13px;padding:3px 10px;cursor:pointer;font-family:Montserrat,sans-serif;letter-spacing:1px;text-transform:uppercase;">✕ Clear Day</button>
+            <button onclick="rejFilter('day','all')" style="background:transparent;border:1px solid var(--border);color:var(--muted);font-size:15px;padding:3px 10px;cursor:pointer;font-family:Montserrat,sans-serif;letter-spacing:1px;text-transform:uppercase;">✕ Clear Day</button>
           </div>
         </div>
         
       </div>
 
         <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;align-items:center;">
-          <span style="font-size:13px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;min-width:24px;">TYPE</span>
+          <span style="font-size:15px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;min-width:24px;">TYPE</span>
           <button class="rej-pill on" id="rt-all" onclick="rejFilter('type','all')">All</button>
           <button class="rej-pill" id="rt-food" onclick="rejFilter('type','food')" title="DCV + DCF">Food</button>
           <button class="rej-pill" id="rt-nf" onclick="rejFilter('type','nonfood')" title="DGC + DGS + DSN">Non-Food</button>
           <span style="width:1px;height:16px;background:var(--border);margin:0 6px;"></span>
-          <span style="font-size:13px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;min-width:40px;">SOURCE</span>
+          <span style="font-size:15px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;min-width:40px;">SOURCE</span>
           <button class="rej-pill on" id="rs-all" onclick="rejFilter('src','all')">All</button>
           <button class="rej-pill" id="rs-ext" onclick="rejFilter('src','external')">External</button>
           <button class="rej-pill" id="rs-int" onclick="rejFilter('src','internal')">Internal</button>
@@ -1161,39 +1188,39 @@ footer span{color:var(--gold);}
           <table style="width:100%;border-collapse:collapse;" id="rej-monthwise-table">
             <thead>
               <tr style="border-bottom:1px solid var(--gold);">
-                <th style="text-align:left;padding:9px 10px;font-size:14px;color:var(--gold);letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">Month</th>
-                <th style="text-align:right;padding:9px 10px;font-size:14px;color:var(--gold);letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">Delivered</th>
-                <th style="text-align:right;padding:9px 10px;font-size:14px;color:var(--gold);letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">Rejection</th>
-                <th style="text-align:right;padding:9px 10px;font-size:14px;color:var(--gold);letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">Delivered %</th>
-                <th style="text-align:right;padding:9px 10px;font-size:14px;color:var(--gold);letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">Rejection %</th>
-                <th style="text-align:right;padding:9px 10px;font-size:14px;color:var(--gold);letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">Food (of Rej.)</th>
-                <th style="text-align:right;padding:9px 10px;font-size:14px;color:var(--gold);letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">Non-Food (of Rej.)</th>
+                <th style="text-align:left;padding:9px 10px;font-size:15px;color:var(--gold);letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">Month</th>
+                <th style="text-align:right;padding:9px 10px;font-size:15px;color:var(--gold);letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">Delivered</th>
+                <th style="text-align:right;padding:9px 10px;font-size:15px;color:var(--gold);letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">Rejection</th>
+                <th style="text-align:right;padding:9px 10px;font-size:15px;color:var(--gold);letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">Delivered %</th>
+                <th style="text-align:right;padding:9px 10px;font-size:15px;color:var(--gold);letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">Rejection %</th>
+                <th style="text-align:right;padding:9px 10px;font-size:15px;color:var(--gold);letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">Food (of Rej.)</th>
+                <th style="text-align:right;padding:9px 10px;font-size:15px;color:var(--gold);letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">Non-Food (of Rej.)</th>
               </tr>
             </thead>
             <tbody id="rej-monthwise-tbody"></tbody>
             <tfoot id="rej-monthwise-tfoot"></tfoot>
           </table>
         </div>
-        <div style="font-size:10px;color:var(--muted);margin-top:8px;">Food/Non-Food % are each category's share of that month's REJECTIONS specifically (not of total orders) — same basis as the Food/Non-Food filter above. "Frozen" isn't tracked as a separate category yet — let me know if that needs adding.</div>
-        <div style="font-size:10px;color:var(--muted);margin-top:4px;" id="rej-monthwise-avg-hint">💡 Click 2+ months above (shift-click for a range) to see an AVERAGE row for that range.</div>
+        <div style="font-size:15px;color:var(--muted);margin-top:8px;">Food/Non-Food % are each category's share of that month's REJECTIONS specifically (not of total orders) — same basis as the Food/Non-Food filter above. "Frozen" isn't tracked as a separate category yet — let me know if that needs adding.</div>
+        <div style="font-size:15px;color:var(--muted);margin-top:4px;" id="rej-monthwise-avg-hint">💡 Click 2+ months above (shift-click for a range) to see an AVERAGE row for that range.</div>
       </div>
 
       <!-- DETAIL TABLE: Customer + Location + Root Cause -->
       <div class="box" style="margin-bottom:16px;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
           <div class="box-title" style="font-size:15px;margin:0;">📋 Customer · Location · Root Cause Detail</div>
-          <button id="rej-export-btn" onclick="exportRejDetailExcel()" style="background:rgba(201,168,76,0.12);border:1px solid var(--gold);color:var(--gold);font-family:Montserrat,sans-serif;font-size:12px;letter-spacing:1px;text-transform:uppercase;padding:7px 16px;cursor:pointer;">⬇ Export Excel</button>
+          <button id="rej-export-btn" onclick="exportRejDetailExcel()" style="background:rgba(255,255,255,0.12);border:1px solid var(--gold);color:var(--gold);font-family:Montserrat,sans-serif;font-size:15px;letter-spacing:1px;text-transform:uppercase;padding:7px 16px;cursor:pointer;">⬇ Export Excel</button>
         </div>
         <div style="overflow-x:auto;">
           <table style="width:100%;border-collapse:collapse;" id="rej-detail-table">
             <thead>
               <tr style="border-bottom:1px solid var(--gold);">
-                <th style="text-align:left;padding:8px 10px;font-size:12px;color:var(--gold);letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">#</th>
-                <th style="text-align:left;padding:8px 10px;font-size:12px;color:var(--gold);letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">Customer Name</th>
-                <th style="text-align:left;padding:8px 10px;font-size:12px;color:var(--gold);letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">Full Address</th>
-                <th style="text-align:left;padding:8px 10px;font-size:12px;color:var(--gold);letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">Final Root Cause</th>
-                <th style="text-align:right;padding:8px 10px;font-size:12px;color:var(--gold);letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">Count</th>
-                <th style="text-align:right;padding:8px 10px;font-size:12px;color:var(--gold);letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">%</th>
+                <th style="text-align:left;padding:8px 10px;font-size:15px;color:var(--gold);letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">#</th>
+                <th style="text-align:left;padding:8px 10px;font-size:15px;color:var(--gold);letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">Customer Name</th>
+                <th style="text-align:left;padding:8px 10px;font-size:15px;color:var(--gold);letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">Full Address</th>
+                <th style="text-align:left;padding:8px 10px;font-size:15px;color:var(--gold);letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">Final Root Cause</th>
+                <th style="text-align:right;padding:8px 10px;font-size:15px;color:var(--gold);letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">Count</th>
+                <th style="text-align:right;padding:8px 10px;font-size:15px;color:var(--gold);letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">%</th>
               </tr>
             </thead>
             <tbody id="rej-detail-tbody">
@@ -1204,11 +1231,11 @@ footer span{color:var(--gold);}
       </div>
 
       <div id="rej-wrongfile-warning" style="display:none;margin-bottom:10px;border:2px solid #ef4444;background:rgba(239,68,68,0.08);border-radius:6px;padding:14px;">
-        <div style="font-size:12px;font-weight:800;color:#ef4444;letter-spacing:1px;margin-bottom:6px;">🚨 WRONG FILE? THIS DOESN'T LOOK LIKE A REJECTION REPORT</div>
-        <div id="rej-wrongfile-msg" style="font-size:12.5px;color:#f5b8b8;line-height:1.6;margin-bottom:10px;"></div>
+        <div style="font-size:15px;font-weight:800;color:#ef4444;letter-spacing:1px;margin-bottom:6px;">🚨 WRONG FILE? THIS DOESN'T LOOK LIKE A REJECTION REPORT</div>
+        <div id="rej-wrongfile-msg" style="font-size:15px;color:#f5b8b8;line-height:1.6;margin-bottom:10px;"></div>
         <div style="display:flex;gap:8px;">
-          <button onclick="rejConfirmWrongFileUpload()" style="padding:7px 14px;background:transparent;border:1px solid #ef4444;color:#ef4444;font-size:10px;letter-spacing:1px;cursor:pointer;font-weight:700;">YES, I'M SURE — UPLOAD ANYWAY</button>
-          <button onclick="rejCancelWrongFileUpload()" style="padding:7px 14px;background:#ef4444;border:1px solid #ef4444;color:#fff;font-size:10px;letter-spacing:1px;cursor:pointer;font-weight:700;">CANCEL — LET ME PICK THE RIGHT FILE</button>
+          <button onclick="rejConfirmWrongFileUpload()" style="padding:7px 14px;background:transparent;border:1px solid #ef4444;color:#ef4444;font-size:15px;letter-spacing:1px;cursor:pointer;font-weight:700;">YES, I'M SURE — UPLOAD ANYWAY</button>
+          <button onclick="rejCancelWrongFileUpload()" style="padding:7px 14px;background:#ef4444;border:1px solid #ef4444;color:#fff;font-size:15px;letter-spacing:1px;cursor:pointer;font-weight:700;">CANCEL — LET ME PICK THE RIGHT FILE</button>
         </div>
       </div>
 
@@ -1216,10 +1243,10 @@ footer span{color:var(--gold);}
            Cooldown has no bypass. Date-overwrite offers a reason box that sends the
            file to the super admin for approval instead of applying it. -->
       <div id="rej-blocked-warning" style="display:none;margin-bottom:10px;border:2px solid #ef4444;background:rgba(239,68,68,0.08);border-radius:6px;padding:14px;">
-        <div id="rej-blocked-title" style="font-size:12px;font-weight:800;color:#ef4444;letter-spacing:1px;margin-bottom:6px;">⛔ UPLOAD BLOCKED</div>
-        <div id="rej-blocked-msg" style="font-size:12.5px;color:#f5b8b8;line-height:1.6;margin-bottom:10px;"></div>
+        <div id="rej-blocked-title" style="font-size:15px;font-weight:800;color:#ef4444;letter-spacing:1px;margin-bottom:6px;">⛔ UPLOAD BLOCKED</div>
+        <div id="rej-blocked-msg" style="font-size:15px;color:#f5b8b8;line-height:1.6;margin-bottom:10px;"></div>
         <div id="rej-blocked-approval-form" style="display:none;">
-          <textarea id="rej-blocked-reason" placeholder="Reason for the super admin (required) — e.g. why this date needs to be corrected..." style="width:100%;box-sizing:border-box;background:#1a0d0d;border:1px solid #ef4444;color:#f5b8b8;font-size:12.5px;padding:8px;border-radius:4px;min-height:60px;margin-bottom:10px;font-family:Montserrat,sans-serif;"></textarea>
+          <textarea id="rej-blocked-reason" placeholder="Reason for the super admin (required) — e.g. why this date needs to be corrected..." style="width:100%;box-sizing:border-box;background:#1a0d0d;border:1px solid #ef4444;color:#f5b8b8;font-size:15px;padding:8px;border-radius:4px;min-height:60px;margin-bottom:10px;font-family:Montserrat,sans-serif;"></textarea>
           <div style="display:flex;gap:8px;">
             <button onclick="rejSubmitForApproval()" style="padding:7px 14px;background:transparent;border:1px solid #ef4444;color:#ef4444;font-size:10px;letter-spacing:1px;cursor:pointer;font-weight:700;">SEND TO SUPER ADMIN FOR APPROVAL</button>
             <button onclick="rejCancelBlockedUpload()" style="padding:7px 14px;background:#ef4444;border:1px solid #ef4444;color:#fff;font-size:10px;letter-spacing:1px;cursor:pointer;font-weight:700;">CANCEL</button>
@@ -4085,7 +4112,7 @@ function rejRender(){
   const oc=document.getElementById('rej-org-cards');
   if(oc)// Add filter indicator above cards
 var filterNote = document.getElementById('rej-filter-note');
-if(!filterNote){ filterNote=document.createElement('div'); filterNote.id='rej-filter-note'; filterNote.style.cssText='font-size:10px;color:var(--gold);letter-spacing:1px;margin-bottom:8px;padding:4px 0;'; oc.parentNode.insertBefore(filterNote, oc); }
+if(!filterNote){ filterNote=document.createElement('div'); filterNote.id='rej-filter-note'; filterNote.style.cssText='font-size:15px;color:var(--gold);letter-spacing:1px;margin-bottom:8px;padding:4px 0;'; oc.parentNode.insertBefore(filterNote, oc); }
 filterNote.textContent = rejORG!=='all' ? ' ORG FILTER ACTIVE: Showing '+rejORG+' data only  KPIs below reflect this filter' : '';
 
 oc.innerHTML=ORG_SUMMARY.map(function(o){
@@ -4131,11 +4158,11 @@ oc.innerHTML=ORG_SUMMARY.map(function(o){
     return '<div class="org-card '+onCls+'" onclick="rejFilter(\'org\',\''+o.org+'\')">'
       +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">'
       +'<span style="font-size:15px;font-weight:700;color:'+o.color+';">'+o.org+'</span>'
-      +'<span style="font-size:12px;color:var(--red);background:rgba(232,75,75,0.1);padding:2px 6px;border-radius:10px;">'+dynamicRate+'</span>'
+      +'<span style="font-size:15px;color:var(--red);background:rgba(255,255,255,0.16);padding:2px 6px;border-radius:10px;">'+dynamicRate+'</span>'
       +'</div>'
       +'<div style="font-family:Cormorant Garamond,serif;font-size:20px;font-weight:700;color:var(--text);">'+filtRej.toLocaleString()+'</div>'
-      +'<div style="font-size:13px;color:var(--gold);margin-top:2px;">'+getOrgFilteredVal(o)+'</div>'
-      +'<div style="font-size:12px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+o.bu+'</div>'
+      +'<div style="font-size:15px;color:var(--gold);margin-top:2px;">'+getOrgFilteredVal(o)+'</div>'
+      +'<div style="font-size:15px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+o.bu+'</div>'
       +'</div>';
   }).join('');
 
@@ -4162,27 +4189,27 @@ oc.innerHTML=ORG_SUMMARY.map(function(o){
   else if(rejSrc==='internal') rateSub='Internal share of overall '+overallRate;
 
   if(kEl)kEl.innerHTML=''
-    +'<div style="background:var(--card);border:1px solid var(--border);padding:16px;position:relative;"><div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:0.4;"></div><div style="font-size:12px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">Total Rejections</div><div style="font-family:Cormorant Garamond,serif;font-size:28px;font-weight:700;color:var(--gold);">'+d.tRej.toLocaleString()+'</div></div>'
-    +'<div style="background:rgba(232,75,75,0.1);border:1px solid rgba(232,75,75,0.3);padding:16px;">'+
-     '<div style="font-size:12px;letter-spacing:2px;color:var(--red);text-transform:uppercase;margin-bottom:4px;">'+rateLabel+'</div>'+
+    +'<div style="background:var(--card);border:1px solid var(--border);padding:16px;position:relative;"><div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:0.4;"></div><div style="font-size:15px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">Total Rejections</div><div style="font-family:Cormorant Garamond,serif;font-size:28px;font-weight:700;color:var(--gold);">'+d.tRej.toLocaleString()+'</div></div>'
+    +'<div style="background:rgba(255,255,255,0.16);border:1px solid rgba(255,255,255,0.48);padding:16px;">'+
+     '<div style="font-size:15px;letter-spacing:2px;color:var(--red);text-transform:uppercase;margin-bottom:4px;">'+rateLabel+'</div>'+
      '<div style="font-family:Cormorant Garamond,serif;font-size:28px;font-weight:700;color:var(--red);">'+rejRate+'</div>'+
-     (rateSub?'<div style="font-size:12px;color:var(--muted);margin-top:3px;">'+rateSub+'</div>':'')+
+     (rateSub?'<div style="font-size:15px;color:var(--muted);margin-top:3px;">'+rateSub+'</div>':'')+
      '</div>'
-    +'<div style="background:var(--card);border:1px solid var(--border);padding:16px;position:relative;"><div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:0.4;"></div><div style="font-size:12px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">Delivered</div><div style="font-family:Cormorant Garamond,serif;font-size:28px;font-weight:700;color:var(--green);">'+d.tDel.toLocaleString()+'</div></div>'
-    +'<div style="background:var(--card);border:1px solid var(--border);padding:16px;position:relative;"><div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:0.4;"></div><div style="font-size:12px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">Value at Risk</div><div style="font-family:Cormorant Garamond,serif;font-size:28px;font-weight:700;color:var(--gold);">'+d.val+'</div></div>';
+    +'<div style="background:var(--card);border:1px solid var(--border);padding:16px;position:relative;"><div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:0.4;"></div><div style="font-size:15px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">Delivered</div><div style="font-family:Cormorant Garamond,serif;font-size:28px;font-weight:700;color:var(--green);">'+d.tDel.toLocaleString()+'</div></div>'
+    +'<div style="background:var(--card);border:1px solid var(--border);padding:16px;position:relative;"><div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:0.4;"></div><div style="font-size:15px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">Value at Risk</div><div style="font-family:Cormorant Garamond,serif;font-size:28px;font-weight:700;color:var(--gold);">'+d.val+'</div></div>';
 
   // Charts
-  const gridC='rgba(255,255,255,0.06)', tickC='#7a7660';
+  const gridC='rgba(255,255,255,0.10)', tickC='#cccccc';
   const mc=document.getElementById('rejMonthChart');
   if(mc){
     if(rejMChart)rejMChart.destroy();
-    rejMChart=new Chart(mc,{type:'bar',data:{labels:REJ_MONTHS,datasets:[{label:'Delivered',data:d.del,backgroundColor:'#4ecb8d',borderRadius:3,borderSkipped:false},{label:'Rejected',data:d.rej,backgroundColor:'#e84b4b',borderRadius:3,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){return ' '+ctx.dataset.label+': '+ctx.parsed.y.toLocaleString();}}}},scales:{x:{grid:{color:gridC},ticks:{color:tickC,font:{size:12}}},y:{grid:{color:gridC},ticks:{color:tickC,font:{size:12}},beginAtZero:true}}}});
+    rejMChart=new Chart(mc,{type:'bar',data:{labels:REJ_MONTHS,datasets:[{label:'Delivered',data:d.del,backgroundColor:'#999999',borderRadius:3,borderSkipped:false},{label:'Rejected',data:d.rej,backgroundColor:'#ffffff',borderRadius:3,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){return ' '+ctx.dataset.label+': '+ctx.parsed.y.toLocaleString();}}}},scales:{x:{grid:{color:gridC},ticks:{color:tickC,font:{size:15}}},y:{grid:{color:gridC},ticks:{color:tickC,font:{size:15}},beginAtZero:true}}}});
   }
   const ac=document.getElementById('rejAreaChart');
   if(ac){
     if(rejAChart)rejAChart.destroy();
     const areas=(d.areas||[]).slice(0,8);
-    rejAChart=new Chart(ac,{type:'bar',data:{labels:areas.map(a=>a.a),datasets:[{label:'Rejections',data:areas.map(a=>a.n),backgroundColor:'#5b8dee',borderRadius:3,borderSkipped:false}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){return ' Rejections: '+ctx.parsed.x.toLocaleString();}}}},scales:{x:{grid:{color:gridC},ticks:{color:tickC,font:{size:12}},beginAtZero:true},y:{grid:{display:false},ticks:{color:tickC,font:{size:12}}}}}});
+    rejAChart=new Chart(ac,{type:'bar',data:{labels:areas.map(a=>a.a),datasets:[{label:'Rejections',data:areas.map(a=>a.n),backgroundColor:'#e0e0e0',borderRadius:3,borderSkipped:false}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){return ' Rejections: '+ctx.parsed.x.toLocaleString();}}}},scales:{x:{grid:{color:gridC},ticks:{color:tickC,font:{size:15}},beginAtZero:true},y:{grid:{display:false},ticks:{color:tickC,font:{size:15}}}}}});
   }
 
   // ── Root Causes (upgraded 15px+) ──
@@ -4194,7 +4221,7 @@ oc.innerHTML=ORG_SUMMARY.map(function(o){
       rp.innerHTML='<div style="font-size:15px;color:var(--muted);padding:20px 0;text-align:center;">No data — upload rejection file</div>';
     } else {
       rp.innerHTML=topR.map(function(r,i){
-        var barColor=i<3?'var(--red)':i<6?'#e8854b':'#5b8dee';
+        var barColor=i<3?'#ffffff':i<6?'#cccccc':'#999999';
         var barW=Math.round((r.n||0)/maxR*100);
         var pct = d.tRej > 0 ? ((r.n||0)/d.tRej*100).toFixed(1)+'%' : '0%';
         var rankMedal = i===0?'🥇':i===1?'🥈':i===2?'🥉':('  '+(i+1)+'.');
@@ -4206,7 +4233,7 @@ oc.innerHTML=ORG_SUMMARY.map(function(o){
           +'</div>'
           +'<div class="rej-reason-num" style="display:flex;gap:10px;align-items:center;flex-shrink:0;">'
           +'<span style="font-size:15px;color:var(--gold);font-weight:700;">'+(r.n||0).toLocaleString()+'</span>'
-          +'<span style="font-size:13px;color:var(--muted);min-width:38px;text-align:right;">'+pct+'</span>'
+          +'<span style="font-size:15px;color:var(--muted);min-width:38px;text-align:right;">'+pct+'</span>'
           +'</div>'
           +'</div>'
           +'<div style="height:6px;background:var(--border);border-radius:3px;">'
@@ -4225,7 +4252,7 @@ oc.innerHTML=ORG_SUMMARY.map(function(o){
     } else {
       const maxC=Math.max(...custList.map(c=>c.c),1);
       cp.innerHTML=custList.map(function(c,i){
-        var cols=['#e84b4b','#e84b4b','#e84b4b','var(--gold)','var(--gold)','var(--gold)','#5b8dee','#5b8dee','#5b8dee','#5b8dee'];
+        var cols=['#ffffff','#ffffff','#ffffff','#cccccc','#cccccc','#cccccc','#999999','#999999','#999999','#999999'];
         var col=cols[i]||'var(--muted)';
         var pct = d.tRej > 0 ? (c.c/d.tRej*100).toFixed(1)+'%' : '0%';
         var barW = Math.round(c.c/maxC*100);
@@ -4237,13 +4264,13 @@ oc.innerHTML=ORG_SUMMARY.map(function(o){
           +'</div>'
           +'<div class="rej-cust-num" style="display:flex;align-items:center;gap:10px;flex-shrink:0;margin-left:8px;">'
           +'<span style="font-size:16px;font-weight:700;color:var(--text);">'+c.c.toLocaleString()+'</span>'
-          +'<span style="font-size:14px;font-weight:700;color:var(--red);min-width:42px;text-align:right;">'+pct+'</span>'
+          +'<span style="font-size:15px;font-weight:700;color:var(--red);min-width:42px;text-align:right;">'+pct+'</span>'
           +'</div>'
           +'</div>'
           +'<div style="height:4px;background:var(--border);border-radius:2px;">'
           +'<div style="height:4px;width:'+barW+'%;background:'+col+';border-radius:2px;transition:width 0.5s;"></div>'
           +'</div>'
-          +(c.v?'<div style="font-size:13px;color:var(--gold);margin-top:3px;padding-left:30px;">'+c.v+'</div>':'')
+          +(c.v?'<div style="font-size:15px;color:var(--gold);margin-top:3px;padding-left:30px;">'+c.v+'</div>':'')
           +'</div>';
       }).join('');
     }
@@ -4313,7 +4340,7 @@ oc.innerHTML=ORG_SUMMARY.map(function(o){
     } else {
       detailTbody.innerHTML = detailRows.slice(0,50).map(function(r,i){
         var rowPct = (r.n/totalForPct*100).toFixed(1)+'%';
-        var rowCol = i<3?'#e84b4b':i<10?'var(--gold)':'var(--text)';
+        var rowCol = i<3?'#ffffff':i<10?'#cccccc':'var(--text)';
         var addrTxt = r.addr || '';
         var rootTxt = r.root || '';
         var addrStyle = addrTxt.startsWith('Re-upload') ? 'color:rgba(201,168,76,0.4);font-style:italic;font-size:12px;' : 'color:var(--muted);font-size:13px;';
@@ -4807,9 +4834,9 @@ async function rejRenderDiscrepancyBox(stats, needsReview, fileName){
   let suggestBarHtml = '';
   if (unmatched.length) {
     suggestBarHtml = '<div id="rej-suggest-bar" style="display:flex;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);margin-bottom:6px;">'+
-      '<button onclick="rejSuggestAllCategories()" id="rej-suggest-btn" style="padding:6px 12px;background:rgba(201,168,76,0.12);border:1px solid var(--gold);color:var(--gold);font-size:10.5px;font-weight:700;cursor:pointer;border-radius:4px;white-space:nowrap;">🤖 Suggest Categories for All '+groupList.length+'</button>'+
-      '<button onclick="rejApplyAllSuggested()" id="rej-apply-all-btn" style="display:none;padding:6px 12px;background:transparent;border:1px solid var(--green);color:var(--green);font-size:10.5px;font-weight:700;cursor:pointer;border-radius:4px;white-space:nowrap;">✅ Apply All Suggested</button>'+
-      '<span id="rej-suggest-status" style="font-size:10.5px;color:var(--muted);"></span>'+
+      '<button onclick="rejSuggestAllCategories()" id="rej-suggest-btn" style="padding:6px 12px;background:rgba(255,255,255,0.12);border:1px solid var(--gold);color:var(--gold);font-size:15px;font-weight:700;cursor:pointer;border-radius:4px;white-space:nowrap;">🤖 Suggest Categories for All '+groupList.length+'</button>'+
+      '<button onclick="rejApplyAllSuggested()" id="rej-apply-all-btn" style="display:none;padding:6px 12px;background:transparent;border:1px solid var(--green);color:var(--green);font-size:15px;font-weight:700;cursor:pointer;border-radius:4px;white-space:nowrap;">✅ Apply All Suggested</button>'+
+      '<span id="rej-suggest-status" style="font-size:15px;color:var(--muted);"></span>'+
     '</div>';
   }
 
@@ -4941,7 +4968,7 @@ async function rejLoadFromServer(){
       Object.keys(d.months).forEach(mo=>{DAY_DATA[parseInt(mo)]=d.months[mo];});
 
       // Rebuild ORG_SUMMARY from live data
-      var orgColors2={DCV:'#e84b4b',DGC:'#5b8dee',DSN:'#c9a84c',DGS:'#4ecb8d',DCF:'#e8854b'};
+      var orgColors2={DCV:'#ffffff',DGC:'#cccccc',DSN:'#aaaaaa',DGS:'#e6e6e6',DCF:'#bfbfbf'};
       var buMap2={DCV:'Consumer DIC',DGC:'Consumer DIC / Salon',DSN:'Consumer DIC',DGS:'Consumer DIC',DCF:'Consumer DIC'};
       ORG_SUMMARY.length=0;
       // Build from ALL orgs in server data (not just hardcoded list)
@@ -7139,7 +7166,7 @@ function renderSalesDashboard(){
   if(lastEl) lastEl.textContent='Last: '+d.date;
 
   // KPI CARDS
-  var orgColors = {DCV:'#e84b4b',DCF:'#e8854b',DGC:'#5b8dee',DSN:'#c9a84c',DGS:'#4ecb8d'};
+  var orgColors = {DCV:'#ffffff',DCF:'#bfbfbf',DGC:'#cccccc',DSN:'#aaaaaa',DGS:'#e6e6e6'};
   var kpis=[
     {icon:'📋',label:'TOTAL ORDERS',val:d.totalOrders.toLocaleString(),sub:fmtSales(d.totalVal),color:'var(--gold)',border:'var(--border)'},
     {icon:'🍽',label:'FOOD (DCV+DCF)',val:d.foodOrders.toLocaleString(),sub:fmtSales(d.foodVal),color:'#e84b4b',border:'rgba(232,75,75,0.4)'},
