@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Transport Cost Control — AZHAR-AI</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@300;400;500;600;700&family=Montserrat:wght@600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --void:#cfe9fb; --surface:#eaf6ff; --card:#eaf6ff; --border:#a9c9e0;
+    --gold:#0a0a0a; --gold2:#222222; --text:#0a0a0a; --muted:#3d4a57; --faint:#5c6a75;
+    --red:#c0392b; --amber:#8a5d22; --green:#1a7a4c;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{height:100%;}
+  body{
+    background:radial-gradient(ellipse 1200px 800px at 15% 0%, rgba(139,105,20,0.16), transparent 60%),
+               radial-gradient(ellipse 1000px 700px at 100% 100%, rgba(201,168,76,0.10), transparent 55%), var(--void);
+    color:var(--text); font-family:'Inter',sans-serif; min-height:100vh; overflow-x:hidden;
+  }
+  a{color:inherit; text-decoration:none;}
+  ::-webkit-scrollbar{width:8px; height:8px;} ::-webkit-scrollbar-thumb{background:var(--border); border-radius:4px;}
+
+  #gate{position:fixed; inset:0; background:var(--void); display:flex; align-items:center; justify-content:center; z-index:999;}
+  #gate .spin{width:28px; height:28px; border-radius:50%; border:2px solid var(--border); border-top-color:var(--gold); animation:spin .9s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  .topbar{position:sticky; top:0; z-index:50; display:flex; align-items:center; justify-content:space-between; padding:14px 28px; background:rgba(234,246,255,0.9); backdrop-filter:blur(10px); border-bottom:1px solid var(--border); flex-wrap:wrap; gap:10px;}
+  .back-link{font-size:12px; color:var(--muted); display:flex; align-items:center; gap:6px;}
+  .back-link:hover{color:var(--gold2);}
+  .hub-title{font-family:'Montserrat',sans-serif; font-weight:700; font-size:15px; letter-spacing:.5px;}
+  .topbar-actions{display:flex; gap:10px; align-items:center;}
+  .btn{font-size:12.5px; padding:8px 16px; border-radius:8px; border:1px solid var(--border); background:rgba(255,255,255,0.03); color:var(--text); cursor:pointer; transition:.15s;}
+  .btn:hover{border-color:#1a3a5c; color:#1a3a5c;}
+  .btn.primary{background:#1a3a5c; color:#eaf6ff; font-weight:600; border-color:#1a3a5c;}
+  .btn.primary:hover{background:var(--gold2);}
+  .btn.small{padding:5px 11px; font-size:11px;}
+
+  .wrap{max-width:1440px; margin:0 auto; padding:28px;}
+  .eyebrow{font-size:14px; letter-spacing:.16em; text-transform:uppercase; color:var(--gold); margin-bottom:8px; display:block; font-weight:600;}
+  .head h1{font-family:'Fraunces',serif; font-size:36px; font-weight:600; margin-bottom:4px;}
+  .head p{color:var(--muted); font-size:13px;}
+  .head-row{display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:22px; flex-wrap:wrap; gap:14px;}
+
+  .data-availability-banner{
+    margin-bottom:14px; padding:9px 16px; border-radius:9px;
+    background:rgba(229,115,115,0.12); border:1.5px solid var(--red);
+    font-weight:700; font-size:12.5px; color:var(--red);
+    text-align:center; letter-spacing:.01em;
+  }
+
+  .active-filter-banner{
+    margin-bottom:18px; padding:12px 20px; border-radius:12px;
+    background:linear-gradient(135deg, rgba(201,168,76,0.18), rgba(232,200,120,0.08));
+    border:1.5px solid var(--gold);
+    display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+    animation: bannerGlow 2s ease-in-out infinite;
+  }
+  .active-filter-banner .af-label{font-size:10px; text-transform:uppercase; letter-spacing:.12em; color:var(--gold); font-weight:700; margin-bottom:2px;}
+  .active-filter-banner .af-value{font-family:'Fraunces',serif; font-size:20px; font-weight:700; color:var(--gold2); line-height:1.1;}
+  .active-filter-banner .af-sub{font-size:11px; color:var(--muted); max-width:480px;}
+  @keyframes bannerGlow{
+    0%,100%{ box-shadow:0 0 10px rgba(201,168,76,0.45), 0 0 22px rgba(201,168,76,0.22); border-color:var(--gold); }
+    50%{ box-shadow:0 0 20px rgba(201,168,76,0.8), 0 0 40px rgba(201,168,76,0.4); border-color:var(--gold2); }
+  }
+
+  .filters{display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end; margin-bottom:22px; padding:14px; background:var(--card); border:1px solid var(--border); border-radius:12px;}
+  select{color-scheme:light;}
+  select option{background-color:#eaf6ff; color:#0a0a0a;}
+  .filters select, .filters input{background:#dcefff; border:1px solid var(--border); border-radius:7px; padding:7px 10px; color:var(--text); font-size:12px; font-family:'Inter',sans-serif;}
+  .filters input[type="date"],.filters input[type="month"]{color-scheme:light;}
+  .filters label{font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:var(--faint); display:block; margin-bottom:4px;}
+  .filter-field{display:flex; flex-direction:column;}
+  .tabs{display:flex; gap:6px; flex-wrap:wrap;}
+  .tab{padding:8px 16px; border-radius:8px; font-size:12px; cursor:pointer; border:1px solid var(--border); color:var(--muted); background:transparent;}
+  .tab.active{background:#1a3a5c; color:#eaf6ff; border-color:#1a3a5c; font-weight:600;}
+
+  .kpi-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:14px; margin-bottom:26px;}
+  .kpi-card{background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px 20px; position:relative; overflow:hidden;}
+  .kpi-card.warn{border-color:rgba(229,115,115,0.4);}
+  .kpi-card .lbl{font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin-bottom:10px;}
+  .kpi-card .val{font-family:'Fraunces',serif; font-size:28px; font-weight:600; line-height:1;}
+  .kpi-card .val.gold{color:var(--gold2);}
+  .kpi-card .val.red{color:var(--red);}
+  .kpi-card .val.green{color:var(--green);}
+  .kpi-card .val.amber{color:var(--amber);}
+  .kpi-card .sub{font-size:11px; color:var(--faint); margin-top:6px;}
+
+  .section{background:var(--card); border:1px solid var(--border); border-radius:14px; padding:22px; margin-bottom:22px;}
+  .section-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;}
+  .section-head h2{font-family:'Fraunces',serif; font-size:22px; font-weight:600;}
+  .section-note{font-size:11.5px; color:var(--muted); margin-bottom:14px; line-height:1.6;}
+  .section-period-label{display:inline-block; font-size:11px; font-weight:700; color:var(--gold2); background:rgba(201,168,76,0.14); border:1px solid var(--gold); border-radius:6px; padding:4px 10px; margin-bottom:14px;}
+
+  table{width:100%; border-collapse:collapse; font-size:12.5px;}
+  th{text-align:left; padding:9px 10px; color:var(--gold); font-size:11px; text-transform:uppercase; letter-spacing:.05em; border-bottom:1px solid var(--border); position:sticky; top:0; background:var(--card); z-index:2;}
+  td{padding:9px 10px; border-bottom:1px solid rgba(10,10,10,0.08);}
+  tr.combined-row td{font-weight:700; background:rgba(232,184,76,0.08);}
+  .scroll-table{overflow-x:auto; max-height:420px; overflow-y:auto;}
+  .pill{display:inline-block; padding:2px 9px; border-radius:10px; font-size:10.5px; font-weight:600;}
+  .pill.green{background:rgba(111,207,151,0.15); color:var(--green);}
+  .pill.amber{background:rgba(232,184,76,0.15); color:var(--amber);}
+  .pill.red{background:rgba(229,115,115,0.15); color:var(--red);}
+  .pill.gray{background:rgba(169,180,201,0.15); color:var(--muted);}
+  .cell-red{color:var(--red); font-weight:700; background:rgba(229,115,115,0.12);}
+  .cell-amber{color:var(--amber); font-weight:700; background:rgba(232,184,76,0.12);}
+  .cell-green{color:var(--green); font-weight:700; background:rgba(111,207,151,0.12);}
+
+  .empty-state{padding:30px; text-align:center; color:var(--faint); font-size:12.5px;}
+  .toast{position:fixed; bottom:26px; left:50%; transform:translateX(-50%) translateY(20px); background:#0e1a2e; border:1px solid #c9a84c; color:#f0f6ff; padding:12px 20px; border-radius:10px; font-size:12.5px; opacity:0; transition:all .35s ease; z-index:600; max-width:520px;}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+  .toast.error{border-color:var(--red);}
+  .gold-glow-btn{animation:goldBtnGlow2 2.4s ease-in-out infinite;}
+  @keyframes goldBtnGlow2{0%,100%{box-shadow:0 0 5px rgba(232,200,120,0.4),0 0 10px rgba(232,200,120,0.18);}50%{box-shadow:0 0 10px rgba(232,200,120,0.75),0 0 20px rgba(232,200,120,0.4);}}
+  .tab.multi-on{background:rgba(37,99,235,0.15);border-color:#2563eb;color:#1d4ed8;font-weight:700;}
+  .filter-field{display:flex; flex-direction:column;}
+  .filter-field label{font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:var(--faint); margin-bottom:4px;}
+  .filter-field input{background:#dcefff; border:1px solid var(--border); border-radius:7px; padding:7px 10px; color:var(--text); font-size:12px; font-family:'Inter',sans-serif;}
+</style>
+</head>
+<body>
+
+<div id="gate"><div class="spin"></div></div>
+
+<div class="topbar">
+  <a href="/" class="back-link">&larr; Dashboard Hub</a>
+  <div class="hub-title">🚚 TRANSPORT COST CONTROL</div>
+  <div class="topbar-actions">
+    <button class="btn primary" onclick="downloadExport()">⬇ Download Excel</button>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="data-availability-banner">⚠ DATA AVAILABLE FROM MAY 2026 ONWARDS ONLY — periods before May 2026 will show empty or incomplete results</div>
+  <div class="head-row">
+    <div class="head">
+      <span class="eyebrow">Transport &amp; Delivery</span>
+      <h1>Transport Cost Control</h1>
+      <p>Built from Daily Dispatch and Rejection YTD data already on the dashboard — value-tier drop efficiency, re-delivery cost, full drop counts, and rejection follow-through, BU-wise and combined.</p>
+    </div>
+  </div>
+
+  <div class="active-filter-banner" id="activeFilterBanner">
+    <div>
+      <div class="af-label">Showing</div>
+      <div class="af-value" id="af-value">Loading…</div>
+    </div>
+    <div class="af-sub">Every table and card on this page reflects this period only — nothing from any other date is included.</div>
+  </div>
+
+  <div class="filters">
+    <div class="filter-field">
+      <label>Period</label>
+      <div class="tabs" id="periodTabs">
+        <button class="tab active" data-period="daily" onclick="setPeriod('daily')">Daily</button>
+        <button class="tab" data-period="monthly" onclick="setPeriod('monthly')">Monthly</button>
+        <button class="tab" data-period="ytd" onclick="setPeriod('ytd')">YTD</button>
+        <button class="tab" data-period="custom" onclick="setPeriod('custom')">Custom Range</button>
+      </div>
+    </div>
+    <div class="filter-field" id="dailyField">
+      <label>Date</label>
+      <input type="date" id="f-date" onchange="loadAll()">
+    </div>
+    <div class="filter-field" id="monthlyField" style="display:none;">
+      <label>Month</label>
+      <input type="month" id="f-month" onchange="loadAll()">
+    </div>
+    <div class="filter-field" id="ytdField" style="display:none;">
+      <label>Year</label>
+      <input type="number" id="f-year" style="width:100px;" onchange="loadAll()">
+    </div>
+    <div class="filter-field" id="customFromField" style="display:none;">
+      <label>From</label>
+      <input type="date" id="f-custom-from" onchange="loadAll()">
+    </div>
+    <div class="filter-field" id="customToField" style="display:none;">
+      <label>To</label>
+      <input type="date" id="f-custom-to" onchange="loadAll()">
+    </div>
+    <div class="filter-field">
+      <label>Food / Non-Food</label>
+      <select id="f-order-type" onchange="loadAll()">
+        <option value="">All</option>
+        <option value="food">Food</option>
+        <option value="nonfood">Non-Food</option>
+      </select>
+    </div>
+    <div class="filter-field">
+      <label title="What-if: test a different minimum order value than the standard AED 1,000">Min Order Value (AED)</label>
+      <input type="number" id="f-threshold" placeholder="1000" style="width:110px;" onchange="loadAll()">
+    </div>
+    <div class="filter-field">
+      <label>&nbsp;</label>
+      <button class="btn small" onclick="loadAll()">Refresh</button>
+    </div>
+  </div>
+
+  <div class="kpi-grid" id="kpiGrid"><div class="empty-state">Loading…</div></div>
+
+  <!-- Averages — mainly useful once a multi-day/multi-month Custom Range is picked -->
+  <div class="section" id="averagesSection" style="display:none;">
+    <div class="section-head"><h2>📈 Averages</h2></div>
+    <div class="section-note" id="averagesNote"></div>
+    <div class="kpi-grid" id="averagesGrid"></div>
+  </div>
+
+  <!-- 1+2) Value Tier -->
+  <div class="section">
+    <div class="section-head"><h2>📦 Order Value Tier — ≥ AED 1,000 vs &lt; AED 1,000</h2></div>
+    <div class="section-note">Orders and drops split at AED 1,000, by BU and by temperature (Ambient/Frozen — the two can't share a truck, so they're never combined into one drop). <strong>Combined</strong> means: multiple orders sharing the same (date, route, location) — the same truck's stop at that address that day — ride together and have their values SUMMED before checking the AED 1,000 line, so e.g. AED 500 + 200 + 300 on one truck's stop counts as one AED 1,000 drop, not three small orders judged individually. This matches the drop definition already validated in Transport Cost Reconciliation.</div>
+    <div class="scroll-table"><table id="valueTierTable"><thead><tr><th>BU</th><th>Type</th><th>Orders ≥1k</th><th>Orders &lt;1k</th><th>Drops ≥1k</th><th>Drops &lt;1k</th><th>Value ≥1k (AED)</th><th>Value &lt;1k (AED)</th></tr></thead><tbody></tbody></table></div>
+  </div>
+
+  <!-- 3) Low-Value Orders -->
+  <div class="section">
+    <div class="section-head"><h2>⚠️ Low-Value Order Tracker</h2></div>
+    <div class="section-note">How many orders below AED 1,000 go out, and what share of total order value they represent — the drop cost is the same whether the order is worth AED 50 or AED 5,000.</div>
+    <div class="scroll-table"><table id="lowValueTable"><thead><tr><th>BU</th><th>Type</th><th>Low-Value Orders</th><th>Total Orders</th><th>Low-Value %</th><th>Low-Value Total (AED)</th><th>Total Value (AED)</th><th>Share of Value %</th></tr></thead><tbody></tbody></table></div>
+  </div>
+
+  <!-- 3a) Consolidation Savings -->
+  <div class="section">
+    <div class="section-head"><h2>💰 Low-Value Order Consolidation — Drops &amp; Savings</h2></div>
+    <div class="section-note">A low-value order isn't automatically a separate truck stop — if two or more share the same date/route/location, they already ride on ONE drop together (green columns below) — a genuine, defensible transport cost saving. <strong>Pure</strong> orders (amber) are the ones that did NOT get combined at that address. Drop Cost tries the REAL transport-team vehicle-type rate card first, then the uploaded Vehicle Master (matched by vehicle plate) if truck type wasn't on file, and only falls back to an AED 130 average if neither resolves anything — that fallback count is shown separately, never hidden inside the total. This is the real cost of running these drops — not a claim it's extra or avoidable spend, since the truck may already be on its normal route regardless. Use the "Min Order Value" filter above to test what raising the threshold (e.g. to AED 1,500) would do to these numbers.</div>
+    <div class="section-period-label" id="consolidationPeriodLabel"></div>
+    <div class="kpi-grid" id="consolidationGrid" style="margin-bottom:18px;"></div>
+    <div class="scroll-table"><table id="consolidationTable"><thead><tr><th>BU</th><th>Type</th><th>Low-Value Orders</th><th>Low-Value Drops</th><th>Orders Saved</th><th>Cost Saved (AED)</th><th>Order Value in Combined Drops (AED)</th><th>Pure Orders</th><th>Pure Order Value (AED)</th><th>Pure Drop Cost (AED)</th><th>Via Vehicle Master</th><th>Via AED 130 Fallback</th></tr></thead><tbody></tbody></table></div>
+  </div>
+
+  <!-- 3b) Low-Value Orders by Customer -->
+  <div class="section">
+    <div class="section-head"><h2>🏆 Low-Value Orders — Ranked by Customer</h2></div>
+    <div class="section-note">Which specific customer/branch is driving each BU's low-value order count — ranked by number of low-value orders, highest first. Showing the top 50 on screen; the Excel download has the full list.</div>
+    <div class="scroll-table"><table id="lowValueByCustomerTable"><thead><tr><th>Rank</th><th>Customer</th><th>BU</th><th>Low-Value Orders</th><th>Total Orders</th><th>Low-Value %</th><th>Low-Value Total (AED)</th><th>Total Value (AED)</th></tr></thead><tbody></tbody></table></div>
+  </div>
+
+  <!-- 4) Re-delivery -->
+  <div class="section">
+    <div class="section-head"><h2>🔁 Re-attempt Tracking</h2></div>
+    <div class="section-note" id="redeliveryNote"></div>
+    <div class="section-period-label" id="redeliveryPeriodLabel"></div>
+    <div class="kpi-grid" id="redeliveryAttemptGrid" style="margin-bottom:18px;"></div>
+    <div style="font-size:11px; color:var(--gold); font-weight:700; text-transform:uppercase; letter-spacing:1px; margin-bottom:8px;">Day-wise</div>
+    <div class="scroll-table" style="margin-bottom:18px;"><table id="redeliveryDailyTable"><thead><tr><th>Date</th><th>Orders Re-attempted</th><th>Estimated Cost (AED)</th></tr></thead><tbody></tbody></table></div>
+    <div style="font-size:11px; color:var(--gold); font-weight:700; text-transform:uppercase; letter-spacing:1px; margin-bottom:8px;">BU-wise</div>
+    <div class="scroll-table"><table id="redeliveryBuTable"><thead><tr><th>BU</th><th>Orders Re-attempted</th><th>Estimated Cost (AED)</th></tr></thead><tbody></tbody></table></div>
+  </div>
+
+  <!-- 5) Drops -->
+  <div class="section">
+    <div class="section-head"><h2>📍 Full Drops — Day-wise &amp; BU-wise</h2></div>
+    <div class="section-note" id="dropsCoverageNote"></div>
+    <div class="kpi-grid" id="dropsTotalGrid" style="margin-bottom:18px;"></div>
+    <div class="scroll-table"><table id="dropsDailyTable"><thead><tr><th>Date</th><th>BU</th><th>Drops</th></tr></thead><tbody></tbody></table></div>
+  </div>
+
+  <!-- 6) Rejection -> Re-delivery -->
+  <div class="section">
+    <div class="section-head"><h2>🔗 Rejected Orders — Re-delivery Status</h2></div>
+    <div class="section-note" id="rejRedeliveryNote">Rejected orders in this period, whether they were re-attempted afterward (appeared in dispatch again — not a confirmation the retry succeeded), and how many attempts it took — BU-wise. Matches Rejection YTD's order number against Daily Dispatch's order code — if the two files use different numbering schemes, this section will show few or no matches rather than wrong numbers.</div>
+    <div class="scroll-table" style="margin-bottom:18px;"><table id="rejBuTable"><thead><tr><th>BU</th><th>1 Attempt</th><th>2 Attempts</th><th>3+ Attempts</th><th>Not Yet Re-attempted</th><th>Total Rejected</th></tr></thead><tbody></tbody></table></div>
+    <div style="font-size:11px; color:var(--gold); font-weight:700; text-transform:uppercase; letter-spacing:1px; margin-bottom:8px;">Order Detail (first 200)</div>
+    <div class="scroll-table"><table id="rejDetailTable"><thead><tr><th>Order No</th><th>BU</th><th>Rejected Date</th><th>Attempts</th><th>Status</th></tr></thead><tbody></tbody></table></div>
+  </div>
+
+  <!-- 7) Driver Rejection Tracker -->
+  <div class="section" id="ds-driver-rej-box">
+    <div class="section-head">
+      <h2>🚨 Driver Rejection Tracker</h2>
+    </div>
+    <div class="section-note">Which in-house driver's orders get rejected most, and how many came back same-day</div>
+    <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px;">
+      <div class="tabs" style="margin-bottom:0;">
+        <button class="tab active" id="drj-period-daily" onclick="setDrjPeriod('daily')">Daily</button>
+        <button class="tab" id="drj-period-mtd" onclick="setDrjPeriod('mtd')">MTD</button>
+        <button class="tab" id="drj-period-ytd" onclick="setDrjPeriod('ytd')">YTD</button>
+        <button class="tab" id="drj-period-custom" onclick="setDrjPeriod('custom')">Custom (months/days)</button>
+      </div>
+      <div id="drj-date-field" class="filter-field"><label>Date</label><input type="date" id="drj-date-input" onchange="loadDriverRejectionTracker()"></div>
+      <div id="drj-month-field" class="filter-field" style="display:none;"><label>Month</label><input type="month" id="drj-month-input" onchange="drjMonthChanged()"></div>
+      <div id="drj-year-field" class="filter-field" style="display:none;"><label>Year</label><input type="number" id="drj-year-input" style="width:90px;" onchange="drjYearChanged()"></div>
+      <button class="btn primary gold-glow-btn" style="margin-left:auto;" onclick="downloadDriverRejectionTracker()">⬇ Download Excel</button>
+    </div>
+    <div id="drj-custom-field" style="display:none;margin-bottom:14px;">
+      <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px;">
+        <label style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--faint);min-width:50px;">Year</label>
+        <input type="number" id="drj-custom-year" style="padding:7px 10px;background:#dcefff;border:1px solid var(--border);color:var(--text);border-radius:6px;font-size:12px;width:90px;" onchange="drjCustomChanged()">
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px;">
+        <label style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--faint);min-width:50px;">Months</label>
+        <div id="drj-custom-months" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+        <span style="font-size:11px;color:var(--muted);">(click multiple, or shift-click for a range)</span>
+      </div>
+      <div id="drj-custom-days-row" style="display:none;flex-wrap:wrap;gap:6px;align-items:center;">
+        <label style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--faint);min-width:50px;">Days</label>
+        <div id="drj-custom-days" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;font-size:11px;color:var(--muted);">
+      <span id="drj-master-status">Checking driver name coverage…</span>
+      <input type="file" id="drj-master-file" accept=".xlsx,.xls,.csv" style="display:none;" onchange="uploadDriverMaster(this)">
+      <button class="btn small" style="margin-left:auto;" onclick="document.getElementById('drj-master-file').click()" title="Manually map a driver code to a name">📤 Add missing code manually</button>
+    </div>
+    <div style="margin-bottom:14px;padding:10px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;">
+      <div style="font-size:11px;color:var(--gold);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">🔍 Check Upload Headers for a Date</div>
+      <div style="font-size:10px;color:var(--muted);margin-bottom:8px;">See exactly which column that day's file used for the driver field, and what raw values it contains — useful when a whole period looks all-hired or all-in-house unexpectedly.</div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <input type="date" id="drj-colcheck-date" style="padding:7px 10px;background:#dcefff;border:1px solid var(--border);color:var(--text);border-radius:6px;font-size:12px;">
+        <button class="btn small" onclick="checkDispatchColumns()">Check</button>
+      </div>
+      <div id="drj-colcheck-result" style="margin-top:10px;font-size:11px;line-height:1.7;"></div>
+    </div>
+    <div id="drj-empty-state" style="font-size:12px;color:var(--muted);">Loading…</div>
+    <div id="drj-content" style="display:none;">
+      <div id="drj-coverage-banner" style="display:none;margin-bottom:10px;padding:9px 14px;border-radius:8px;background:rgba(192,57,43,0.1);border:1px solid var(--red);font-size:11px;color:var(--red);"></div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:12px;line-height:1.7;" id="drj-match-note"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px;">
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">🏠 In-House Fleet</div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;"><span style="color:var(--muted);">Rejections</span><strong id="drj-inhouse-count" style="color:var(--red);">—</strong></div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;"><span style="color:var(--muted);">Rejection Rate</span><strong id="drj-inhouse-rate">—</strong></div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;"><span style="color:var(--muted);">Delivered %</span><strong id="drj-inhouse-delivered" style="color:var(--green);">—</strong></div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;"><span style="color:var(--muted);">Same-Day Returns</span><strong id="drj-inhouse-sameday">—</strong></div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;"><span style="color:var(--muted);">Re-Attempted (any day)</span><strong id="drj-inhouse-reattempt">—</strong></div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;"><span style="color:var(--muted);">Drivers</span><strong id="drj-inhouse-drivers">—</strong></div>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px;">
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">🚚 Hired Fleet</div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;"><span style="color:var(--muted);">Rejections</span><strong id="drj-hired-count" style="color:var(--red);">—</strong></div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;"><span style="color:var(--muted);">Rejection Rate</span><strong id="drj-hired-rate">—</strong></div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;"><span style="color:var(--muted);">Delivered %</span><strong id="drj-hired-delivered" style="color:var(--green);">—</strong></div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;"><span style="color:var(--muted);">Same-Day Returns</span><strong id="drj-hired-sameday">—</strong></div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;"><span style="color:var(--muted);">Re-Attempted (any day)</span><strong id="drj-hired-reattempt">—</strong></div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;"><span style="color:var(--muted);">Drivers</span><strong id="drj-hired-drivers">—</strong></div>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--gold);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">In-House Drivers — Ranked by Rejections (highest first)</div>
+      <div class="scroll-table">
+        <table style="min-width:680px;">
+          <thead><tr><th>#</th><th>Driver</th><th style="text-align:center;">Orders</th><th style="text-align:center;">Rejections</th><th style="text-align:center;">Rejection Rate</th><th style="text-align:center;">Delivered %</th><th style="text-align:center;">Same-Day Returns</th><th style="text-align:center;">Re-Attempted</th><th style="text-align:center;">Avg Drops/Day</th><th style="text-align:center;">Avg Value/Drop</th></tr></thead>
+          <tbody id="drj-driver-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================
+// AUTH — same pattern as the rest of AZHAR-AI
+// ============================================================
+var AUTH_TOKEN = localStorage.getItem('azhar_token') || null;
+var AUTH_USER = null;
+function authHeaders(json){
+  var h = { 'x-auth-token': AUTH_TOKEN };
+  if (json) h['Content-Type'] = 'application/json';
+  return h;
+}
+async function boot(){
+  if (!AUTH_TOKEN) { window.location.href = '/'; return; }
+  try {
+    var r = await fetch('/api/auth/me', { headers: authHeaders() });
+    if (!r.ok) { localStorage.removeItem('azhar_token'); window.location.href = '/'; return; }
+    AUTH_USER = await r.json();
+    document.getElementById('gate').style.display = 'none';
+    initDefaults();
+    await loadAll();
+    setDrjPeriod('daily');
+    loadDriverMasterStatus();
+  } catch(e) {
+    document.getElementById('gate').style.display = 'none';
+    showToast('Could not load: ' + e.message, true);
+  }
+}
+function showToast(msg, isError){
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (isError ? ' error' : '');
+  setTimeout(function(){ t.className = 'toast'; }, 4500);
+}
+
+// ============================================================
+// PERIOD STATE
+// ============================================================
+var CURRENT_PERIOD = 'daily';
+function initDefaults(){
+  var today = new Date();
+  document.getElementById('f-date').value = today.toISOString().split('T')[0];
+  document.getElementById('f-month').value = today.toISOString().slice(0,7);
+  document.getElementById('f-year').value = today.getFullYear();
+  // Custom Range defaults to the last 3 full months (e.g. May-Jul) — a sensible
+  // starting point for "select multiple months" without forcing the user to set it up
+  // from scratch every time they switch to Custom.
+  var to = today.toISOString().split('T')[0];
+  var fromDate = new Date(today.getFullYear(), today.getMonth() - 2, 1);
+  document.getElementById('f-custom-from').value = fromDate.toISOString().split('T')[0];
+  document.getElementById('f-custom-to').value = to;
+}
+function setPeriod(p){
+  CURRENT_PERIOD = p;
+  document.querySelectorAll('#periodTabs .tab').forEach(function(t){ t.classList.toggle('active', t.dataset.period === p); });
+  document.getElementById('dailyField').style.display = p === 'daily' ? '' : 'none';
+  document.getElementById('monthlyField').style.display = p === 'monthly' ? '' : 'none';
+  document.getElementById('ytdField').style.display = p === 'ytd' ? '' : 'none';
+  document.getElementById('customFromField').style.display = p === 'custom' ? '' : 'none';
+  document.getElementById('customToField').style.display = p === 'custom' ? '' : 'none';
+  loadAll();
+}
+function currentQs(){
+  var q = ['period=' + CURRENT_PERIOD];
+  if (CURRENT_PERIOD === 'daily') q.push('date=' + document.getElementById('f-date').value);
+  else if (CURRENT_PERIOD === 'monthly') q.push('month=' + document.getElementById('f-month').value);
+  else if (CURRENT_PERIOD === 'custom') {
+    q.push('date_from=' + document.getElementById('f-custom-from').value);
+    q.push('date_to=' + document.getElementById('f-custom-to').value);
+  }
+  else q.push('year=' + document.getElementById('f-year').value);
+  var orderType = document.getElementById('f-order-type').value;
+  if (orderType) q.push('order_type=' + orderType);
+  var thresholdEl = document.getElementById('f-threshold');
+  if (thresholdEl && thresholdEl.value) q.push('threshold=' + thresholdEl.value);
+  return q.join('&');
+}
+
+// ============================================================
+// LOAD + RENDER
+// ============================================================
+function fmtNum(n){ return (n||0).toLocaleString('en-US'); }
+function fmtAED(n){ return 'AED ' + Math.round(n||0).toLocaleString('en-US'); }
+
+async function loadAll(){
+  document.getElementById('kpiGrid').innerHTML = '<div class="empty-state">Loading…</div>';
+  document.getElementById('af-value').textContent = 'Loading…';
+  try {
+    var r = await fetch('/api/transport-cost/summary?' + currentQs(), { headers: authHeaders() });
+    var d = await r.json();
+    if (!r.ok) { document.getElementById('kpiGrid').innerHTML = '<div class="empty-state">' + esc(d.error||'Failed to load') + '</div>'; return; }
+    window.lastTransportCostData = d;
+    renderActiveFilterBanner(d);
+    renderKpis(d);
+    renderAverages(d);
+    renderValueTier(d);
+    renderLowValue(d);
+    renderConsolidationSavings(d);
+    renderLowValueByCustomer(d);
+    renderRedelivery(d);
+    renderDrops(d);
+    renderRejectionRedelivery(d);
+  } catch(e) {
+    document.getElementById('kpiGrid').innerHTML = '<div class="empty-state">' + esc(e.message) + '</div>';
+  }
+}
+function esc(s){ var d = document.createElement('div'); d.textContent = s==null?'':String(s); return d.innerHTML; }
+
+// The big glowing banner always reflects the ACTUAL period the data came back for
+// (from the API's own period object), not just what's sitting in the picker — so it
+// can never say one thing while the tables below show another.
+function buildPeriodFilterLabel(d){
+  var p = d.period;
+  var text;
+  if (p.type === 'daily') {
+    text = 'Daily — ' + new Date(p.date_from + 'T00:00:00').toLocaleDateString('en-GB', {day:'numeric', month:'long', year:'numeric'});
+  } else if (p.type === 'monthly') {
+    text = 'Monthly — ' + new Date(p.date_from + 'T00:00:00').toLocaleDateString('en-GB', {month:'long', year:'numeric'});
+  } else if (p.type === 'custom') {
+    text = 'Custom Range — ' + p.label;
+  } else {
+    text = 'Year to Date — ' + p.date_from.slice(0,4) + ' (through ' + new Date(p.date_to + 'T00:00:00').toLocaleDateString('en-GB', {day:'numeric', month:'long'}) + ')';
+  }
+  var orderType = document.getElementById('f-order-type').value;
+  if (orderType === 'food') text += '  •  Food only';
+  else if (orderType === 'nonfood') text += '  •  Non-Food only';
+  return text;
+}
+function renderActiveFilterBanner(d){
+  document.getElementById('af-value').textContent = buildPeriodFilterLabel(d);
+}
+
+function renderKpis(d){
+  var lowPct = d.low_value.combined.low_value_pct;
+  var orderType = document.getElementById('f-order-type').value;
+  // "(All BU)" means combined across DCF/DCV/DPS etc — it does NOT mean the Food/
+  // Non-Food filter is ignored. But that reads as confusing/contradictory when a
+  // filter IS active, so the label now says exactly what's included: e.g. "Food,
+  // All BU Combined" instead of a bare "(All BU)" that looks like it's showing
+  // unfiltered data.
+  var scopeLabel = orderType === 'food' ? 'Food, All BU Combined' : (orderType === 'nonfood' ? 'Non-Food, All BU Combined' : 'All BU Combined');
+  var cards = [
+    { lbl:'Period', val: d.period.label },
+    { lbl:'Orders ≥1k / <1k (' + scopeLabel + ')', val: fmtNum(d.value_tier.combined.orders_ge1k) + ' / ' + fmtNum(d.value_tier.combined.orders_lt1k) },
+    { lbl:'Low-Value Orders %', val: lowPct + '%', cls: lowPct >= 50 ? 'red' : (lowPct >= 25 ? '' : 'green') },
+    { lbl:'Total Drops (' + scopeLabel + ')', val: fmtNum(d.drops.combined_total_drops) },
+    { lbl:'Orders Re-attempted', val: fmtNum(d.redelivery.total_orders_redelivered), cls: d.redelivery.total_orders_redelivered > 0 ? 'red' : 'green', sub:'Appeared in dispatch again after an earlier attempt — confirms a retry, not that it succeeded' },
+    { lbl:'Estimated Re-attempt Cost', val: fmtAED(d.redelivery.total_estimated_cost), cls:'red', warn: d.redelivery.total_estimated_cost > 0 },
+    { lbl:'Rejected Orders in Period', val: fmtNum(d.rejection_redelivery.total_rejected) },
+    { lbl:'Rejected Orders Later Re-attempted', val: fmtNum(d.rejection_redelivery.total_redelivered), sub:'Of the ' + fmtNum(d.rejection_redelivery.total_rejected) + ' rejected above, this many showed up again in dispatch afterward (not a confirmed successful delivery)' }
+  ];
+  document.getElementById('kpiGrid').innerHTML = cards.map(function(c){
+    return '<div class="kpi-card'+(c.warn?' warn':'')+'"><div class="lbl">'+esc(c.lbl)+'</div><div class="val'+(c.cls?' '+c.cls:'')+'">'+esc(c.val)+'</div>'+(c.sub?'<div class="sub">'+esc(c.sub)+'</div>':'')+'</div>';
+  }).join('');
+}
+
+// Averages only add value once the period spans more than one day — a single Daily
+// view's "average" is just that day's own numbers, so the whole section stays hidden
+// then and only appears for Monthly/YTD/Custom (or a multi-day Custom range).
+function renderAverages(d){
+  var av = d.averages;
+  var section = document.getElementById('averagesSection');
+  if (d.period.type === 'daily' || av.days_with_data <= 1) { section.style.display = 'none'; return; }
+  section.style.display = '';
+  document.getElementById('averagesNote').textContent = 'Based on ' + av.days_with_data + ' day(s) with data, spanning ' + av.months_spanned + ' calendar month(s) — averages use the days/months that actually have data, not the full calendar span, so a partial month doesn\'t drag the average down.';
+  var cards = [
+    { lbl:'Avg Orders / Day', val: av.avg_orders_per_day },
+    { lbl:'Avg Drops / Day', val: av.avg_drops_per_day },
+    { lbl:'Avg Order Value / Day', val: fmtAED(av.avg_value_per_day_aed) },
+    { lbl:'Avg Orders / Month', val: av.avg_orders_per_month },
+    { lbl:'Avg Drops / Month', val: av.avg_drops_per_month },
+    { lbl:'Avg Order Value / Month', val: fmtAED(av.avg_value_per_month_aed) },
+    { lbl:'Avg Re-attempt Cost / Month', val: fmtAED(av.avg_redelivery_cost_per_month_aed), cls: av.avg_redelivery_cost_per_month_aed > 0 ? 'red' : 'green' },
+    { lbl:'Avg Low-Value Orders %', val: av.avg_low_value_pct + '%', cls: av.avg_low_value_pct >= 50 ? 'red' : (av.avg_low_value_pct >= 25 ? '' : 'green') }
+  ];
+  document.getElementById('averagesGrid').innerHTML = cards.map(function(c){
+    return '<div class="kpi-card"><div class="lbl">'+esc(c.lbl)+'</div><div class="val'+(c.cls?' '+c.cls:'')+'">'+esc(c.val)+'</div></div>';
+  }).join('');
+}
+
+function buLabelWithFoodQualifier(org, isTotal){
+  if (isTotal) return org;
+  var orderType = document.getElementById('f-order-type').value;
+  var qualifier = orderType === 'food' ? ' Food' : (orderType === 'nonfood' ? ' Non-Food' : '');
+  return org + qualifier;
+}
+
+function renderValueTier(d){
+  var rows = d.value_tier.rows.concat([d.value_tier.combined]);
+  document.querySelector('#valueTierTable tbody').innerHTML = rows.map(function(r){
+    var isTotal = r.org.indexOf('TOTAL') !== -1;
+    var buLabel = buLabelWithFoodQualifier(r.org, isTotal);
+    return '<tr'+(isTotal?' class="combined-row"':'')+'><td>'+esc(buLabel)+'</td><td>'+esc(r.type)+'</td><td>'+fmtNum(r.orders_ge1k)+'</td><td>'+fmtNum(r.orders_lt1k)+'</td><td>'+fmtNum(r.drops_ge1k)+'</td><td>'+fmtNum(r.drops_lt1k)+'</td><td>'+fmtAED(r.value_ge1k)+'</td><td>'+fmtAED(r.value_lt1k)+'</td></tr>';
+  }).join('') || '<tr><td colspan="8" class="empty-state">No data for this period.</td></tr>';
+}
+
+function renderLowValue(d){
+  var rows = d.low_value.rows.concat([d.low_value.combined]);
+  document.querySelector('#lowValueTable tbody').innerHTML = rows.map(function(r){
+    var isTotal = r.org.indexOf('TOTAL') !== -1;
+    var buLabel = buLabelWithFoodQualifier(r.org, isTotal);
+    var pctCls = r.low_value_pct >= 50 ? 'cell-red' : (r.low_value_pct >= 25 ? 'cell-amber' : 'cell-green');
+    return '<tr'+(isTotal?' class="combined-row"':'')+'><td>'+esc(buLabel)+'</td><td>'+esc(r.type)+'</td><td>'+fmtNum(r.low_value_orders)+'</td><td>'+fmtNum(r.total_orders)+'</td><td class="'+pctCls+'">'+r.low_value_pct+'%</td><td>'+fmtAED(r.low_value_total_aed)+'</td><td>'+fmtAED(r.total_value_aed)+'</td><td>'+r.low_value_share_of_value_pct+'%</td></tr>';
+  }).join('') || '<tr><td colspan="8" class="empty-state">No data for this period.</td></tr>';
+}
+
+function renderConsolidationSavings(d){
+  var lvcData = d.low_value_consolidation;
+  if (!lvcData) return;
+  var thresholdLabel = ' · Min order value: AED ' + (d.value_tier.threshold || 1000).toLocaleString();
+  document.getElementById('consolidationPeriodLabel').textContent = '📅 Measuring: ' + buildPeriodFilterLabel(d) + thresholdLabel;
+  var c = lvcData.combined;
+  var cards = [
+    { lbl:'Low-Value Orders (All BU)', val: fmtNum(c.low_value_orders) },
+    { lbl:'Orders Saved by Consolidation', val: fmtNum(c.orders_saved_by_consolidation), cls: c.orders_saved_by_consolidation > 0 ? 'green' : '' },
+    { lbl:'Estimated Cost Saved (AED)', val: fmtAED(c.estimated_cost_saved_aed), cls: c.estimated_cost_saved_aed > 0 ? 'green' : '' },
+    { lbl:'Pure Orders (Sent Standalone)', val: fmtNum(c.pure_low_value_orders), cls: c.pure_low_value_orders > 0 ? 'amber' : '' },
+    { lbl:'Pure Order Value (AED)', val: fmtAED(c.pure_order_value_aed) },
+    { lbl:'Pure Drop Cost — Real Rate Card (AED)', val: fmtAED(c.pure_drop_cost_aed), cls: c.pure_drop_cost_aed > 0 ? 'amber' : '' }
+  ];
+  document.getElementById('consolidationGrid').innerHTML = cards.map(function(k){
+    return '<div class="kpi-card"><div class="lbl">'+esc(k.lbl)+'</div><div class="val'+(k.cls?' '+k.cls:'')+'">'+k.val+'</div></div>';
+  }).join('');
+  if (c.pure_vehicle_master_count > 0) {
+    document.getElementById('consolidationGrid').innerHTML += '<div class="kpi-card"><div class="lbl">...resolved via Vehicle Master plate lookup</div><div class="val">'+fmtNum(c.pure_vehicle_master_count)+'</div></div>';
+  }
+  if (c.pure_fallback_rate_count > 0) {
+    document.getElementById('consolidationGrid').innerHTML += '<div class="kpi-card"><div class="lbl">...of which used AED 130 fallback (no truck type or matching plate)</div><div class="val amber">'+fmtNum(c.pure_fallback_rate_count)+'</div></div>';
+  }
+  var rows = lvcData.rows.concat([lvcData.combined]);
+  document.querySelector('#consolidationTable tbody').innerHTML = rows.map(function(r){
+    var isTotal = r.org.indexOf('TOTAL') !== -1;
+    var savedCls = r.orders_saved_by_consolidation > 0 ? 'cell-green' : '';
+    var pureCls = r.pure_low_value_orders > 0 ? 'cell-amber' : '';
+    var buLabel = buLabelWithFoodQualifier(r.org, isTotal);
+    return '<tr'+(isTotal?' class="combined-row"':'')+'><td>'+esc(buLabel)+'</td><td>'+esc(r.type)+'</td><td>'+fmtNum(r.low_value_orders)+'</td><td>'+fmtNum(r.low_value_drops)+'</td><td class="'+savedCls+'">'+fmtNum(r.orders_saved_by_consolidation)+'</td><td>'+fmtAED(r.estimated_cost_saved_aed)+'</td><td>'+fmtAED(r.combined_order_value_aed)+'</td><td class="'+pureCls+'">'+fmtNum(r.pure_low_value_orders)+'</td><td>'+fmtAED(r.pure_order_value_aed)+'</td><td class="'+pureCls+'">'+fmtAED(r.pure_drop_cost_aed)+'</td><td>'+fmtNum(r.pure_vehicle_master_count)+'</td><td>'+fmtNum(r.pure_fallback_rate_count)+'</td></tr>';
+  }).join('') || '<tr><td colspan="12" class="empty-state">No data for this period.</td></tr>';
+}
+
+function renderLowValueByCustomer(d){
+  var top = d.low_value_by_customer.slice(0, 50);
+  document.querySelector('#lowValueByCustomerTable tbody').innerHTML = top.map(function(r, i){
+    var rankCls = i < 10 ? 'cell-red' : (i < 30 ? 'cell-amber' : '');
+    return '<tr><td class="'+rankCls+'">#'+(i+1)+'</td><td>'+esc(r.customer)+'</td><td>'+esc(r.org)+'</td><td>'+fmtNum(r.low_value_orders)+'</td><td>'+fmtNum(r.total_orders)+'</td><td>'+r.low_value_pct+'%</td><td>'+fmtAED(r.low_value_total_aed)+'</td><td>'+fmtAED(r.total_value_aed)+'</td></tr>';
+  }).join('') || '<tr><td colspan="8" class="empty-state">No low-value orders in this period.</td></tr>';
+}
+
+function renderRedelivery(d){
+  document.getElementById('redeliveryNote').textContent = d.redelivery.note;
+  document.getElementById('redeliveryPeriodLabel').textContent = '📅 Measuring: ' + buildPeriodFilterLabel(d);
+  var att = d.redelivery.by_attempt;
+  document.getElementById('redeliveryAttemptGrid').innerHTML = [
+    { lbl:'2nd Attempt', val: att.second },
+    { lbl:'3rd Attempt', val: att.third, cls: att.third > 0 ? 'amber' : '' },
+    { lbl:'4th+ Attempt', val: att.fourth_plus, cls: att.fourth_plus > 0 ? 'red' : '' }
+  ].map(function(c){ return '<div class="kpi-card"><div class="lbl">'+c.lbl+'</div><div class="val'+(c.cls?' '+c.cls:'')+'">'+fmtNum(c.val)+'</div></div>'; }).join('');
+  document.querySelector('#redeliveryDailyTable tbody').innerHTML = d.redelivery.daily.map(function(r){
+    return '<tr><td>'+esc(r.date)+'</td><td>'+fmtNum(r.orders_redelivered)+'</td><td class="'+(r.estimated_cost>0?'cell-red':'')+'">'+fmtAED(r.estimated_cost)+'</td></tr>';
+  }).join('') || '<tr><td colspan="3" class="empty-state">No re-deliveries in this period.</td></tr>';
+  document.querySelector('#redeliveryBuTable tbody').innerHTML = d.redelivery.by_bu.map(function(r){
+    return '<tr><td>'+esc(r.org)+'</td><td>'+fmtNum(r.orders_redelivered)+'</td><td class="'+(r.estimated_cost>0?'cell-red':'')+'">'+fmtAED(r.estimated_cost)+'</td></tr>';
+  }).join('') || '<tr><td colspan="3" class="empty-state">No re-deliveries in this period.</td></tr>';
+}
+
+function renderDrops(d){
+  var cov = d.data_coverage;
+  var covNote = document.getElementById('dropsCoverageNote');
+  if (cov.days_with_data < cov.calendar_days) {
+    covNote.innerHTML = '⚠ Data exists for <strong>' + cov.days_with_data + ' of ' + cov.calendar_days + '</strong> calendar days in this period — the totals below only cover those ' + cov.days_with_data + ' day(s), not the full period. A low total is usually this, not a calculation error.';
+    covNote.style.color = 'var(--red)';
+  } else {
+    covNote.textContent = 'Data exists for all ' + cov.calendar_days + ' calendar days in this period.';
+    covNote.style.color = '';
+  }
+  var buRows = d.drops.totals_by_bu.slice().sort(function(a,b){ return b.drops - a.drops; });
+  document.getElementById('dropsTotalGrid').innerHTML = buRows.map(function(r){
+    return '<div class="kpi-card"><div class="lbl">'+esc(r.org)+'</div><div class="val">'+fmtNum(r.drops)+'</div></div>';
+  }).join('') + '<div class="kpi-card"><div class="lbl">TOTAL (All BU)</div><div class="val gold">'+fmtNum(d.drops.combined_total_drops)+'</div></div>';
+  document.querySelector('#dropsDailyTable tbody').innerHTML = d.drops.daily_by_bu.map(function(r){
+    return '<tr><td>'+esc(r.date)+'</td><td>'+esc(r.org)+'</td><td>'+fmtNum(r.drops)+'</td></tr>';
+  }).join('') || '<tr><td colspan="3" class="empty-state">No drops in this period.</td></tr>';
+}
+
+function renderRejectionRedelivery(d){
+  document.querySelector('#rejBuTable tbody').innerHTML = d.rejection_redelivery.by_bu.map(function(r){
+    var notCls = r.not_redelivered > 0 ? 'cell-red' : '';
+    return '<tr><td>'+esc(r.org)+'</td><td>'+fmtNum(r.attempt_1)+'</td><td>'+fmtNum(r.attempt_2)+'</td><td>'+fmtNum(r.attempt_3_plus)+'</td><td class="'+notCls+'">'+fmtNum(r.not_redelivered)+'</td><td>'+fmtNum(r.total)+'</td></tr>';
+  }).join('') || '<tr><td colspan="6" class="empty-state">No rejections with an order number in this period.</td></tr>';
+  document.querySelector('#rejDetailTable tbody').innerHTML = d.rejection_redelivery.rows.slice(0,200).map(function(r){
+    var cls = r.redelivery_attempts === 0 ? 'cell-red' : 'cell-green';
+    return '<tr><td>'+esc(r.order_no)+'</td><td>'+esc(r.org)+'</td><td>'+esc(r.rejected_date)+'</td><td>'+r.redelivery_attempts+'</td><td class="'+cls+'">'+esc(r.status)+'</td></tr>';
+  }).join('') || '<tr><td colspan="5" class="empty-state">No rejections with an order number in this period.</td></tr>';
+}
+
+async function downloadExport(){
+  try {
+    var r = await fetch('/api/transport-cost/export?' + currentQs(), { headers: authHeaders() });
+    if (!r.ok) { var d = await r.json().catch(function(){return {};}); showToast(d.error || 'Export failed', true); return; }
+    var blob = await r.blob();
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'Transport_Cost_Control_' + CURRENT_PERIOD + '.xlsx';
+    a.click();
+  } catch(e) { showToast('Export failed: ' + e.message, true); }
+}
+
+
+// ============================================================
+// DRIVER REJECTION TRACKER (moved here from Daily Dispatch)
+// ============================================================
+var DRJ_PERIOD = 'daily';
+var DRJ_CUSTOM_MONTHS = []; // selected months for Custom mode
+var DRJ_CUSTOM_DAYS = []; // selected days for Custom mode
+function setDrjPeriod(period){
+  DRJ_PERIOD = period;
+  ['daily','mtd','ytd','custom'].forEach(function(p){
+    document.getElementById('drj-period-'+p).classList.toggle('on', p === period);
+  });
+  document.getElementById('drj-date-field').style.display = period === 'daily' ? '' : 'none';
+  document.getElementById('drj-month-field').style.display = period === 'mtd' ? '' : 'none';
+  document.getElementById('drj-year-field').style.display = period === 'ytd' ? '' : 'none';
+  document.getElementById('drj-custom-field').style.display = period === 'custom' ? 'block' : 'none';
+  var today = new Date();
+  if (period === 'mtd' && !document.getElementById('drj-month-input').value) {
+    document.getElementById('drj-month-input').value = today.toISOString().slice(0,7);
+  }
+  if (period === 'ytd' && !document.getElementById('drj-year-input').value) {
+    document.getElementById('drj-year-input').value = today.getFullYear();
+  }
+  if (!document.getElementById('drj-date-input').value) {
+    document.getElementById('drj-date-input').value = today.toISOString().split('T')[0];
+  }
+  if (period === 'custom') {
+    if (!document.getElementById('drj-custom-year').value) document.getElementById('drj-custom-year').value = today.getFullYear();
+    drjBuildCustomMonthPills();
+    if (!DRJ_CUSTOM_MONTHS.length) return; // wait for a month to be picked before loading
+  }
+  loadDriverRejectionTracker();
+}
+function drjBuildCustomMonthPills(){
+  var mNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var container = document.getElementById('drj-custom-months');
+  container.innerHTML = mNames.map(function(name, i){
+    var m = i+1;
+    var isOn = DRJ_CUSTOM_MONTHS.indexOf(m)!==-1;
+    var isMulti = DRJ_CUSTOM_MONTHS.length>1;
+    return '<button class="pill'+(isOn?(isMulti?' multi-on':' on'):'')+'" onclick="drjToggleCustomMonth('+m+',event)">'+name+'</button>';
+  }).join('');
+}
+function drjToggleCustomMonth(m, evt){
+  if (evt && evt.shiftKey && DRJ_CUSTOM_MONTHS.length>0){
+    var last = DRJ_CUSTOM_MONTHS[DRJ_CUSTOM_MONTHS.length-1];
+    var lo = Math.min(last,m), hi = Math.max(last,m);
+    DRJ_CUSTOM_MONTHS = [];
+    for (var i=lo;i<=hi;i++) DRJ_CUSTOM_MONTHS.push(i);
+  } else {
+    var idx = DRJ_CUSTOM_MONTHS.indexOf(m);
+    if (idx>=0) DRJ_CUSTOM_MONTHS.splice(idx,1);
+    else DRJ_CUSTOM_MONTHS.push(m);
+  }
+  DRJ_CUSTOM_DAYS = [];
+  drjBuildCustomMonthPills();
+  drjBuildCustomDayPills();
+  if (DRJ_CUSTOM_MONTHS.length) loadDriverRejectionTracker();
+  else { document.getElementById('drj-empty-state').style.display='block'; document.getElementById('drj-empty-state').textContent='Pick at least one month.'; document.getElementById('drj-content').style.display='none'; }
+}
+function drjBuildCustomDayPills(){
+  var row = document.getElementById('drj-custom-days-row');
+  var container = document.getElementById('drj-custom-days');
+  if (!DRJ_CUSTOM_MONTHS.length){ row.style.display='none'; return; }
+  var year = +document.getElementById('drj-custom-year').value || new Date().getFullYear();
+  // Days shown = max days across selected months (e.g. 31 if any selected month has 31 days) — exact validity per month is handled server-side.
+  var maxDays = Math.max.apply(null, DRJ_CUSTOM_MONTHS.map(function(m){ return new Date(year, m, 0).getDate(); }));
+  var days = [];
+  for (var d=1; d<=maxDays; d++) days.push(d);
+  container.innerHTML = days.map(function(d){
+    var isOn = DRJ_CUSTOM_DAYS.indexOf(d)!==-1;
+    var isMulti = DRJ_CUSTOM_DAYS.length>1;
+    return '<button class="pill'+(isOn?(isMulti?' multi-on':' on'):'')+'" style="min-width:34px;padding:6px 8px;" onclick="drjToggleCustomDay('+d+',event)">'+d+'</button>';
+  }).join('');
+  row.style.display='flex';
+}
+function drjToggleCustomDay(d, evt){
+  if (evt && evt.shiftKey && DRJ_CUSTOM_DAYS.length>0){
+    var last = DRJ_CUSTOM_DAYS[DRJ_CUSTOM_DAYS.length-1];
+    var lo = Math.min(last,d), hi = Math.max(last,d);
+    DRJ_CUSTOM_DAYS = [];
+    for (var i=lo;i<=hi;i++) DRJ_CUSTOM_DAYS.push(i);
+  } else {
+    var idx = DRJ_CUSTOM_DAYS.indexOf(d);
+    if (idx>=0) DRJ_CUSTOM_DAYS.splice(idx,1);
+    else DRJ_CUSTOM_DAYS.push(d);
+  }
+  drjBuildCustomDayPills();
+  loadDriverRejectionTracker();
+}
+function drjCustomChanged(){
+  DRJ_CUSTOM_DAYS = [];
+  drjBuildCustomDayPills();
+  if (DRJ_CUSTOM_MONTHS.length) loadDriverRejectionTracker();
+}
+// MTD's "as of" date is the last day of the picked month, so a completed past month
+// shows its full total rather than stopping partway through.
+function drjMonthChanged(){
+  var m = document.getElementById('drj-month-input').value;
+  if (!m) return;
+  var y = +m.slice(0,4), mo = +m.slice(5,7);
+  var lastDay = new Date(y, mo, 0).getDate();
+  document.getElementById('drj-date-input').value = m + '-' + String(lastDay).padStart(2,'0');
+  loadDriverRejectionTracker();
+}
+function drjYearChanged(){
+  var y = document.getElementById('drj-year-input').value;
+  if (!y) return;
+  var today = new Date();
+  var isCurrentYear = +y === today.getFullYear();
+  document.getElementById('drj-date-input').value = isCurrentYear ? today.toISOString().split('T')[0] : (y + '-12-31');
+  loadDriverRejectionTracker();
+}
+function drjBuildQuery(){
+  var q = ['period=' + DRJ_PERIOD];
+  if (DRJ_PERIOD === 'custom'){
+    q.push('year=' + (document.getElementById('drj-custom-year').value || new Date().getFullYear()));
+    q.push('months=' + DRJ_CUSTOM_MONTHS.join(','));
+    if (DRJ_CUSTOM_DAYS.length) q.push('days=' + DRJ_CUSTOM_DAYS.join(','));
+    return q.join('&');
+  }
+  var date = document.getElementById('drj-date-input').value;
+  if (date) q.push('date=' + date);
+  return q.join('&');
+}
+async function loadDriverRejectionTracker(){
+  var empty = document.getElementById('drj-empty-state');
+  var content = document.getElementById('drj-content');
+  empty.style.display = 'block'; empty.textContent = 'Loading…';
+  content.style.display = 'none';
+  try {
+    var r = await fetch('/api/dispatch/driver-rejection-tracker?' + drjBuildQuery(), { headers: authHeaders() });
+    var d = await r.json();
+    if (!r.ok) { empty.textContent = '❌ ' + (d.error || 'Failed to load.'); return; }
+    empty.style.display = 'none';
+    content.style.display = 'block';
+    // Data-coverage warning — this is what actually explains a low match count on
+    // YTD/MTD: dispatch driver-level data may only exist for part of the period,
+    // even though Rejection YTD's own total covers the full period.
+    var covBanner = document.getElementById('drj-coverage-banner');
+    var covLines = [];
+    if (d.calendar_days_in_period && d.days_with_dispatch_data < d.calendar_days_in_period) {
+      covLines.push('⚠ Dispatch driver data exists for only ' + d.days_with_dispatch_data + ' of ' + d.calendar_days_in_period +
+        ' calendar day(s) in this period' + (d.earliest_dispatch_date ? ' (earliest: ' + d.earliest_dispatch_date + ')' : '') +
+        ' — rejections from days with no dispatch data can never match a driver, however many there are.');
+    }
+    // A big gap between how many days had IN-HOUSE data vs HIRED data (within the
+    // same days_with_dispatch_data) means one side of the fleet split is missing or
+    // broken for part of the period — this is exactly what produces a lopsided
+    // result like "0 in-house / 162 hired" instead of it being a calculation error.
+    if (d.days_with_dispatch_data > 0 && (d.days_with_inhouse_driver_data === 0 || d.days_with_hired_driver_data === 0 ||
+        Math.abs(d.days_with_inhouse_driver_data - d.days_with_hired_driver_data) >= Math.ceil(d.days_with_dispatch_data * 0.3))) {
+      covLines.push('⚠ Of the ' + d.days_with_dispatch_data + ' day(s) with dispatch data, only ' + d.days_with_inhouse_driver_data +
+        ' had in-house driver details recorded and ' + d.days_with_hired_driver_data + ' had hired driver details recorded — ' +
+        'a day missing one side entirely will under-count that fleet for the whole period, which is likely why one side looks unusually high or low.');
+      if (d.days_with_inhouse_driver_data === 0 && (d.sample_hired_driver_names || []).length) {
+        covLines.push('Sample driver values actually stored as "hired" this period: ' + d.sample_hired_driver_names.join(', ') +
+          '. If these look like bare phone numbers rather than real names, that\'s very likely the cause — a dispatch file that only recorded phone numbers (no name column) that period gets every driver misclassified as hired, in-house or not.');
+      }
+    }
+    if (covLines.length) { covBanner.style.display = 'block'; covBanner.innerHTML = covLines.join('<br>'); }
+    else { covBanner.style.display = 'none'; }
+    var matchNote = document.getElementById('drj-match-note');
+    if (d.total_rejections_all) {
+      var lines = [];
+      lines.push(d.total_rejections_all.toLocaleString() + ' total rejections in this period (matches Rejection YTD\'s own count).');
+      if (d.total_rejections_missing_order_no) {
+        lines.push(d.total_rejections_missing_order_no.toLocaleString() + ' of those have no order number captured at all — can never match a driver, regardless of dispatch data.');
+      }
+      lines.push(d.total_rejections_with_order_no.toLocaleString() + ' have an order number to check.');
+      lines.push('Of those: ' + d.total_rejections_matched.toLocaleString() + ' matched a driver in dispatch data, ' + d.total_rejections_unmatched.toLocaleString() + ' did not (different order-numbering scheme, or that date/BU has no dispatch data — see warning above if shown).');
+      if (d.total_rejections_unmatched > 0 && (d.sample_rejection_order_numbers || []).length && (d.sample_dispatch_order_codes || []).length) {
+        lines.push('<strong style="color:var(--gold);">See for yourself — sample values from both sides:</strong>');
+        lines.push('Rejection order numbers (unmatched): ' + d.sample_rejection_order_numbers.join(', '));
+        lines.push('Dispatch order codes (on file): ' + d.sample_dispatch_order_codes.join(', '));
+        lines.push('If these look like clearly different formats (different length, a prefix/suffix one side has and the other doesn\'t), that\'s the real reason for the unmatched count — not a bug in the matching.');
+      }
+      matchNote.innerHTML = lines.join('<br>');
+    } else {
+      matchNote.textContent = 'No rejections recorded in this period.';
+    }
+    var ih = d.inhouse_summary, hd = d.hired_summary;
+    document.getElementById('drj-inhouse-count').textContent = ih.rejections.toLocaleString();
+    document.getElementById('drj-inhouse-rate').textContent = ih.rejection_rate_pct + '%';
+    document.getElementById('drj-inhouse-delivered').textContent = ih.delivered_pct + '%';
+    document.getElementById('drj-inhouse-sameday').textContent = ih.same_day_returns.toLocaleString();
+    document.getElementById('drj-inhouse-reattempt').textContent = ih.re_attempted.toLocaleString();
+    document.getElementById('drj-inhouse-drivers').textContent = ih.driver_count.toLocaleString();
+    document.getElementById('drj-hired-count').textContent = hd.rejections.toLocaleString();
+    document.getElementById('drj-hired-rate').textContent = hd.rejection_rate_pct + '%';
+    document.getElementById('drj-hired-delivered').textContent = hd.delivered_pct + '%';
+    document.getElementById('drj-hired-sameday').textContent = hd.same_day_returns.toLocaleString();
+    document.getElementById('drj-hired-reattempt').textContent = hd.re_attempted.toLocaleString();
+    document.getElementById('drj-hired-drivers').textContent = hd.driver_count.toLocaleString();
+    var rows = d.inhouse_drivers || [];
+    var body = document.getElementById('drj-driver-body');
+    if (!rows.length) {
+      body.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:16px;">No in-house driver data for this period.</td></tr>';
+      return;
+    }
+    body.innerHTML = rows.map(function(row, i){
+      var rateColor = row.rejection_rate_pct >= 10 ? 'var(--red)' : (row.rejection_rate_pct >= 5 ? 'var(--gold)' : 'var(--green)');
+      var rankColor = i === 0 && row.rejections > 0 ? 'var(--red)' : 'var(--text)';
+      return '<tr><td style="color:' + rankColor + ';font-weight:700;">' + (i+1) + '</td>' +
+        '<td style="font-weight:600;">' + row.driver + (i === 0 && row.rejections > 0 ? ' <span style="font-size:9px;color:var(--red);border:1px solid var(--red);border-radius:4px;padding:1px 5px;margin-left:4px;">TOP ISSUE</span>' : '') + '</td>' +
+        '<td style="text-align:center;">' + row.orders.toLocaleString() + '</td>' +
+        '<td style="text-align:center;font-weight:700;color:' + (row.rejections > 0 ? 'var(--red)' : 'var(--text)') + ';">' + row.rejections.toLocaleString() + '</td>' +
+        '<td style="text-align:center;font-weight:700;color:' + rateColor + ';">' + row.rejection_rate_pct + '%</td>' +
+        '<td style="text-align:center;color:var(--green);">' + row.delivered_pct + '%</td>' +
+        '<td style="text-align:center;">' + row.same_day_returns.toLocaleString() + '</td>' +
+        '<td style="text-align:center;">' + row.re_attempted.toLocaleString() + '</td>' +
+        '<td style="text-align:center;">' + row.avg_drops_per_day + '</td>' +
+        '<td style="text-align:center;">AED ' + row.avg_value_per_drop.toLocaleString() + '</td></tr>';
+    }).join('');
+  } catch(e) {
+    empty.style.display = 'block';
+    empty.textContent = '❌ Error: ' + e.message;
+    content.style.display = 'none';
+  }
+}
+async function downloadDriverRejectionTracker(){
+  try {
+    var r = await fetch('/api/dispatch/driver-rejection-tracker/export?' + drjBuildQuery(), { headers: authHeaders() });
+    if (!r.ok) { var d = await r.json().catch(function(){return {};}); alert(d.error || 'Export failed'); return; }
+    var blob = await r.blob();
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'Driver_Rejection_Tracker_' + DRJ_PERIOD + '_' + (document.getElementById('drj-date-input').value || 'export') + '.xlsx';
+    a.click();
+  } catch(e) { alert('Export failed: ' + e.message); }
+}
+async function loadDriverMasterStatus(){
+  var el = document.getElementById('drj-master-status');
+  if (!el) return;
+  try {
+    var r = await fetch('/api/driver-master/status', { headers: authHeaders() });
+    var d = await r.json().catch(function(){ return {}; });
+    if (!r.ok) { el.textContent = 'Could not check driver name coverage (' + (d.error || ('HTTP ' + r.status)) + ').'; return; }
+    el.textContent = d.manual_override_codes
+      ? (d.manual_override_codes.toLocaleString() + ' driver code(s) manually mapped to a name.')
+      : 'No manual name mapping on file — driver codes like "E111640" show as-is unless added below.';
+  } catch(e) { el.textContent = 'Could not check driver name coverage (' + e.message + ').'; }
+}
+async function uploadDriverMaster(input){
+  var file = input.files[0];
+  if (!file) return;
+  var el = document.getElementById('drj-master-status');
+  el.textContent = 'Uploading…';
+  var fd = new FormData();
+  fd.append('file', file);
+  try {
+    var r = await fetch('/api/driver-master/upload', { method: 'POST', headers: authHeaders(), body: fd });
+    var d = await r.json();
+    if (!r.ok) { el.textContent = '❌ ' + (d.error || 'Upload failed'); return; }
+    el.textContent = 'Uploaded — ' + d.inserted + ' new, ' + d.updated + ' updated' + (d.skipped ? ', ' + d.skipped + ' skipped' : '') + '.';
+    loadDriverRejectionTracker(); // re-run so newly-resolved names show immediately
+  } catch(e) { el.textContent = '❌ Error: ' + e.message; }
+  input.value = '';
+}
+var DRJ_COLCHECK_SAMPLES = []; // flat list of raw values, indexed for the override buttons below
+async function checkDispatchColumns(){
+  var dateInput = document.getElementById('drj-colcheck-date');
+  var resultEl = document.getElementById('drj-colcheck-result');
+  var date = dateInput.value;
+  if (!date) { resultEl.textContent = 'Pick a date first.'; return; }
+  resultEl.textContent = 'Checking…';
+  DRJ_COLCHECK_SAMPLES = [];
+  try {
+    var r = await fetch('/api/dispatch/column-diagnostic?date=' + date, { headers: authHeaders() });
+    var d = await r.json();
+    if (!r.ok) { resultEl.textContent = '❌ ' + (d.error || 'Failed to check.'); return; }
+    if (!d.found) { resultEl.textContent = d.note; return; }
+    resultEl.innerHTML = d.sources.map(function(src){
+      var lines = [];
+      lines.push('<strong style="color:var(--gold);">Source: ' + src.source_label + '</strong> (' + (src.row_count||0) + ' rows)');
+      lines.push('All column headers in this file: ' + (src.headers.length ? src.headers.join(' | ') : '(none found)'));
+      lines.push('Driver column detected: <strong>' + (src.driver_column_detected || '— none matched —') + '</strong>');
+      var html = lines.join('<br>');
+      if (src.samples && src.samples.length) {
+        html += '<div style="margin-top:6px;">Sample raw values from that column — reclassify any that are wrong:</div>';
+        src.samples.forEach(function(s){
+          var idx = DRJ_COLCHECK_SAMPLES.length;
+          DRJ_COLCHECK_SAMPLES.push(s.raw_value);
+          var color = s.would_be_classified_as === 'Hired' ? 'var(--red)' : 'var(--green)';
+          html += '<div style="display:flex;align-items:center;gap:8px;padding:4px 0;flex-wrap:wrap;">' +
+            '<span>"' + s.raw_value + '" → "' + s.extracted_name + '" → <strong style="color:' + color + ';">' + s.would_be_classified_as + '</strong></span>' +
+            '<button class="btn-mini" onclick="setDriverFleetOverride(' + idx + ',\'inhouse\')">Mark In-House</button>' +
+            '<button class="btn-mini" onclick="setDriverFleetOverride(' + idx + ',\'hired\')">Mark Hired</button>' +
+            '<span id="drj-override-status-' + idx + '" style="font-size:10px;color:var(--muted);"></span>' +
+            '</div>';
+        });
+      } else if (src.driver_column_detected) {
+        html += '<br>(No non-empty values found in that column.)';
+      }
+      return '<div style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--border);">' + html + '</div>';
+    }).join('');
+  } catch(e) { resultEl.textContent = '❌ Error: ' + e.message; }
+}
+async function setDriverFleetOverride(idx, fleetType){
+  var rawValue = DRJ_COLCHECK_SAMPLES[idx];
+  var statusEl = document.getElementById('drj-override-status-' + idx);
+  if (statusEl) statusEl.textContent = 'Saving…';
+  try {
+    var r = await fetch('/api/driver-fleet-override/set', {
+      method: 'POST',
+      headers: authHeaders(true),
+      body: JSON.stringify({ driver_key: rawValue, fleet_type: fleetType })
+    });
+    var d = await r.json();
+    if (!r.ok) { if (statusEl) statusEl.textContent = '❌ ' + (d.error || 'Failed'); return; }
+    if (statusEl) statusEl.textContent = '✓ Saved as ' + (fleetType === 'inhouse' ? 'In-House' : 'Hired');
+    loadDriverRejectionTracker(); // re-run so the correction shows immediately
+  } catch(e) { if (statusEl) statusEl.textContent = '❌ Error: ' + e.message; }
+}
+
+document.addEventListener('DOMContentLoaded', boot);
+</script>
+</body>
+</html>
